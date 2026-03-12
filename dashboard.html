@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+  <script>
+    // DEBUG: detectar quién redirige a index.html (se quita luego)
+    (function () {
+      try {
+        const loc = window.location;
+
+        const origReplace = loc.replace.bind(loc);
+        loc.replace = function (url) {
+          console.warn("[NAV][replace]", url);
+          try { console.warn(new Error("[NAV stack]").stack); } catch (_) {}
+          return origReplace(url);
+        };
+
+        const origAssign = loc.assign.bind(loc);
+        loc.assign = function (url) {
+          console.warn("[NAV][assign]", url);
+          try { console.warn(new Error("[NAV stack]").stack); } catch (_) {}
+          return origAssign(url);
+        };
+      } catch (e) {
+        // si el navegador no deja override, no rompemos nada
+        console.warn("[NAV] hook failed", e);
+      }
+    })();
+  </script>
+
+  <script>
+    (function () {
+      try {
+        const isDev = String(window.location.port) === "3000";
+        if (!isDev) return;
+
+        // Canonical host en dev para que la cookie de sesión no se pierda
+        if (window.location.hostname === "localhost") {
+          const next = window.location.href.replace("://localhost:", "://127.0.0.1:");
+          window.location.replace(next);
+        }
+      } catch (_) {}
+    })();
+  </script>
+
+  <meta charset="UTF-8" />
+  <title>Quacker · Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="assets/img/logo-quacker.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+
+</head>
+<body>
+<div class="app-shell">
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-mark">
+        <div class="brand-logo">
+          <img src="assets/img/logo-quacker.png" alt="Quacker logo">
+        </div>
+        <div class="brand-text">Quacker</div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Plegar menú">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Navegación</div>
+      <ul class="nav-list">
+        <li>
+          <button class="nav-item-btn is-active" data-view="home">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 11.5L12 4l9 7.5"/>
+              <path d="M6.5 10.5V20h5v-5h1v5h5v-9.5"/>
+            </svg>
+            <span class="nav-label">Inicio</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-item-btn" data-view="explore" type="button">
+            <span class="nav-ico" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="M21 21l-4.3-4.3"></path>
+              </svg>
+            </span>
+            <span class="nav-label">Explorar</span>
+          </button>
+        </li>        
+        <li>
+          <button class="nav-item-btn" data-view="library">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="5" height="16" rx="1.5"/>
+              <rect x="10" y="4" width="5" height="16" rx="1.5"/>
+              <rect x="17" y="4" width="4" height="16" rx="1.5"/>
+            </svg>
+            <span class="nav-label">Mi Biblioteca</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-item-btn" data-view="lists">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 6h14M5 12h10M5 18h7"/>
+            </svg>
+            <span class="nav-label">Listas personalizadas</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-item-btn" data-view="profile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="3.5"/>
+              <path d="M5 20c1.3-3 3.6-4.5 7-4.5s5.7 1.5 7 4.5"/>
+            </svg>
+            <span class="nav-label">Mi perfil</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="theme-row">
+        <span class="nav-label">Modo claro</span>
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" data-theme-toggle>
+          <div class="theme-knob"></div>
+        </button>
+      </div>
+      <button class="logout-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 5v14"/>
+          <path d="M5 12h9"/>
+          <path d="M12 9l3 3-3 3"/>
+        </svg>
+        <span class="nav-label">Cerrar sesión</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN PANE ===== -->
+  <div class="main-pane">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title" id="sectionTitle">Inicio</div>
+        <div class="topbar-subtitle" id="sectionSubtitle">
+          <span id="sectionSubtitleText">Resumen de tu actividad en Quacker</span>
+          <span id="libraryCountInline" style="display:none;"></span>
+          <span id="listsCountInline" style="display:none;"></span>
+        </div>
+      </div> 
+
+
+      <div class="topbar-center">
+        <div class="search-box is-disabled" id="globalSearchBox" aria-disabled="true">
+          <input
+            class="search-input"
+            id="globalSearch"
+            placeholder="Buscar contenido..."
+            aria-label="Buscar"
+            disabled
+          />
+
+          <button
+            class="search-clear"
+            id="globalSearchClear"
+            type="button"
+            aria-label="Borrar búsqueda"
+            tabindex="-1"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 6l12 12M6 18L18 6"/>
+            </svg>
+          </button>
+
+          <div class="search-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="6"/>
+              <path d="M16 16l4 4"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="lang-pill" id="langPill">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="es">ES</button>
+        </div>
+
+        <button class="icon-button" id="notifButton" aria-label="Notificaciones" data-open-notifications aria-controls="notifPanel" aria-expanded="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 16V11a6 6 0 0 0-12 0v5"/>
+            <path d="M5 16h14"/>
+            <path d="M10 19a2 2 0 0 0 4 0"/>
+          </svg>
+          <span class="notif-badge" id="notifBadge" aria-hidden="true"></span>
+        </button>
+
+        <button class="icon-button profile-chip" id="profileChip">
+          <div class="avatar-circle">
+            <img src="assets/img/logo-quacker.png" alt="Avatar">
+          </div>
+          <span id="profileChipName">Arnau</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Panel de notificaciones -->
+      <div class="notif-panel" id="notifPanel" data-notifications-panel aria-hidden="true">
+        <div class="notif-header-row">
+          <div class="notif-title">Notificaciones (<span id="notifCount">0</span>)</div>
+          <div class="notif-actions">
+            <button class="chip-small" id="markAllBtn">Marcar todas</button>
+            <button class="close-chip" id="notifClose" data-close-notifications>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 6l12 12M6 18L18 6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="notif-list" id="notifList"></div>
+
+        <div id="notifEmptyState" class="notif-empty-state" hidden>
+          <div class="notif-empty-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-12 0v5l-2 2v1h18v-1l-2-2z"
+                    fill="currentColor"></path>
+            </svg>
+          </div>
+          <div class="notif-empty-title">Sin notificaciones</div>
+          <div class="notif-empty-desc">No tienes notificaciones nuevas.</div>
+        </div>
+      </div>
+
+      <!-- Menú de perfil (dropdown) -->
+      <div class="profile-menu" id="profileMenu" aria-hidden="true">
+        <div class="profile-menu-header">
+          <div class="avatar-circle profile-menu-avatar">
+            <img src="assets/img/logo-quacker.png" alt="Avatar">
+          </div>
+          <div class="profile-menu-text">
+            <div class="profile-menu-name" id="profileMenuName">Arnau</div>
+            <div class="profile-menu-handle" id="profileMenuHandle">@arnauduck</div>
+          </div>
+        </div>
+
+        <div class="profile-menu-divider"></div>
+
+        <button class="profile-menu-item" data-profile-action="profile">
+          <span>Mi perfil</span>
+        </button>
+        <button class="profile-menu-item" data-profile-action="settings">
+          <span>Ajustes</span>
+        </button>
+        <button class="profile-menu-item" data-profile-action="theme">
+          <span>Cambiar tema</span>
+        </button>
+        <button class="profile-menu-item profile-menu-item-danger" data-profile-action="logout">
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="app-main">
+      <!-- ===== VIEW: HOME ===== -->
+      <section class="view is-active" id="view-home" data-view-id="home">
+        <!-- Saludo -->
+        <div class="welcome-banner">
+          <div class="welcome-text">
+            <div class="welcome-badge-row">
+              <span class="welcome-badge">Inicio</span>
+              <span class="welcome-badge" id="welcomeDayLabel">Hoy</span>
+            </div>
+
+            <h2>¡Hola de nuevo, <span id="welcomeName">Arnau</span>!</h2>
+
+            <p class="welcome-subtitle" id="welcomeSubtitle">
+              Tienes
+              <strong><span id="welcomeInProgress">0</span> contenidos</strong>
+              en progreso. Sigue con tus rachas
+            </p>
+
+            <div class="welcome-chips-row">
+              <span class="welcome-chip streak-badge is-hidden" id="welcomeStreakChip"></span>
+              <span class="welcome-chip" id="welcomeTodayTimeChip">Hoy: 0 min</span>
+            </div>
+          </div>
+
+          <div class="welcome-duck">
+            <img id="homeBannerAvatar" src="assets/img/logo-quacker.png" alt="Avatar">
+          </div>
+        </div>
+
+
+        <!-- Métricas principales -->
+        <div class="grid-4 home-metrics-row">
+          <!-- Tiempo esta semana -->
+          <div class="metric-card">
+            <div class="metric-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="8"></circle>
+                <path d="M12 8v4l2.5 2.5"></path>
+              </svg>
+            </div>
+            <div class="metric-main">
+              <div class="metric-label-row">
+                <span class="metric-label">Tiempo esta semana</span>
+                <span class="metric-pill" id="metricWeeklyTodayPill">Hoy: 0 min</span>
+              </div>
+              <div class="metric-value" id="metricWeeklyTime">–</div>
+              <div class="metric-sub">Entre series, pelis y juegos</div>
+            </div>
+          </div>
+
+          <!-- Contenidos en progreso -->
+          <div class="metric-card">
+            <div class="metric-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="5" width="6" height="14" rx="1.5"></rect>
+                <rect x="14" y="5" width="6" height="14" rx="1.5"></rect>
+              </svg>
+            </div>
+            <div class="metric-main">
+              <div class="metric-label-row">
+                <span class="metric-label">Contenidos en progreso</span>
+              </div>
+              <div class="metric-value" id="metricInProgress">–</div>
+              <div class="metric-sub">No pierdas el hilo</div>
+            </div>
+          </div>
+
+          <!-- Completados este año -->
+          <div class="metric-card">
+            <div class="metric-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="8"></circle>
+                <path d="M9 12l2 2 4-4"></path>
+              </svg>
+            </div>
+            <div class="metric-main">
+              <div class="metric-label-row">
+                <span class="metric-label">Completados este año</span>
+                <span class="metric-pill" id="metricCompletedTodayPill">Hoy: 0</span>
+              </div>
+              <div class="metric-value" id="metricCompletedYear">–</div>
+              <div class="metric-sub">Tu biblioteca no para de crecer</div>
+            </div>
+          </div>
+
+          <!-- Racha actual -->
+          <div class="metric-card">
+            <div class="metric-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 20c1-3 2-5 4-7"></path>
+                <path d="M9 4l3 3-3 3"></path>
+                <path d="M17 4c-1 3-2 5-4 7"></path>
+                <path d="M15 20l-3-3 3-3"></path>
+              </svg>
+            </div>
+            <div class="metric-main">
+              <div class="metric-label-row">
+                <span class="metric-label">Racha actual</span>
+              </div>
+              <div class="metric-value" id="metricStreak">–</div>
+              <div class="metric-sub">Actividad diaria en Quacker</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Continúa donde lo dejaste -->
+        <section class="home-panel home-continue-panel">
+          <div class="home-panel-header home-continue-header">
+            <h3>Continúa donde lo dejaste</h3>
+
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="home-continue-count" id="continueCountLabel">0 contenidos</span>
+
+              <button
+                class="btn-secondary btn-sm"
+                id="btnGoLibraryFromContinue"
+                type="button"
+                style="display:none;"
+              >
+                Ver todo
+              </button>
+            </div>
+          </div>
+
+          <!-- Filtros por tipo -->
+          <div class="home-continue-filters">
+            <div class="home-continue-filter-row">
+              <span class="home-continue-filter-label">Tipo</span>
+              <div class="home-continue-pills">
+                <button class="pill-filter-sm cw-type-pill active" data-type="all">Todo</button>
+                <button class="pill-filter-sm cw-type-pill" data-type="serie">Series</button>
+                <button class="pill-filter-sm cw-type-pill" data-type="pelicula">Películas</button>
+                <button class="pill-filter-sm cw-type-pill" data-type="book">Libros</button>
+                <button class="pill-filter-sm cw-type-pill" data-type="game">Videojuegos</button>
+              </div>
+            </div>
+
+            <!-- Filtros por estado -->
+            <div class="home-continue-filter-row">
+              <span class="home-continue-filter-label">Estado</span>
+              <div class="home-continue-pills">
+                <button class="pill-filter-sm cw-status-pill active" data-status="in_progress">En progreso</button>
+                <button class="pill-filter-sm cw-status-pill" data-status="not_started">No comenzados</button>
+                <button class="pill-filter-sm cw-status-pill" data-status="completed">Al día</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid de contenidos -->
+          <div class="home-continue-grid" id="continueGrid">
+            <!-- Se rellena por JS -->
+          </div>
+        </section>
+
+
+        <!-- Última actividad + Reto mensual -->
+        <div class="home-main-row">
+          <!-- Última actividad -->
+        <section class="home-panel">
+          <div class="home-panel-header">
+            <h3>Última actividad</h3>
+            <button class="icon-btn" type="button" id="btnViewAllActivity" aria-label="Ver toda la actividad">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path>
+                <circle cx="12" cy="12" r="2.5"></circle>
+              </svg>
+            </button>
+          </div>
+
+          <div class="last-activity-card">
+            <div class="last-activity-cover">
+              <!-- La portada se rellena por JS -->
+            </div>
+
+            <div class="last-activity-body">
+              <div class="last-activity-header-row">
+              <div class="last-activity-title-group">
+                <span class="last-activity-type-icon" id="lastActivityTypeIcon"></span>
+                <h4 class="last-activity-title" id="lastActivityTitle">–</h4>
+              </div>
+              <span class="last-activity-time-chip" id="lastActivityTime">–</span>
+            </div>
+
+
+              <p class="last-activity-meta" id="lastActivityMeta">–</p>
+
+              <div class="last-activity-progress">
+                <div class="last-activity-progress-bar">
+                  <div class="last-activity-progress-bar-fill" id="lastActivityProgressFill"></div>
+                </div>
+                <div class="last-activity-progress-footer">
+                  <span class="last-activity-progress-label" id="lastActivityProgressLabel">–</span>
+                </div>
+              </div>
+
+              <div class="last-activity-actions">
+                <button class="btn-primary btn-sm btn-progress-last" type="button" id="btnMarkLastActivity">
+                  <span class="btn-progress-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 12l4 4 10-10"></path>
+                    </svg>
+                  </span>
+                  Progreso hecho
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- Reto mensual -->
+        <section class="home-panel">
+          <div class="home-panel-header">
+            <h3>Reto mensual</h3>
+            <button class="icon-btn" type="button" id="btnChallengeSettings" aria-label="Configurar retos">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.8 1.8 0 0 0 .3 2l.1.1a1.6 1.6 0 0 1-2.3 2.3l-.1-.1a1.8 1.8 0 0 0-2-.3 1.8 1.8 0 0 0-1 1.6V21a1.6 1.6 0 0 1-3.2 0v-.2a1.8 1.8 0 0 0-1-1.6 1.8 1.8 0 0 0-2 .3l-.1.1a1.6 1.6 0 1 1-2.3-2.3l.1-.1a1.8 1.8 0 0 0 .3-2 1.8 1.8 0 0 0-1.6-1H3a1.6 1.6 0 0 1 0-3.2h.2a1.8 1.8 0 0 0 1.6-1 1.8 1.8 0 0 0-.3-2l-.1-.1a1.6 1.6 0 1 1 2.3-2.3l.1.1a1.8 1.8 0 0 0 2 .3h.1a1.8 1.8 0 0 0 1-1.6V3a1.6 1.6 0 0 1 3.2 0v.2a1.8 1.8 0 0 0 1 1.6h.1a1.8 1.8 0 0 0 2-.3l.1-.1a1.6 1.6 0 1 1 2.3 2.3l-.1.1a1.8 1.8 0 0 0-.3 2 1.8 1.8 0 0 0 1.6 1H21a1.6 1.6 0 0 1 0 3.2h-.2a1.8 1.8 0 0 0-1.6 1z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="challenge-card">
+            <div class="challenge-header">
+              <div class="challenge-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 4h8v3a4 4 0 0 1-4 4 4 4 0 0 1-4-4V4z"></path>
+                  <path d="M6 4h12"></path>
+                  <path d="M7 21h10"></path>
+                  <path d="M10 17h4"></path>
+                </svg>
+              </div>
+              <div class="challenge-header-text">
+                <h4 id="challengeTitle">–</h4>
+                <p class="challenge-description" id="challengeDescription">–</p>
+              </div>
+            </div>
+
+            <div class="challenge-progress">
+              <div class="challenge-progress-bar">
+                <div class="challenge-progress-fill" id="challengeProgressFill"></div>
+              </div>
+              <div class="challenge-meta-row">
+                <span class="challenge-chip" id="challengeCount">–</span>
+                <span class="challenge-chip" id="challengeDays">–</span>
+              </div>
+            </div>
+
+            <div class="challenge-reward-row">
+              <span class="challenge-reward-label">Recompensa:</span>
+              <span class="challenge-reward-badge" id="challengeReward">–</span>
+            </div>
+          </div>
+        </section>
+
+        </div>
+
+        <!-- Backlog olvidado -->
+        <section class="home-backlog">
+          <div class="home-panel-header">
+            <h3>Backlog olvidado</h3>
+            <p class="home-panel-subtitle">
+              Contenidos en progreso que llevan días sin avanzar.
+            </p>
+          </div>
+            <div class="backlog-grid" id="backlogList">
+              <!-- Se rellena por JS -->
+            </div>
+        </section>
+      </section>
+
+      <section class="view" id="view-explore" data-view-id="explore">
+        <div class="explore-toolbar">
+          <div class="explore-toolbar-left">
+            <div class="explore-pills" data-explore-type>
+              <button class="pill-btn active" type="button" data-value="all">Todo</button>
+              <button class="pill-btn" type="button" data-value="serie">Series</button>
+              <button class="pill-btn" type="button" data-value="pelicula">Películas</button>
+              <button class="pill-btn" type="button" data-value="book">Libros</button>
+              <button class="pill-btn" type="button" data-value="game">Videojuegos</button>
+            </div>
+          </div>
+
+          <div class="explore-toolbar-right">
+            <div class="explore-mode-chip" id="exploreAddToListMode" hidden>
+              <svg class="explore-mode-ico" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true" focusable="false">
+                <path d="M8 6h13"></path>
+                <path d="M8 12h13"></path>
+                <path d="M8 18h13"></path>
+                <path d="M3 6h.01"></path>
+                <path d="M3 12h.01"></path>
+                <path d="M3 18h.01"></path>
+              </svg>
+
+              <span class="explore-mode-text" id="exploreAddToListModeText">Añadiendo a: –</span>
+
+              <button type="button" class="explore-mode-back" id="exploreAddToListBack">
+                Volver
+              </button>
+
+              <button type="button" class="explore-mode-finish" id="exploreAddToListFinish">
+                Finalizar
+              </button>
+
+              <button type="button" class="explore-mode-cancel" id="exploreAddToListCancel" aria-label="Cancelar modo añadir">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true" focusable="false">
+                  <path d="M6 6l12 12M6 18L18 6"></path>
+                </svg>
+              </button>
+            </div>
+            <label class="select-wrap">
+              <select id="exploreSort">
+                <option value="recent" selected>Más reciente</option>
+                <option value="title">Título</option>
+              </select>
+            </label>
+            <button type="button" class="btn-ghost" id="exploreClearDismissed">
+              Restablecer
+            </button>
+          </div>
+        </div>
+
+        <div class="explore-grid" data-explore-container></div>
+
+        <div id="exploreLoading" class="explore-loading" hidden aria-live="polite" aria-busy="true">
+          <div class="explore-loading-card" role="status">
+            <span class="explore-loading-spinner" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+              </svg>
+            </span>
+            <span class="explore-loading-text">Actualizando resultados…</span>
+          </div>
+        </div>
+
+        <!-- Drawer detalle Explore -->
+        <aside class="explore-drawer" id="exploreDrawer" aria-hidden="true">
+          <div class="explore-drawer-inner">
+            <button type="button" class="explore-drawer-close" id="exploreDrawerClose" aria-label="Cerrar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true" focusable="false">
+                <path d="M6 6l12 12M6 18L18 6"/>
+              </svg>
+            </button>
+
+            <div class="explore-drawer-cover" id="exploreDrawerCover" aria-hidden="true"></div>
+
+            <div class="explore-drawer-content">
+              <div class="explore-drawer-title-row">
+                <h3 class="explore-drawer-title" id="exploreDrawerTitle">Título</h3>
+                <div id="exploreDrawerBadge"></div>
+              </div>
+
+              <div class="explore-drawer-meta" id="exploreDrawerMeta"></div>
+
+              <p class="explore-drawer-summary" id="exploreDrawerSummary"></p>
+
+              <div class="explore-drawer-actions">
+                <button class="btn-primary" type="button" id="exploreDrawerAddLibrary">Añadir a biblioteca</button>
+                <button class="btn-ghost" type="button" id="exploreDrawerAddLists">Añadir a listas</button>
+              </div>
+              <div class="drawer-inline-note" id="exploreDrawerInlineNote" hidden aria-live="polite"></div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="explore-drawer-backdrop" id="exploreDrawerBackdrop" hidden></div>
+
+        <div class="empty-state" id="exploreEmpty" hidden>
+          <div class="empty-state-card" role="status" aria-live="polite">
+            <div class="empty-state-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"></path>
+                <path d="M12 8v5"></path>
+                <path d="M12 16h.01"></path>
+              </svg>
+            </div>
+
+            <div class="empty-state-main">
+              <h3 class="empty-state-title">No hay resultados</h3>
+              <p class="empty-state-text">Prueba a cambiar el filtro o ajustar la búsqueda.</p>
+
+              <div class="empty-state-actions">
+                <button type="button" class="btn-primary btn-sm" id="exploreEmptyReset">
+                  Restablecer filtros
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ===== VIEW: LIBRARY (placeholder) ===== -->
+      <section class="view" id="view-library" data-view-id="library">
+        <div class="library-filters">
+
+          <!-- FILTRO TIPO + ORDEN (misma fila) -->
+          <div class="library-filter-row library-filter-row--type">
+            <span class="library-filter-label">Tipo</span>
+
+            <div class="library-pills">
+              <button class="pill-filter-sm lib-type-pill active" data-type="all">Todo</button>
+              <button class="pill-filter-sm lib-type-pill" data-type="serie">Series</button>
+              <button class="pill-filter-sm lib-type-pill" data-type="pelicula">Películas</button>
+              <button class="pill-filter-sm lib-type-pill" data-type="book">Libros</button>
+              <button class="pill-filter-sm lib-type-pill" data-type="game">Videojuegos</button>
+            </div>
+
+            <button type="button" class="btn-primary" id="btnAddLibraryItem">
+              + Añadir
+            </button>
+
+            <div class="library-sort">
+              <label for="librarySort" class="sr-only">Orden</label>
+              <select id="librarySort">
+                <option value="recent">Última actividad</option>
+                <option value="progress">Progreso</option>
+                <option value="az">A–Z</option>
+                <option value="added_desc">Añadido recientemente</option>
+                <option value="added_asc">Añadido primero</option>
+              </select>
+            </div>
+            <div class="lib-refresh-veil" id="libRefreshVeil" hidden aria-live="polite" role="status">
+              <div class="lib-refresh-veil-inner">
+                <span class="btn-spinner" aria-hidden="true"></span>
+                <span>Actualizando…</span>
+              </div>
+            </div>
+
+            <div id="libraryGrid" class="lib-grid"></div>
+
+          </div>          
+
+          <!-- FILTRO ESTADO -->
+          <div class="library-filter-row">
+            <span class="library-filter-label">Estado</span>
+            <div class="library-pills">
+              <button class="pill-filter-sm lib-status-pill active" data-status="all">Todos</button>
+              <button class="pill-filter-sm lib-status-pill" data-status="in_progress">En progreso</button>
+              <button class="pill-filter-sm lib-status-pill" data-status="not_started">No empezados</button>
+              <button class="pill-filter-sm lib-status-pill" data-status="completed">Completados</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- MODAL CONFIRMAR VACIAR NOTIFICACIONES -->
+      <div class="modal-overlay" id="confirmClearNotifsModal" aria-hidden="true">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Notificaciones</h3>
+            <button class="modal-close" id="closeConfirmClearNotifs" aria-label="Cerrar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6L6 18"></path>
+                <path d="M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <p id="confirmClearNotifsText">
+              ¿Quieres marcar todas las notificaciones como vistas?
+            </p>
+            <p class="modal-warning">
+              Podrás deshacer desde el toast.
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn-secondary" id="cancelClearNotifs">
+              Cancelar
+            </button>
+            <button class="btn-primary" id="confirmClearNotifs">
+              Marcar todas
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== VIEW: CUSTOM LISTS ===== -->
+      <section class="view" id="view-lists" data-view-id="lists">
+
+        <div class="lists-toolbar">
+          <div class="lists-toolbar-top">
+            <div class="lists-search">
+              <input type="text" id="listsSearch" placeholder="Buscar en tus listas..." />
+              <div class="search-icon" style="left:9px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="6"/>
+                  <path d="M16 16l4 4"/>
+                </svg>
+              </div>
+            </div>
+
+            <button class="btn-primary" id="btnNewList" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Nueva lista
+            </button>
+          </div>
+
+          <div class="lists-toolbar-bottom">
+            <div class="lists-filters">
+              <button class="pill-filter active" data-filter="all">
+                Todas las listas <span class="count" id="countAll">0</span>
+              </button>
+              <button class="pill-filter" data-filter="public">
+                Públicas <span class="count" id="countPublic">0</span>
+              </button>
+              <button class="pill-filter" data-filter="private">
+                Privadas <span class="count" id="countPrivate">0</span>
+              </button>
+              <button class="pill-filter" data-filter="collab">
+                Colaborativas <span class="count" id="countCollab">0</span>
+              </button>
+            </div>
+
+            <div class="view-toggle">
+              <button class="active" aria-label="Vista de tarjetas">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                </svg>
+              </button>
+              <button aria-label="Vista de lista">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3" id="listsGrid" data-lists-container>
+          <!-- se rellena con JS -->
+        </div>
+
+        <!-- DETALLE DE LISTA (oculto por defecto) -->
+        <section id="listDetail" class="list-detail" hidden>
+          <div class="list-detail-top">
+            <button type="button" class="btn-secondary list-detail-back" id="btnBackToLists">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true" focusable="false">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+              Volver
+            </button>
+
+            <button type="button" class="btn-primary list-detail-add" id="btnAddContentToList">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true" focusable="false">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Añadir contenido
+            </button>
+
+            <div class="list-detail-titlewrap">
+              <h2 id="listDetailTitle" class="list-detail-title">Lista</h2>
+              <div class="list-detail-meta">
+                <span class="list-detail-pill" id="listDetailVisibility">Privada</span>
+                <span class="list-detail-count" id="listDetailCount">0 elementos</span>
+              </div>
+            </div>
+          </div>
+
+          <p id="listDetailDescription" class="list-detail-desc"></p>
+
+          <div class="list-detail-items">
+            <div class="list-items-header">
+              <div class="list-items-head-left">
+                <h3 class="list-items-title">Contenido</h3>
+                <span class="list-items-sub" id="listDetailHint"></span>
+              </div>
+
+              <div class="list-items-controls" aria-label="Filtros de la lista">
+                <label class="input-wrap list-items-search">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                      aria-hidden="true" focusable="false">
+                    <path d="M21 21l-4.3-4.3"/>
+                    <circle cx="11" cy="11" r="7"/>
+                  </svg>
+                  <input id="listDetailSearch" type="search" placeholder="Buscar en la lista" autocomplete="off">
+                </label>
+
+                <label class="select-wrap">
+                  <select id="listDetailTypeFilter" aria-label="Filtrar por tipo">
+                    <option value="all">Todos</option>
+                    <option value="serie">Series</option>
+                    <option value="pelicula">Películas</option>
+                    <option value="book">Libros</option>
+                    <option value="game">Videojuegos</option>
+                  </select>
+                </label>
+
+                <label class="select-wrap">
+                  <select id="listDetailStatusFilter" aria-label="Filtrar por estado">
+                    <option value="all">Todos</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="inprogress">En progreso</option>
+                    <option value="completed">Completado</option>
+                  </select>
+                </label>
+
+                <span class="list-items-showing" id="listDetailShowing"></span>
+              </div>
+            </div>
+
+            <div id="listDetailItemsGrid" class="list-items-grid"></div>
+
+            <p id="listDetailEmpty" class="empty-state" style="display:none;">
+              Esta lista todavía no tiene contenido.
+            </p>
+          </div>
+        </section>
+
+      </section>
+
+      <!-- ===== VIEW: PROFILE ===== -->
+      <section class="view" id="view-profile" data-view-id="profile">
+        <div class="profile-layout">
+          <div class="profile-card">
+            <div class="profile-header">
+              <div class="profile-avatar-big">
+                <img id="profileAvatarImg" src="assets/img/logo-quacker.png" alt="Avatar">
+              </div>
+
+              <div>
+                <h2 style="font-size:1.2rem;">Mi perfil</h2>
+                <p class="profile-meta">Configura cómo apareces en Quacker.</p>
+
+                <div class="profile-avatar-actions">
+                  <button type="button" class="btn-secondary" id="profileAvatarBtn">
+                    Subir foto
+                  </button>
+
+                  <button type="button" class="btn-secondary" id="profileAvatarPickerBtn">
+                    Elegir avatar
+                  </button>
+
+                  <input id="profileAvatarInput" type="file" accept="image/*" hidden>
+                </div>
+
+              </div>
+            </div>
+
+            <form id="profileForm">
+              <div class="profile-form-group">
+                <label for="profileName">Nombre</label>
+                <input id="profileName" name="name" value="Arnau" />
+              </div>
+              <div class="profile-form-group">
+                <label for="profileHandle">Usuario</label>
+                <input id="profileHandle" name="handle" value="@arnauduck" />
+              </div>
+              <div class="profile-form-group">
+                <label for="profileEmail">Email</label>
+                <input id="profileEmail" type="email" name="email" value="arnau@example.com" />
+              </div>
+              <div class="profile-form-group">
+                <label for="profileLanguage">Idioma preferido</label>
+                <select id="profileLanguage" name="language">
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+              <div class="profile-form-group">
+                <label for="profileBio">Bio</label>
+                <textarea id="profileBio" name="bio" placeholder="Cuenta algo sobre ti...">Amante de las series largas, pelis de ciencia ficción y JRPGs eternos.</textarea>
+              </div>
+
+              <div id="profileFormErrors" class="profile-form-errors" style="display:none;"></div>
+
+              <button type="submit" class="btn-primary" id="profileSaveBtn" disabled>
+                Guardar cambios
+              </button>
+            </form>
+          </div>
+
+          <div class="profile-card">
+            <h3 style="font-size:1rem;margin-bottom:8px;">Resumen rápido</h3>
+            <p class="profile-meta" style="margin-bottom:10px;">
+              Un pequeño snapshot de tu cuenta.
+            </p>
+
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+              <span class="profile-chip-metric">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 11.5L12 4l9 7.5"/>
+                  <path d="M6.5 10.5V20h5v-5h1v5h5v-9.5"/>
+                </svg>
+                213 contenidos completados
+              </span>
+              <span class="profile-chip-metric">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 2h4v4h-4z"/>
+                  <path d="M4 9h16v11H4z"/>
+                </svg>
+                6 listas personalizadas
+              </span>
+            </div>
+
+            <button class="btn-secondary" id="resetProfileBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 0 1 9-9 8.8 8.8 0 0 1 6.3 2.6L21 3v6h-6l2.3-2.3A6 6 0 1 0 18 15"/>
+              </svg>
+              Restaurar valores demo
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- Modal: elegir avatar -->
+<div class="q-modal" id="avatarPickerModal" aria-hidden="true">
+  <div class="q-modal__backdrop" data-avatar-close></div>
+
+  <div class="q-modal__panel" role="dialog" aria-modal="true" aria-labelledby="avatarPickerTitle">
+    <div class="q-modal__header">
+      <h3 id="avatarPickerTitle">Elige un avatar</h3>
+      <button type="button" class="icon-btn" data-avatar-close aria-label="Cerrar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true">
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="q-modal__subtitle">Puedes elegir uno predefinido o subir tu foto.</p>
+
+    <div class="avatar-grid" id="avatarGrid"></div>
+
+    <div class="q-modal__footer">
+      <button type="button" class="btn-secondary" id="avatarUploadFromModal">
+        Subir mi foto
+      </button>
+      <button type="button" class="btn-secondary" data-avatar-close>
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVA / EDITAR LISTA -->
+<div class="modal-overlay" id="listModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="listModalTitle">Nueva lista</h3>
+      <button class="modal-close" id="closeListModal" aria-label="Cerrar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Nombre</label>
+        <input id="lm_name" type="text" placeholder="Ej: Series 2025" />
+      </div>
+
+      <div class="modal-field">
+        <label>Descripción (opcional)</label>
+        <textarea id="lm_desc" rows="3" placeholder="Una breve descripción..."></textarea>
+      </div>
+
+      <div class="modal-field">
+        <label>Visibilidad</label>
+        <select id="lm_visibility">
+          <option value="private">Privada</option>
+          <option value="public">Pública</option>
+          <option value="collab">Colaborativa</option>
+        </select>
+      </div>
+
+      <div class="modal-errors" id="listModalErrors" style="display:none;"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="cancelListModal">Cancelar</button>
+      <button type="button" class="btn-primary" id="saveListModal">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PROGRESO -->
+<div class="modal-overlay" id="progressModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="progressModalTitle">Editar progreso</h3>
+      <button class="modal-close" id="closeProgressModal" aria-label="Cerrar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="progressModalErrors" class="modal-errors" style="display:none;"></div>
+    <div id="progressModalBody"></div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-delete-item" id="deleteItemBtn">Eliminar</button>
+      <button class="btn-secondary" id="cancelProgressBtn">Cancelar</button>
+      <button class="btn-primary" id="saveProgressBtn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AÑADIR A BIBLIOTECA -->
+<div class="modal-overlay" id="addLibraryModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Añadir a mi biblioteca</h3>
+
+      <button class="modal-close" id="closeAddLibraryModal" aria-label="Cerrar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-content">
+      <div class="modal-field">
+        <label>Título</label>
+        <input id="addLib_title" type="text" placeholder="Ej: Interstellar" />
+      </div>
+
+      <div class="modal-field">
+        <label>Tipo</label>
+        <select id="addLib_type">
+          <option value="serie">Serie</option>
+          <option value="pelicula">Película</option>
+          <option value="book">Libro</option>
+          <option value="game">Videojuego</option>
+        </select>
+      </div>
+
+      <div class="modal-errors" id="addLib_errors" style="display:none;"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="cancelAddLibraryModal">Cancelar</button>
+      <button type="button" class="btn-primary" id="saveAddLibraryModal">Añadir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AÑADIR A LISTAS (selección múltiple) -->
+<div class="modal-overlay" id="addToListModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Añadir a listas</h3>
+
+      <button class="modal-close" id="closeAddToListModal" aria-label="Cerrar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-content">
+      <div class="modal-errors" id="atl_errors" style="display:none;"></div>
+
+      <div class="atl-options" id="atl_listOptions" aria-label="Opciones de listas">
+        <!-- JS: aquí se inyectan las opciones -->
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="cancelAddToListModal">Cancelar</button>
+      <button type="button" class="btn-primary" id="confirmAddToListModal">Añadir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TODA LA ACTIVIDAD -->
+<div class="modal-overlay" id="activityModal" aria-hidden="true">
+  <div class="modal-card modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="activityModalTitle">
+    <div class="modal-header">
+      <h3 id="activityModalTitle">Actividad</h3>
+
+      <button class="modal-close" id="closeActivityModal" aria-label="Cerrar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-content">
+      <div class="activity-filters" role="tablist" aria-label="Filtros de actividad">
+        <button type="button" class="pill-filter active" data-activity-filter="all">Todo</button>
+        <button type="button" class="pill-filter" data-activity-filter="progress">Progreso</button>
+        <button type="button" class="pill-filter" data-activity-filter="completed">Completados</button>
+      </div>
+
+      <div class="activity-list" id="activityList"></div>
+
+      <div class="activity-loading" id="activityLoading" hidden>
+        <div class="activity-loading-row"></div>
+        <div class="activity-loading-row"></div>
+        <div class="activity-loading-row"></div>
+      </div>
+
+      <div class="activity-empty" id="activityEmpty" hidden>
+        <div class="activity-empty-title">Sin actividad aún</div>
+        <div class="activity-empty-desc">Haz progreso o completa algo para ver tu historial aquí.</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="closeActivityModalFooter">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Toast container -->
+  <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="assets/js/data/mock-data.js"></script>
+  <script src="assets/js/data/api-client.js"></script>
+
+  <script>
+    (function () {
+      try {
+        // En el server real (3000) NO restauramos nada: HTTP debe ser la verdad.
+        const isNodeServer = String(window.location.port) === "3000";
+        if (isNodeServer) return;
+
+        // En estático, respetamos sessionStorage si existe
+        const t = sessionStorage.getItem("quacker_transport");
+        const baseUrl = sessionStorage.getItem("quacker_baseUrl");
+
+        if (baseUrl && window.ApiClient?.setBaseUrl) ApiClient.setBaseUrl(baseUrl);
+        if (t && window.ApiClient?.setTransport) ApiClient.setTransport(t);
+      } catch (_) {}
+    })();
+  </script>
+
+  <script>
+    (function () {
+      function bindLogout() {
+        const logoutBtn = document.querySelector(".logout-btn");
+        const logoutMenuItem = document.querySelector('[data-profile-action="logout"]');
+
+        async function doLogout() {
+          try {
+            if (logoutBtn) {
+              if (logoutBtn.dataset.busy === "1") return;
+              logoutBtn.dataset.busy = "1";
+              logoutBtn.setAttribute("aria-busy", "true");
+            }
+
+            if (window.ApiClient?.logout) {
+              await ApiClient.logout();
+            }
+          } catch (_) {
+            // aunque falle, por seguridad salimos igual
+          } finally {
+            // importante: usar replace para no volver atrás al dashboard con "back"
+            window.location.replace("index.html");
+          }
+        }
+
+        if (logoutBtn) logoutBtn.addEventListener("click", doLogout);
+        if (logoutMenuItem) logoutMenuItem.addEventListener("click", doLogout);
+      }
+
+      // Esperamos al DOM, pero sin depender del resto de módulos
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bindLogout);
+      } else {
+        bindLogout();
+      }
+    })();
+  </script>
+
+  <script>
+    (async function () {
+      console.log("[DashboardGuard] START", {
+        href: window.location.href,
+        host: window.location.hostname,
+        port: window.location.port
+      });
+
+      // 1) Esperar a que ApiClient exista (máx 2s)
+      async function waitForApiClient(ms = 2000) {
+        const start = Date.now();
+        while (Date.now() - start < ms) {
+          if (window.ApiClient && typeof ApiClient.getCurrentSession === "function") return true;
+          await new Promise((r) => setTimeout(r, 30));
+        }
+        return false;
+      }
+
+      try {
+        const ok = await waitForApiClient(2000);
+        console.log("[DashboardGuard] ApiClient ready?", ok);
+
+        if (!ok) {
+          console.warn("[DashboardGuard] ApiClient NOT READY -> redirect index.html");
+          window.location.replace("index.html");
+          return;
+        }
+
+        // 2) En server real (3000) SIEMPRE http + /api
+        const isNodeServer = String(window.location.port) === "3000";
+        if (isNodeServer) {
+          try {
+            if (ApiClient.setBaseUrl) ApiClient.setBaseUrl("/api");
+            if (ApiClient.setTransport) ApiClient.setTransport("http");
+          } catch (e) {
+            console.error("[DashboardGuard] setTransport/setBaseUrl failed:", e);
+          }
+        }
+
+        console.log("[DashboardGuard] transportInfo:", ApiClient.getTransportInfo?.());
+
+        // 3) Guard real
+        let session = null;
+        try {
+          session = await ApiClient.getCurrentSession();
+          console.log("[DashboardGuard] session:", session);
+        } catch (err) {
+          console.error("[DashboardGuard] getCurrentSession failed:", err);
+          session = null;
+        }
+
+        if (!session || !session.user) {
+          console.warn("[DashboardGuard] NO SESSION -> redirect index.html");
+          window.location.replace("index.html");
+          return;
+        }
+
+        console.log("[DashboardGuard] OK SESSION -> stay");
+      } catch (e) {
+        console.error("[DashboardGuard] CRASH -> redirect index.html", e);
+        window.location.replace("index.html");
+      }
+    })();
+  </script>
+
+  <script src="assets/js/app/ui-toast.js"></script>
+  <script src="assets/js/app/home-lists-ui.js"></script>
+
+  <script src="assets/js/app/ui-theme.js"></script>
+  <script src="assets/js/app/ui-modal.js"></script>
+  <script src="assets/js/app/router.js"></script>
+  <script src="assets/js/app/lists.js"></script>
+  <script src="assets/js/app/library.js"></script>
+  <script src="assets/js/app/profile.js"></script>
+  <script src="assets/js/app/explore.js"></script>
+  <script src="assets/js/app/app-core.js"></script>
+  <script src="assets/js/app/home-notifications.js"></script>
+</body>
+</html>

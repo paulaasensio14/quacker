@@ -1,0 +1,2001 @@
+// assets/js/data/api-client.js
+// Capa de abstracción para futuras llamadas a API / backend real.
+// Ahora usa FakeBackend como fuente de datos local.
+
+const ApiClient = (() => {
+
+  // =========================
+  // TRANSPORT (local | http)
+  // =========================
+  // =========================
+  // AUTO-TRANSPORT (dev)
+  // =========================
+  // Regla:
+  // - Si servimos desde el backend local (puerto 3000): usamos HTTP por defecto
+  // - En estático (Live Server / file): local por defecto
+  const __isNodeServer = String(window.location.port) === "3000";
+
+  const __cfg = {
+    transport: __isNodeServer ? "http" : "local",   // auto en dev server
+    baseUrl: "/api",      // prefijo del backend. Ej: "https://api.quacker.app"
+    timeoutMs: 12000
+  };
+
+  function setTransport(mode) {
+    __cfg.transport = (mode === "http") ? "http" : "local";
+    return { ok: true, transport: __cfg.transport };
+  }
+
+  function setBaseUrl(url) {
+    if (typeof url === "string" && url.trim()) __cfg.baseUrl = url.trim().replace(/\/+$/, "");
+    return { ok: true, baseUrl: __cfg.baseUrl };
+  }
+
+  function getTransportInfo() {
+    return { ...__cfg };
+  }
+
+  async function getCurrentSession() {
+    if (_isHttp()) {
+      try {
+        const res = await _httpJson("GET", "/auth/me");
+        return res; // { user: {...} }
+      } catch (err) {
+        return null;
+      }
+    }
+
+    // modo local siempre válido
+    return { user: { id: "demo-user" } };
+  }
+
+  function _isHttp() {
+    return __cfg.transport === "http";
+  }
+
+  async function _httpJson(method, path, body) {
+    const url = `${__cfg.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), __cfg.timeoutMs);
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // IMPORTANTE: cookies httpOnly para sesión
+        body: body == null ? undefined : JSON.stringify(body),
+        signal: ctrl.signal
+      });
+
+      const text = await res.text();
+      let json = null;
+      try { json = text ? JSON.parse(text) : null; } catch (_) {}
+
+      if (!res.ok) {
+        const msg = (json && (json.error || json.message)) ? (json.error || json.message) : `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+
+      return json;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  // === helpers internos ===
+  function _safeState() {
+    if (typeof FakeBackend === "undefined") {
+      return {
+        user: null,
+        lists: [],
+        library: [],
+        activities: [],
+        goals: []
+      };
+    }
+    return FakeBackend.getState();
+  }
+
+  function _formatTimeAgo(iso) {
+    if (!iso) return "";
+    const now = new Date();
+    const date = new Date(iso);
+    const diffMs = now - date;
+    const diffMin = Math.round(diffMs / 60000);
+    if (diffMin < 1) return "Hace un momento";
+    if (diffMin < 60) return `Hace ${diffMin} min`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `Hace ${diffH} h`;
+    const diffD = Math.round(diffH / 24);
+    if (diffD === 1) return "Hace 1 día";
+    return `Hace ${diffD} días`;
+  }
+
+  function _emitDataChanged(detail = {}) {
+    try {
+      document.dispatchEvent(new CustomEvent("quacker:data-changed", { detail }));
+    } catch (_) {
+      // defensivo: si CustomEvent falla por algún motivo, no rompemos la app
+    }
+  }
+
+  // === auth (de momento fake) ===
+  async function login(email, password) {
+    if (_isHttp()) {
+      // Backend real: sesión por cookie httpOnly
+      const res = await _httpJson("POST", "/auth/login", { email, password });
+      return res;
+    }
+
+    // modo local (demo)
+    console.log("ApiClient.login", email);
+    return { userId: "demo-user", email };
+  }
+
+  async function register(email, password, name) {
+    if (_isHttp()) {
+      const res = await _httpJson("POST", "/auth/register", { email, password, name });
+      return res;
+    }
+
+    // modo local (demo)
+    console.log("ApiClient.register", email);
+    return { userId: "demo-user", email, name };
+  }
+
+  async function logout() {
+    if (_isHttp()) {
+      await _httpJson("POST", "/auth/logout");
+      return { ok: true };
+    }
+
+    // modo local (demo)
+    return { ok: true };
+  }
+
+  function ensureListsSeeded() {
+    if (typeof FakeBackend === "undefined") return;
+
+    const state = _safeState();
+    state.lists = Array.isArray(state.lists) ? state.lists : [];
+
+    // Si ya hay listas, nada que hacer.
+    // La migración legacy de "quacker_lists" se hace en FakeBackend._load().
+    if (state.lists.length > 0) return;
+
+    // Guardamos estado consistente (listas vacías)
+    FakeBackend.saveState(state);
+  }
+
+  async function getExploreFeed() {
+    // Mock v1: “novedades” (más adelante aquí entra API real)
+    // Importante: esto NO toca FakeBackend directo.
+    return [
+      {
+        eid: "ex_001",
+        type: "serie",
+        title: "Shogun",
+        releaseDate: "2024-02-27",
+        summary: "Drama histórico con estética muy cuidada y ritmo contenido."
+      },
+      {
+        eid: "ex_002",
+        type: "pelicula",
+        title: "Dune: Part Two",
+        releaseDate: "2024-03-01",
+        summary: "Ciencia ficción épica, gran escala y producción muy sólida."
+      },
+      {
+        eid: "ex_003",
+        type: "book",
+        title: "Project Hail Mary",
+        releaseDate: "2021-05-04",
+        summary: "Ciencia ficción accesible, humor y misterio científico."
+      },
+      {
+        eid: "ex_004",
+        type: "game",
+        title: "Baldur's Gate 3",
+        releaseDate: "2023-08-03",
+        summary: "RPG enorme, decisiones con impacto y combate por turnos pulido."
+      },
+      {
+        eid: "ex_005",
+        type: "serie",
+        title: "Arcane",
+        releaseDate: "2021-11-06",
+        summary: "Animación premium, música potente y narrativa muy emocional."
+      },
+      {
+        eid: "ex_006",
+        type: "pelicula",
+        title: "Spider-Man: Across the Spider-Verse",
+        releaseDate: "2023-06-02",
+        summary: "Animación experimental, ritmo alto y diseño visual increíble."
+      },
+      {
+        eid: "ex_007",
+        type: "serie",
+        title: "Severance",
+        releaseDate: "2022-02-18",
+        summary: "Thriller corporativo con misterio y una identidad visual muy marcada."
+      },
+      {
+        eid: "ex_008",
+        type: "serie",
+        title: "The Bear",
+        releaseDate: "2022-06-23",
+        summary: "Cocina, caos y personajes intensos con ritmo rápido."
+      },
+      {
+        eid: "ex_009",
+        type: "serie",
+        title: "Silo",
+        releaseDate: "2023-05-05",
+        summary: "Ciencia ficción con misterio, mundo cerrado y tensión creciente."
+      },
+      {
+        eid: "ex_010",
+        type: "serie",
+        title: "The Last of Us",
+        releaseDate: "2023-01-15",
+        summary: "Drama postapocalíptico con foco en relación y supervivencia."
+      },
+      {
+        eid: "ex_011",
+        type: "pelicula",
+        title: "Oppenheimer",
+        releaseDate: "2023-07-21",
+        summary: "Biografía densa con gran montaje y tensión sostenida."
+      },
+      {
+        eid: "ex_012",
+        type: "pelicula",
+        title: "Poor Things",
+        releaseDate: "2023-12-08",
+        summary: "Fábula surreal con estética potente y humor oscuro."
+      },
+      {
+        eid: "ex_013",
+        type: "pelicula",
+        title: "The Zone of Interest",
+        releaseDate: "2023-12-15",
+        summary: "Terror cotidiano contado desde la distancia y el sonido."
+      },
+      {
+        eid: "ex_014",
+        type: "pelicula",
+        title: "Past Lives",
+        releaseDate: "2023-06-02",
+        summary: "Drama íntimo sobre decisiones, tiempo y conexiones."
+      },
+      {
+        eid: "ex_015",
+        type: "pelicula",
+        title: "Barbie",
+        releaseDate: "2023-07-21",
+        summary: "Comedia y sátira con diseño de producción muy cuidado."
+      },
+      {
+        eid: "ex_016",
+        type: "book",
+        title: "The Three-Body Problem",
+        releaseDate: "2008-01-01",
+        summary: "Ciencia ficción de ideas grandes, escala histórica y misterio."
+      },
+      {
+        eid: "ex_017",
+        type: "book",
+        title: "Klara and the Sun",
+        releaseDate: "2021-03-02",
+        summary: "Reflexión suave sobre humanidad, amor y observación."
+      },
+      {
+        eid: "ex_018",
+        type: "book",
+        title: "Tomorrow, and Tomorrow, and Tomorrow",
+        releaseDate: "2022-07-05",
+        summary: "Amistad, creatividad y videojuegos como hilo emocional."
+      },
+      {
+        eid: "ex_019",
+        type: "book",
+        title: "The Name of the Wind",
+        releaseDate: "2007-03-27",
+        summary: "Fantasía con narrador carismático y mundo muy detallado."
+      },
+      {
+        eid: "ex_020",
+        type: "book",
+        title: "Atomic Habits",
+        releaseDate: "2018-10-16",
+        summary: "Hábitos y sistemas con enfoque práctico y simple."
+      },
+      {
+        eid: "ex_021",
+        type: "game",
+        title: "Hades",
+        releaseDate: "2020-09-17",
+        summary: "Roguelite ágil con narrativa integrada y combate muy pulido."
+      },
+      {
+        eid: "ex_022",
+        type: "game",
+        title: "Elden Ring",
+        releaseDate: "2022-02-25",
+        summary: "Exploración libre, combate exigente y mundo enorme."
+      },
+      {
+        eid: "ex_023",
+        type: "game",
+        title: "Cyberpunk 2077",
+        releaseDate: "2020-12-10",
+        summary: "RPG urbano con narrativa y estilo visual muy marcados."
+      },
+      {
+        eid: "ex_024",
+        type: "game",
+        title: "The Legend of Zelda: Tears of the Kingdom",
+        releaseDate: "2023-05-12",
+        summary: "Creatividad, exploración y sistemas emergentes a gran escala."
+      },
+      {
+        eid: "ex_025",
+        type: "game",
+        title: "Disco Elysium",
+        releaseDate: "2019-10-15",
+        summary: "RPG narrativo con decisiones, diálogos y tono único."
+      },
+      {
+        eid: "ex_026",
+        type: "serie",
+        title: "True Detective",
+        releaseDate: "2014-01-12",
+        summary: "Investigación oscura, atmósfera densa y personajes complejos."
+      }
+
+    ];
+  }
+
+  // === listas (por ahora simplemente devuelven lo del estado) ===
+  async function getLists() {
+    ensureListsSeeded();
+    const state = _safeState();
+    return state.lists || [];
+  }
+
+  // Devuelve las listas donde está un item (para deshabilitar opciones y pintar estado)
+  async function getListsContainingItem(itemId) {
+    if (itemId == null) return [];
+
+    const lists = await getLists();
+    const target = String(itemId);
+
+    return (lists || []).filter((l) => {
+      const arr = Array.isArray(l.items) ? l.items : [];
+      return arr.some((entry) => {
+        const id = typeof entry === "string" ? entry : entry?.id;
+        return String(id) === target;
+      });
+    });
+  }
+
+  // Explore: contar listas por título + tipo (helper)
+  async function getListsCountByLibraryMatch({ title, type }) {
+    if (!title || !type) return 0;
+
+    const state = _safeState();
+    const lists = state.lists || [];
+    const library = state.library || [];
+
+    // buscar item real en biblioteca
+    const libItem = library.find(
+      i =>
+        i.title?.toLowerCase() === title.toLowerCase() &&
+        i.type === type
+    );
+
+    if (!libItem) return 0;
+
+    const libId = String(libItem.id);
+
+    let count = 0;
+
+    for (const list of lists) {
+      const arr = Array.isArray(list.items) ? list.items : [];
+
+      const has = arr.some((entry) => {
+        const id = (typeof entry === "string") ? entry : entry?.id;
+        return String(id) === libId;
+      });
+
+      if (has) count++;
+    }
+
+    return count;
+
+  }
+
+  // Devuelve un mapa de conteos por key "title::type" para toda la biblioteca.
+  // Esto evita hacer 1 llamada por item desde Explore.
+  async function getListsCountMapByLibraryKey() {
+    const state = _safeState();
+    const lists = Array.isArray(state.lists) ? state.lists : [];
+    const library = Array.isArray(state.library) ? state.library : [];
+
+    // Mapa id -> "title::type"
+    const idToKey = new Map();
+    for (const it of library) {
+      const title = (it?.title ?? "").toString().trim().toLowerCase();
+      const type = (it?.type ?? "").toString();
+      if (!it?.id) continue;
+      idToKey.set(String(it.id), `${title}::${type}`);
+    }
+
+    // Inicializamos todos a 0 para consistencia
+    const counts = {};
+    for (const key of idToKey.values()) counts[key] = 0;
+
+    for (const list of lists) {
+      const items = Array.isArray(list?.items) ? list.items : [];
+
+      for (const entry of items) {
+        const id = (typeof entry === "string") ? entry : entry?.id;
+        if (!id) continue;
+
+        const key = idToKey.get(String(id));
+        if (!key) continue;
+
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    }
+
+    return counts;
+  }
+
+  async function createList(listData) {
+    const state = _safeState();
+    state.lists = state.lists || [];
+
+    const newList = {
+      id: String(Date.now()),
+      name: listData.name,
+      description: listData.description || "",
+      visibility: listData.visibility || "private",
+      items: listData.items || [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    state.lists.push(newList);
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({ kind: "lists", action: "create", listId: String(newList.id) });
+
+    return newList;
+  }
+
+  async function updateList(listId, patch = {}) {
+    const state = _safeState();
+    state.lists = state.lists || [];
+    const lists = state.lists;
+
+    const idx = lists.findIndex(l => String(l.id) === String(listId));
+    if (idx === -1) return null;
+
+    const prev = lists[idx];
+    const next = {
+      ...prev,
+      ...patch,
+      updatedAt: new Date().toISOString()
+    };
+
+    lists[idx] = next;
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({ kind: "lists", action: "update", listId: String(listId) });
+
+    return next;
+  }
+
+  async function deleteList(listId) {
+    const state = _safeState();
+    const before = (state.lists || []).length;
+
+    state.lists = (state.lists || []).filter(l => String(l.id) !== String(listId));
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({ kind: "lists", action: "delete", listId: String(listId) });
+
+    return { ok: true, deleted: before - state.lists.length };
+  }
+
+  // === listas: añadir / quitar items ===
+  async function addLibraryItemToList(listId, itemId) {
+    if (!listId || !itemId) return { ok: false };
+
+    ensureListsSeeded();
+
+    const state = _safeState();
+    state.lists = state.lists || [];
+    state.library = state.library || [];
+
+    const list = state.lists.find(l => String(l.id) === String(listId));
+    if (!list) return { ok: false, reason: "list_not_found" };
+
+    const itemExists = state.library.some(i => String(i.id) === String(itemId));
+    if (!itemExists) return { ok: false, reason: "item_not_found" };
+
+    list.items = Array.isArray(list.items) ? list.items : [];
+
+    const already = list.items.some(x => {
+      const id = (typeof x === "string") ? x : x?.id;
+      return String(id) === String(itemId);
+    });
+
+    if (already) {
+      return { ok: true, already: true };
+    }
+
+    list.items.push({
+      id: String(itemId),
+      addedAt: new Date().toISOString()
+    });
+
+    list.itemsCount = list.items.length;
+    list.updatedAt = new Date().toISOString();
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "add_item",
+      listId: String(listId),
+      itemId: String(itemId)
+    });
+
+    return { ok: true, listId: String(listId), itemId: String(itemId) };
+  }
+
+  async function removeLibraryItemFromList(listId, itemId) {
+    if (!listId || !itemId) return { ok: false };
+
+    ensureListsSeeded();
+
+    const state = _safeState();
+    state.lists = state.lists || [];
+
+    const list = state.lists.find(l => String(l.id) === String(listId));
+    if (!list) return { ok: false, reason: "list_not_found" };
+
+    list.items = Array.isArray(list.items) ? list.items : [];
+
+    const before = list.items.length;
+    list.items = list.items.filter(x => {
+      const id = (typeof x === "string") ? x : x?.id;
+      return String(id) !== String(itemId);
+    });
+
+    list.itemsCount = list.items.length;
+    list.updatedAt = new Date().toISOString();
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "remove_item",
+      listId: String(listId),
+      itemId: String(itemId)
+    });
+
+    return { ok: true, removed: before - list.items.length };
+  }
+
+  async function setLists(nextLists = []) {
+    const state = _safeState();
+    state.lists = Array.isArray(nextLists) ? nextLists : [];
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "set_all"
+    });
+
+    return { ok: true, count: state.lists.length };
+  }
+
+  // === perfil / usuario ===
+  async function getUser() {
+    if (_isHttp()) {
+      // Backend real (por partes)
+      const res = await _httpJson("GET", "/user");
+      return res; // esperado: { id, name, handle, email, ... }
+    }
+
+    const state = _safeState();
+    return state.user || null;
+  }
+
+  async function updateUser(patch = {}) {
+    const state = _safeState();
+    state.user = { ...(state.user || {}), ...patch };
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "user",
+      action: "update"
+    });
+
+    return state.user;
+  }
+
+  // === preferencias (dashboard) ===
+  // Regla: la UI NO toca localStorage. Migraciones legacy ocurren solo en FakeBackend.
+  function getUserPreferences() {
+    const state = _safeState();
+    state.user = state.user || {};
+
+    // Preferencias ya migradas por FakeBackend (si existían keys legacy)
+    let theme = state.user.theme;
+    let language = state.user.language;
+
+    // Defaults defensivos
+    theme = (theme === "dark" || theme === "light") ? theme : "light";
+    language = (language === "en" || language === "es") ? language : "es";
+
+    // Persistir en el estado si faltaba (sin tocar localStorage aquí)
+    const patch = {};
+    if (!state.user.theme) patch.theme = theme;
+    if (!state.user.language) patch.language = language;
+
+    if (Object.keys(patch).length > 0) {
+      state.user = { ...state.user, ...patch };
+      if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
+    }
+
+    return { theme, language };
+  }
+
+  async function setUserTheme(theme) {
+    const mode = (theme === "dark" || theme === "light") ? theme : "light";
+    await updateUser({ theme: mode });
+    return { ok: true, theme: mode };
+  }
+
+  async function setUserLanguage(language) {
+    const lang = (language === "en" || language === "es") ? language : "es";
+    await updateUser({ language: lang });
+    return { ok: true, language: lang };
+  }
+
+  // === NOTIFICACIONES ===
+  async function addNotification({ title, text = "", color = "#2563eb", icon = "check" } = {}) {
+    const state = _safeState();
+    state.notifications = state.notifications || [];
+
+    const nowIso = new Date().toISOString();
+
+    const notif = {
+      id: `notif-${Date.now()}`,
+      title: title || "Notificación",
+      text,
+      color,
+      icon,
+      time: "Ahora",
+      createdAt: nowIso
+    };
+
+    // Insertar al principio (más reciente arriba)
+    state.notifications.unshift(notif);
+
+    // Limitar para que no crezcan infinito (UX + rendimiento)
+    if (state.notifications.length > 30) {
+      state.notifications = state.notifications.slice(0, 30);
+    }
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+      _emitDataChanged({ kind: "notifications", action: "add", notificationId: String(notif?.id || "") });
+    }
+
+    return notif;
+  }
+
+  // === RACHA (notificación por hitos) ===
+  async function maybeNotifyStreak() {
+    const state = _safeState();
+    state.user = state.user || {};
+
+    // racha actual
+    const stats = await getHomeStats();
+    const streak = Number(stats?.streakDays || 0);
+
+    // guardamos el último hito notificado para NO spamear
+    const lastNotified = Number(state.user.lastStreakNotified || 0);
+
+    // hitos (puedes cambiarlos)
+    const milestones = [3, 7, 14, 30];
+
+    // buscamos el mayor hito alcanzado
+    const achieved = milestones.filter((m) => streak >= m).pop() || 0;
+
+    // si no hay hito, o ya lo notificamos, salimos
+    if (achieved <= 0) return { ok: true, notified: false };
+    if (achieved <= lastNotified) return { ok: true, notified: false };
+
+    // actualizar marca (regla de oro: UI→ApiClient→FakeBackend, con evento oficial)
+    await updateUser({ lastStreakNotified: achieved });
+
+    // Coherencia con Home:
+    // - warm desde 3 (check)
+    // - hot desde 7 (flame)
+    const hot = achieved >= 7;
+    const color = hot ? "#f97316" : "#2563eb";
+    const icon = hot ? "flame" : "check";
+
+    await addNotification({
+      title: `Racha de ${achieved} días`,
+      text: "Sigue así. Hoy también cuenta.",
+      color,
+      icon
+    });
+
+    return { ok: true, notified: true, streak: achieved };
+  }
+
+  // Deshacer activities recientes de un item (para "Deshacer" de Retomar)
+  // Persistencia: FakeBackend. UI: ApiClient (evento oficial).
+  async function undoActivitiesForItemSince(itemId, sinceIso) {
+    if (!itemId || !sinceIso) return { ok: false, reason: "missing_params" };
+
+    if (typeof FakeBackend === "undefined" || typeof FakeBackend.removeActivitiesForItemSince !== "function") {
+      return { ok: false, reason: "backend_not_available" };
+    }
+
+    const state = _safeState();
+    state.user = state.user || {};
+
+    const res = FakeBackend.removeActivitiesForItemSince(
+      String(itemId),
+      String(sinceIso),
+      ["resume", "progress", "completed"]
+    );
+
+    const removed = Number(res?.removed || 0);
+
+    // 1) Emitimos cambio de activities (para que app-core dispare home-refresh)
+    _emitDataChanged({
+      kind: "activities",
+      action: "undo_since",
+      itemId: String(itemId),
+      removed
+    });
+
+    // 2) Reconciliar lastStreakNotified:
+    // Si el undo reduce la racha, ajustamos lastStreakNotified hacia abajo
+    // para evitar que el usuario quede "bloqueado" sin volver a recibir hitos.
+    try {
+      const stats = await getHomeStats();
+      const streak = Number(stats?.streakDays || 0);
+
+      const milestones = [3, 7, 14, 30];
+      const achievedNow = milestones.filter((m) => streak >= m).pop() || 0;
+
+      const lastNotified = Number(state.user.lastStreakNotified || 0);
+
+      if (lastNotified > achievedNow) {
+        // Actualizamos usuario (evento oficial kind:"user")
+        await updateUser({ lastStreakNotified: achievedNow });
+      }
+    } catch (e) {
+      console.error("undoActivitiesForItemSince: reconcile streak failed", e);
+      // defensivo: no bloqueamos el undo si falla esta parte
+    }
+
+    return { ok: true, removed };
+  }
+
+  // Retomar contenido (se usa desde Home > Backlog)
+  async function resumeLibraryItem(itemId) {
+    if (!itemId) return { ok: false };
+
+    const state = _safeState();
+    state.library = state.library || [];
+    state.activities = state.activities || [];
+
+    const item = state.library.find((i) => String(i.id) === String(itemId));
+    if (!item) return { ok: false };
+
+    // Calcular días desde la última actividad (antes de tocar updatedAt)
+    const now = new Date();
+    let lastDate = null;
+
+    (state.activities || []).forEach((act) => {
+      if (String(act.targetId) !== String(itemId)) return;
+      if (!act.createdAt) return;
+      const d = new Date(act.createdAt);
+      if (!lastDate || d > lastDate) lastDate = d;
+    });
+
+    if (!lastDate) {
+      const fallbackIso = item.updatedAt || item.createdAt;
+      lastDate = fallbackIso ? new Date(fallbackIso) : now;
+    }
+
+    const daysSinceLast = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+
+    // Actualizar timestamps
+    const nowIso = now.toISOString();
+    item.updatedAt = nowIso;
+    if ("lastActivityAt" in item) item.lastActivityAt = nowIso;
+
+    // Si estaba no empezado, al retomarlo pasa a “en progreso”
+    if (item.status === "not_started") {
+      if (item.type === "serie") item.status = "watching";
+      else if (item.type === "book") item.status = "reading";
+      else if (item.type === "game") item.status = "playing";
+      else item.status = "in_progress";
+    }
+
+    // Guardar estado
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    // Registrar actividad (mantener tu sistema actual)
+    if (typeof FakeBackend !== "undefined" && typeof FakeBackend.addActivity === "function") {
+      FakeBackend.addActivity({
+        type: "resume",
+        targetType: "library_item",
+        targetId: item.id,
+        minutes: 0
+      });
+    }
+
+    // Notificación automática SOLO si estaba “olvidado de verdad”
+    // (umbral: 7 días -> warm, 14 -> hot)
+    if (daysSinceLast >= 7) {
+      const hot = daysSinceLast >= 14;
+
+      await addNotification({
+        title: `Retomado: ${item.title}`,
+        text: `Volviste después de ${daysSinceLast} días.`,
+        color: hot ? "#f97316" : "#2563eb",
+        icon: hot ? "flame" : "resume"
+      });
+    }
+
+    _emitDataChanged({ kind: "library", action: "resume", itemId: String(item.id) });
+    return { ok: true, daysSinceLast, itemId: item.id, title: item.title };
+  }
+
+  // Completar contenido (desde Biblioteca / Home)
+  async function completeLibraryItem(itemId) {
+    if (!itemId) return { ok: false };
+
+    const state = _safeState();
+    state.library = state.library || [];
+    state.activities = state.activities || [];
+
+    const item = state.library.find(i => String(i.id) === String(itemId));
+    if (!item) return { ok: false };
+
+    // Si ya estaba completado, no hacemos nada
+    if (item.progress >= 100 || item.status === "completed") {
+      return { ok: true, alreadyCompleted: true };
+    }
+
+    // Marcar como completado
+    item.progress = 100;
+    item.status = "completed";
+    item.updatedAt = new Date().toISOString();
+
+    // Guardar estado
+    if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
+
+    // Registrar actividad
+    if (typeof FakeBackend !== "undefined" && typeof FakeBackend.addActivity === "function") {
+      FakeBackend.addActivity({
+        type: "completed",
+        targetType: "library_item",
+        targetId: item.id,
+        minutes: 0
+      });
+    }
+
+    // Notificación automática
+    await addNotification({
+      title: "Completado",
+      text: item.title,
+      color: "#16a34a",
+      icon: "check"
+    });
+
+    await maybeNotifyStreak();
+
+    _emitDataChanged({ kind: "library", action: "complete", itemId: String(itemId) });
+    return { ok: true, itemId: item.id, title: item.title };
+  }
+
+  async function progressLibraryItem(itemId, delta = 5) {
+    
+    // =========================
+    // HTTP (backend real)
+    // =========================
+    if (_isHttp()) {
+      const targetId = String(itemId);
+
+      // Traemos item actual del backend
+      const current = await _httpJson("GET", `/library/${encodeURIComponent(targetId)}`);
+      if (!current) return { ok: false, reason: "not_found" };
+
+      const prev = Number(current.progress ?? 0);
+      const safeDelta = Math.max(1, Math.min(100, Number(delta || 0)));
+      const next = Math.min(100, Math.max(0, prev + safeDelta));
+
+      const justCompleted = next >= 100 && prev < 100;
+
+      const payload = {
+        ...current,
+        progress: next,
+        status: next >= 100 ? "completed" : current.status,
+        logActivity: true
+      };
+
+      const res = await _httpJson(
+        "PATCH",
+        `/library/${encodeURIComponent(targetId)}`,
+        payload
+      );
+
+      _emitDataChanged({ kind: "library", action: "progress", itemId: targetId });
+
+      return { ok: true, justCompleted, itemId: targetId };
+    }
+
+    if (itemId == null) return { ok: false, reason: "missing_id" };
+
+    const state = _safeState();
+
+    _emitDataChanged({ kind: "library", action: "progress", itemId: targetId });
+
+    return { ok: true, justCompleted, itemId: targetId };
+  }
+
+  // === biblioteca ===
+  async function getLibrary() {
+    if (_isHttp()) {
+      // Backend real (por partes)
+      const res = await _httpJson("GET", "/library");
+      // Permitimos dos formatos: array directo o wrapper { items: [...] }
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.items)) return res.items;
+      return [];
+    }
+
+    // modo local (demo)
+    const state = _safeState();
+    return state.library || [];
+  }
+
+  async function getLibraryItemById(itemId) {
+    if (itemId == null) return null;
+    const state = _safeState();
+    const library = state.library || [];
+    return library.find(i => String(i.id) === String(itemId)) || null;
+  }
+
+  async function updateLibraryItem(updatedItem, { logActivity = true } = {}) {
+    if (!updatedItem?.id) return { ok: false, reason: "missing_id" };
+
+    // =========================
+    // HTTP (backend real)
+    // =========================
+    if (_isHttp()) {
+      // Nota: el backend debe decidir si registra activity (progress/completed) según logActivity
+      // para mantener racha coherente sin que el cliente toque /activities directamente.
+      const itemId = String(updatedItem.id);
+
+      const payload = {
+        ...updatedItem,
+        logActivity: !!logActivity
+      };
+
+      const res = await _httpJson("PATCH", `/library/${encodeURIComponent(itemId)}`, payload);
+
+      // Permitimos que el backend devuelva { item } o el item directo
+      const item = (res && res.item) ? res.item : res;
+
+      _emitDataChanged({ kind: "library", action: "update", itemId });
+
+      return { ok: true, item };
+    }
+
+    // =========================
+    // LOCAL (FakeBackend)
+    // =========================
+    const state = _safeState();
+    state.library = state.library || [];
+
+    const idx = state.library.findIndex(i => String(i.id) === String(updatedItem.id));
+    if (idx === -1) return { ok: false, reason: "not_found" };
+
+    const prev = state.library[idx];
+    const next = {
+      ...prev,
+      ...updatedItem,
+      meta: { ...(prev.meta || {}), ...(updatedItem.meta || {}) },
+      updatedAt: new Date().toISOString()
+    };
+
+    const pct = Math.max(0, Math.min(100, Number(next.progress ?? 0)));
+    next.progress = pct;
+
+    if (pct >= 100) next.status = "completed";
+    if (pct <= 0 && next.status === "completed") next.status = "not_started";
+
+    state.library[idx] = next;
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+
+      if (logActivity) {
+        const actType =
+          pct >= 100 ? "completed" :
+          pct > 0 ? "progress" :
+          null;
+
+        if (actType) {
+          FakeBackend.addActivity({
+            type: actType,
+            targetType: "library_item",
+            targetId: next.id,
+            minutes: 20
+          });
+
+          await maybeNotifyStreak();
+        }
+      }
+    }
+
+    _emitDataChanged({ kind: "library", action: "update", itemId: String(next.id) });
+
+    return { ok: true, item: next };
+  }
+
+  async function deleteLibraryItem(itemId) {
+    if (itemId == null) return { ok: false, reason: "missing_id" };
+
+    const idStr = String(itemId);
+
+    // =========================
+    // HTTP (backend real)
+    // =========================
+    if (_isHttp()) {
+      await _httpJson("DELETE", `/library/${encodeURIComponent(idStr)}`);
+
+      _emitDataChanged({ kind: "library", action: "delete", itemId: idStr });
+
+      return { ok: true };
+    }
+
+    // =========================
+    // LOCAL (FakeBackend)
+    // =========================
+    const state = _safeState();
+    state.library = state.library || [];
+    state.lists = state.lists || [];
+
+    const idx = state.library.findIndex(i => String(i.id) === idStr);
+    if (idx === -1) return { ok: false, reason: "not_found" };
+
+    const removed = state.library[idx];
+
+    state.library.splice(idx, 1);
+
+    // integridad: quitar de listas donde aparezca
+    state.lists.forEach((list) => {
+      const arr = Array.isArray(list.items) ? list.items : [];
+      const before = arr.length;
+
+      const filtered = arr.filter((entry) => {
+        const id = (typeof entry === "string") ? entry : entry?.id;
+        return String(id) !== idStr;
+      });
+
+      if (filtered.length !== before) {
+        list.items = filtered;
+        list.itemsCount = filtered.length;
+        list.updatedAt = new Date().toISOString();
+      }
+    });
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({ kind: "library", action: "delete", itemId: idStr });
+
+    return { ok: true, removed };
+  }
+
+  async function restoreLibraryItem(item, { toFront = true } = {}) {
+    if (!item?.id) return { ok: false, reason: "missing_id" };
+
+    const state = _safeState();
+    state.library = state.library || [];
+
+    const exists = state.library.some(i => String(i.id) === String(item.id));
+    if (exists) return { ok: true, already: true, item };
+
+    const restored = {
+      ...item,
+      updatedAt: new Date().toISOString()
+    };
+    if (!restored.createdAt) restored.createdAt = restored.updatedAt;
+
+    if (toFront) state.library.unshift(restored);
+    else state.library.push(restored);
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+      _emitDataChanged({ kind: "library", action: "restore", itemId: String(item.id) });
+    }
+
+    return { ok: true, item: restored };
+  }
+
+  // === EXPLORE: ocultados (persistente en user) ===
+  function _ensureExploreUserState(state) {
+    state.user = state.user || {};
+    state.user.explore = state.user.explore || {};
+    state.user.explore.dismissed = Array.isArray(state.user.explore.dismissed)
+      ? state.user.explore.dismissed
+      : [];
+    return state.user.explore;
+  }
+
+  // === EXPLORE: UI state (filtros/orden/búsqueda) persistente en user ===
+  function _ensureExploreUIState(state) {
+    const explore = _ensureExploreUserState(state);
+    explore.ui = explore.ui && typeof explore.ui === "object" ? explore.ui : {};
+    return explore.ui;
+  }
+
+  async function getExploreUIState() {
+    const state = _safeState();
+    const ui = _ensureExploreUIState(state);
+
+    return {
+      typeFilter: (ui.typeFilter && typeof ui.typeFilter === "string") ? ui.typeFilter : "all",
+      sortMode: (ui.sortMode && typeof ui.sortMode === "string") ? ui.sortMode : "recent",
+      searchTerm: (ui.searchTerm && typeof ui.searchTerm === "string") ? ui.searchTerm : ""
+    };
+  }
+
+  async function setExploreUIState(patch = {}) {
+    const state = _safeState();
+    const ui = _ensureExploreUIState(state);
+
+    const next = {
+      ...ui,
+      ...patch
+    };
+
+    // defensivo: solo strings
+    if (typeof next.typeFilter !== "string") next.typeFilter = "all";
+    if (typeof next.sortMode !== "string") next.sortMode = "recent";
+    if (typeof next.searchTerm !== "string") next.searchTerm = "";
+
+    state.user.explore.ui = next;
+
+    if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
+
+    return { ok: true, ui: next };
+  }
+
+  // === LIBRARY: UI state (orden) persistente en user ===
+  function _ensureLibraryUIState(state) {
+    state.user = state.user || {};
+    state.user.library = state.user.library || {};
+    state.user.library.ui = state.user.library.ui && typeof state.user.library.ui === "object"
+      ? state.user.library.ui
+      : {};
+    return state.user.library.ui;
+  }
+
+  function getLibraryUIState() {
+    const state = _safeState();
+    const ui = _ensureLibraryUIState(state);
+
+    // La migración de keys legacy se hace en FakeBackend._load()
+    return {
+      sortMode: (ui.sortMode && typeof ui.sortMode === "string") ? ui.sortMode : "recent",
+      typeFilter: (ui.typeFilter && typeof ui.typeFilter === "string") ? ui.typeFilter : "all",
+      statusFilter: (ui.statusFilter && typeof ui.statusFilter === "string") ? ui.statusFilter : "all",
+      searchTerm: (ui.searchTerm && typeof ui.searchTerm === "string") ? ui.searchTerm : ""
+    };
+  }
+
+  async function setLibraryUIState(patch = {}) {
+    const state = _safeState();
+    const ui = _ensureLibraryUIState(state);
+
+    const next = { ...ui, ...patch };
+    if (typeof next.sortMode !== "string") next.sortMode = "recent";
+    if (typeof next.typeFilter !== "string") next.typeFilter = "all";
+    if (typeof next.statusFilter !== "string") next.statusFilter = "all";
+    if (typeof next.searchTerm !== "string") next.searchTerm = "";
+
+    state.user.library.ui = next;
+    if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
+
+    return { ok: true, ui: next };
+  }
+
+  async function getExploreDismissed() {
+    const state = _safeState();
+    const explore = _ensureExploreUserState(state);
+    return explore.dismissed;
+  }
+
+  async function dismissExploreItem(eid) {
+    if (!eid) return { ok: false };
+
+    const state = _safeState();
+    const explore = _ensureExploreUserState(state);
+
+    const key = String(eid);
+    if (!explore.dismissed.includes(key)) {
+      explore.dismissed.unshift(key);
+      // límite razonable para no crecer infinito
+      if (explore.dismissed.length > 500) {
+        explore.dismissed = explore.dismissed.slice(0, 500);
+      }
+    }
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    return { ok: true };
+  }
+
+  async function clearExploreDismissed() {
+    const state = _safeState();
+    const explore = _ensureExploreUserState(state);
+    explore.dismissed = [];
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    return { ok: true };
+  }
+
+  // === biblioteca ===
+  async function createLibraryItem(data = {}) {
+
+    if (_isHttp()) {
+      const res = await _httpJson("POST", "/library", data);
+      _emitDataChanged({ kind: "library", action: "create", itemId: String(res?.id || "") });
+      return res;
+    }
+
+    const state = _safeState();
+    state.library = state.library || [];
+
+    const type = data.type || "pelicula";
+
+    const defaultStatus =
+      type === "book" ? "reading" :
+      type === "game" ? "playing" :
+      type === "serie" ? "watching" :
+      "watching";
+
+    const newItem = {
+      id: String(Date.now()),
+      type,
+      title: (data.title || "").trim(),
+      status: defaultStatus,
+      progress: 0,
+      meta: data.meta || {},
+      cover: data.cover || "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    state.library.push(newItem);
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({ kind: "library", action: "create", itemId: String(newItem.id) });
+
+    return newItem;
+  }
+
+  // === DASHBOARD HOME: métricas ===
+  async function getHomeStats() {
+    const state = _safeState();
+    const activities = state.activities || [];
+    const library = state.library || [];
+    const now = new Date();
+
+    const weekAgo = new Date(now);
+    weekAgo.setDate(now.getDate() - 7);
+
+    function _dateKeyLocal(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    const todayKey = _dateKeyLocal(now);
+
+    let weeklyMinutes = 0;
+    let todayMinutes = 0;
+    let completedThisYear = 0;
+    let completedToday = 0;
+
+    const MEANINGFUL_ACTIVITY_TYPES = new Set(["progress", "completed"]); // (resume NO cuenta)
+
+    activities.forEach((act) => {
+      if (!MEANINGFUL_ACTIVITY_TYPES.has(act.type)) return;
+      const d = new Date(act.createdAt);
+      const dateKey = _dateKeyLocal(d);
+
+      // minutos esta semana
+      if (act.minutes && d >= weekAgo && d <= now) {
+        weeklyMinutes += act.minutes;
+      }
+
+      // minutos hoy
+      if (act.minutes && dateKey === todayKey) {
+        todayMinutes += act.minutes;
+      }
+
+      // completados este año / hoy
+      if (act.type === "completed") {
+        if (d.getFullYear() === now.getFullYear()) {
+          completedThisYear += 1;
+        }
+        if (dateKey === todayKey) {
+          completedToday += 1;
+        }
+      }
+    });
+
+    const inProgressCount = library.filter((item) => {
+      const pct = Number(item.progress ?? 0);
+
+      // En progreso = progreso real, no solo status
+      if (pct <= 0) return false;
+      if (pct >= 100) return false;
+      if (item.status === "completed") return false;
+
+      return true;
+    }).length;
+
+    // racha: días seguidos con al menos una actividad
+    const activeDays = new Set(
+      activities
+        .filter((a) => MEANINGFUL_ACTIVITY_TYPES.has(a.type))
+        .map((a) => _dateKeyLocal(new Date(a.createdAt)))
+    );
+
+    let streakDays = 0;
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+
+    while (true) {
+      const key = _dateKeyLocal(cursor);
+      if (activeDays.has(key)) {
+        streakDays += 1;
+        cursor.setDate(cursor.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    return {
+      weeklyMinutes,
+      todayMinutes,
+      inProgressCount,
+      completedThisYear,
+      completedToday,
+      streakDays
+    };
+  }
+
+
+  // === DASHBOARD HOME: última actividad ===
+  async function getLastActivityDetailed() {
+    if (typeof FakeBackend === "undefined") return null;
+    const state = _safeState();
+    // Última actividad "meaningful": progress / completed (resume NO cuenta)
+    const activities = Array.isArray(state.activities) ? state.activities : [];
+    const MEANINGFUL = new Set(["progress", "completed"]);
+
+    const last = [...activities]
+      .filter((a) => a && MEANINGFUL.has(a.type) && a.targetId && a.createdAt)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
+
+    if (!last) return null;
+
+    const library = state.library || [];
+    const item = library.find((i) => i.id === last.targetId);
+
+    if (!item) {
+      return {
+        id: null,
+        title: "Actividad reciente",
+        meta: "",
+        timeAgo: _formatTimeAgo(last.createdAt),
+        progressPercent: 0,
+        progressLabel: ""
+      };
+    }
+
+    let meta = "";
+
+    // Serie: meta real (sin "?")
+    if (item.type === "serie") {
+      const s = Number(item.meta?.season);
+      const e = Number(item.meta?.episode);
+
+      if (Number.isFinite(s) && s > 0 && Number.isFinite(e) && e > 0) {
+        meta = `T${s} · E${e}`;
+      } else {
+        meta = ""; // sin fallback
+      }
+    }
+
+    // Libro: meta real páginas (sin fallback)
+    if (item.type === "book") {
+      const pr = Number(item.meta?.pagesRead);
+      const tp = Number(item.meta?.totalPages);
+
+      if (Number.isFinite(pr) && pr > 0 && Number.isFinite(tp) && tp > 0) {
+        meta = `${pr} / ${tp} páginas`;
+      } else {
+        meta = ""; // sin fallback
+      }
+    }
+
+    // Película/Juego: meta % real
+    if (item.type === "pelicula" || item.type === "game") {
+      const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
+      meta = `${Math.round(pct)}%`;
+    }
+
+    const progressPercent = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
+
+    let progressLabel = "";
+    if (item.type === "book") {
+      // Para libro, dejamos la barra + porcentaje simple (la meta ya son páginas)
+      progressLabel = `${Math.round(progressPercent)}%`;
+    } else {
+      progressLabel = `${Math.round(progressPercent)}%`;
+    }
+
+    return {
+      id: item.id,
+      type: item.type,
+      title: item.title,
+      meta,
+      timeAgo: _formatTimeAgo(last.createdAt),
+      progressPercent,
+      progressLabel,
+      cover: item.cover || null
+    };
+  }
+
+  // === DASHBOARD HOME: feed de actividad (lista) ===
+  async function getRecentActivitiesDetailed(limit = 30, filter = "all") {
+    const state = _safeState();
+    const activities = Array.isArray(state.activities) ? state.activities : [];
+    const library = Array.isArray(state.library) ? state.library : [];
+
+    const MEANINGFUL = new Set(["progress", "completed"]); // resume NO cuenta
+
+    function typeLabel(t) {
+      if (t === "progress") return "Progreso";
+      if (t === "completed") return "Completado";
+      return "Actividad";
+    }
+
+    function formatTimeAgo(iso) {
+      return _formatTimeAgo(iso);
+    }
+
+    function metaForItem(item) {
+      if (!item) return "";
+
+      // Serie: T# · E# (sin fallback)
+      if (item.type === "serie") {
+        const s = Number(item.meta?.season);
+        const e = Number(item.meta?.episode);
+        if (Number.isFinite(s) && s > 0 && Number.isFinite(e) && e > 0) return `T${s} · E${e}`;
+        return "";
+      }
+
+      // Libro: X / Y páginas (sin fallback)
+      if (item.type === "book") {
+        const pr = Number(item.meta?.pagesRead);
+        const tp = Number(item.meta?.totalPages);
+        if (Number.isFinite(pr) && pr > 0 && Number.isFinite(tp) && tp > 0) return `${pr} / ${tp} páginas`;
+        return "";
+      }
+
+      // Película / Juego: % real
+      if (item.type === "pelicula" || item.type === "game") {
+        const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
+        return `${Math.round(pct)}%`;
+      }
+
+      return "";
+    }
+
+    const filtered = activities
+      .filter((a) => MEANINGFUL.has(a.type))
+      .filter((a) => {
+        if (filter === "all") return true;
+        return a.type === filter;
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, limit)
+      .map((act) => {
+        const item = library.find((i) => i.id === act.targetId) || null;
+
+        return {
+          id: act.id,
+
+          // TIPO DE ACTIVIDAD (no de contenido)
+          activityType: act.type, // "progress" | "completed"
+
+          // Tipo real del contenido (para iconos secundarios si quieres)
+          itemType: item?.type || "other",
+
+          itemId: act.targetId || null,
+          itemTitle: item?.title || "Contenido",
+          itemMeta: metaForItem(item),
+          timeAgo: _formatTimeAgo(act.createdAt)
+        };
+      });
+
+    return filtered;
+  }
+
+  // === DASHBOARD HOME: reto mensual ===
+  async function getMonthlyChallenge() {
+    const state = _safeState();
+    const goal = (state.goals && state.goals[0]) || null;
+    if (!goal) return null;
+
+    const now = new Date();
+    const end = new Date(goal.periodEnd + "T23:59:59");
+    const diffMs = end - now;
+    const diffD = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+    return {
+      id: goal.id,
+      title: goal.title,
+      description: goal.description,
+      current: goal.current,
+      target: goal.target,
+      daysRemaining: diffD,
+      rewardLabel: goal.rewardLabel
+    };
+  }
+
+  // Backlog
+  async function getBacklogItems(limit = 4, minDays = 5) {
+    const state = _safeState();
+    const library = state.library || [];
+    const activities = state.activities || [];
+    const now = new Date();
+
+    // Regla definitiva: días para considerar “olvidado” según tipo
+    const BACKLOG_MIN_DAYS_BY_TYPE = {
+      serie: 3,
+      book: 5,
+      game: 7,
+      pelicula: 10,
+      default: minDays
+    };
+
+    function minDaysForType(type) {
+      return BACKLOG_MIN_DAYS_BY_TYPE[type] ?? BACKLOG_MIN_DAYS_BY_TYPE.default;
+    }
+
+
+    // Mapa: itemId -> última fecha de actividad
+    const lastActivityMap = new Map();
+    activities.forEach((act) => {
+      if (!act.targetId || !act.createdAt) return;
+      const prev = lastActivityMap.get(act.targetId);
+      const curr = new Date(act.createdAt);
+      if (!prev || curr > prev) {
+        lastActivityMap.set(act.targetId, curr);
+      }
+    });
+
+    function progressLabelFor(item) {
+      const pct = item.progress ?? 0;
+
+      if (item.type === "serie" && item.meta) {
+        const s = item.meta.season || 1;
+        const e = item.meta.episode || 1;
+        return `T${s} · E${e}`;
+      }
+      if (item.type === "book" && item.meta?.pagesRead && item.meta?.totalPages) {
+        return `${item.meta.pagesRead}/${item.meta.totalPages} páginas`;
+      }
+      if (item.type === "game") {
+        return `${pct}% completado`;
+      }
+      return `${pct}% completado`;
+    }
+
+    const candidates = library
+      .filter((item) => {
+        const pct = Number(item.progress ?? 0);
+        // Solo “olvidado” si está realmente en progreso (1..99)
+        return pct > 0 && pct < 100 && item.status !== "completed";
+      })
+      .map((item) => {
+        const fallbackDate = item.updatedAt || item.createdAt || now.toISOString();
+        const lastDate = lastActivityMap.get(item.id) || new Date(fallbackDate);
+        const diffMs = now - lastDate;
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        return {
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          daysSinceLast: days,
+          progressPercent: item.progress ?? 0,
+          progressLabel: progressLabelFor(item),
+          cover: item.cover || ""
+        };
+      })
+      .filter((row) => row.daysSinceLast >= minDaysForType(row.type));
+
+    // Ordenar por más olvidado primero
+    candidates.sort((a, b) => b.daysSinceLast - a.daysSinceLast);
+
+    return candidates.slice(0, limit);
+  }
+
+  // === DASHBOARD HOME: sugerencias ===
+  async function getSuggestions() {
+    const state = _safeState();
+    const library = state.library || [];
+    if (!library.length) return [];
+
+    // Por ahora: coger los 3 primeros como “sugerencias”
+    return library.slice(0, 3).map((item) => ({
+      id: item.id,
+      title: item.title,
+      note:
+        item.status === "watching"
+          ? "Serie en progreso."
+          : item.status === "reading"
+          ? "Lectura en curso."
+          : item.status === "playing"
+          ? "Partida abierta."
+          : "En tu biblioteca."
+    }));
+  }
+
+  // === NOTIFICACIONES (dashboard) ===
+  async function getNotifications() {
+    const state = _safeState();
+    return state.notifications || [];
+  }
+
+  async function dismissNotification(notificationId) {
+    const state = _safeState();
+    state.notifications = (state.notifications || []).filter(
+      (n) => String(n.id) !== String(notificationId)
+    );
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+      _emitDataChanged({ kind: "notifications", action: "dismiss", notificationId: String(notificationId) });
+    }
+
+    return { ok: true };
+  }
+
+  async function clearNotifications() {
+    const state = _safeState();
+    state.notifications = [];
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+      _emitDataChanged({ kind: "notifications", action: "clear_all" });
+    }
+
+    return { ok: true };
+  }
+
+  async function setNotifications(nextList = []) {
+    const state = _safeState();
+    state.notifications = Array.isArray(nextList) ? nextList : [];
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+      _emitDataChanged({ kind: "notifications", action: "set_all" });
+    }
+
+    return { ok: true, count: state.notifications.length };
+  }
+
+  // === DASHBOARD HOME: "Continúa donde lo dejaste" ===
+  async function getContinueWatchingItems() {
+    const state = _safeState();
+    const library = state.library || [];
+
+    function progressLabelFor(item) {
+      const pct = item.progress ?? 0;
+
+      // Si está completado
+      if (pct >= 100) {
+        if (item.type === "book") return "Libro completado";
+        if (item.type === "serie") return "Serie completada";
+        if (item.type === "game") return "Juego completado";
+        return "Completado";
+      }
+
+      if (item.type === "serie" && item.meta) {
+        const s = item.meta.season || 1;
+        const e = item.meta.episode || 1;
+        return `T${s} · E${e} · ${pct}%`;
+      }
+
+      if (item.type === "book" && item.meta?.pagesRead && item.meta?.totalPages) {
+        return `${item.meta.pagesRead}/${item.meta.totalPages} páginas`;
+      }
+
+      if (item.type === "game") {
+        return `${pct}% completado`;
+      }
+
+      return `${pct}% completado`;
+    }
+
+    return library.map((item) => {
+      const pct = Number(item.progress ?? 0);
+
+      const status =
+        (pct >= 100 || item.status === "completed")
+          ? "completed"
+          : (pct <= 0)
+            ? "not_started"
+            : "in_progress";
+
+      return {
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        status,
+        progressPercent: pct,
+        progressLabel: progressLabelFor(item),
+        lastActivityAt: item.updatedAt || item.createdAt,
+        platform: item.meta?.platform || null,
+        cover: item.cover || null
+      };
+    });
+  }
+
+  // === PROGRESO RÁPIDO (por tipo) ===
+  async function applyQuickProgress(itemId) {
+    if (!itemId) return { ok: false };
+
+    const state = _safeState();
+    state.library = state.library || [];
+
+    const idx = state.library.findIndex(i => String(i.id) === String(itemId));
+    if (idx === -1) return { ok: false, reason: "item_not_found" };
+
+    const item = state.library[idx];
+    const type = item.type || "generic";
+
+    const prevPct = Number(item.progress ?? 0);
+    const meta = { ...(item.meta || {}) };
+
+    let nextPct = prevPct;
+    let deltaLabel = "";
+    let justCompleted = false;
+
+    // Reglas del producto
+    if (type === "serie") {
+      const prevS = Number(meta.season || 1);
+      const prevE = Number(meta.episode || 0);
+
+      let s = prevS;
+      let e = prevE + 1;
+
+      const epsPerSeason = Number(meta.episodesPerSeason || 0);
+      if (epsPerSeason > 0 && e > epsPerSeason) {
+        s = s + 1;
+        e = 1;
+      }
+
+      meta.season = s;
+      meta.episode = e;
+
+      nextPct = Math.min(100, prevPct + 5);
+      deltaLabel = `T${s} · E${e}`;
+    }
+    else if (type === "book") {
+      const total = Number(meta.totalPages || 0);
+      const prevRead = Number(meta.pagesRead || 0);
+
+      if (total > 0) {
+        const nextRead = Math.min(total, prevRead + 20);
+        meta.pagesRead = nextRead;
+        meta.totalPages = total;
+
+        nextPct = Math.min(100, Math.round((nextRead / total) * 100));
+        deltaLabel = `+${nextRead - prevRead} páginas`;
+      } else {
+        meta.pagesRead = prevRead + 20;
+        nextPct = Math.min(100, prevPct + 5);
+        deltaLabel = "+20 páginas";
+      }
+    }
+    else if (type === "pelicula") {
+      nextPct = Math.min(100, prevPct + 10);
+      deltaLabel = "+10%";
+    }
+    else if (type === "game") {
+      nextPct = Math.min(100, prevPct + 5);
+      deltaLabel = "+5%";
+    }
+    else {
+      nextPct = Math.min(100, prevPct + 5);
+      deltaLabel = "+5%";
+    }
+
+    const nextStatus =
+      (nextPct >= 100) ? "completed" :
+      (nextPct <= 0) ? "not_started" :
+      "in_progress";
+
+    justCompleted = (prevPct < 100 && nextPct >= 100);
+
+    const nowIso = new Date().toISOString();
+
+    const updated = {
+      ...item,
+      progress: nextPct,
+      status: nextStatus,
+      meta,
+      updatedAt: nowIso
+    };
+
+    state.library[idx] = updated;
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+
+      FakeBackend.addActivity({
+        type: justCompleted ? "completed" : "progress",
+        targetType: "library_item",
+        targetId: String(itemId),
+        minutes: 20,
+        createdAt: nowIso
+      });
+    }
+
+    await maybeNotifyStreak();
+
+    _emitDataChanged({
+      kind: "library",
+      action: "quick_progress",
+      itemId: String(itemId)
+    });
+
+    return {
+      ok: true,
+      itemId: String(itemId),
+      type,
+      prevPct,
+      nextPct,
+      deltaLabel,
+      justCompleted
+    };
+  }
+
+  return {
+    login,
+    register,
+    logout,
+    // transport (local/http)
+    setTransport,
+    setBaseUrl,
+    getTransportInfo,
+    getCurrentSession,
+    // perfil
+    getUser,
+    updateUser,
+    getUserPreferences,
+    setUserTheme,
+    setUserLanguage,
+    // explorar
+    getExploreFeed,
+    getExploreDismissed,
+    dismissExploreItem,
+    clearExploreDismissed,
+    getListsCountByLibraryMatch,
+    getExploreUIState,
+    setExploreUIState,
+    getListsCountMapByLibraryKey,
+    getLibraryUIState,
+    setLibraryUIState,
+    // listas
+    getLists,
+    getListsContainingItem,
+    createList,
+    updateList,
+    deleteList,
+    addLibraryItemToList,
+    removeLibraryItemFromList,
+    setLists,
+    getRecentActivitiesDetailed,
+    // libreria
+    createLibraryItem,
+    getLibrary,
+    getLibraryItemById,
+    updateLibraryItem,
+    deleteLibraryItem,
+    restoreLibraryItem,
+    // dashboard
+    getHomeStats,
+    getLastActivityDetailed,
+    getMonthlyChallenge,
+    getSuggestions,
+    getContinueWatchingItems,
+    getBacklogItems,
+
+    // notificaciones
+    getNotifications,
+    dismissNotification,
+    clearNotifications,
+    setNotifications,
+    addNotification,
+    
+    // acciones 
+    completeLibraryItem,
+    resumeLibraryItem,
+    progressLibraryItem,
+    applyQuickProgress,
+    undoActivitiesForItemSince,
+    maybeNotifyStreak
+  };
+})();
