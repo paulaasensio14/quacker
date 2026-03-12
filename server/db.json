@@ -1,0 +1,48 @@
+{
+  "users": {
+    "u_1772099762586_462046a48d18c": {
+      "profile": {
+        "id": "u_1772099762586_462046a48d18c",
+        "email": "test@quacker.app",
+        "name": "Test User",
+        "handle": "@user",
+        "language": "es",
+        "theme": "light"
+      },
+      "library": []
+    },
+    "u_1772099806327_7e0c19b5010238": {
+      "profile": {
+        "id": "u_1772099806327_7e0c19b5010238",
+        "email": "test2@quacker.app",
+        "name": "Test User 2",
+        "handle": "@user",
+        "language": "es",
+        "theme": "light"
+      },
+      "library": []
+    },
+    "u_1772100562970_94e60b5994908": {
+      "profile": {
+        "id": "u_1772100562970_94e60b5994908",
+        "email": "b1@quacker.app",
+        "name": "User B1",
+        "handle": "@user",
+        "language": "es",
+        "theme": "light"
+      },
+      "library": []
+    },
+    "u_1772184937935_bcbf40acaa4e2": {
+      "profile": {
+        "id": "u_1772184937935_bcbf40acaa4e2",
+        "email": "paulaasensi0812@gmail.com",
+        "name": "Paula Asensio Sánchez",
+        "handle": "@user",
+        "language": "es",
+        "theme": "light"
+      },
+      "library": []
+    }
+  }
+}

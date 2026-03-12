@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  <script>
+    (function () {
+      try {
+        const isDev = String(window.location.port) === "3000";
+        if (!isDev) return;
+
+        // Canonical host en dev para que la cookie de sesión no se pierda
+        if (window.location.hostname === "localhost") {
+          const next = window.location.href.replace("://localhost:", "://127.0.0.1:");
+          window.location.replace(next);
+        }
+      } catch (_) {}
+    })();
+  </script>
+
+  <meta charset="UTF-8" />
+  <title>Quacker · Track Everything You Watch, Read & Play</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="assets/img/logo-quacker.png">
+
+  <!-- FUENTE FREDOKA -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/landing.css">
+
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-logo">
+        <img src="assets/img/logo-quacker.png" alt="Quacker logo">
+      </div>
+      <div class="brand-name">Quacker</div>
+    </div>
+
+    <div class="nav-center">
+      <nav class="nav-pill">
+        <a href="#top" class="nav-link nav-link-pill active">
+          <span class="nav-pill-inner">
+            <span class="nav-pill-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 11.5L12 4l9 7.5" />
+                <path d="M6.5 10.5V19h5v-4h1v4h5v-8.5" />
+              </svg>
+            </span>
+            <span data-i18n="nav_home">Home</span>
+          </span>
+        </a>
+
+        <a href="#how-it-works" class="nav-link" data-i18n="nav_how">How it works</a>
+        <a href="#features"     class="nav-link" data-i18n="nav_features">Features</a>
+        <a href="#contact"      class="nav-link" data-i18n="nav_contact">Contact</a>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <div class="lang-pill">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="es">ES</button>
+      </div>
+
+      <div class="toggle-pill" id="themeToggle" aria-label="Toggle dark mode">
+        <div class="toggle-knob"></div>
+      </div>
+
+      <button class="btn-signin" id="btnSignIn" data-i18n="btn_signin">Sign In</button>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div id="top" class="hero-wrapper">
+    <div class="hero-frame">
+
+        <div class="hero-layout">
+        <div class="hero-text">
+            <p class="hero-kicker" data-i18n="hero_kicker">Track Everything You Love</p>
+
+            <h1 class="hero-title" data-i18n="hero_title">
+            Track Everything You<br>
+            Watch, Read &amp; Play<span class="dot">.</span>
+            </h1>
+
+            <p class="hero-subtitle" data-i18n="hero_subtitle">
+            Quacker helps you keep track of your favorite entertainment,
+            from TV shows to books — all in one cozy place.
+            </p>
+
+            <div class="hero-actions">
+            <button class="btn-primary" id="btnStartTracking" data-i18n="btn_start">
+                Start Tracking
+            </button>
+            <button class="btn-secondary" data-i18n="btn_watch_how">
+                Watch how it works
+            </button>
+            </div>
+
+            <div class="hero-social-proof">
+              <span class="hero-social-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2l3.2 6.8 7.5 1.1-5.4 5.2 1.3 7.4L12 19.8 5.4 22.5l1.3-7.4L1.3 9.9l7.5-1.1L12 2z"></path>
+                </svg>
+              </span>
+
+              <span data-i18n="hero_social">
+                Únete a quienes ya organizan miles de títulos con Quacker.
+              </span>
+            </div>
+        </div>
+
+        <div class="hero-preview">
+            <div class="preview-frame">
+                <div class="preview-inner"></div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+
+  <!-- MAIN SECTIONS -->
+  <main>
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works">
+      <div class="section-header">
+        <p class="section-kicker" data-i18n="how_kicker">How it works</p>
+        <h2 class="section-title" data-i18n="how_title">Three simple steps to stay on track</h2>
+        <p class="section-subtitle" data-i18n="how_subtitle">
+          Quacker turns your messy watchlists into a single, playful place.
+        </p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-badge">1</div>
+          <div class="step-title" data-i18n="how_step1_title">Create your library</div>
+          <div class="step-text" data-i18n="how_step1_text">
+            Add the shows, movies, books and games you’re into. Import or start fresh.
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">2</div>
+          <div class="step-title" data-i18n="how_step2_title">Update as you go</div>
+          <div class="step-text" data-i18n="how_step2_text">
+            Log new episodes, chapters or play sessions. Everything updates instantly.
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">3</div>
+          <div class="step-title" data-i18n="how_step3_title">Discover & set goals</div>
+          <div class="step-text" data-i18n="how_step3_text">
+            Explore new titles, set challenges and let Quacker cheer you on.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="section-header">
+        <p class="section-kicker" data-i18n="features_kicker">Features</p>
+        <h2 class="section-title" data-i18n="features_title">Everything you need in one nest</h2>
+        <p class="section-subtitle" data-i18n="features_subtitle">
+          From a dashboard to detailed stats — everything stays in sync.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-pill">
+            <span class="pill-ico" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 13h8V3H3v10z"></path>
+                <path d="M13 21h8V11h-8v10z"></path>
+                <path d="M13 3h8v6h-8V3z"></path>
+                <path d="M3 15h8v6H3v-6z"></path>
+              </svg>
+            </span>
+            <span data-i18n="feature1_tag">Dashboard</span>
+          </div>
+          <div class="feature-title" data-i18n="feature1_title">Overview</div>
+          <div class="feature-text" data-i18n="feature1_text">Streaks, progress and what's next.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-pill">
+            <span class="pill-ico" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 5h7a3 3 0 0 1 3 3v11H7a3 3 0 0 0-3-3V5z"></path>
+                <path d="M20 5h-7a3 3 0 0 0-3 3v11h7a3 3 0 0 1 3-3V5z"></path>
+              </svg>
+            </span>
+            <span data-i18n="feature2_tag">Library</span>
+          </div>
+          <div class="feature-title" data-i18n="feature2_title">Unified library</div>
+          <div class="feature-text" data-i18n="feature2_text">Series, movies, books and games.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-pill">
+            <span class="pill-ico" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="M21 21l-4.3-4.3"></path>
+              </svg>
+            </span>
+            <span data-i18n="feature3_tag">Explore</span>
+          </div>
+          <div class="feature-title" data-i18n="feature3_title">Discovery</div>
+          <div class="feature-text" data-i18n="feature3_text">Find titles from APIs and catalogs.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-pill">
+            <span class="pill-ico" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19V5"></path>
+                <path d="M20 19H4"></path>
+                <path d="M7 15l3-3 3 2 4-5"></path>
+              </svg>
+            </span>
+            <span data-i18n="feature4_tag">Stats</span>
+          </div>
+          <div class="feature-title" data-i18n="feature4_title">Analytics</div>
+          <div class="feature-text" data-i18n="feature4_text">Trends and insights month by month.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-pill">
+            <span class="pill-ico" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 6h13"></path>
+                <path d="M8 12h13"></path>
+                <path d="M8 18h13"></path>
+                <path d="M3 6h1"></path>
+                <path d="M3 12h1"></path>
+                <path d="M3 18h1"></path>
+              </svg>
+            </span>
+            <span data-i18n="feature5_tag">Lists</span>
+          </div>
+          <div class="feature-title" data-i18n="feature5_title">Custom lists</div>
+          <div class="feature-text" data-i18n="feature5_text">Create, organize and share lists.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-pill">
+            <span class="pill-ico" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="8"></circle>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 2v2"></path>
+                <path d="M22 12h-2"></path>
+              </svg>
+            </span>
+            <span data-i18n="feature6_tag">Goals</span>
+          </div>
+          <div class="feature-title" data-i18n="feature6_title">Challenges</div>
+          <div class="feature-text" data-i18n="feature6_text">Set monthly watch/read/play goals.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-pill">
+            <span class="pill-ico" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v10"></path>
+                <path d="M8 9l4 4 4-4"></path>
+                <path d="M4 17v3h16v-3"></path>
+              </svg>
+            </span>
+            <span data-i18n="feature7_tag">Import</span>
+          </div>
+          <div class="feature-title" data-i18n="feature7_title">Import</div>
+          <div class="feature-text" data-i18n="feature7_text">Bring data from CSV or other services.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-pill">
+            <span class="pill-ico" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21a8 8 0 0 0-16 0"></path>
+                <circle cx="12" cy="8" r="4"></circle>
+              </svg>
+            </span>
+            <span data-i18n="feature8_tag">Profile</span>
+          </div>
+          <div class="feature-title" data-i18n="feature8_title">Profile & notifications</div>
+          <div class="feature-text" data-i18n="feature8_text">Themes, reminders and privacy.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact">
+      <div class="section-header">
+        <p class="section-kicker" data-i18n="contact_kicker">Contact</p>
+        <h2 class="section-title" data-i18n="contact_title">Get in touch</h2>
+        <p class="section-subtitle" data-i18n="contact_subtitle">
+          Send us a message if you have feedback, ideas or want to say hi.
+        </p>
+      </div>
+
+      <div class="contact-layout">
+        <div class="contact-card">
+          <h3 class="contact-card-title" data-i18n="contact_form_title">Send us a message</h3>
+          <form id="contactForm">
+            <div class="form-field">
+              <label class="form-label" for="cname" data-i18n="contact_name_label">Name</label>
+              <input class="form-input" id="cname" name="name"
+                     type="text" placeholder="Your name">
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="cemail" data-i18n="contact_email_label">Email</label>
+              <input class="form-input" id="cemail" name="email"
+                     type="email" placeholder="your@email.com">
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="cmessage" data-i18n="contact_message_label">Message</label>
+              <textarea class="form-textarea" id="cmessage" name="message"
+                        placeholder="Tell us what's on your mind..."></textarea>
+            </div>
+            <button class="btn-submit" type="submit" data-i18n="contact_send">Send Message</button>
+          </form>
+        </div>
+
+        <div class="contact-side">
+            <div class="contact-side-card">
+                <div class="contact-side-avatar">
+                <img src="assets/img/contact-quacker.png" alt="Quacker duck">
+                </div>
+
+                <p data-i18n="contact_side_intro">
+                Seguimos construyendo Quacker y nos encantaría saber cómo te gustaría usarlo.
+                Tu mensaje puede influir en la hoja de ruta:
+                </p>
+
+                <ul>
+                  <li data-i18n="contact_side_li1">Cuéntanos qué estadísticas y paneles te gustaría ver.</li>
+                  <li data-i18n="contact_side_li2">Pide integraciones con tus aplicaciones favoritas.</li>
+                  <li data-i18n="contact_side_li3">Apúntate para probar funciones en beta.</li>
+                </ul>
+
+                <p data-i18n="contact_side_email">
+                ¿Prefieres email? Escríbenos a <strong>hello@quacker.app</strong>.
+                </p>
+            </div>
+        </div>
+
+
+
+      </div>
+    </section>
+  </main>
+  
+  <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- FOOTER -->
+  <footer>
+    © <span id="year"></span> <span data-i18n="footer_text">Quacker. All rights reserved.</span>
+  </footer>
+
+  <!-- ========= MODAL AUTH ========= -->
+  <div class="auth-overlay" id="authOverlay" aria-hidden="true">
+    <div class="auth-card-modal" id="authDialog" role="dialog" aria-modal="true" aria-labelledby="authTitle" tabindex="-1">
+      <button class="auth-close" id="authClose" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6L6 18"></path>
+          <path d="M6 6l12 12"></path>
+        </svg>
+      </button>
+
+      <div class="auth-avatar-wrapper">
+        <div class="auth-avatar-inner">
+          <img src="assets/img/logo-quacker.png" alt="Quacker logo">
+        </div>
+      </div>
+
+      <div class="auth-card-inner">
+        <h1 class="auth-title" id="authTitle" data-i18n="auth_title_login">Welcome back!</h1>
+        <p class="auth-subtitle" id="authSubtitle" data-i18n="auth_subtitle_login">
+          Access your personal library
+        </p>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-mode="login" id="tabLogin" data-i18n="tab_login">
+            Sign In
+          </button>
+          <button class="auth-tab" data-mode="register" id="tabRegister" data-i18n="tab_register">
+            Sign Up
+          </button>
+        </div>
+
+        <form id="authForm">
+          <div class="form-group-auth hidden" id="groupName">
+            <label class="form-label-auth" for="name" data-i18n="auth_name_label">Name</label>
+            <div class="input-wrapper-auth">
+              <span class="input-icon-auth" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21a8 8 0 0 0-16 0"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </span>
+              <input
+                class="input-field-auth"
+                type="text"
+                id="name"
+                name="name"
+                placeholder="Your name"
+                aria-describedby="nameError" 
+                aria-invalid="false"
+              />
+            </div>
+            <p class="field-error-auth hidden" id="nameError"></p>
+          </div>
+
+          <div class="form-group-auth">
+            <label class="form-label-auth" for="email" data-i18n="auth_email_label">Email</label>
+            <div class="input-wrapper-auth">
+              <span class="input-icon-auth" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16v16H4z"></path>
+                  <path d="M4 6l8 7 8-7"></path>
+                </svg>
+              </span>
+              <input
+                class="input-field-auth"
+                type="email"
+                id="email"
+                name="email"
+                placeholder="you@email.com"
+                aria-describedby="emailError"
+                aria-invalid="false"
+                required
+              />
+            </div>
+            <p class="field-error-auth hidden" id="emailError"></p>
+          </div>
+
+          <div class="form-group-auth">
+            <label class="form-label-auth" for="password" data-i18n="auth_password_label">Password</label>
+            <div class="input-wrapper-auth">
+              <span class="input-icon-auth" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+                  <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+                </svg>
+              </span>
+              <input
+                class="input-field-auth"
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Your password"
+                aria-describedby="passwordError"
+                aria-invalid="false"
+                required
+              />
+              <button type="button" class="password-toggle-auth" id="togglePassword" aria-label="Show or hide password">
+                <span aria-hidden="true" id="togglePasswordIcon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+              </button>
+            </div>
+            <p class="field-error-auth hidden" id="passwordError"></p>
+            <div class="forgot-link-auth" id="forgotWrapper">
+              <a href="#" data-i18n="auth_forgot">Forgot your password?</a>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary-auth" id="authSubmitBtn">
+            <span id="submitText" data-i18n="auth_btn_login">Sign In</span>
+
+            <span class="btn-icon" aria-hidden="true" id="authSubmitArrow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h13"></path>
+                <path d="M13 6l6 6-6 6"></path>
+              </svg>
+            </span>
+
+            <span class="btn-spinner hidden" aria-hidden="true" id="authSubmitSpinner">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-3-6.7"></path>
+              </svg>
+            </span>
+          </button>
+
+          <p class="auth-error hidden" id="authError"></p>
+        </form>
+
+        <p class="auth-legal" data-i18n="auth_legal">
+          By signing in you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón volver arriba -->
+  <button
+    id="scrollTopBtn"
+    class="scroll-top-btn"
+    aria-label="Back to top">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
+         stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 15l-6-6-6 6"/>
+    </svg>
+  </button>
+
+  <script src="assets/js/data/api-client.js"></script>
+  <script src="assets/js/app/ui-toast.js"></script>
+  <script src="assets/js/landing/main-landing.js"></script>
+
+</body>
+</html>

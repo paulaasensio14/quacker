@@ -1,0 +1,16 @@
+:root {
+  --bg-body: #0b1724;
+  --text-main: #020617;
+}
+
+/* Aquí puedes poner resets globales, tipografías, etc. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}

@@ -1,0 +1,200 @@
+// assets/js/app/app-core.js
+// Punto de entrada del dashboard.
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await UITheme.init();
+
+  // 1) Iniciar módulos primero (para que escuchen view-change)
+  window.LibraryUI?.init?.();
+  window.ListsModule?.init?.();
+  window.ProfileModule?.init?.();
+  window.ExploreModule?.init?.();
+
+  // Home no es módulo aún, pero si lo exponemos lo iniciaremos aquí
+  window.HomeUI?.init?.();
+
+  // ===== REFRESCO GLOBAL (una sola fuente de verdad) =====
+  // Cuando ApiClient cambia datos reales (biblioteca/listas/notificaciones),
+  // emitimos refrescos oficiales para mantener Home / Explore / Listas sincronizados.
+  document.addEventListener("quacker:data-changed", (e) => {
+    const detail = e?.detail || {};
+    const kind = detail.kind || "";
+    const itemId = detail.itemId ? String(detail.itemId) : null;
+    const listId = detail.listId ? String(detail.listId) : null;
+
+    // 1) Home + notificaciones solo cuando cambia contenido real (no para ajustes de usuario)
+    const affectsHome =
+      kind === "library" ||
+      kind === "lists" ||
+      kind === "notifications" ||
+      kind === "activities" ||
+      kind === "goals";
+
+    if (affectsHome) {
+      document.dispatchEvent(new CustomEvent("quacker:home-refresh"));
+      window.NotificationsUI?.render?.().catch?.(console.error);
+    }
+
+    // 1.b) Si estás en Perfil y cambia el usuario, recargamos el formulario
+    const isProfileActive = document.querySelector("#view-profile")?.classList.contains("is-active");
+    if (isProfileActive && kind === "user") {
+      // Perfil no expone load público ahora, así que re-inicializamos de forma defensiva:
+      // (solo recarga datos del formulario; no duplica listeners porque init ya los bindea una vez)
+      try {
+        // si más adelante expones ProfileModule.load(), cambiamos esto por load().
+        window.ProfileModule?.load?.() || window.ProfileModule?.init?.();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 3) Explore: actualizar contadores "En X listas" cuando cambian listas o biblioteca
+    if (kind === "lists" || kind === "library") {
+      document.dispatchEvent(new CustomEvent("quacker:lists-changed", {
+        detail: { itemId, listId }
+      }));
+    }
+
+    // 4) Si estás en Biblioteca, recargar solo cuando cambian biblioteca o listas
+    const isLibraryActive = document.querySelector("#view-library")?.classList.contains("is-active");
+    if (isLibraryActive && (kind === "library" || kind === "lists")) {
+      window.LibraryUI?.load?.()
+        .then(() => window.LibraryUI?.render?.())
+        .catch(console.error);
+    }
+
+    // 5) Si estás en Listas, recargar solo cuando cambian listas o biblioteca
+    const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
+    if (isListsActive && (kind === "lists" || kind === "library")) {
+      window.ListsModule?.load?.().catch?.(console.error);
+    }
+  });
+
+  // ===== PROFILE MENU (chip arriba derecha) =====
+  const profileChip = $("#profileChip");
+  const profileMenu = $("#profileMenu");
+
+  if (profileChip && profileMenu) {
+    // Abrir/cerrar al hacer click en el chip
+    profileChip.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = profileMenu.classList.toggle("is-open");
+      profileMenu.setAttribute("aria-hidden", String(!isOpen));
+
+      // Si abro el menú de perfil, cierro las notificaciones
+      const notifPanelEl = document.getElementById("notifPanel");
+      if (isOpen && notifPanelEl) {
+        notifPanelEl.classList.remove("is-open");
+      }
+    });
+
+    // Cerrar al clicar fuera
+    document.addEventListener("click", (e) => {
+      if (!profileMenu.classList.contains("is-open")) return;
+      if (!profileMenu.contains(e.target) && !profileChip.contains(e.target)) {
+        profileMenu.classList.remove("is-open");
+        profileMenu.setAttribute("aria-hidden", "true");
+      }
+    });
+
+    // Cerrar con Escape
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        profileMenu.classList.remove("is-open");
+        profileMenu.setAttribute("aria-hidden", "true");
+      }
+    });
+
+    // Acciones del menú
+    profileMenu.addEventListener("click", (e) => {
+      const item = e.target.closest(".profile-menu-item");
+      if (!item) return;
+
+      const action = item.dataset.profileAction;
+
+      switch (action) {
+        case "profile": {
+          // Navegar a la vista de perfil usando el mismo sistema de la sidebar
+          const profileBtn = document.querySelector('.nav-item-btn[data-view="profile"]');
+          if (profileBtn) profileBtn.click();
+          break;
+        }
+        case "settings": {
+          // De momento podemos llevar también a perfil (luego podrás crear vista "settings")
+          const profileBtn = document.querySelector('.nav-item-btn[data-view="profile"]');
+          if (profileBtn) profileBtn.click();
+          break;
+        }
+        case "theme": {
+          const themeToggle = $("#themeToggle");
+          if (themeToggle) themeToggle.click();
+          break;
+        }
+        case "logout": {
+          // Versión sencilla: volver a la landing
+          window.location.href = "index.html";
+          break;
+        }
+      }
+
+      profileMenu.classList.remove("is-open");
+      profileMenu.setAttribute("aria-hidden", "true");
+    });
+  }
+
+  // ===== LANG TOGGLE (persistente en user via ApiClient) =====
+  const langBtns = $all(".lang-btn");
+
+  function applyActiveLang(lang) {
+    langBtns.forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+  }
+
+  // Cargar preferencia inicial
+  (async () => {
+    try {
+      const prefs = await ApiClient.getUserPreferences?.();
+      const lang = (prefs?.language === "en" || prefs?.language === "es") ? prefs.language : "es";
+      applyActiveLang(lang);
+    } catch (e) {
+      console.error(e);
+      applyActiveLang("es");
+    }
+  })();
+
+  // Click: guardar preferencia
+  langBtns.forEach(btn => {
+    if (btn.__quackerBound) return;
+    btn.__quackerBound = true;
+
+    btn.addEventListener("click", async () => {
+      const lang = btn.dataset.lang;
+      if (!lang) return;
+
+      // feedback inmediato
+      applyActiveLang(lang);
+
+      try {
+        await ApiClient.setUserLanguage(lang);
+
+        window.toast?.({
+          title: "Idioma actualizado",
+          message: "Preferencia guardada.",
+          type: "success",
+          duration: 2000
+        });
+      } catch (e) {
+        console.error(e);
+
+        window.toast?.({
+          title: "No se pudo guardar el idioma",
+          message: "Inténtalo de nuevo.",
+          type: "error",
+          duration: 3000
+        });
+      }
+    });
+  });
+
+  // 2) Router el último (dispara el primer view-change al init)
+  Router.init();
+});
