@@ -1,0 +1,23 @@
+# Node
+node_modules/
+npm-debug.log
+
+# Mac
+.DS_Store
+
+# Logs
+logs
+*.log
+
+# Environment
+.env
+
+# Build
+dist/
+build/
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
