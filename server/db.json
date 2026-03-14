@@ -42,7 +42,19 @@
         "language": "es",
         "theme": "light"
       },
-      "library": []
+      "library": [
+        {
+          "id": "u_1773483713888_3ebc7f376193b8",
+          "type": "pelicula",
+          "title": "Past Lives",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-14T10:21:53.888Z",
+          "updatedAt": "2026-03-14T10:21:53.888Z"
+        }
+      ]
     }
   }
 }
