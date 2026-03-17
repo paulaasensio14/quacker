@@ -44,17 +44,6 @@
       },
       "library": [
         {
-          "id": "u_1773483713888_3ebc7f376193b8",
-          "type": "pelicula",
-          "title": "Past Lives",
-          "status": "watching",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-14T10:21:53.888Z",
-          "updatedAt": "2026-03-14T10:21:53.888Z"
-        },
-        {
           "id": "u_1773741666647_40bd58a16eaa2",
           "type": "book",
           "title": "Comerás flores",
@@ -71,31 +60,48 @@
           "lastActivityAt": "2026-03-17T11:33:04.271Z"
         },
         {
-          "id": "u_1773741871378_628b16fe704d28",
+          "id": "u_1773749633000_3b2c4f0eccd8d",
           "type": "book",
           "title": "Tomorrow, and Tomorrow, and Tomorrow",
           "status": "reading",
-          "progress": 40,
-          "meta": {
-            "pagesRead": 40,
-            "totalPages": 100
-          },
+          "progress": 0,
+          "meta": {},
           "cover": "",
-          "createdAt": "2026-03-17T10:04:31.377Z",
-          "updatedAt": "2026-03-01T10:00:00.000Z",
-          "logActivity": false,
-          "lastActivityAt": "2026-03-17T10:29:18.902Z"
+          "createdAt": "2026-03-17T12:13:53.000Z",
+          "updatedAt": "2026-03-17T12:13:53.000Z"
         },
         {
-          "id": "u_1773741873609_1aa8cad0eba238",
+          "id": "u_1773749633982_55133b13ec1d4",
           "type": "book",
           "title": "Project Hail Mary",
           "status": "reading",
           "progress": 0,
           "meta": {},
           "cover": "",
-          "createdAt": "2026-03-17T10:04:33.609Z",
-          "updatedAt": "2026-03-17T10:04:33.609Z"
+          "createdAt": "2026-03-17T12:13:53.982Z",
+          "updatedAt": "2026-03-17T12:13:53.982Z"
+        },
+        {
+          "id": "u_1773749643164_eb50b9a46ead78",
+          "type": "book",
+          "title": "Klara and the Sun",
+          "status": "reading",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T12:14:03.164Z",
+          "updatedAt": "2026-03-17T12:14:03.164Z"
+        },
+        {
+          "id": "u_1773749651864_85bd8d3e8f1208",
+          "type": "book",
+          "title": "Atomic Habits",
+          "status": "reading",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T12:14:11.864Z",
+          "updatedAt": "2026-03-17T12:14:11.864Z"
         }
       ]
     }
