@@ -311,6 +311,15 @@ const LibraryUI = (() => {
     return "Continuar";
   }
 
+  function normalizeSearchText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
   function matchesFilters(item) {
     if (typeFilter !== "all" && item.type !== typeFilter) return false;
 
@@ -319,13 +328,13 @@ const LibraryUI = (() => {
 
     // búsqueda
     if (searchTerm) {
-      const q = searchTerm.toLowerCase().trim();
-      const haystack = [
+      const q = normalizeSearchText(searchTerm);
+      const haystack = normalizeSearchText([
         item.title,
         item.meta?.author,
         item.meta?.studio,
         item.meta?.year
-      ].filter(Boolean).join(" ").toLowerCase();
+      ].filter(Boolean).join(" "));
 
       if (!haystack.includes(q)) return false;
     }
@@ -333,44 +342,77 @@ const LibraryUI = (() => {
     return true;
   }
 
-
   function sortItems(items) {
     const arr = items.slice();
 
+    function recentTs(item) {
+      return new Date(item.updatedAt || item.createdAt || 0).getTime();
+    }
+
+    function createdTs(item) {
+      return new Date(item.createdAt || 0).getTime();
+    }
+
+    function titleText(item) {
+      return String(item.title || "").toLocaleLowerCase("es");
+    }
+
+    function stableCompare(a, b) {
+      const byTitle = titleText(a).localeCompare(titleText(b), "es");
+      if (byTitle !== 0) return byTitle;
+
+      return String(a.id || "").localeCompare(String(b.id || ""), "es");
+    }
+
     if (sortMode === "az") {
-      arr.sort((a, b) => String(a.title).localeCompare(String(b.title)));
+      arr.sort((a, b) => stableCompare(a, b));
       return arr;
     }
 
     if (sortMode === "progress") {
-      arr.sort((a, b) => (Number(b.progress ?? 0) - Number(a.progress ?? 0)));
+      arr.sort((a, b) => {
+        const byProgress = Number(b.progress ?? 0) - Number(a.progress ?? 0);
+        if (byProgress !== 0) return byProgress;
+
+        const byRecent = recentTs(b) - recentTs(a);
+        if (byRecent !== 0) return byRecent;
+
+        return stableCompare(a, b);
+      });
       return arr;
     }
 
     if (sortMode === "added_desc") {
       arr.sort((a, b) => {
-        const da = new Date(a.createdAt || 0).getTime();
-        const db = new Date(b.createdAt || 0).getTime();
-        return db - da;
+        const byCreated = createdTs(b) - createdTs(a);
+        if (byCreated !== 0) return byCreated;
+
+        return stableCompare(a, b);
       });
       return arr;
     }
 
     if (sortMode === "added_asc") {
       arr.sort((a, b) => {
-        const da = new Date(a.createdAt || 0).getTime();
-        const db = new Date(b.createdAt || 0).getTime();
-        return da - db;
+        const byCreated = createdTs(a) - createdTs(b);
+        if (byCreated !== 0) return byCreated;
+
+        return stableCompare(a, b);
       });
       return arr;
     }
 
     // recent (default): updatedAt / createdAt
     arr.sort((a, b) => {
-      const da = new Date(a.updatedAt || a.createdAt || 0).getTime();
-      const db = new Date(b.updatedAt || b.createdAt || 0).getTime();
-      return db - da;
+      const byRecent = recentTs(b) - recentTs(a);
+      if (byRecent !== 0) return byRecent;
+
+      const byCreated = createdTs(b) - createdTs(a);
+      if (byCreated !== 0) return byCreated;
+
+      return stableCompare(a, b);
     });
+
     return arr;
   }
 
@@ -1223,12 +1265,15 @@ const LibraryUI = (() => {
           onAction: async () => {
             try {
               await ApiClient.createLibraryItem({
+                id: itemToRestore.id,
                 type: itemToRestore.type,
                 title: itemToRestore.title,
                 status: itemToRestore.status,
                 progress: itemToRestore.progress,
                 meta: itemToRestore.meta || {},
-                cover: itemToRestore.cover || ""
+                cover: itemToRestore.cover || "",
+                createdAt: itemToRestore.createdAt,
+                updatedAt: itemToRestore.updatedAt
               });
 
               window.toast?.({
