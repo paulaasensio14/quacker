@@ -1000,10 +1000,7 @@ async function renderHomeDashboard() {
           ? async () => {
               try {
                 // 1) Restaurar el item sin crear nueva activity
-                const undoItemRes = await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
-                if (!undoItemRes || undoItemRes.ok !== true) {
-                  throw new Error(undoItemRes?.reason || "undo_restore_failed");
-                }
+                await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
 
                 // Feedback defensivo: si quedara alguna card "pending" por estados anteriores, la retiramos.
                 try {
@@ -1014,7 +1011,7 @@ async function renderHomeDashboard() {
                   // defensivo
                 }
                 // 2) Eliminar las activities creadas por el flujo "Retomar"
-                if (ApiClient.undoActivitiesForItemSince) {
+                if (ApiClient.transport !== "http" && ApiClient.undoActivitiesForItemSince) {
                   const undoActsRes = await ApiClient.undoActivitiesForItemSince(itemId, undoSinceIso);
                   if (undoActsRes && undoActsRes.ok === false) {
                     throw new Error(undoActsRes.reason || "undo_activities_failed");
