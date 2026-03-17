@@ -6,6 +6,15 @@
   let currentToast = null;
   let timer = null;
 
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function getHost() {
     let host = document.getElementById("toastHost");
     if (host) return host;
@@ -70,13 +79,17 @@
     toast.className = `toast toast--${type}`;
     toast.setAttribute("role", "status");
 
+    const safeTitle = escapeHtml(title);
+    const safeMessage = escapeHtml(message);
+    const safeActionLabel = escapeHtml(actionLabel);
+
     toast.innerHTML = `
       ${iconSvg(type)}
       <div class="toast-content">
-        ${title ? `<div class="toast-title">${title}</div>` : ""}
-        ${message ? `<div class="toast-message">${message}</div>` : ""}
+        ${safeTitle ? `<div class="toast-title">${safeTitle}</div>` : ""}
+        ${safeMessage ? `<div class="toast-message">${safeMessage}</div>` : ""}
       </div>
-      ${actionLabel ? `<button class="toast-btn toast-action">${actionLabel}</button>` : ""}
+      ${safeActionLabel ? `<button class="toast-btn toast-action">${safeActionLabel}</button>` : ""}
       <button class="toast-btn toast-close" aria-label="Cerrar notificación">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
