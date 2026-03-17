@@ -71,7 +71,34 @@ const ListsModule = (() => {
     return document.querySelector(`.list-card[data-id="${safe}"]`);
   }
 
+  function renderListsSkeleton(count = 6) {
+    const container = document.querySelector("[data-lists-container]");
+    if (!container) return;
+
+    const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
+    if (!isListsActive) return;
+
+    container.innerHTML = Array.from({ length: count }).map(() => `
+      <article class="list-card list-card--skeleton" aria-hidden="true">
+        <div class="list-card-header">
+          <div class="list-skel-title"></div>
+
+          <div class="list-card-header-actions">
+            <span class="list-skel-pill"></span>
+            <span class="list-skel-icon"></span>
+            <span class="list-skel-icon"></span>
+          </div>
+        </div>
+
+        <div class="list-skel-line md"></div>
+        <div class="list-skel-line sm"></div>
+      </article>
+    `).join("");
+  }
+
   async function load() {
+    renderListsSkeleton();
+
     try {
       allLists = await ApiClient.getLists();
       if (!Array.isArray(allLists)) allLists = [];

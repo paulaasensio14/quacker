@@ -2058,6 +2058,74 @@ main.app-main {
   pointer-events: none;
 }
 
+.list-card--skeleton {
+  pointer-events: none;
+  min-height: 152px;
+}
+
+.list-card--skeleton .list-card-header {
+  margin-bottom: 14px;
+}
+
+.list-card--skeleton .list-skel-title,
+.list-card--skeleton .list-skel-pill,
+.list-card--skeleton .list-skel-icon,
+.list-card--skeleton .list-skel-line {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(15, 23, 42, 0.12);
+}
+
+.list-card--skeleton .list-skel-title::after,
+.list-card--skeleton .list-skel-pill::after,
+.list-card--skeleton .list-skel-icon::after,
+.list-card--skeleton .list-skel-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0.16),
+    rgba(255,255,255,0)
+  );
+  animation: quackerShimmer 950ms ease-in-out infinite;
+}
+
+.list-card--skeleton .list-skel-title {
+  height: 18px;
+  width: 56%;
+  border-radius: 10px;
+}
+
+.list-card--skeleton .list-skel-pill {
+  width: 92px;
+  height: 28px;
+  border-radius: 999px;
+}
+
+.list-card--skeleton .list-skel-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+}
+
+.list-card--skeleton .list-skel-line {
+  height: 11px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.list-card--skeleton .list-skel-line.md {
+  width: 88%;
+}
+
+.list-card--skeleton .list-skel-line.sm {
+  width: 54%;
+}
+
 /* Botones de acciones en cards (estilo Quacker) */
 .list-edit-btn,
 .list-delete-btn{
