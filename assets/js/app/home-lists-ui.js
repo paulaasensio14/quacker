@@ -227,8 +227,8 @@ async function renderHomeDashboard() {
       const hasLast = !!(lastActivity && typeof lastActivity === "object" && lastActivity.id);
 
       if (!hasLast) {
-        if (titleEl) titleEl.textContent = "Sin actividad aún";
-        if (metaEl) metaEl.textContent = "Haz progreso en algo para verlo aquí.";
+        if (titleEl) titleEl.textContent = "Tu actividad aparecerá aquí";
+        if (metaEl) metaEl.textContent = "Haz progreso o completa algo para ver tu último movimiento.";
         if (timeEl) timeEl.textContent = "";
         if (barFill) barFill.style.width = "0%";
         if (labelEl) labelEl.textContent = "";
@@ -257,6 +257,7 @@ async function renderHomeDashboard() {
       if (card) {
         // reset
         card.classList.remove("is-clickable");
+        card.classList.toggle("is-empty", !hasLast);
         card.removeAttribute("role");
         card.removeAttribute("tabindex");
         card.removeAttribute("aria-label");
@@ -396,7 +397,20 @@ async function renderHomeDashboard() {
         markBtn.dataset.itemId = "";
       }
 
-      if ((lastActivity?.progressPercent || 0) >= 100) {
+      if (!lastActivity?.id) {
+        markBtn.innerHTML = `
+          <span class="btn-progress-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14"></path>
+              <path d="M5 12h14"></path>
+            </svg>
+          </span>
+          Sin actividad
+        `;
+        markBtn.disabled = true;
+        markBtn.classList.remove("completed");
+      } else if ((lastActivity?.progressPercent || 0) >= 100) {
         // Ya está completado
         markBtn.innerHTML = "Completado";
         markBtn.disabled = true;
@@ -474,30 +488,32 @@ async function renderHomeDashboard() {
 
         const text = hasInProgress
           ? "Vas al día. Si dejas un contenido sin avanzar durante una semana, aparecerá aquí."
-          : "Empieza un contenido para ver sugerencias y retomar más tarde.";
+          : "Empieza un contenido y, si lo dejas aparcado unos días, lo verás aquí para retomarlo.";
 
         backlogContainer.innerHTML = `
-          <div class="empty-card">
-            <div class="empty-card-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
-                <path d="M8 9h8"></path>
-                <path d="M8 13h6"></path>
-              </svg>
-            </div>
+          <div class="empty-state home-backlog-empty">
+            <div class="empty-state-card" role="status" aria-live="polite">
+              <div class="empty-state-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+                  <path d="M8 9h8"></path>
+                  <path d="M8 13h6"></path>
+                </svg>
+              </div>
 
-            <div class="empty-card-main">
-              <div class="empty-card-title">${title}</div>
-              <div class="empty-card-text">${text}</div>
+              <div class="empty-state-main">
+                <h3 class="empty-state-title">${title}</h3>
+                <p class="empty-state-text">${text}</p>
 
-              <div class="empty-card-actions">
-                <button type="button" class="btn-secondary" id="btnBacklogGoLibrary">
-                  Ver mi biblioteca
-                </button>
-                <button type="button" class="btn-ghost" id="btnBacklogGoExplore">
-                  Explorar contenido
-                </button>
+                <div class="empty-state-actions">
+                  <button type="button" class="btn-secondary btn-sm" id="btnBacklogGoLibrary">
+                    Ver mi biblioteca
+                  </button>
+                  <button type="button" class="btn-ghost btn-sm" id="btnBacklogGoExplore">
+                    Explorar contenido
+                  </button>
+                </div>
               </div>
             </div>
           </div>

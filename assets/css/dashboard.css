@@ -1687,6 +1687,40 @@ main.app-main {
   justify-content: flex-end;
 }
 
+.last-activity-card.is-empty {
+  background:
+    radial-gradient(circle at top left, rgba(148, 163, 184, 0.10), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(148, 163, 184, 0.08), transparent 55%),
+    var(--bg-card);
+}
+
+.last-activity-card.is-empty .last-activity-cover {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+    var(--bg-body);
+  border: 2px dashed var(--border-strong);
+  opacity: 0.8;
+}
+
+.last-activity-card.is-empty .last-activity-time-chip,
+.last-activity-card.is-empty .last-activity-progress,
+.last-activity-card.is-empty .last-activity-actions {
+  display: none;
+}
+
+.last-activity-card.is-empty .last-activity-body {
+  justify-content: center;
+  min-height: 90px;
+}
+
+.last-activity-card.is-empty .last-activity-title {
+  font-size: 1rem;
+}
+
+.last-activity-card.is-empty .last-activity-meta {
+  max-width: 48ch;
+}
+
 /* ===== RETO MENSUAL ===== */
 .challenge-card {
   border-radius: 24px;
@@ -4718,6 +4752,16 @@ body.dark-theme .notif-mark-btn:hover {
 
 .home-continue-empty .empty-state-card {
   max-width: none;
+  min-height: 132px;
+}
+
+.home-backlog-empty {
+  width: 100%;
+}
+
+.home-backlog-empty .empty-state-card {
+  max-width: none;
+  width: 100%;
   min-height: 132px;
 }
 
