@@ -47,15 +47,15 @@
           "id": "u_1773741666647_40bd58a16eaa2",
           "type": "book",
           "title": "Comerás flores",
-          "status": "reading",
-          "progress": 30,
+          "status": "completed",
+          "progress": 100,
           "meta": {
             "pagesRead": 100,
             "totalPages": 300
           },
           "cover": "",
           "createdAt": "2026-03-17T10:01:06.646Z",
-          "updatedAt": "2026-03-17T11:33:05.940Z",
+          "updatedAt": "2026-03-17T16:44:21.140Z",
           "logActivity": false,
           "lastActivityAt": "2026-03-17T11:33:04.271Z"
         },
@@ -82,17 +82,6 @@
           "updatedAt": "2026-03-17T12:13:53.982Z"
         },
         {
-          "id": "u_1773749643164_eb50b9a46ead78",
-          "type": "book",
-          "title": "Klara and the Sun",
-          "status": "reading",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T12:14:03.164Z",
-          "updatedAt": "2026-03-17T12:14:03.164Z"
-        },
-        {
           "id": "u_1773749651864_85bd8d3e8f1208",
           "type": "book",
           "title": "Atomic Habits",
@@ -102,6 +91,17 @@
           "cover": "",
           "createdAt": "2026-03-17T12:14:11.864Z",
           "updatedAt": "2026-03-17T12:14:11.864Z"
+        },
+        {
+          "id": "u_1773764917277_82f76f84bdcc8",
+          "type": "book",
+          "title": "Klara and the Sun",
+          "status": "reading",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T16:28:37.277Z",
+          "updatedAt": "2026-03-17T16:28:37.277Z"
         }
       ]
     }
