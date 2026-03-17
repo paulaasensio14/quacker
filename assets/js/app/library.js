@@ -470,7 +470,7 @@ const LibraryUI = (() => {
     grid.innerHTML = "";
 
     for(let i=0;i<8;i++){
-      const card = document.createElement("div");
+      const card = document.createElement("article");
       card.className = "lib-card is-skeleton";
 
       card.innerHTML = `
@@ -506,15 +506,63 @@ const LibraryUI = (() => {
 
     // 3) Empty state
     if (!filtered.length) {
+      const hasAnyItems = Array.isArray(allItems) && allItems.length > 0;
+
+      if (!hasAnyItems) {
+        grid.innerHTML = `
+          <div class="lib-empty-state" style="grid-column:1/-1;">
+            <div class="lib-empty-state-card">
+              <div class="lib-empty-state-title">Tu biblioteca está vacía</div>
+              <div class="lib-empty-state-text">
+                Empieza añadiendo una serie, película, libro o videojuego.
+              </div>
+              <div class="lib-empty-state-title">Tu biblioteca está vacía</div>
+              <div class="lib-empty-state-text">
+                Empieza añadiendo una serie, película, libro o videojuego.
+              </div>
+              <button type="button" class="btn-primary" id="libEmptyAddBtn">
+                + Añadir contenido
+              </button>
+            </div>
+          </div>
+        `;
+
+        requestAnimationFrame(() => {
+          document.getElementById("libEmptyAddBtn")?.addEventListener("click", openAddLibraryModal);
+        });
+
+        return;
+      }
+
       grid.innerHTML = `
-        <div style="grid-column:1/-1;color:var(--text-muted);font-size:0.95rem;">
-          No hay resultados con estos filtros.
+        <div class="lib-empty-state" style="grid-column:1/-1;">
+          <div class="lib-empty-state-card">
+            <div class="lib-empty-state-title">No hay resultados</div>
+            <div class="lib-empty-state-text">
+              No hay contenidos que coincidan con los filtros actuales.
+            </div>
+            <button type="button" class="btn-secondary" id="libEmptyResetBtn">
+              Restablecer filtros
+            </button>
+          </div>
         </div>
       `;
+
+      requestAnimationFrame(() => {
+        document.getElementById("libEmptyResetBtn")?.addEventListener("click", () => {
+          document.querySelector('.lib-type-pill[data-type="all"]')?.click();
+          document.querySelector('.lib-status-pill[data-status="all"]')?.click();
+
+          const sort = document.getElementById("librarySort");
+          if (sort) {
+            sort.value = "recent";
+            sort.dispatchEvent(new Event("change"));
+          }
+        });
+      });
+
       return;
     }
-
-
 
     // 4) Render de cards
     grid.innerHTML = filtered.map((item) => {
