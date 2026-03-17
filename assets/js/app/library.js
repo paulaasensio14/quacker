@@ -463,6 +463,28 @@ const LibraryUI = (() => {
     return arr;
   }
 
+  function renderLibrarySkeleton(){
+    const grid = document.getElementById("libraryGrid");
+    if(!grid) return;
+
+    grid.innerHTML = "";
+
+    for(let i=0;i<8;i++){
+      const card = document.createElement("div");
+      card.className = "lib-card is-skeleton";
+
+      card.innerHTML = `
+        <div class="lib-cover"></div>
+        <div class="lib-body">
+          <div class="lib-title"></div>
+          <div class="lib-meta"></div>
+        </div>
+      `;
+
+      grid.appendChild(card);
+    }
+  }
+
   function render() {
     const grid = $("#libraryGrid");
     if (!grid) return;
@@ -626,6 +648,7 @@ const LibraryUI = (() => {
   async function load() {
     try {
       setLibraryRefreshing(true);
+      renderLibrarySkeleton();
       allItems = await ApiClient.getLibrary();
 
       // Construimos un Set con todos los itemId que ya están en alguna lista

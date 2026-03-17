@@ -102,6 +102,61 @@
           "cover": "",
           "createdAt": "2026-03-17T16:28:37.277Z",
           "updatedAt": "2026-03-17T16:28:37.277Z"
+        },
+        {
+          "id": "u_1773775669077_8842b4a2c45ed8",
+          "type": "pelicula",
+          "title": "Dune: Part Two",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T19:27:49.077Z",
+          "updatedAt": "2026-03-17T19:27:49.077Z"
+        },
+        {
+          "id": "u_1773775670393_a2e533ce301008",
+          "type": "pelicula",
+          "title": "The Zone of Interest",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T19:27:50.392Z",
+          "updatedAt": "2026-03-17T19:27:50.392Z"
+        },
+        {
+          "id": "u_1773775671691_585316e5e909e",
+          "type": "pelicula",
+          "title": "Poor Things",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T19:27:51.691Z",
+          "updatedAt": "2026-03-17T19:27:51.691Z"
+        },
+        {
+          "id": "u_1773775674659_0195eff6476f2",
+          "type": "game",
+          "title": "Baldur's Gate 3",
+          "status": "playing",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T19:27:54.659Z",
+          "updatedAt": "2026-03-17T19:27:54.659Z"
+        },
+        {
+          "id": "u_1773775675509_fbab2744dbe568",
+          "type": "game",
+          "title": "Elden Ring",
+          "status": "playing",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T19:27:55.509Z",
+          "updatedAt": "2026-03-17T19:27:55.509Z"
         }
       ]
     }
