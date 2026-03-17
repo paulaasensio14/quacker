@@ -59,16 +59,16 @@
           "type": "book",
           "title": "Comerás flores",
           "status": "reading",
-          "progress": 40,
+          "progress": 30,
           "meta": {
-            "pagesRead": 120,
+            "pagesRead": 100,
             "totalPages": 300
           },
           "cover": "",
           "createdAt": "2026-03-17T10:01:06.646Z",
-          "updatedAt": "2026-03-17T10:52:17.995Z",
-          "logActivity": true,
-          "lastActivityAt": "2026-03-17T10:52:17.963Z"
+          "updatedAt": "2026-03-17T11:33:05.940Z",
+          "logActivity": false,
+          "lastActivityAt": "2026-03-17T11:33:04.271Z"
         },
         {
           "id": "u_1773741871378_628b16fe704d28",
