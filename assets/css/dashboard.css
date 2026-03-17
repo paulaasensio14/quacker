@@ -1839,6 +1839,38 @@ main.app-main {
   margin-bottom: 10px;
 }
 
+/* ===== LIBRARY SKELETON ===== */
+
+.lib-card.is-skeleton{
+  pointer-events: none;
+}
+
+.lib-card.is-skeleton .lib-cover{
+  background: rgba(255,255,255,0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.lib-card.is-skeleton .lib-cover::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.00),
+    rgba(255,255,255,0.12),
+    rgba(255,255,255,0.00)
+  );
+  animation: quackerShimmer 900ms ease-in-out infinite;
+}
+
+.lib-card.is-skeleton .lib-title,
+.lib-card.is-skeleton .lib-meta{
+  height: 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+}
 
 /* ===== CUSTOM LISTS ===== */
 
