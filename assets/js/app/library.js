@@ -17,25 +17,49 @@ function openAddLibraryModal() {
   if (!modal) return;
 
   _showAddLibError("");
-
-  // Guardar foco actual para restaurarlo al cerrar
   __addLibraryModalLastFocus = document.activeElement;
 
-  window.UIModal?.open(modal, {
-    initialFocusSelector: "#addLib_title",
-    lastFocusEl: __addLibraryModalLastFocus
-  });
+  const titleInput = document.getElementById("addLib_title");
+  const typeSelect = document.getElementById("addLib_type");
 
-  // reset suave
-  const t = document.getElementById("addLib_title");
-  if (t) t.value = "";
+  if (titleInput) titleInput.value = "";
+  if (typeSelect) typeSelect.value = "serie";
+
+  if (window.UIModal && typeof window.UIModal.open === "function") {
+    window.UIModal.open(modal, {
+      initialFocusSelector: "#addLib_title",
+      lastFocusEl: __addLibraryModalLastFocus
+    });
+    return;
+  }
+
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+
+  requestAnimationFrame(() => {
+    if (titleInput && typeof titleInput.focus === "function") {
+      titleInput.focus();
+    }
+  });
 }
 
 function closeAddLibraryModal() {
   const modal = document.getElementById("addLibraryModal");
   if (!modal) return;
 
-  window.UIModal?.close(modal);
+  if (window.UIModal && typeof window.UIModal.close === "function") {
+    window.UIModal.close(modal);
+  } else {
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+
+    if (__addLibraryModalLastFocus && typeof __addLibraryModalLastFocus.focus === "function") {
+      requestAnimationFrame(() => __addLibraryModalLastFocus.focus());
+    }
+  }
+
   __addLibraryModalLastFocus = null;
   _showAddLibError("");
 }
@@ -850,8 +874,13 @@ const LibraryUI = (() => {
       });
     }
     
-    // Botón "Añadir"
-    document.getElementById("btnAddLibraryItem")?.addEventListener("click", openAddLibraryModal);
+    // Botón "Añadir" (delegado, robusto)
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("#btnAddLibraryItem");
+      if (!btn) return;
+      e.preventDefault();
+      openAddLibraryModal();
+    });
 
     // Abrir modal "Añadir a lista"
     document.addEventListener("click", (e) => {

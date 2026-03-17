@@ -53,6 +53,49 @@
           "cover": "",
           "createdAt": "2026-03-14T10:21:53.888Z",
           "updatedAt": "2026-03-14T10:21:53.888Z"
+        },
+        {
+          "id": "u_1773741666647_40bd58a16eaa2",
+          "type": "book",
+          "title": "Comerás flores",
+          "status": "reading",
+          "progress": 40,
+          "meta": {
+            "pagesRead": 120,
+            "totalPages": 300
+          },
+          "cover": "",
+          "createdAt": "2026-03-17T10:01:06.646Z",
+          "updatedAt": "2026-03-17T10:52:17.995Z",
+          "logActivity": true,
+          "lastActivityAt": "2026-03-17T10:52:17.963Z"
+        },
+        {
+          "id": "u_1773741871378_628b16fe704d28",
+          "type": "book",
+          "title": "Tomorrow, and Tomorrow, and Tomorrow",
+          "status": "reading",
+          "progress": 40,
+          "meta": {
+            "pagesRead": 40,
+            "totalPages": 100
+          },
+          "cover": "",
+          "createdAt": "2026-03-17T10:04:31.377Z",
+          "updatedAt": "2026-03-01T10:00:00.000Z",
+          "logActivity": false,
+          "lastActivityAt": "2026-03-17T10:29:18.902Z"
+        },
+        {
+          "id": "u_1773741873609_1aa8cad0eba238",
+          "type": "book",
+          "title": "Project Hail Mary",
+          "status": "reading",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-17T10:04:33.609Z",
+          "updatedAt": "2026-03-17T10:04:33.609Z"
         }
       ]
     }

@@ -763,10 +763,21 @@ const ApiClient = (() => {
     return { ok: true, notified: true, streak: achieved };
   }
 
-  // Deshacer activities recientes de un item (para "Deshacer" de Retomar)
-  // Persistencia: FakeBackend. UI: ApiClient (evento oficial).
   async function undoActivitiesForItemSince(itemId, sinceIso) {
     if (!itemId || !sinceIso) return { ok: false, reason: "missing_params" };
+
+    // En HTTP aún no existe Activities real en backend.
+    // El undo visual/persistente del item se hace restaurando snapshot con updateLibraryItem().
+    if (_isHttp()) {
+      _emitDataChanged({
+        kind: "activities",
+        action: "undo_since",
+        itemId: String(itemId),
+        removed: 0
+      });
+
+      return { ok: true, removed: 0, mode: "http_noop" };
+    }
 
     if (typeof FakeBackend === "undefined" || typeof FakeBackend.removeActivitiesForItemSince !== "function") {
       return { ok: false, reason: "backend_not_available" };
@@ -783,7 +794,6 @@ const ApiClient = (() => {
 
     const removed = Number(res?.removed || 0);
 
-    // 1) Emitimos cambio de activities (para que app-core dispare home-refresh)
     _emitDataChanged({
       kind: "activities",
       action: "undo_since",
@@ -791,9 +801,6 @@ const ApiClient = (() => {
       removed
     });
 
-    // 2) Reconciliar lastStreakNotified:
-    // Si el undo reduce la racha, ajustamos lastStreakNotified hacia abajo
-    // para evitar que el usuario quede "bloqueado" sin volver a recibir hitos.
     try {
       const stats = await getHomeStats();
       const streak = Number(stats?.streakDays || 0);
@@ -804,21 +811,69 @@ const ApiClient = (() => {
       const lastNotified = Number(state.user.lastStreakNotified || 0);
 
       if (lastNotified > achievedNow) {
-        // Actualizamos usuario (evento oficial kind:"user")
         await updateUser({ lastStreakNotified: achievedNow });
       }
     } catch (e) {
       console.error("undoActivitiesForItemSince: reconcile streak failed", e);
-      // defensivo: no bloqueamos el undo si falla esta parte
     }
 
     return { ok: true, removed };
   }
 
-  // Retomar contenido (se usa desde Home > Backlog)
   async function resumeLibraryItem(itemId) {
     if (!itemId) return { ok: false };
 
+    // =========================
+    // HTTP (backend real)
+    // =========================
+    if (_isHttp()) {
+      const item = await getLibraryItemById(itemId);
+      if (!item || !item.id) return { ok: false, reason: "not_found" };
+
+      const now = new Date();
+      const nowIso = now.toISOString();
+
+      const fallbackIso =
+        item.lastActivityAt ||
+        item.updatedAt ||
+        item.createdAt ||
+        nowIso;
+
+      const lastDate = new Date(fallbackIso);
+      const daysSinceLast = Math.max(
+        0,
+        Math.floor((now - lastDate) / (1000 * 60 * 60 * 24))
+      );
+
+      let nextStatus = item.status;
+
+      if (item.status === "not_started") {
+        if (item.type === "serie") nextStatus = "watching";
+        else if (item.type === "book") nextStatus = "reading";
+        else if (item.type === "game") nextStatus = "playing";
+        else nextStatus = "in_progress";
+      }
+
+      const updated = {
+        ...item,
+        status: nextStatus,
+        updatedAt: nowIso,
+        lastActivityAt: nowIso
+      };
+
+      await updateLibraryItem(updated, { logActivity: false });
+
+      return {
+        ok: true,
+        daysSinceLast,
+        itemId: item.id,
+        title: item.title
+      };
+    }
+
+    // =========================
+    // LOCAL (FakeBackend)
+    // =========================
     const state = _safeState();
     state.library = state.library || [];
     state.activities = state.activities || [];
@@ -826,7 +881,6 @@ const ApiClient = (() => {
     const item = state.library.find((i) => String(i.id) === String(itemId));
     if (!item) return { ok: false };
 
-    // Calcular días desde la última actividad (antes de tocar updatedAt)
     const now = new Date();
     let lastDate = null;
 
@@ -844,12 +898,10 @@ const ApiClient = (() => {
 
     const daysSinceLast = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
 
-    // Actualizar timestamps
     const nowIso = now.toISOString();
     item.updatedAt = nowIso;
     if ("lastActivityAt" in item) item.lastActivityAt = nowIso;
 
-    // Si estaba no empezado, al retomarlo pasa a “en progreso”
     if (item.status === "not_started") {
       if (item.type === "serie") item.status = "watching";
       else if (item.type === "book") item.status = "reading";
@@ -857,12 +909,10 @@ const ApiClient = (() => {
       else item.status = "in_progress";
     }
 
-    // Guardar estado
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
     }
 
-    // Registrar actividad (mantener tu sistema actual)
     if (typeof FakeBackend !== "undefined" && typeof FakeBackend.addActivity === "function") {
       FakeBackend.addActivity({
         type: "resume",
@@ -872,8 +922,6 @@ const ApiClient = (() => {
       });
     }
 
-    // Notificación automática SOLO si estaba “olvidado de verdad”
-    // (umbral: 7 días -> warm, 14 -> hot)
     if (daysSinceLast >= 7) {
       const hot = daysSinceLast >= 14;
 
@@ -1000,6 +1048,17 @@ const ApiClient = (() => {
 
   async function getLibraryItemById(itemId) {
     if (itemId == null) return null;
+
+    if (_isHttp()) {
+      try {
+        const res = await _httpJson("GET", `/library/${encodeURIComponent(String(itemId))}`);
+        if (!res) return null;
+        return res && res.item ? res.item : res;
+      } catch (_) {
+        return null;
+      }
+    }
+
     const state = _safeState();
     const library = state.library || [];
     return library.find(i => String(i.id) === String(itemId)) || null;
@@ -1613,12 +1672,20 @@ const ApiClient = (() => {
 
   // Backlog
   async function getBacklogItems(limit = 4, minDays = 5) {
-    const state = _safeState();
-    const library = state.library || [];
-    const activities = state.activities || [];
     const now = new Date();
 
-    // Regla definitiva: días para considerar “olvidado” según tipo
+    let library = [];
+    let activities = [];
+
+    if (_isHttp()) {
+      library = await getLibrary();
+      activities = [];
+    } else {
+      const state = _safeState();
+      library = state.library || [];
+      activities = state.activities || [];
+    }
+
     const BACKLOG_MIN_DAYS_BY_TYPE = {
       serie: 3,
       book: 5,
@@ -1631,17 +1698,18 @@ const ApiClient = (() => {
       return BACKLOG_MIN_DAYS_BY_TYPE[type] ?? BACKLOG_MIN_DAYS_BY_TYPE.default;
     }
 
-
-    // Mapa: itemId -> última fecha de actividad
     const lastActivityMap = new Map();
-    activities.forEach((act) => {
-      if (!act.targetId || !act.createdAt) return;
-      const prev = lastActivityMap.get(act.targetId);
-      const curr = new Date(act.createdAt);
-      if (!prev || curr > prev) {
-        lastActivityMap.set(act.targetId, curr);
-      }
-    });
+
+    if (!_isHttp()) {
+      activities.forEach((act) => {
+        if (!act.targetId || !act.createdAt) return;
+        const prev = lastActivityMap.get(act.targetId);
+        const curr = new Date(act.createdAt);
+        if (!prev || curr > prev) {
+          lastActivityMap.set(act.targetId, curr);
+        }
+      });
+    }
 
     function progressLabelFor(item) {
       const pct = item.progress ?? 0;
@@ -1651,24 +1719,34 @@ const ApiClient = (() => {
         const e = item.meta.episode || 1;
         return `T${s} · E${e}`;
       }
+
       if (item.type === "book" && item.meta?.pagesRead && item.meta?.totalPages) {
         return `${item.meta.pagesRead}/${item.meta.totalPages} páginas`;
       }
+
       if (item.type === "game") {
         return `${pct}% completado`;
       }
+
       return `${pct}% completado`;
     }
 
     const candidates = library
       .filter((item) => {
         const pct = Number(item.progress ?? 0);
-        // Solo “olvidado” si está realmente en progreso (1..99)
         return pct > 0 && pct < 100 && item.status !== "completed";
       })
       .map((item) => {
-        const fallbackDate = item.updatedAt || item.createdAt || now.toISOString();
-        const lastDate = lastActivityMap.get(item.id) || new Date(fallbackDate);
+        const fallbackIso =
+          item.lastActivityAt ||
+          item.updatedAt ||
+          item.createdAt ||
+          now.toISOString();
+
+        const lastDate = _isHttp()
+          ? new Date(fallbackIso)
+          : (lastActivityMap.get(item.id) || new Date(fallbackIso));
+
         const diffMs = now - lastDate;
         const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
@@ -1684,7 +1762,6 @@ const ApiClient = (() => {
       })
       .filter((row) => row.daysSinceLast >= minDaysForType(row.type));
 
-    // Ordenar por más olvidado primero
     candidates.sort((a, b) => b.daysSinceLast - a.daysSinceLast);
 
     return candidates.slice(0, limit);
@@ -1757,13 +1834,11 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: "Continúa donde lo dejaste" ===
   async function getContinueWatchingItems() {
-    const state = _safeState();
-    const library = state.library || [];
+    const library = await getLibrary();
 
     function progressLabelFor(item) {
       const pct = item.progress ?? 0;
 
-      // Si está completado
       if (pct >= 100) {
         if (item.type === "book") return "Libro completado";
         if (item.type === "serie") return "Serie completada";
@@ -1805,131 +1880,104 @@ const ApiClient = (() => {
         status,
         progressPercent: pct,
         progressLabel: progressLabelFor(item),
-        lastActivityAt: item.updatedAt || item.createdAt,
+        lastActivityAt: item.lastActivityAt || item.updatedAt || item.createdAt,
         platform: item.meta?.platform || null,
         cover: item.cover || null
       };
     });
   }
 
-  // === PROGRESO RÁPIDO (por tipo) ===
   async function applyQuickProgress(itemId) {
-    if (!itemId) return { ok: false };
 
-    const state = _safeState();
-    state.library = state.library || [];
-
-    const idx = state.library.findIndex(i => String(i.id) === String(itemId));
-    if (idx === -1) return { ok: false, reason: "item_not_found" };
-
-    const item = state.library[idx];
-    const type = item.type || "generic";
-
-    const prevPct = Number(item.progress ?? 0);
-    const meta = { ...(item.meta || {}) };
-
-    let nextPct = prevPct;
-    let deltaLabel = "";
-    let justCompleted = false;
-
-    // Reglas del producto
-    if (type === "serie") {
-      const prevS = Number(meta.season || 1);
-      const prevE = Number(meta.episode || 0);
-
-      let s = prevS;
-      let e = prevE + 1;
-
-      const epsPerSeason = Number(meta.episodesPerSeason || 0);
-      if (epsPerSeason > 0 && e > epsPerSeason) {
-        s = s + 1;
-        e = 1;
-      }
-
-      meta.season = s;
-      meta.episode = e;
-
-      nextPct = Math.min(100, prevPct + 5);
-      deltaLabel = `T${s} · E${e}`;
-    }
-    else if (type === "book") {
-      const total = Number(meta.totalPages || 0);
-      const prevRead = Number(meta.pagesRead || 0);
-
-      if (total > 0) {
-        const nextRead = Math.min(total, prevRead + 20);
-        meta.pagesRead = nextRead;
-        meta.totalPages = total;
-
-        nextPct = Math.min(100, Math.round((nextRead / total) * 100));
-        deltaLabel = `+${nextRead - prevRead} páginas`;
-      } else {
-        meta.pagesRead = prevRead + 20;
-        nextPct = Math.min(100, prevPct + 5);
-        deltaLabel = "+20 páginas";
-      }
-    }
-    else if (type === "pelicula") {
-      nextPct = Math.min(100, prevPct + 10);
-      deltaLabel = "+10%";
-    }
-    else if (type === "game") {
-      nextPct = Math.min(100, prevPct + 5);
-      deltaLabel = "+5%";
-    }
-    else {
-      nextPct = Math.min(100, prevPct + 5);
-      deltaLabel = "+5%";
+    if (!itemId) {
+      return { ok: false };
     }
 
-    const nextStatus =
-      (nextPct >= 100) ? "completed" :
-      (nextPct <= 0) ? "not_started" :
-      "in_progress";
+    let item = null;
 
-    justCompleted = (prevPct < 100 && nextPct >= 100);
+    if (_isHttp()) {
+      item = await getLibraryItemById(itemId);
+    } else {
+      const state = _safeState();
+      item = (state.library || []).find(i => String(i.id) === String(itemId));
+    }
 
-    const nowIso = new Date().toISOString();
+    if (!item) {
+      return { ok: false, reason: "item_not_found" };
+    }
 
-    const updated = {
+    const prevProgress = Number(item.progress || 0);
+    let nextProgress = prevProgress;
+    let meta = { ...(item.meta || {}) };
+
+    switch (item.type) {
+
+      case "serie":
+        nextProgress = Math.min(100, prevProgress + 5);
+        break;
+
+      case "pelicula":
+        nextProgress = Math.min(100, prevProgress + 10);
+        break;
+
+      case "book":
+
+        const total = Number(meta.totalPages || 0);
+        const prevPages = Number(meta.pagesRead || 0);
+
+        if (total > 0) {
+          const nextPages = Math.min(total, prevPages + 20);
+          meta.pagesRead = nextPages;
+          nextProgress = Math.round((nextPages / total) * 100);
+        } else {
+          nextProgress = Math.min(100, prevProgress + 5);
+        }
+
+        break;
+
+      case "game":
+        nextProgress = Math.min(100, prevProgress + 5);
+        break;
+
+      default:
+        nextProgress = Math.min(100, prevProgress + 5);
+    }
+
+    const updatedItem = {
       ...item,
-      progress: nextPct,
-      status: nextStatus,
+      progress: nextProgress,
       meta,
-      updatedAt: nowIso
+      updatedAt: new Date().toISOString()
     };
 
-    state.library[idx] = updated;
-
-    if (typeof FakeBackend !== "undefined") {
-      FakeBackend.saveState(state);
-
-      FakeBackend.addActivity({
-        type: justCompleted ? "completed" : "progress",
-        targetType: "library_item",
-        targetId: String(itemId),
-        minutes: 20,
-        createdAt: nowIso
-      });
+    if (_isHttp()) {
+      await updateLibraryItem(updatedItem, { logActivity: true });
+    } else {
+      const state = _safeState();
+      const idx = state.library.findIndex(i => String(i.id) === String(itemId));
+      if (idx !== -1) {
+        state.library[idx] = updatedItem;
+        FakeBackend.saveState(state);
+      }
     }
 
-    await maybeNotifyStreak();
-
-    _emitDataChanged({
-      kind: "library",
-      action: "quick_progress",
-      itemId: String(itemId)
-    });
+    window.dispatchEvent(
+      new CustomEvent("quacker:data-changed", {
+        detail: {
+          kind: "library",
+          action: "quick_progress",
+          itemId: String(itemId)
+        }
+      })
+    );
 
     return {
       ok: true,
       itemId: String(itemId),
-      type,
-      prevPct,
-      nextPct,
-      deltaLabel,
-      justCompleted
+      prevProgress,
+      nextProgress
     };
+
   }
 
   return {

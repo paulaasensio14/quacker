@@ -256,7 +256,7 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   _writeDb(db);
 
   // De momento ignoramos logActivity en backend (lo implementaremos cuando migremos Activities)
-  res.json({ item: next });
+  res.json(next);
 });
 
 app.delete("/api/library/:id", _requireAuth, (req, res) => {
