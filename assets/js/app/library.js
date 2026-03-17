@@ -5,6 +5,35 @@ let __progressModalLastFocus = null;
 let __addLibraryModalLastFocus = null;
 let __addToListModalLastFocus = null;
 
+const LIBRARY_FILTERS_KEY = "quacker_library_filters";
+
+function saveLibraryFilters() {
+  try {
+    const activeType = document.querySelector(".lib-type-pill.active")?.dataset.type || "all";
+    const activeStatus = document.querySelector(".lib-status-pill.active")?.dataset.status || "all";
+    const sort = document.getElementById("librarySort")?.value || "recent";
+
+    localStorage.setItem(
+      LIBRARY_FILTERS_KEY,
+      JSON.stringify({
+        type: activeType,
+        status: activeStatus,
+        sort
+      })
+    );
+  } catch (_) {}
+}
+
+function loadLibraryFilters() {
+  try {
+    const raw = localStorage.getItem(LIBRARY_FILTERS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
 function _showAddLibError(msg = "") {
   const box = document.getElementById("addLib_errors");
   if (!box) return;
@@ -203,6 +232,24 @@ function closeAddToListModal() {
 }
 
 const LibraryUI = (() => {
+  const savedFilters = loadLibraryFilters();
+
+  if (savedFilters) {
+    requestAnimationFrame(() => {
+      const typeBtn = document.querySelector(`.lib-type-pill[data-type="${savedFilters.type}"]`);
+      if (typeBtn) typeBtn.click();
+
+      const statusBtn = document.querySelector(`.lib-status-pill[data-status="${savedFilters.status}"]`);
+      if (statusBtn) statusBtn.click();
+
+      const sortSelect = document.getElementById("librarySort");
+      if (sortSelect && savedFilters.sort) {
+        sortSelect.value = savedFilters.sort;
+        sortSelect.dispatchEvent(new Event("change"));
+      }
+    });
+  }
+
   const TYPE_LABELS = {
     serie: "Serie",
     pelicula: "Película",
@@ -1134,6 +1181,7 @@ const LibraryUI = (() => {
       sort.addEventListener("change", async () => {
         sortMode = sort.value || "recent";
         await _saveUIState();
+        saveLibraryFilters();
         render();
       });
     }
@@ -1146,6 +1194,7 @@ const LibraryUI = (() => {
         btn.classList.add("active");
         typeFilter = btn.dataset.type || "all";
         _saveUIState();
+        saveLibraryFilters();
         render();
       });
     });
@@ -1158,6 +1207,7 @@ const LibraryUI = (() => {
         btn.classList.add("active");
         statusFilter = btn.dataset.status || "all";
         _saveUIState();
+        saveLibraryFilters();
         render();
       });
     });
