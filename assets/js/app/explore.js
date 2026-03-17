@@ -187,6 +187,64 @@ const ExploreModule = (() => {
     `;
   }
 
+  function _renderExploreSkeleton() {
+    const container = document.querySelector("[data-explore-container]");
+    const empty = document.getElementById("exploreEmpty");
+    const isActive = document.querySelector("#view-explore")?.classList.contains("is-active");
+
+    if (!container || !isActive) return;
+
+    if (empty) empty.hidden = true;
+    container.hidden = false;
+
+    const renderSkeletonCard = () => `
+      <article class="explore-card explore-card--skeleton" aria-hidden="true">
+        <div class="explore-card-cover explore-skel-cover"></div>
+
+        <div class="explore-card-body">
+          <div class="explore-skel-title"></div>
+
+          <div class="explore-skel-meta-row">
+            <span class="explore-skel-chip"></span>
+            <span class="explore-skel-chip short"></span>
+          </div>
+
+          <div class="explore-skel-line"></div>
+          <div class="explore-skel-line short"></div>
+
+          <div class="explore-card-actions">
+            <span class="explore-skel-btn"></span>
+            <span class="explore-skel-btn ghost"></span>
+            <span class="explore-skel-btn icon"></span>
+          </div>
+        </div>
+      </article>
+    `;
+
+    const renderSkeletonSection = (title, count) => `
+      <section class="explore-section explore-section--skeleton" aria-hidden="true">
+        <header class="explore-section-head">
+          <div>
+            <div class="explore-skel-section-title"></div>
+            <div class="explore-skel-section-subtitle"></div>
+          </div>
+
+          <div class="explore-skel-section-actions"></div>
+        </header>
+
+        <div class="explore-section-grid">
+          ${Array.from({ length: count }).map(renderSkeletonCard).join("")}
+        </div>
+      </section>
+    `;
+
+    container.innerHTML = [
+      renderSkeletonSection("Novedades", 4),
+      renderSkeletonSection("Tendencias", 4),
+      renderSkeletonSection("Recomendados", 6)
+    ].join("");
+  }
+
   function _render() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
@@ -499,6 +557,9 @@ const ExploreModule = (() => {
   }
 
   async function load() {
+    _setExploreLoading(true);
+    _renderExploreSkeleton();
+
     try {
       feed = await ApiClient.getExploreFeed();
       if (!Array.isArray(feed)) feed = [];
