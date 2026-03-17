@@ -1188,30 +1188,32 @@ const LibraryUI = (() => {
     document.getElementById("saveProgressBtn")?.addEventListener("click", saveProgressModal);
 
     // Eliminar (con animación) + Toast "Deshacer"
-    document.getElementById("deleteItemBtn")?.addEventListener("click", () => {
+    document.getElementById("deleteItemBtn")?.addEventListener("click", async () => {
       const modal = document.getElementById("progressModal");
       const itemId = modal?.dataset.itemId;
       if (!itemId) return;
 
       const btn = document.getElementById("deleteItemBtn");
+      if (btn?.dataset.busy === "1") return;
+
       if (btn) {
+        btn.dataset.busy = "1";
         btn.disabled = true;
-        // si por lo que sea no se cierra el modal, lo re-habilitamos rápido
-        setTimeout(() => { btn.disabled = false; }, 600);
       }
 
-      // 1) Snapshot del item ANTES de borrar (para poder restaurarlo) vía ApiClient
-      ApiClient.getLibraryItemById(itemId).then((itemToRestore) => {
+      try {
+        const itemToRestore = await ApiClient.getLibraryItemById(itemId);
+
         // Si no existe, borramos sin undo
         if (!itemToRestore) {
           deleteLibraryItemAnimated(itemId, { silentToast: true });
           return;
         }
 
-        // 2) Borrado animado (silencioso: el toast con undo lo gestionamos aquí)
+        // Borrado animado (silencioso: el toast con undo lo gestionamos aquí)
         deleteLibraryItemAnimated(itemId, { silentToast: true });
 
-        // 3) Toast con botón deshacer durante X ms
+        // Toast con botón deshacer
         window.toast?.({
           title: "Contenido eliminado",
           message: itemToRestore.title || "Contenido",
@@ -1220,7 +1222,15 @@ const LibraryUI = (() => {
           actionLabel: "Deshacer",
           onAction: async () => {
             try {
-              await ApiClient.restoreLibraryItem(itemToRestore, { toFront: true });
+              await ApiClient.createLibraryItem({
+                type: itemToRestore.type,
+                title: itemToRestore.title,
+                status: itemToRestore.status,
+                progress: itemToRestore.progress,
+                meta: itemToRestore.meta || {},
+                cover: itemToRestore.cover || ""
+              });
+
               window.toast?.({
                 title: "Contenido restaurado",
                 message: "Se ha vuelto a añadir a tu biblioteca.",
@@ -1238,7 +1248,20 @@ const LibraryUI = (() => {
             }
           }
         });
-      });
+      } catch (e) {
+        console.error(e);
+        window.toast?.({
+          title: "No se pudo eliminar",
+          message: "Inténtalo de nuevo.",
+          type: "error",
+          duration: 3000
+        });
+      } finally {
+        if (btn && document.body.contains(btn)) {
+          btn.dataset.busy = "0";
+          btn.disabled = false;
+        }
+      }
     });
 
     document.addEventListener("click", async (e) => {
