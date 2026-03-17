@@ -945,6 +945,10 @@ async function renderHomeDashboard() {
 
     const btn = card.querySelector(".btn-retomar");
     const prevBtnHtml = btn ? btn.innerHTML : "";
+
+    if (btn && btn.dataset.busy === "1") return;
+    if (btn) btn.dataset.busy = "1";
+
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = `
@@ -1047,6 +1051,9 @@ async function renderHomeDashboard() {
         btn.disabled = false;
         btn.innerHTML = prevBtnHtml || "Retomar";
       }
+
+      if (btn) btn.dataset.busy = "0";
+      
       card.dataset.busy = "0";
 
       // No reinsertamos HTML ni re-enganchamos listeners.
