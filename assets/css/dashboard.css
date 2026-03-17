@@ -4712,6 +4712,15 @@ body.dark-theme .notif-mark-btn:hover {
   flex-wrap: wrap;
 }
 
+.home-continue-empty {
+  grid-column: 1 / -1;
+}
+
+.home-continue-empty .empty-state-card {
+  max-width: none;
+  min-height: 132px;
+}
+
 /* =========================
    EXPLORE DRAWER (detalle)
    (estilos base)
