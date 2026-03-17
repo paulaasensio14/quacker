@@ -4,14 +4,12 @@
 document.addEventListener("DOMContentLoaded", async () => {
   await UITheme.init();
 
-  // 1) Iniciar módulos primero (para que escuchen view-change)
-  window.LibraryUI?.init?.();
-  window.ListsModule?.init?.();
-  window.ProfileModule?.init?.();
-  window.ExploreModule?.init?.();
-
-  // Home no es módulo aún, pero si lo exponemos lo iniciaremos aquí
-  window.HomeUI?.init?.();
+  // 1) Iniciar módulos sin bloquear el arranque del router
+  try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }
+  try { window.ListsModule?.init?.(); } catch (e) { console.error("ListsModule.init error", e); }
+  try { window.ProfileModule?.init?.(); } catch (e) { console.error("ProfileModule.init error", e); }
+  try { window.ExploreModule?.init?.(); } catch (e) { console.error("ExploreModule.init error", e); }
+  try { window.HomeUI?.init?.(); } catch (e) { console.error("HomeUI.init error", e); }
 
   // ===== REFRESCO GLOBAL (una sola fuente de verdad) =====
   // Cuando ApiClient cambia datos reales (biblioteca/listas/notificaciones),

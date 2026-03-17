@@ -175,9 +175,8 @@
       const btn = document.querySelector(sel);
       if (!btn) return;
 
-      const key = `closeBound_${sel}`;
-      if (modalEl.dataset[key]) return;
-      modalEl.dataset[key] = "1";
+      if (btn.dataset.closeBound === "1") return;
+      btn.dataset.closeBound = "1";
 
       btn.addEventListener("click", (e) => {
         e.preventDefault();

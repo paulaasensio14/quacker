@@ -428,7 +428,7 @@ async function renderHomeDashboard() {
     // cwVisibleIds contiene los IDs realmente visibles en “Continúa” (limit + filtros).
     const backlogClean = (backlog || []).filter((it) => {
       if (!it || !it.id) return false;
-      return !cwVisibleIds.has(String(it.id));
+      return true;
     });
 
     // Backlog olvidado
@@ -961,12 +961,18 @@ async function renderHomeDashboard() {
 
       // 1) Marcar como retomado (no cuenta para racha)
       const resumeRes = await ApiClient.resumeLibraryItem(itemId);
+      if (!resumeRes || resumeRes.ok !== true) {
+        throw new Error(resumeRes?.reason || "resume_failed");
+      }
 
       // 2) Aplicar mini progreso real (sí cuenta para racha)
       const progRes = await (ApiClient.applyQuickProgress
         ? ApiClient.applyQuickProgress(itemId)
         : ApiClient.progressLibraryItem(itemId, 5)
       );
+      if (!progRes || progRes.ok !== true) {
+        throw new Error(progRes?.reason || "quick_progress_failed");
+      }
 
       // No quitamos la card manualmente.
       // ApiClient emite "quacker:data-changed" y app-core refresca Home (quacker:home-refresh).
@@ -994,7 +1000,10 @@ async function renderHomeDashboard() {
           ? async () => {
               try {
                 // 1) Restaurar el item sin crear nueva activity
-                await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+                const undoItemRes = await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+                if (!undoItemRes || undoItemRes.ok !== true) {
+                  throw new Error(undoItemRes?.reason || "undo_restore_failed");
+                }
 
                 // Feedback defensivo: si quedara alguna card "pending" por estados anteriores, la retiramos.
                 try {
@@ -1006,7 +1015,10 @@ async function renderHomeDashboard() {
                 }
                 // 2) Eliminar las activities creadas por el flujo "Retomar"
                 if (ApiClient.undoActivitiesForItemSince) {
-                  await ApiClient.undoActivitiesForItemSince(itemId, undoSinceIso);
+                  const undoActsRes = await ApiClient.undoActivitiesForItemSince(itemId, undoSinceIso);
+                  if (undoActsRes && undoActsRes.ok === false) {
+                    throw new Error(undoActsRes.reason || "undo_activities_failed");
+                  }
                 }
 
                 window.toast?.({

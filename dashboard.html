@@ -1325,13 +1325,12 @@
       }
 
       try {
-        const ok = await waitForApiClient(2000);
+        const ok = await waitForApiClient(5000);
         console.log("[DashboardGuard] ApiClient ready?", ok);
 
         if (!ok) {
-          console.warn("[DashboardGuard] ApiClient NOT READY -> redirect index.html");
-          window.location.replace("index.html");
-          return;
+          console.warn("[DashboardGuard] ApiClient NOT READY (still waiting)...");
+          await waitForApiClient(5000);
         }
 
         // 2) En server real (3000) SIEMPRE http + /api
