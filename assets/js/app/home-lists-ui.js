@@ -1124,9 +1124,97 @@ async function renderHomeDashboard() {
     }
 
     if (!total) {
-      continueGrid.innerHTML = `
-        <p class="empty-state">No hay contenidos para esta combinación de filtros.</p>
+      const hasLibraryItems = Array.isArray(cwAllItems) && cwAllItems.length > 0;
+      const isFilteredView = cwTypeFilter !== "all" || cwStatusFilter !== "in_progress";
+
+      const emptyTitle = hasLibraryItems
+        ? (isFilteredView ? "No hay resultados para este filtro" : "No tienes nada para continuar")
+        : "Tu zona de Continue está vacía";
+
+      const emptyText = hasLibraryItems
+        ? (isFilteredView
+            ? "Prueba a cambiar el tipo o el estado para ver otros contenidos."
+            : "Cuando avances en una serie, película, libro o videojuego, aparecerá aquí para que puedas retomarlo rápido.")
+        : "Añade contenido a tu biblioteca y haz progreso en algo para verlo aquí.";
+
+      const primaryActionHtml = isFilteredView
+        ? `
+            <button type="button" class="btn-primary btn-sm" id="btnContinueResetFilters">
+              Restablecer filtros
+            </button>
+          `
+        : `
+            <button type="button" class="btn-primary btn-sm" id="btnContinueGoLibrary">
+              Ver mi biblioteca
+            </button>
+          `;
+
+      const secondaryActionHtml = `
+        <button type="button" class="btn-secondary btn-sm" id="btnContinueGoExplore">
+          Explorar contenido
+        </button>
       `;
+
+      continueGrid.innerHTML = `
+        <div class="empty-state home-continue-empty">
+          <div class="empty-state-card" role="status" aria-live="polite">
+            <div class="empty-state-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 17A2.5 2.5 0 0 0 4 14.5V6.5A2.5 2.5 0 0 1 6.5 4H20v13"></path>
+              </svg>
+            </div>
+
+            <div class="empty-state-main">
+              <h3 class="empty-state-title">${emptyTitle}</h3>
+              <p class="empty-state-text">${emptyText}</p>
+
+              <div class="empty-state-actions">
+                ${primaryActionHtml}
+                ${secondaryActionHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const btnContinueResetFilters = document.getElementById("btnContinueResetFilters");
+      if (btnContinueResetFilters) {
+        btnContinueResetFilters.addEventListener("click", () => {
+          cwTypeFilter = "all";
+          cwStatusFilter = "in_progress";
+
+          document.querySelectorAll(".cw-type-pill").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.type === "all");
+          });
+
+          document.querySelectorAll(".cw-status-pill").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.status === "in_progress");
+          });
+
+          renderContinueWatching();
+        });
+      }
+
+      const btnContinueGoLibrary = document.getElementById("btnContinueGoLibrary");
+      if (btnContinueGoLibrary) {
+        btnContinueGoLibrary.addEventListener("click", () => {
+          const libraryBtn = document.querySelector('.nav-item-btn[data-view="library"]');
+          if (libraryBtn) libraryBtn.click();
+          document.querySelector("main.app-main")?.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      }
+
+      const btnContinueGoExplore = document.getElementById("btnContinueGoExplore");
+      if (btnContinueGoExplore) {
+        btnContinueGoExplore.addEventListener("click", () => {
+          const exploreBtn = document.querySelector('.nav-item-btn[data-view="explore"]');
+          if (exploreBtn) exploreBtn.click();
+          document.querySelector("main.app-main")?.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      }
+
       return;
     }
 
