@@ -327,9 +327,33 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, "meta")) {
-    next.meta = (patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta))
-      ? { ...(prev.meta || {}), ...patch.meta }
-      : { ...(prev.meta || {}) };
+    if (patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta)) {
+
+      const allowedMetaKeys = new Set([
+        "totalEpisodes",
+        "totalSeasons",
+        "totalPages",
+        "totalChapters",
+        "platform",
+        "author"
+      ]);
+
+      const sanitizedMeta = {};
+
+      for (const key of Object.keys(patch.meta)) {
+        if (allowedMetaKeys.has(key)) {
+          sanitizedMeta[key] = patch.meta[key];
+        }
+      }
+
+      next.meta = {
+        ...(prev.meta || {}),
+        ...sanitizedMeta
+      };
+
+    } else {
+      next.meta = { ...(prev.meta || {}) };
+    }
   } else {
     next.meta = { ...(prev.meta || {}) };
   }
