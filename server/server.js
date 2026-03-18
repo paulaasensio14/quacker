@@ -271,6 +271,10 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   const id = String(req.params.id);
   const patch = req.body || {};
 
+  if (Object.keys(patch).length === 0) {
+    return res.status(400).json({ error: "empty_patch" });
+  }
+
   const allowedPatchFields = new Set([
     "title",
     "type",
