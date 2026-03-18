@@ -166,7 +166,7 @@
     if (closeOnBackdrop && !modalEl.dataset.backdropBound) {
       modalEl.dataset.backdropBound = "1";
       modalEl.addEventListener("click", (e) => {
-        if (e.target === modalEl) close(modalEl, { restoreFocus: false });
+        if (e.target === modalEl) close(modalEl);
       });
     }
 
