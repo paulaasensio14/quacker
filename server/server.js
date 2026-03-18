@@ -112,7 +112,7 @@ app.post("/api/auth/register", (req, res) => {
       id: userId,
       email,
       name,
-      handle: "@user",
+      handle: "@" + String(email).split("@")[0].trim().toLowerCase(),
       language: "es",
       theme: "light"
     },
