@@ -193,10 +193,31 @@ app.get("/api/library/:id", _requireAuth, (req, res) => {
 
 app.post("/api/library", _requireAuth, (req, res) => {
   const data = req.body || {};
-  const title = String(data.title || "").trim();
-  const type = String(data.type || "pelicula");
+  const title = String(data.title || "").replace(/\s+/g, " ").trim();
+  const type = String(data.type || "pelicula").trim();
 
-  if (!title) return res.status(400).json({ error: "missing_title" });
+  const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+
+  if (!title) {
+    return res.status(400).json({ error: "missing_title" });
+  }
+
+  if (title.length < 2) {
+    return res.status(400).json({ error: "title_too_short" });
+  }
+
+  if (title.length > 120) {
+    return res.status(400).json({ error: "title_too_long" });
+  }
+
+  if (!allowedTypes.has(type)) {
+    return res.status(400).json({ error: "invalid_type" });
+  }
+
+  const rawProgress = Number(data.progress ?? 0);
+  const progress = Number.isFinite(rawProgress)
+    ? Math.max(0, Math.min(100, rawProgress))
+    : 0;
 
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
@@ -214,9 +235,9 @@ app.post("/api/library", _requireAuth, (req, res) => {
     type,
     title,
     status: defaultStatus,
-    progress: Number(data.progress ?? 0) || 0,
+    progress,
     meta: (data.meta && typeof data.meta === "object") ? data.meta : {},
-    cover: String(data.cover || ""),
+    cover: String(data.cover || "").trim(),
     createdAt: nowIso,
     updatedAt: nowIso
   };

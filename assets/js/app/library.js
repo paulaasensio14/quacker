@@ -1191,17 +1191,50 @@ const LibraryUI = (() => {
 
     // Guardar
     document.getElementById("saveAddLibraryModal")?.addEventListener("click", async () => {
-      const title = document.getElementById("addLib_title")?.value?.trim() || "";
-      const type = document.getElementById("addLib_type")?.value || "pelicula";
+      const titleInput = document.getElementById("addLib_title");
+      const typeSelect = document.getElementById("addLib_type");
 
-      if (title.length < 2) {
+      const rawTitle = titleInput?.value || "";
+      const normalizedTitle = rawTitle.replace(/\s+/g, " ").trim();
+      const type = String(typeSelect?.value || "pelicula");
+
+      const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+
+      if (titleInput && titleInput.value !== normalizedTitle) {
+        titleInput.value = normalizedTitle;
+      }
+
+      _showAddLibError("");
+
+      if (!normalizedTitle) {
+        _showAddLibError("Escribe un título.");
+        titleInput?.focus?.();
+        return;
+      }
+
+      if (normalizedTitle.length < 2) {
         _showAddLibError("Escribe un título (mínimo 2 caracteres).");
+        titleInput?.focus?.();
+        return;
+      }
+
+      if (normalizedTitle.length > 120) {
+        _showAddLibError("El título no puede superar los 120 caracteres.");
+        titleInput?.focus?.();
+        return;
+      }
+
+      if (!allowedTypes.has(type)) {
+        _showAddLibError("Selecciona un tipo válido.");
+        typeSelect?.focus?.();
         return;
       }
 
       const btn = document.getElementById("saveAddLibraryModal");
       const cancelBtn = document.getElementById("cancelAddLibraryModal");
       const closeBtn = document.getElementById("closeAddLibraryModal");
+
+      if (btn?.dataset.busy === "1") return;
 
       const prevHtml = btn?.innerHTML || "Añadir";
 
@@ -1218,23 +1251,42 @@ const LibraryUI = (() => {
       if (closeBtn) closeBtn.disabled = true;
 
       try {
-        const created = await ApiClient.createLibraryItem({ title, type });
+        const created = await ApiClient.createLibraryItem({
+          title: normalizedTitle,
+          type
+        });
 
         window.__lastCreatedLibraryItemId = created?.id || null;
 
         closeAddLibraryModal();
 
-        // No refrescamos manualmente: app-core reaccionará a "quacker:data-changed"
         window.toast?.({
           title: "Guardado",
-          message: `"${(created?.title || title).trim()}" añadido a tu biblioteca.`,
+          message: `"${(created?.title || normalizedTitle).trim()}" añadido a tu biblioteca.`,
           type: "success",
           duration: 2400
         });
 
       } catch (err) {
         console.error(err);
-        _showAddLibError("No se pudo añadir. Inténtalo de nuevo.");
+
+        const errorCode = err?.body?.error || err?.error || "";
+
+        if (errorCode === "missing_title") {
+          _showAddLibError("Escribe un título.");
+          titleInput?.focus?.();
+        } else if (errorCode === "title_too_short") {
+          _showAddLibError("Escribe un título (mínimo 2 caracteres).");
+          titleInput?.focus?.();
+        } else if (errorCode === "title_too_long") {
+          _showAddLibError("El título no puede superar los 120 caracteres.");
+          titleInput?.focus?.();
+        } else if (errorCode === "invalid_type") {
+          _showAddLibError("Selecciona un tipo válido.");
+          typeSelect?.focus?.();
+        } else {
+          _showAddLibError("No se pudo añadir. Inténtalo de nuevo.");
+        }
       } finally {
         if (btn) {
           btn.disabled = false;
