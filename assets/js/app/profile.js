@@ -6,6 +6,7 @@ const ProfileModule = (() => {
   let initialData = null;
   let isBound = false;
   let pendingAvatarDataUrl = null;
+  let lastAvatarPickerFocus = null;
 
   function showErrors(errors) {
     const box = $("#profileFormErrors");
@@ -148,6 +149,8 @@ const ProfileModule = (() => {
     const modal = document.getElementById("avatarPickerModal");
     if (!modal) return;
 
+    lastAvatarPickerFocus = document.activeElement || null;
+
     renderAvatarGrid();
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
@@ -159,6 +162,12 @@ const ProfileModule = (() => {
 
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
+
+    if (lastAvatarPickerFocus && typeof lastAvatarPickerFocus.focus === "function") {
+      requestAnimationFrame(() => {
+        lastAvatarPickerFocus.focus();
+      });
+    }
   }
 
   function renderAvatarGrid() {
