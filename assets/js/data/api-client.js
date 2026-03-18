@@ -1464,9 +1464,18 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: métricas ===
   async function getHomeStats() {
-    const state = _safeState();
-    const activities = state.activities || [];
-    const library = state.library || [];
+    let library = [];
+    let activities = [];
+
+    if (_isHttp()) {
+      library = await getLibrary();
+      activities = [];
+    } else {
+      const state = _safeState();
+      library = state.library || [];
+      activities = state.activities || [];
+    }
+
     const now = new Date();
 
     const weekAgo = new Date(now);
