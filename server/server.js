@@ -291,7 +291,10 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
 
   const next = {
     ...prev,
-    updatedAt: nowIso
+    ...data,
+    id: prev.id,
+    createdAt: prev.createdAt,
+    updatedAt: new Date().toISOString()
   };
 
   if (Object.prototype.hasOwnProperty.call(patch, "title")) {
