@@ -592,22 +592,22 @@ const LibraryUI = (() => {
 
       if (!hasAnyItems) {
         grid.innerHTML = `
-          <div class="lib-empty-state" style="grid-column:1/-1;">
-            <div class="lib-empty-state-card">
-              <div class="lib-empty-state-title">Tu biblioteca está vacía</div>
-              <div class="lib-empty-state-text">
-                Empieza añadiendo una serie, película, libro o videojuego.
-              </div>
-              <div class="lib-empty-state-title">Tu biblioteca está vacía</div>
-              <div class="lib-empty-state-text">
-                Empieza añadiendo una serie, película, libro o videojuego.
-              </div>
+        <div class="lib-empty-state" style="grid-column:1/-1;">
+          <div class="lib-empty-state-card" role="status" aria-live="polite">
+            <div class="lib-empty-state-title">Tu biblioteca está vacía</div>
+
+            <div class="lib-empty-state-text">
+              Empieza añadiendo una serie, película, libro o videojuego.
+            </div>
+
+            <div class="empty-state-actions">
               <button type="button" class="btn-primary" id="libEmptyAddBtn">
                 + Añadir contenido
               </button>
             </div>
           </div>
-        `;
+        </div>
+      `;
 
         requestAnimationFrame(() => {
           document.getElementById("libEmptyAddBtn")?.addEventListener("click", openAddLibraryModal);
