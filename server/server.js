@@ -248,7 +248,7 @@ app.post("/api/library", _requireAuth, (req, res) => {
   const item = {
     id: _uid(),
     type,
-    title,
+    title: String(title).replace(/\s+/g, " ").trim(),
     status: defaultStatus,
     progress,
     meta: sanitizedMeta,
