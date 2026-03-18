@@ -80,6 +80,15 @@ const ApiClient = (() => {
       let json = null;
       try { json = text ? JSON.parse(text) : null; } catch (_) {}
 
+      if (res.status === 401) {
+        window.location.href = "/index.html";
+        const err = new Error("unauthenticated");
+        err.status = 401;
+        err.body = json;
+        err.error = "unauthenticated";
+        throw err;
+      }
+
       if (!res.ok) {
 
         const errorCode = json?.error || "";
