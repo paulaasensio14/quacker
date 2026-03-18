@@ -524,6 +524,41 @@ const LibraryUI = (() => {
     }
   }
 
+  function renderLibraryLoadError() {
+    const grid = document.getElementById("libraryGrid");
+    if (!grid) return;
+
+    const countInline = document.getElementById("libraryCountInline");
+    if (countInline) {
+      countInline.style.display = "none";
+      countInline.textContent = "";
+    }
+
+    grid.innerHTML = `
+      <div class="lib-empty-state" style="grid-column:1/-1;">
+        <div class="lib-empty-state-card" role="status" aria-live="polite">
+          <div class="lib-empty-state-title">No se pudo cargar tu biblioteca</div>
+
+          <div class="lib-empty-state-text">
+            Revisa la conexión o vuelve a intentarlo en unos segundos.
+          </div>
+
+          <div class="empty-state-actions">
+            <button type="button" class="btn-primary" id="libRetryLoadBtn">
+              Reintentar
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    requestAnimationFrame(() => {
+      document.getElementById("libRetryLoadBtn")?.addEventListener("click", () => {
+        load();
+      });
+    });
+  }
+
   function render() {
     const grid = $("#libraryGrid");
     if (!grid) return;
@@ -756,7 +791,10 @@ const LibraryUI = (() => {
       render();
 
     } catch (e) {
+
       console.error("LibraryUI.load error", e);
+      renderLibraryLoadError();
+
     } finally {
       setLibraryRefreshing(false);
     }
