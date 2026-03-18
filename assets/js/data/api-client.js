@@ -86,7 +86,12 @@ const ApiClient = (() => {
 
       const text = await res.text();
       let json = null;
-      try { json = text ? JSON.parse(text) : null; } catch (_) {}
+
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch (_) {
+        json = { raw: text };
+      }
 
       if (res.status === 401) {
         window.location.href = "/index.html";
