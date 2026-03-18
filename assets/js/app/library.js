@@ -857,6 +857,28 @@ const LibraryUI = (() => {
     }, 520);
   }
 
+  function getLibraryActionErrorMessage(err, fallback = "Inténtalo de nuevo.") {
+    const errorCode = err?.body?.error || err?.error || "";
+
+    if (errorCode === "not_found") {
+      return "Este contenido ya no existe o ha sido eliminado.";
+    }
+
+    if (errorCode === "invalid_status") {
+      return "El estado del contenido ya no es válido. Recarga la biblioteca e inténtalo otra vez.";
+    }
+
+    if (errorCode === "invalid_type") {
+      return "El tipo de contenido no es válido. Recarga la biblioteca e inténtalo otra vez.";
+    }
+
+    if (errorCode === "missing_title" || errorCode === "title_too_short" || errorCode === "title_too_long") {
+      return "El contenido tiene datos no válidos. Revísalo desde Editar.";
+    }
+
+    return fallback;
+  }
+
   async function applyQuickProgressWithUndo(itemId) {
     if (!itemId) return { ok: false };
 
@@ -927,12 +949,14 @@ const LibraryUI = (() => {
       return { ok: true, res };
     } catch (e) {
       console.error(e);
+
       window.toast?.({
         title: "No se pudo actualizar",
-        message: "Inténtalo de nuevo.",
+        message: getLibraryActionErrorMessage(e, "Inténtalo de nuevo."),
         type: "error",
         duration: 3600
       });
+
       return { ok: false };
     }
   }
@@ -991,12 +1015,14 @@ const LibraryUI = (() => {
       return { ok: true, res };
     } catch (e) {
       console.error(e);
+
       window.toast?.({
         title: "No se pudo completar",
-        message: "Inténtalo de nuevo.",
+        message: getLibraryActionErrorMessage(e, "Inténtalo de nuevo."),
         type: "error",
         duration: 3600
       });
+
       return { ok: false };
     }
   }
