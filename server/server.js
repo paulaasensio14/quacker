@@ -96,21 +96,21 @@ app.get("/api/health", (req, res) => {
 // ===== AUTH =====
 app.post("/api/auth/register", (req, res) => {
   const { email, password, name } = req.body || {};
-  if (!email || !password || !name) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail || !password || !name) {
     return res.status(400).json({ error: "missing_fields" });
   }
-
   const db = _readDb();
-
   // email único (dev)
-  const existing = Object.entries(db.users).find(([, u]) => u?.profile?.email === email);
+  const existing = Object.entries(db.users).find(([, u]) => String(u?.profile?.email || "").trim().toLowerCase() === normalizedEmail);
+
   if (existing) return res.status(409).json({ error: "email_in_use" });
 
   const userId = _uid();
   db.users[userId] = {
     profile: {
       id: userId,
-      email,
+      normalizedEmail,
       name,
       handle: "@" + String(email).split("@")[0].trim().toLowerCase(),
       language: "es",
@@ -133,10 +133,10 @@ app.post("/api/auth/register", (req, res) => {
 
 app.post("/api/auth/login", (req, res) => {
   const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: "missing_fields" });
-
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail || !password) return res.status(400).json({ error: "missing_fields" });
   const db = _readDb();
-  const found = Object.entries(db.users).find(([, u]) => u?.profile?.email === email);
+  const found = Object.entries(db.users).find(([, u]) => String(u?.profile?.email || "").trim().toLowerCase() === normalizedEmail);
 
   // DEV: no validamos password de verdad (solo para levantar pipeline)
   if (!found) return res.status(401).json({ error: "invalid_credentials" });
