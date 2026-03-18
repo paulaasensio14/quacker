@@ -1,12 +1,10 @@
 # Node
 node_modules/
-npm-debug.log
-
-# Mac
-.DS_Store
+server/node_modules/
+npm-debug.log*
 
 # Logs
-logs
+logs/
 *.log
 
 # Environment
@@ -16,8 +14,9 @@ logs
 dist/
 build/
 
-# VS Code
+# Editor
 .vscode/
 
-# Windows
+# OS
+.DS_Store
 Thumbs.db
