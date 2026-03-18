@@ -68,13 +68,21 @@ const ApiClient = (() => {
     const t = setTimeout(() => ctrl.abort(), __cfg.timeoutMs);
 
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "include", // IMPORTANTE: cookies httpOnly para sesión
-        body: body == null ? undefined : JSON.stringify(body),
-        signal: ctrl.signal
-      });
+      let res;
+      try {
+        res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          credentials: "include", // IMPORTANTE: cookies httpOnly para sesión
+          body: body == null ? undefined : JSON.stringify(body),
+          signal: ctrl.signal
+        });
+      } catch (e) {
+        const err = new Error("network_error");
+        err.status = 0;
+        err.error = "network_error";
+        throw err;
+      }
 
       const text = await res.text();
       let json = null;
