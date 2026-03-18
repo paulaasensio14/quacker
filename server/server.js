@@ -110,7 +110,7 @@ app.post("/api/auth/register", (req, res) => {
   db.users[userId] = {
     profile: {
       id: userId,
-      normalizedEmail,
+      email: normalizedEmail,
       name,
       handle: "@" + String(email).split("@")[0].trim().toLowerCase(),
       language: "es",
