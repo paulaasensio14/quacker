@@ -73,11 +73,41 @@ const ApiClient = (() => {
       try { json = text ? JSON.parse(text) : null; } catch (_) {}
 
       if (!res.ok) {
-        const msg = (json && (json.error || json.message)) ? (json.error || json.message) : `HTTP ${res.status}`;
-        throw new Error(msg);
+
+        const errorCode = json?.error || "";
+        const errorMessage = json?.message || "";
+        const msg = errorCode || errorMessage || `HTTP ${res.status}`;
+
+        const err = new Error(msg);
+        err.status = res.status;
+        err.body = json;
+        err.error = errorCode || msg;
+
+        throw err;
+
       }
 
       return json;
+    
+    } catch (err) {
+
+      if (err?.name === "AbortError") {
+        const timeoutErr = new Error("timeout");
+        timeoutErr.status = 0;
+        timeoutErr.body = { error: "timeout" };
+        timeoutErr.error = "timeout";
+        throw timeoutErr;
+      }
+
+      if (err instanceof TypeError) {
+        const networkErr = new Error("network_error");
+        networkErr.status = 0;
+        networkErr.body = { error: "network_error" };
+        networkErr.error = "network_error";
+        throw networkErr;
+      }
+
+      throw err;
     } finally {
       clearTimeout(t);
     }
