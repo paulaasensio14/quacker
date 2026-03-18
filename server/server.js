@@ -249,6 +249,8 @@ app.post("/api/library", _requireAuth, (req, res) => {
   if (!Number.isFinite(safeProgress)) safeProgress = 0;
   safeProgress = Math.max(0, Math.min(100, safeProgress));
 
+  delete data.status;
+  
   const item = {
     id: _uid(),
     type,
