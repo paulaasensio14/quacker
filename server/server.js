@@ -219,17 +219,22 @@ app.post("/api/library", _requireAuth, (req, res) => {
     ? Math.max(0, Math.min(100, rawProgress))
     : 0;
 
-  const db = _readDb();
-  const bucket = _getUserBucket(db, req.session.userId);
+  const allowedMetaKeys = new Set([
+    "totalEpisodes",
+    "totalSeasons",
+    "totalPages",
+    "totalChapters",
+    "platform",
+    "author"
+  ]);
 
-  const normalizedTitle = title.toLocaleLowerCase("es").trim();
-  const duplicate = bucket.library.find((it) => {
-    const currentTitle = String(it?.title || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
-    const currentType = String(it?.type || "").trim();
-    return currentTitle === normalizedTitle && currentType === type;
-  });
-  if (duplicate) {
-    return res.status(409).json({ error: "duplicate_item" });
+  const sanitizedMeta = {};
+  if (data.meta && typeof data.meta === "object" && !Array.isArray(data.meta)) {
+    for (const key of Object.keys(data.meta)) {
+      if (allowedMetaKeys.has(key)) {
+        sanitizedMeta[key] = data.meta[key];
+      }
+    }
   }
 
   const nowIso = new Date().toISOString();
@@ -246,7 +251,7 @@ app.post("/api/library", _requireAuth, (req, res) => {
     title,
     status: defaultStatus,
     progress,
-    meta: (data.meta && typeof data.meta === "object") ? data.meta : {},
+    meta: sanitizedMeta,
     cover: String(data.cover || "").trim(),
     createdAt: nowIso,
     updatedAt: nowIso
