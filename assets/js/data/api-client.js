@@ -11,12 +11,20 @@ const ApiClient = (() => {
   // AUTO-TRANSPORT (dev)
   // =========================
   // Regla:
-  // - Si servimos desde el backend local (puerto 3000): usamos HTTP por defecto
-  // - En estático (Live Server / file): local por defecto
-  const __isNodeServer = String(window.location.port) === "3000";
+  // - file:// o servidor estático local (Live Server, etc.): local
+  // - backend Node local en :3000: http
+  // - despliegue normal same-origin con /api: http
+  const __hostname = String(window.location.hostname || "").toLowerCase();
+  const __port = String(window.location.port || "");
+  const __protocol = String(window.location.protocol || "").toLowerCase();
+
+  const __isFileProtocol = __protocol === "file:";
+  const __isLocalHost = __hostname === "localhost" || __hostname === "127.0.0.1";
+  const __isNodeServer = __isLocalHost && __port === "3000";
+  const __isStaticLocalDev = __isLocalHost && __port !== "3000";
 
   const __cfg = {
-    transport: __isNodeServer ? "http" : "local",   // auto en dev server
+    transport: (__isFileProtocol || __isStaticLocalDev) ? "local" : "http",
     baseUrl: "/api",      // prefijo del backend. Ej: "https://api.quacker.app"
     timeoutMs: 12000
   };
