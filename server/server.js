@@ -245,12 +245,16 @@ app.post("/api/library", _requireAuth, (req, res) => {
     type === "serie" ? "watching" :
     "watching";
 
+  let safeProgress = Number(progress);
+  if (!Number.isFinite(safeProgress)) safeProgress = 0;
+  safeProgress = Math.max(0, Math.min(100, safeProgress));
+
   const item = {
     id: _uid(),
     type,
     title: String(title).replace(/\s+/g, " ").trim(),
     status: defaultStatus,
-    progress,
+    progress: safeProgress,
     meta: sanitizedMeta,
     cover: String(data.cover || "").trim(),
     createdAt: nowIso,
