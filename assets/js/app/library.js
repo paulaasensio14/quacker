@@ -165,9 +165,17 @@ async function openAddToListModal(itemId) {
       lastFocusEl: __addToListModalLastFocus
     });
 
-    document.getElementById("atlRetryLoadListsBtn")?.addEventListener("click", () => {
-      openAddToListModal(itemId);
-    });
+    const retryBtn = document.getElementById("atlRetryLoadListsBtn");
+
+    if (retryBtn) {
+      retryBtn.replaceWith(retryBtn.cloneNode(true));
+
+      document
+        .getElementById("atlRetryLoadListsBtn")
+        ?.addEventListener("click", () => {
+          openAddToListModal(itemId);
+        });
+    }
 
     return;
   }
