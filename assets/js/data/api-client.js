@@ -1568,7 +1568,9 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: última actividad ===
   async function getLastActivityDetailed() {
+    if (_isHttp()) return null;
     if (typeof FakeBackend === "undefined") return null;
+
     const state = _safeState();
     // Última actividad "meaningful": progress / completed (resume NO cuenta)
     const activities = Array.isArray(state.activities) ? state.activities : [];
@@ -1604,7 +1606,7 @@ const ApiClient = (() => {
       if (Number.isFinite(s) && s > 0 && Number.isFinite(e) && e > 0) {
         meta = `T${s} · E${e}`;
       } else {
-        meta = ""; // sin fallback
+        meta = "";
       }
     }
 
@@ -1616,7 +1618,7 @@ const ApiClient = (() => {
       if (Number.isFinite(pr) && pr > 0 && Number.isFinite(tp) && tp > 0) {
         meta = `${pr} / ${tp} páginas`;
       } else {
-        meta = ""; // sin fallback
+        meta = "";
       }
     }
 
@@ -1627,14 +1629,7 @@ const ApiClient = (() => {
     }
 
     const progressPercent = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
-
-    let progressLabel = "";
-    if (item.type === "book") {
-      // Para libro, dejamos la barra + porcentaje simple (la meta ya son páginas)
-      progressLabel = `${Math.round(progressPercent)}%`;
-    } else {
-      progressLabel = `${Math.round(progressPercent)}%`;
-    }
+    const progressLabel = `${Math.round(progressPercent)}%`;
 
     return {
       id: item.id,
@@ -1726,6 +1721,8 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: reto mensual ===
   async function getMonthlyChallenge() {
+    if (_isHttp()) return null;
+
     const state = _safeState();
     const goal = (state.goals && state.goals[0]) || null;
     if (!goal) return null;
