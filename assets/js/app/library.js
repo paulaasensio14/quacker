@@ -114,11 +114,14 @@ async function openAddToListModal(itemId) {
   }
 
   let lists = [];
+  let listsLoadFailed = false;
+
   try {
     lists = await ApiClient.getLists();
   } catch (e) {
     console.error(e);
     lists = [];
+    listsLoadFailed = true;
   }
 
   // Deshabilitar listas donde ya está el item
@@ -132,6 +135,42 @@ async function openAddToListModal(itemId) {
   const alreadyIds = new Set((alreadyIn || []).map(l => String(l.id)));
 
   optionsEl.innerHTML = "";
+
+  if (listsLoadFailed) {
+    _showAddToListError("");
+
+    optionsEl.innerHTML = `
+      <div class="atl-empty-state">
+        <div class="atl-empty-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 8v5"></path>
+            <path d="M12 16h.01"></path>
+          </svg>
+        </div>
+
+        <div class="atl-empty-title">No se pudieron cargar tus listas</div>
+        <div class="atl-empty-sub">Revisa la conexión e inténtalo otra vez.</div>
+
+        <button type="button" class="btn-primary" id="atlRetryLoadListsBtn">Reintentar</button>
+      </div>
+    `;
+
+    const confirmBtn = document.getElementById("confirmAddToListModal");
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    window.UIModal?.open(modal, {
+      initialFocusSelector: "#atlRetryLoadListsBtn",
+      lastFocusEl: __addToListModalLastFocus
+    });
+
+    document.getElementById("atlRetryLoadListsBtn")?.addEventListener("click", () => {
+      openAddToListModal(itemId);
+    });
+
+    return;
+  }
 
   if (!lists.length) {
     // Empty state dentro del modal (en vez de solo error)
