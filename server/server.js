@@ -271,6 +271,21 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   const id = String(req.params.id);
   const patch = req.body || {};
 
+  const allowedPatchFields = new Set([
+    "title",
+    "type",
+    "status",
+    "progress",
+    "meta",
+    "cover"
+  ]);
+
+  for (const key of Object.keys(patch)) {
+    if (!allowedPatchFields.has(key)) {
+      delete patch[key];
+    }
+  }
+
   const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
   const allowedStatuses = new Set([
     "pending",
