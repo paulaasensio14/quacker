@@ -194,7 +194,7 @@ app.get("/api/library/:id", _requireAuth, (req, res) => {
 app.post("/api/library", _requireAuth, (req, res) => {
   const data = req.body || {};
   const title = String(data.title || "").replace(/\s+/g, " ").trim();
-  const type = String(data.type || "pelicula").trim();
+  const type = String(data.type || "pelicula").trim().toLowerCase();
 
   const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
 
