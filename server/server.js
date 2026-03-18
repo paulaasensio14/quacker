@@ -368,6 +368,17 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     next.meta = { ...(prev.meta || {}) };
   }
 
+  const normalizedNextTitle = String(next.title || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
+  const duplicate = bucket.library.find((it) => {
+    if (String(it?.id) === id) return false;
+    const currentTitle = String(it?.title || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
+    const currentType = String(it?.type || "").trim();
+    return currentTitle === normalizedNextTitle && currentType === String(next.type || "").trim();
+  });
+  if (duplicate) {
+    return res.status(409).json({ error: "duplicate_item" });
+  }
+
   if (next.progress >= 100) {
     next.progress = 100;
     next.status = "completed";
