@@ -11,6 +11,58 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { window.ExploreModule?.init?.(); } catch (e) { console.error("ExploreModule.init error", e); }
   try { window.HomeUI?.init?.(); } catch (e) { console.error("HomeUI.init error", e); }
 
+  let homeRefreshScheduled = false;
+  let notificationsRefreshScheduled = false;
+  let libraryRefreshPromise = null;
+  let listsRefreshPromise = null;
+
+  function scheduleHomeRefresh() {
+    if (homeRefreshScheduled) return;
+    homeRefreshScheduled = true;
+
+    queueMicrotask(() => {
+      homeRefreshScheduled = false;
+      document.dispatchEvent(new CustomEvent("quacker:home-refresh"));
+    });
+  }
+
+  function scheduleNotificationsRefresh() {
+    if (notificationsRefreshScheduled) return;
+    notificationsRefreshScheduled = true;
+
+    queueMicrotask(() => {
+      notificationsRefreshScheduled = false;
+      window.NotificationsUI?.render?.().catch?.(console.error);
+    });
+  }
+
+  function scheduleLibraryRefresh() {
+    if (libraryRefreshPromise) return libraryRefreshPromise;
+
+    libraryRefreshPromise = Promise.resolve()
+      .then(() => window.LibraryUI?.load?.())
+      .then(() => window.LibraryUI?.render?.())
+      .catch(console.error)
+      .finally(() => {
+        libraryRefreshPromise = null;
+      });
+
+    return libraryRefreshPromise;
+  }
+
+  function scheduleListsRefresh() {
+    if (listsRefreshPromise) return listsRefreshPromise;
+
+    listsRefreshPromise = Promise.resolve()
+      .then(() => window.ListsModule?.load?.())
+      .catch(console.error)
+      .finally(() => {
+        listsRefreshPromise = null;
+      });
+
+    return listsRefreshPromise;
+  }
+
   // ===== REFRESCO GLOBAL (una sola fuente de verdad) =====
   // Cuando ApiClient cambia datos reales (biblioteca/listas/notificaciones),
   // emitimos refrescos oficiales para mantener Home / Explore / Listas sincronizados.
@@ -29,8 +81,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       kind === "goals";
 
     if (affectsHome) {
-      document.dispatchEvent(new CustomEvent("quacker:home-refresh"));
-      window.NotificationsUI?.render?.().catch?.(console.error);
+      scheduleHomeRefresh();
+      scheduleNotificationsRefresh();
     }
 
     // 1.b) Si estás en Perfil y cambia el usuario, recargamos el formulario
@@ -56,15 +108,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 4) Si estás en Biblioteca, recargar solo cuando cambian biblioteca o listas
     const isLibraryActive = document.querySelector("#view-library")?.classList.contains("is-active");
     if (isLibraryActive && (kind === "library" || kind === "lists")) {
-      window.LibraryUI?.load?.()
-        .then(() => window.LibraryUI?.render?.())
-        .catch(console.error);
+      scheduleLibraryRefresh();
     }
 
     // 5) Si estás en Listas, recargar solo cuando cambian listas o biblioteca
     const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
     if (isListsActive && (kind === "lists" || kind === "library")) {
-      window.ListsModule?.load?.().catch?.(console.error);
+      scheduleListsRefresh();
     }
   });
 
