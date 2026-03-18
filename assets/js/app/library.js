@@ -991,18 +991,23 @@ const LibraryUI = (() => {
   }
 
   async function applyQuickProgressWithUndo(itemId) {
-    if (!itemId) return { ok: false };
+    const card = document.querySelector(`.library-card[data-id="${itemId}"]`);
+    if (card?.dataset.busy === "1") return;
 
-    // Snapshot antes del progreso rápido (para Deshacer)
-    let snapshotBefore = null;
-    try {
-      snapshotBefore = await ApiClient.getLibraryItemById(itemId);
-      if (!snapshotBefore || !snapshotBefore.id) snapshotBefore = null;
-    } catch (_) {
-      snapshotBefore = null;
-    }
+    if (card) card.dataset.busy = "1";
 
     try {
+      if (!itemId) return { ok: false };
+
+      // Snapshot antes del progreso rápido (para Deshacer)
+      let snapshotBefore = null;
+      try {
+        snapshotBefore = await ApiClient.getLibraryItemById(itemId);
+        if (!snapshotBefore || !snapshotBefore.id) snapshotBefore = null;
+      } catch (_) {
+        snapshotBefore = null;
+      }
+
       // Marcador temporal para deshacer activities creadas por ESTE click
       const sinceIso = new Date(Date.now() - 2000).toISOString();
 
@@ -1069,6 +1074,8 @@ const LibraryUI = (() => {
       });
 
       return { ok: false };
+    } finally {
+      if (card) card.dataset.busy = "0";
     }
   }
 
