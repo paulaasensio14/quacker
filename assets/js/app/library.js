@@ -1080,18 +1080,23 @@ const LibraryUI = (() => {
   }
 
   async function markAsCompletedWithUndo(itemId) {
-    if (!itemId) return { ok: false };
+    const card = document.querySelector(`.library-card[data-id="${itemId}"]`);
+    if (card?.dataset.busy === "1") return;
 
-    // Snapshot previo
-    let snapshotBefore = null;
-    try {
-      snapshotBefore = await ApiClient.getLibraryItemById(itemId);
-      if (!snapshotBefore || !snapshotBefore.id) snapshotBefore = null;
-    } catch (_) {
-      snapshotBefore = null;
-    }
+    if (card) card.dataset.busy = "1";
 
     try {
+      if (!itemId) return { ok: false };
+
+      // Snapshot previo
+      let snapshotBefore = null;
+      try {
+        snapshotBefore = await ApiClient.getLibraryItemById(itemId);
+        if (!snapshotBefore || !snapshotBefore.id) snapshotBefore = null;
+      } catch (_) {
+        snapshotBefore = null;
+      }
+
       const res = await ApiClient.completeLibraryItem(itemId);
 
       // Feedback visual inmediato
@@ -1142,6 +1147,8 @@ const LibraryUI = (() => {
       });
 
       return { ok: false };
+    } finally {
+      if (card) card.dataset.busy = "0";
     }
   }
 
