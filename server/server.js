@@ -370,6 +370,12 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, "meta")) {
+    if (patch.meta !== undefined) {
+      if (typeof patch.meta !== "object" || Array.isArray(patch.meta)) {
+        return res.status(400).json({ error: "invalid_meta" });
+      }
+    }
+
     if (patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta)) {
 
       const allowedMetaKeys = new Set([
