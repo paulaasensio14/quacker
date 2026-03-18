@@ -3,7 +3,10 @@
 
 const Router = (() => {
   const views = {};
+
   let currentView = null;
+  let mainScrollEl = null;
+  const viewScrollPositions = {};
 
   function _trimSearchValue(v) {
     return String(v || "").trim();
@@ -53,18 +56,43 @@ const Router = (() => {
 
     const prevView = currentView;
 
+    if (!mainScrollEl) {
+      mainScrollEl = document.querySelector("main.app-main");
+    }
+
+    if (prevView && mainScrollEl) {
+      viewScrollPositions[prevView] = mainScrollEl.scrollTop;
+    }
+
     // Si salimos de Biblioteca o Explorar, persistimos el término actual del buscador global
+
     const globalSearchPrev = document.querySelector("#globalSearch");
+
     if (prevView && globalSearchPrev && (prevView === "library" || prevView === "explore")) {
-      _persistSearchForView(prevView, globalSearchPrev.value);
+
+    _persistSearchForView(prevView, globalSearchPrev.value);
+
     }
 
     // 1) activar vista
     if (currentView) {
       views[currentView].classList.remove("is-active");
     }
+
     views[id].classList.add("is-active");
+
     currentView = id;
+
+    requestAnimationFrame(() => {
+      if (!mainScrollEl) {
+        mainScrollEl = document.querySelector("main.app-main");
+      }
+
+      if (!mainScrollEl) return;
+
+      const savedScrollTop = viewScrollPositions[id] ?? 0;
+      mainScrollEl.scrollTop = savedScrollTop;
+    });
 
     // 2) topbar title
     const titles = {
