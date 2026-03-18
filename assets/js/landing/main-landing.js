@@ -827,16 +827,29 @@
       } catch (err) {
         console.error(err);
 
-        const msg = currentLang === 'es'
+        const isRegister = mode === 'register';
+        const errorCode = String(err?.error || err?.message || "").trim();
+
+        let msg = currentLang === 'es'
           ? "No se pudo iniciar sesión. Revisa email/contraseña y vuelve a intentarlo."
           : "Couldn’t sign in. Check your email/password and try again.";
+
+        if (isRegister) {
+          msg = errorCode === "email_exists"
+            ? (currentLang === 'es'
+                ? "Ya existe una cuenta con ese email."
+                : "An account with that email already exists.")
+            : (currentLang === 'es'
+                ? "No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo."
+                : "Couldn’t create the account. Check your details and try again.");
+        }
 
         if (errorEl) {
           errorEl.textContent = msg;
           errorEl.classList.remove('hidden');
         }
 
-        if (window.toast) {
+        if (!isRegister && window.toast) {
           window.toast({
             title: currentLang === 'es' ? "Error de acceso" : "Sign-in error",
             message: msg,
