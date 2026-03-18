@@ -256,7 +256,7 @@ app.post("/api/library", _requireAuth, (req, res) => {
     status: defaultStatus,
     progress: safeProgress,
     meta: sanitizedMeta,
-    cover: String(data.cover || "").trim(),
+    cover: String(data.cover || "").trim().slice(0, 500),
     createdAt: nowIso,
     updatedAt: nowIso
   };
