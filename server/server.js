@@ -300,6 +300,8 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   if (Object.prototype.hasOwnProperty.call(patch, "title")) {
     const title = String(patch.title || "").replace(/\s+/g, " ").trim();
 
+    next.title = title;
+
     if (!title) {
       return res.status(400).json({ error: "missing_title" });
     }
