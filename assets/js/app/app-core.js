@@ -118,6 +118,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // ===== SIDEBAR TOGGLE =====
+  const sidebar = document.getElementById("sidebar");
+  const sidebarToggle = document.getElementById("sidebarToggle");
+  const SIDEBAR_COLLAPSED_KEY = "quacker:sidebar-collapsed";
+
+  function applySidebarCollapsed(collapsed) {
+    if (!sidebar || !sidebarToggle) return;
+    sidebar.classList.toggle("collapsed", collapsed);
+    sidebarToggle.setAttribute("aria-label", collapsed ? "Desplegar menú" : "Plegar menú");
+    sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  if (sidebar && sidebarToggle) {
+    const savedCollapsed = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+    applySidebarCollapsed(savedCollapsed);
+
+    sidebarToggle.addEventListener("click", () => {
+      const collapsed = !sidebar.classList.contains("collapsed");
+      applySidebarCollapsed(collapsed);
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+    });
+  }
+
   // ===== PROFILE MENU (chip arriba derecha) =====
   const profileChip = $("#profileChip");
   const profileMenu = $("#profileMenu");
