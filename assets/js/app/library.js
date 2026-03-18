@@ -879,6 +879,32 @@ const LibraryUI = (() => {
     return fallback;
   }
 
+  function getLibraryUndoErrorMessage(err, fallback = "Inténtalo de nuevo.") {
+    const errorCode = err?.body?.error || err?.error || "";
+
+    if (errorCode === "not_found") {
+      return "Este contenido ya no existe o ya fue eliminado.";
+    }
+
+    if (errorCode === "invalid_status") {
+      return "El estado ya no es válido. Recarga la biblioteca e inténtalo otra vez.";
+    }
+
+    if (errorCode === "invalid_type") {
+      return "El tipo de contenido ya no es válido. Recarga la biblioteca e inténtalo otra vez.";
+    }
+
+    if (
+      errorCode === "missing_title" ||
+      errorCode === "title_too_short" ||
+      errorCode === "title_too_long"
+    ) {
+      return "Los datos del contenido ya no son válidos. Revísalo desde Editar.";
+    }
+
+    return fallback;
+  }
+
   async function applyQuickProgressWithUndo(itemId) {
     if (!itemId) return { ok: false };
 
@@ -937,7 +963,7 @@ const LibraryUI = (() => {
                 console.error(e);
                 window.toast?.({
                   title: "No se pudo deshacer",
-                  message: "Inténtalo de nuevo.",
+                  message: getLibraryUndoErrorMessage(e, "Inténtalo de nuevo."),
                   type: "error",
                   duration: 3200
                 });
@@ -1003,7 +1029,7 @@ const LibraryUI = (() => {
                 console.error(e);
                 window.toast?.({
                   title: "No se pudo deshacer",
-                  message: "Inténtalo de nuevo.",
+                  message: getLibraryUndoErrorMessage(e, "Inténtalo de nuevo."),
                   type: "error",
                   duration: 3200
                 });
