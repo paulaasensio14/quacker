@@ -849,15 +849,6 @@
           errorEl.classList.remove('hidden');
         }
 
-        if (!isRegister && window.toast) {
-          window.toast({
-            title: currentLang === 'es' ? "Error de acceso" : "Sign-in error",
-            message: msg,
-            type: "error",
-            duration: 3800
-          });
-        }
-
         if (submitText) submitText.textContent = prevText;
         setSubmitLoading(false);
       }
