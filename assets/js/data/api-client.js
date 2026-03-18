@@ -94,7 +94,14 @@ const ApiClient = (() => {
       }
 
       if (res.status === 401) {
-        window.location.href = "/index.html";
+        const isLandingPage =
+          window.location.pathname === "/" ||
+          window.location.pathname.endsWith("/index.html");
+
+        if (!isLandingPage) {
+          window.location.href = "/index.html";
+        }
+
         const err = new Error("unauthenticated");
         err.status = 401;
         err.body = json;
