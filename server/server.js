@@ -252,6 +252,15 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   const id = String(req.params.id);
   const patch = req.body || {};
 
+  const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+  const allowedStatuses = new Set([
+    "pending",
+    "watching",
+    "reading",
+    "playing",
+    "completed"
+  ]);
+
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
 
@@ -263,20 +272,76 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
 
   const next = {
     ...prev,
-    ...patch,
-    meta: { ...(prev.meta || {}), ...(patch.meta || {}) },
     updatedAt: nowIso
   };
 
-  // normalización mínima
-  const pct = Math.max(0, Math.min(100, Number(next.progress ?? 0)));
-  next.progress = pct;
-  if (pct >= 100) next.status = "completed";
+  if (Object.prototype.hasOwnProperty.call(patch, "title")) {
+    const title = String(patch.title || "").replace(/\s+/g, " ").trim();
+
+    if (!title) {
+      return res.status(400).json({ error: "missing_title" });
+    }
+
+    if (title.length < 2) {
+      return res.status(400).json({ error: "title_too_short" });
+    }
+
+    if (title.length > 120) {
+      return res.status(400).json({ error: "title_too_long" });
+    }
+
+    next.title = title;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "type")) {
+    const type = String(patch.type || "").trim();
+
+    if (!allowedTypes.has(type)) {
+      return res.status(400).json({ error: "invalid_type" });
+    }
+
+    next.type = type;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "status")) {
+    const status = String(patch.status || "").trim();
+
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({ error: "invalid_status" });
+    }
+
+    next.status = status;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "progress")) {
+    const rawProgress = Number(patch.progress);
+    next.progress = Number.isFinite(rawProgress)
+      ? Math.max(0, Math.min(100, rawProgress))
+      : 0;
+  } else {
+    next.progress = Math.max(0, Math.min(100, Number(prev.progress ?? 0)));
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "cover")) {
+    next.cover = String(patch.cover || "").trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "meta")) {
+    next.meta = (patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta))
+      ? { ...(prev.meta || {}), ...patch.meta }
+      : { ...(prev.meta || {}) };
+  } else {
+    next.meta = { ...(prev.meta || {}) };
+  }
+
+  if (next.progress >= 100) {
+    next.progress = 100;
+    next.status = "completed";
+  }
 
   bucket.library[idx] = next;
   _writeDb(db);
 
-  // De momento ignoramos logActivity en backend (lo implementaremos cuando migremos Activities)
   res.json(next);
 });
 
