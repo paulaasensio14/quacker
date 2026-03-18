@@ -222,6 +222,16 @@ app.post("/api/library", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
 
+  const normalizedTitle = title.toLocaleLowerCase("es").trim();
+  const duplicate = bucket.library.find((it) => {
+    const currentTitle = String(it?.title || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
+    const currentType = String(it?.type || "").trim();
+    return currentTitle === normalizedTitle && currentType === type;
+  });
+  if (duplicate) {
+    return res.status(409).json({ error: "duplicate_item" });
+  }
+
   const nowIso = new Date().toISOString();
 
   const defaultStatus =
