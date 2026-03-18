@@ -5350,3 +5350,13 @@ body.modal-open{
     transform: translateX(100%);
   }
 }
+
+.library-card[data-busy="1"] {
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+.library-card[data-busy="1"] .library-card-actions button {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
