@@ -351,11 +351,15 @@ app.delete("/api/library/:id", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
 
-  const before = bucket.library.length;
-  bucket.library = bucket.library.filter((it) => String(it.id) !== id);
+  const idx = bucket.library.findIndex((it) => String(it.id) === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  bucket.library.splice(idx, 1);
   _writeDb(db);
 
-  res.json({ ok: true, deleted: before - bucket.library.length });
+  res.json({ ok: true, deleted: 1 });
 });
 
 // ===== STATIC (sirve tu frontend) =====
