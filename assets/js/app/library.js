@@ -1435,7 +1435,13 @@ const LibraryUI = (() => {
         } else if (errorCode === "invalid_type") {
           _showAddLibError("Selecciona un tipo válido.");
           typeSelect?.focus?.();
-        } else {
+        } else if (errorCode === "invalid_type") { 
+          _showAddLibError("Selecciona un tipo válido."); 
+          typeSelect?.focus?.(); 
+        } else if (errorCode === "duplicate_item") { 
+          _showAddLibError("Este contenido ya está en tu biblioteca."); 
+          titleInput?.focus?.(); 
+        } else { 
           _showAddLibError("No se pudo añadir. Inténtalo de nuevo.");
         }
       } finally {
