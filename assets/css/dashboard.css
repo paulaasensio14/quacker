@@ -4248,15 +4248,127 @@ body.dark-theme .notif-mark-btn:hover {
   gap: 24px;
 }
 
+.explore-card {
+  min-height: 0;
+}
+
+/* ===== Explore compact catalog ===== */
+
 .explore-section-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 16px;
   align-items: start;
 }
 
-.explore-card {
-  min-height: 0;
+.explore-card--catalog {
+  position: relative;
+  min-width: 0;
+}
+
+.explore-card--catalog .explore-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 10px 12px;
+}
+
+.explore-card--catalog .explore-top {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.explore-card--catalog .explore-title-row {
+  display: block;
+}
+
+.explore-card--catalog .explore-title {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.explore-card--catalog .explore-meta,
+.explore-meta--compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.72rem;
+}
+
+.explore-card--catalog .explore-dot {
+  display: none;
+}
+
+.explore-card--catalog .explore-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.explore-card--catalog .explore-chip {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+}
+
+.explore-card--catalog .explore-summary,
+.explore-card--catalog .explore-add-list,
+.explore-card--catalog .explore-hide {
+  display: none;
+}
+
+.explore-card--catalog .explore-actions {
+  display: block;
+}
+
+.explore-card--catalog .explore-add-lib {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.explore-card-dismiss {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 2px solid var(--border-strong);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--border-strong);
+}
+
+.explore-card--catalog .explore-card-cover {
+  min-height: 220px;
+}
+
+@media (max-width: 1200px) {
+  .explore-section-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .explore-section-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .explore-card-cover,
@@ -4341,6 +4453,61 @@ body.dark-theme .notif-mark-btn:hover {
 
 @media (max-width: 960px) {
   .explore-grid { grid-template-columns: 1fr; }
+}
+
+/* ===== EXPLORE POSTER MODE ===== */
+
+.explore-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.explore-card--poster {
+  position: relative;
+  cursor: pointer;
+}
+
+.explore-card--poster .explore-card-cover {
+  aspect-ratio: 2 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease;
+}
+
+.explore-card--poster:hover .explore-card-cover {
+  transform: scale(1.05);
+}
+
+/* overlay */
+.explore-card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.explore-card--poster:hover .explore-card-overlay {
+  opacity: 1;
+}
+
+/* botón + */
+.explore-card-add {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 2px solid var(--border-strong);
+  background: var(--color-primary);
+  color: black;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--border-strong);
 }
 
 .explore-card {
@@ -4511,12 +4678,6 @@ body.dark-theme .notif-mark-btn:hover {
 
 .explore-section-btn{
   white-space: nowrap;
-}
-
-.explore-section-grid{
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
 }
 
 @media (max-width: 960px) {

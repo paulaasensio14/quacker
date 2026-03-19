@@ -313,55 +313,19 @@ const ExploreModule = (() => {
     const saving = !!item.__saving;
 
     return `
-      <article class="explore-card" data-eid="${item.eid}" tabindex="0" role="button" aria-haspopup="dialog">
+      <article class="explore-card explore-card--poster" data-eid="${item.eid}">
+
         ${_cardCover(title)}
 
-        <div class="explore-body explore-body--compact">
-          <div class="explore-top">
-            <div class="explore-meta-row">
-              <span class="explore-type">${typeLabel}</span>
-              ${item.releaseDate ? `<span class="explore-date">${_safeText(item.releaseDate)}</span>` : ""}
-            </div>
-
-            <h3 class="explore-title">${title}</h3>
-
-            <div class="explore-badges explore-badges--compact">
-              ${isNew ? _chipSvgNew() : ""}
-              ${item.__inLibrary ? `<span class="explore-chip">En biblioteca</span>` : ""}
-              ${item.__listsCount > 0
-                ? `<span class="explore-chip">En ${item.__listsCount} lista${item.__listsCount > 1 ? "s" : ""}</span>`
-                : ""}
-            </div>
-
-            ${item.summary ? `<p class="explore-summary explore-summary--clamped">${_safeText(item.summary)}</p>` : ""}
-          </div>
-
-          <div class="explore-actions explore-actions--compact">
-            <button class="btn-primary explore-add-lib"
-              type="button"
-              data-action="add-library"
-              ${saved ? "disabled" : ""}
-              ${saving ? "disabled" : ""}>
-              ${saving ? "Añadiendo..." : (saved ? "En biblioteca" : (__addToListMode?.listId ? "Añadir y guardar" : "Añadir a biblioteca"))}
-            </button>
-
-            <div class="explore-secondary-actions">
-              <button class="btn-ghost explore-add-list"
-                type="button"
-                data-action="add-lists"
-                ${(saving || __addToListMode?.listId) ? "disabled" : ""}>
-                ${__addToListMode?.listId ? "Modo lista activo" : "Añadir a listas"}
-              </button>
-
-              <button class="btn-ghost explore-hide"
-                type="button"
-                data-action="dismiss"
-                ${saving ? "disabled" : ""}>
-                Ocultar
-              </button>
-            </div>
-          </div>
+        <div class="explore-card-overlay">
+          <button 
+            class="explore-card-add"
+            data-action="open-add-modal"
+            data-eid="${item.eid}">
+            +
+          </button>
         </div>
+
       </article>
     `;
   };
@@ -1145,6 +1109,22 @@ const ExploreModule = (() => {
       return;
     }
 
+    const openAddModalBtn = e.target.closest('[data-action="open-add-modal"]');
+    if (openAddModalBtn) {
+      e.stopPropagation();
+
+      const eid = openAddModalBtn.dataset.eid;
+      if (!eid) return;
+
+      const item = feed.find(x => _safeText(x.eid) === _safeText(eid));
+      if (!item) return;
+
+      activeEid = item.eid;
+
+      openAddToLibraryModal(eid);
+      return;
+    }
+
     const actionBtn = e.target.closest(".explore-card button[data-action]");
     if (!actionBtn) return;
 
@@ -1300,6 +1280,62 @@ const ExploreModule = (() => {
         duration: 3000
       });
       }
+      return;
+    }
+
+    // ===== MODAL ADD FROM EXPLORE =====
+
+    const addLibBtn = e.target.closest("#modalAddToLibrary");
+    if (addLibBtn) {
+      const modal = document.getElementById("addFromExploreModal");
+      const eid = modal?.dataset?.eid;
+      if (!eid) return;
+
+      const item = feed.find(x => _safeText(x.eid) === _safeText(eid));
+      if (!item) return;
+
+      try {
+        await ApiClient.addLibraryItem({
+          title: item.title,
+          type: item.type,
+          releaseDate: item.releaseDate
+        });
+
+        closeAddFromExploreModal();
+
+        // refrescar UI
+        item.__inLibrary = true;
+        _render();
+
+      } catch (err) {
+        console.error(err);
+      }
+
+      return;
+    }
+
+    // abrir flujo de listas EXISTENTE
+    const addListBtn = e.target.closest("#modalAddToLists");
+    if (addListBtn) {
+      const modal = document.getElementById("addFromExploreModal");
+      const eid = modal?.dataset?.eid;
+      if (!eid) return;
+
+      const item = feed.find(x => _safeText(x.eid) === _safeText(eid));
+      if (!item) return;
+
+      closeAddFromExploreModal();
+
+      // reutiliza tu flujo actual
+      openAddToListsModal(item);
+
+      return;
+    }
+
+    // cancelar
+    const cancelBtn = e.target.closest("#modalCancelExplore");
+    if (cancelBtn) {
+      closeAddFromExploreModal();
       return;
     }
     });
@@ -1554,3 +1590,19 @@ const ExploreModule = (() => {
 })();
 
 window.ExploreModule = ExploreModule;
+
+function openAddToLibraryModal(eid) {
+  const modal = document.getElementById("addFromExploreModal");
+  if (!modal) return;
+
+  modal.dataset.eid = eid;
+  modal.classList.add("open");
+}
+
+function closeAddFromExploreModal() {
+  const modal = document.getElementById("addFromExploreModal");
+  if (!modal) return;
+
+  modal.classList.remove("open");
+  delete modal.dataset.eid;
+}
