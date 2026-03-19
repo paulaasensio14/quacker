@@ -1162,31 +1162,19 @@ const ExploreModule = (() => {
       if (!res?.ok) return;
 
       // Feedback inmediato en la card (sin esperar a un re-render completo)
-      const cardEl = btn.closest(".explore-card");
+      const cardEl = actionBtn.closest(".explore-card");
       if (cardEl) {
         cardEl.classList.remove("is-pop");
         requestAnimationFrame(() => cardEl.classList.add("is-pop"));
       }
 
       // Actualizar CTA de la card con tick temporal y luego "En biblioteca"
-      if (btn) {
-        btn.disabled = true;
-
-        const prevHtml = btn.innerHTML;
-        btn.innerHTML = `
-          <span class="btn-tick" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 6L9 17l-5-5"></path>
-            </svg>
-          </span>
-          <span>Guardado</span>
-        `;
-
+      if (actionBtn) {
+        actionBtn.disabled = true;
+        actionBtn.innerHTML = `  Guardado `;
         window.setTimeout(() => {
-          // Puede que la card se haya re-renderizado; comprobamos que el btn siga existiendo
-          if (!btn) return;
-          btn.innerHTML = "En biblioteca";
+          if (!document.body.contains(actionBtn)) return;
+          actionBtn.innerHTML = "En biblioteca";
         }, 650);
       }
 
