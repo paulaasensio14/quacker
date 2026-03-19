@@ -708,7 +708,7 @@ const LibraryUI = (() => {
                   </button>
                 
                   ${
-                    item.progress < 100
+                    logicalStatus(item) !== "completed"
                       ? `<button
                           class="lib-complete-btn"
                           type="button"
@@ -1432,9 +1432,6 @@ const LibraryUI = (() => {
         } else if (errorCode === "title_too_long") {
           _showAddLibError("El título no puede superar los 120 caracteres.");
           titleInput?.focus?.();
-        } else if (errorCode === "invalid_type") {
-          _showAddLibError("Selecciona un tipo válido.");
-          typeSelect?.focus?.();
         } else if (errorCode === "invalid_type") { 
           _showAddLibError("Selecciona un tipo válido."); 
           typeSelect?.focus?.(); 
