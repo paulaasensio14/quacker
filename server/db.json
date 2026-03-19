@@ -194,77 +194,7 @@
         "language": "es",
         "theme": "light"
       },
-      "library": [
-        {
-          "id": "u_1773916081262_d9e76e349a0068",
-          "type": "serie",
-          "title": "La casa de papel",
-          "status": "completed",
-          "progress": 100,
-          "meta": {
-            "season": 1,
-            "episode": 1
-          },
-          "cover": "",
-          "createdAt": "2026-03-19T10:28:01.262Z",
-          "updatedAt": "2026-03-19T11:18:05.957Z"
-        },
-        {
-          "id": "u_1773916119013_9e46ed6e14803",
-          "type": "pelicula",
-          "title": "Interestelar",
-          "status": "completed",
-          "progress": 100,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-19T10:28:39.013Z",
-          "updatedAt": "2026-03-19T10:30:02.086Z"
-        },
-        {
-          "id": "u_1773916137980_682ad65f16ede",
-          "type": "book",
-          "title": "Mañana, mañana y mañana",
-          "status": "reading",
-          "progress": 10,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-19T10:28:57.980Z",
-          "updatedAt": "2026-03-19T10:29:53.670Z"
-        },
-        {
-          "id": "u_1773916158512_4c63ab741fd6d",
-          "type": "game",
-          "title": "R.E.P.O",
-          "status": "playing",
-          "progress": 5,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-19T10:29:18.512Z",
-          "updatedAt": "2026-03-19T10:29:51.034Z"
-        },
-        {
-          "id": "u_1773918365057_ec638ac6586348",
-          "type": "book",
-          "title": "Dune",
-          "status": "reading",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-19T11:06:05.057Z",
-          "updatedAt": "2026-03-19T11:06:05.057Z"
-        },
-        {
-          "id": "u_1773918484907_21282b7ec669a",
-          "type": "pelicula",
-          "title": "Dune",
-          "status": "watching",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-19T11:08:04.907Z",
-          "updatedAt": "2026-03-19T11:08:04.907Z"
-        }
-      ]
+      "library": []
     }
   }
 }
