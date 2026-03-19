@@ -1014,29 +1014,16 @@ const ApiClient = (() => {
     if (_isHttp()) {
       const targetId = String(itemId);
 
-      const currentRes = await _httpJson("GET", `/library/${encodeURIComponent(targetId)}`);
-      const current = (currentRes && currentRes.item) ? currentRes.item : currentRes;
-
-      if (!current || !current.id) return { ok: false };
+      const current = await _httpJson("GET", `/library/${encodeURIComponent(targetId)}`);
+      if (!current) return { ok: false, reason: "not_found" };
 
       if (Number(current.progress ?? 0) >= 100 || current.status === "completed") {
         return { ok: true, alreadyCompleted: true };
       }
 
-      const nextMeta = { ...(current.meta || {}) };
-
-      if (current.type === "book") {
-        const totalPages = Number(nextMeta.totalPages ?? 0);
-        if (Number.isFinite(totalPages) && totalPages > 0) {
-          nextMeta.pagesRead = totalPages;
-        }
-      }
-
       const payload = {
         progress: 100,
-        status: "completed",
-        meta: nextMeta,
-        logActivity: true
+        status: "completed"
       };
 
       const res = await _httpJson("PATCH", `/library/${encodeURIComponent(targetId)}`, payload);
@@ -1065,13 +1052,6 @@ const ApiClient = (() => {
     item.progress = 100;
     item.status = "completed";
     item.updatedAt = new Date().toISOString();
-
-    if (item.type === "book") {
-      const totalPages = Number(item.meta?.totalPages ?? 0);
-      if (Number.isFinite(totalPages) && totalPages > 0) {
-        item.meta = { ...(item.meta || {}), pagesRead: totalPages };
-      }
-    }
 
     // Guardar estado
     if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
@@ -1119,10 +1099,8 @@ const ApiClient = (() => {
       const justCompleted = next >= 100 && prev < 100;
 
       const payload = {
-        ...current,
         progress: next,
-        status: next >= 100 ? "completed" : current.status,
-        logActivity: true
+        status: next >= 100 ? "completed" : current.status
       };
 
       const res = await _httpJson(
