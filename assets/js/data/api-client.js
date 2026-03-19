@@ -1033,7 +1033,6 @@ const ApiClient = (() => {
       }
 
       const payload = {
-        ...current,
         progress: 100,
         status: "completed",
         meta: nextMeta,
