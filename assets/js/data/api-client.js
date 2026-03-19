@@ -1560,6 +1560,22 @@ const ApiClient = (() => {
       return true;
     }).length;
 
+    if (_isHttp()) {
+      completedThisYear = library.filter((item) => {
+        if (item.status !== "completed") return false;
+        const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
+        if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
+        return updatedAt.getFullYear() === now.getFullYear();
+      }).length;
+
+      completedToday = library.filter((item) => {
+        if (item.status !== "completed") return false;
+        const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
+        if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
+        return _dateKeyLocal(updatedAt) === todayKey;
+      }).length;
+    }
+
     // racha: días seguidos con al menos una actividad
     const activeDays = new Set(
       activities

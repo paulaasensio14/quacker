@@ -140,12 +140,12 @@
           "id": "u_1773775674659_0195eff6476f2",
           "type": "game",
           "title": "Baldur's Gate 3",
-          "status": "playing",
-          "progress": 0,
+          "status": "completed",
+          "progress": 100,
           "meta": {},
           "cover": "",
           "createdAt": "2026-03-17T19:27:54.659Z",
-          "updatedAt": "2026-03-17T19:27:54.659Z"
+          "updatedAt": "2026-03-19T09:44:11.710Z"
         },
         {
           "id": "u_1773775675509_fbab2744dbe568",
