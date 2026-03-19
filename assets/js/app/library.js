@@ -2018,15 +2018,31 @@ function validateProgress(item, values) {
     const season = Number(values.season);
     const episode = Number(values.episode);
 
-    if (!Number.isFinite(season) || season < 1) errors.push("La temporada debe ser 1 o más.");
-    if (!Number.isFinite(episode) || episode < 1) errors.push("El episodio debe ser 1 o más.");
+    if (!Number.isFinite(season) || season < 1) {
+      errors.push("La temporada debe ser 1 o más.");
+    }
+    if (!Number.isFinite(episode) || episode < 1) {
+      errors.push("El episodio debe ser 1 o más.");
+    }
+
+    const rawPct = String(values.progress ?? "").trim();
+    if (rawPct !== "") {
+      const pct = Number(rawPct);
+      if (!Number.isFinite(pct)) {
+        errors.push("Introduce un progreso válido.");
+      } else if (pct < 0) {
+        errors.push("El progreso no puede ser negativo.");
+      }
+    }
   }
 
-  // Game: % obligatorio
+  // Game: % obligatorio, pero >100 se permite porque se completará automáticamente
   if (item.type === "game") {
     const pct = Number(values.progress);
-    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
-      errors.push("El progreso debe estar entre 0 y 100.");
+    if (!Number.isFinite(pct)) {
+      errors.push("Introduce un progreso válido.");
+    } else if (pct < 0) {
+      errors.push("El progreso no puede ser negativo.");
     }
   }
 
