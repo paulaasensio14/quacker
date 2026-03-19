@@ -592,15 +592,14 @@ const ApiClient = (() => {
     if (!listId || !itemId) return { ok: false };
 
     ensureListsSeeded();
-
     const state = _safeState();
     state.lists = state.lists || [];
-    state.library = state.library || [];
 
     const list = state.lists.find(l => String(l.id) === String(listId));
     if (!list) return { ok: false, reason: "list_not_found" };
 
-    const itemExists = state.library.some(i => String(i.id) === String(itemId));
+    const library = _isHttp() ? await getLibrary() : (state.library || []);
+    const itemExists = library.some(i => String(i.id) === String(itemId));
     if (!itemExists) return { ok: false, reason: "item_not_found" };
 
     list.items = Array.isArray(list.items) ? list.items : [];
@@ -614,11 +613,7 @@ const ApiClient = (() => {
       return { ok: true, already: true };
     }
 
-    list.items.push({
-      id: String(itemId),
-      addedAt: new Date().toISOString()
-    });
-
+    list.items.push({ id: String(itemId), addedAt: new Date().toISOString() });
     list.itemsCount = list.items.length;
     list.updatedAt = new Date().toISOString();
 
