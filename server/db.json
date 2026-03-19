@@ -194,7 +194,19 @@
         "language": "es",
         "theme": "light"
       },
-      "library": []
+      "library": [
+        {
+          "id": "u_1773938401405_312c4bbaed3fc",
+          "type": "pelicula",
+          "title": "Dune",
+          "status": "watching",
+          "progress": 10,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-19T16:40:01.405Z",
+          "updatedAt": "2026-03-19T16:40:05.101Z"
+        }
+      ]
     }
   }
 }

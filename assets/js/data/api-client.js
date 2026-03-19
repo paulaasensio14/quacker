@@ -1610,37 +1610,56 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: última actividad ===
   async function getLastActivityDetailed() {
-    if (_isHttp()) return null;
-    if (typeof FakeBackend === "undefined") return null;
+    let item = null;
+    let activityDate = null;
 
-    const state = _safeState();
-    // Última actividad "meaningful": progress / completed (resume NO cuenta)
-    const activities = Array.isArray(state.activities) ? state.activities : [];
-    const MEANINGFUL = new Set(["progress", "completed"]);
+    if (_isHttp()) {
+      const library = await getLibrary();
 
-    const last = [...activities]
-      .filter((a) => a && MEANINGFUL.has(a.type) && a.targetId && a.createdAt)
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
+      item = [...library]
+        .filter((it) => {
+          const pct = Number(it.progress ?? 0);
+          return pct > 0 || it.status === "completed";
+        })
+        .sort((a, b) => {
+          const aTime = a?.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const bTime = b?.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          return bTime - aTime;
+        })[0] || null;
 
-    if (!last) return null;
+      activityDate = item?.updatedAt || null;
+      if (!item || !activityDate) return null;
+    } else {
+      if (typeof FakeBackend === "undefined") return null;
 
-    const library = state.library || [];
-    const item = library.find((i) => i.id === last.targetId);
+      const state = _safeState();
+      const activities = Array.isArray(state.activities) ? state.activities : [];
+      const MEANINGFUL = new Set(["progress", "completed"]);
 
-    if (!item) {
-      return {
-        id: null,
-        title: "Actividad reciente",
-        meta: "",
-        timeAgo: _formatTimeAgo(last.createdAt),
-        progressPercent: 0,
-        progressLabel: ""
-      };
+      const last = [...activities]
+        .filter((a) => a && MEANINGFUL.has(a.type) && a.targetId && a.createdAt)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
+
+      if (!last) return null;
+
+      const library = state.library || [];
+      item = library.find((i) => i.id === last.targetId) || null;
+      activityDate = last.createdAt;
+
+      if (!item) {
+        return {
+          id: null,
+          title: "Actividad reciente",
+          meta: "",
+          timeAgo: _formatTimeAgo(last.createdAt),
+          progressPercent: 0,
+          progressLabel: ""
+        };
+      }
     }
 
     let meta = "";
 
-    // Serie: meta real (sin "?")
     if (item.type === "serie") {
       const s = Number(item.meta?.season);
       const e = Number(item.meta?.episode);
@@ -1652,7 +1671,6 @@ const ApiClient = (() => {
       }
     }
 
-    // Libro: meta real páginas (sin fallback)
     if (item.type === "book") {
       const pr = Number(item.meta?.pagesRead);
       const tp = Number(item.meta?.totalPages);
@@ -1664,7 +1682,6 @@ const ApiClient = (() => {
       }
     }
 
-    // Película/Juego: meta % real
     if (item.type === "pelicula" || item.type === "game") {
       const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
       meta = `${Math.round(pct)}%`;
@@ -1678,7 +1695,7 @@ const ApiClient = (() => {
       type: item.type,
       title: item.title,
       meta,
-      timeAgo: _formatTimeAgo(last.createdAt),
+      timeAgo: _formatTimeAgo(activityDate),
       progressPercent,
       progressLabel,
       cover: item.cover || null
