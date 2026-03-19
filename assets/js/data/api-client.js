@@ -1008,6 +1008,48 @@ const ApiClient = (() => {
   async function completeLibraryItem(itemId) {
     if (!itemId) return { ok: false };
 
+    // =========================
+    // HTTP (backend real)
+    // =========================
+    if (_isHttp()) {
+      const targetId = String(itemId);
+
+      const currentRes = await _httpJson("GET", `/library/${encodeURIComponent(targetId)}`);
+      const current = (currentRes && currentRes.item) ? currentRes.item : currentRes;
+
+      if (!current || !current.id) return { ok: false };
+
+      if (Number(current.progress ?? 0) >= 100 || current.status === "completed") {
+        return { ok: true, alreadyCompleted: true };
+      }
+
+      const nextMeta = { ...(current.meta || {}) };
+
+      if (current.type === "book") {
+        const totalPages = Number(nextMeta.totalPages ?? 0);
+        if (Number.isFinite(totalPages) && totalPages > 0) {
+          nextMeta.pagesRead = totalPages;
+        }
+      }
+
+      const payload = {
+        ...current,
+        progress: 100,
+        status: "completed",
+        meta: nextMeta,
+        logActivity: true
+      };
+
+      const res = await _httpJson("PATCH", `/library/${encodeURIComponent(targetId)}`, payload);
+      const item = (res && res.item) ? res.item : res;
+
+      _emitDataChanged({ kind: "library", action: "complete", itemId: targetId });
+      return { ok: true, itemId: targetId, title: item?.title || current.title };
+    }
+
+    // =========================
+    // LOCAL (FakeBackend)
+    // =========================
     const state = _safeState();
     state.library = state.library || [];
     state.activities = state.activities || [];
@@ -1024,6 +1066,13 @@ const ApiClient = (() => {
     item.progress = 100;
     item.status = "completed";
     item.updatedAt = new Date().toISOString();
+
+    if (item.type === "book") {
+      const totalPages = Number(item.meta?.totalPages ?? 0);
+      if (Number.isFinite(totalPages) && totalPages > 0) {
+        item.meta = { ...(item.meta || {}), pagesRead: totalPages };
+      }
+    }
 
     // Guardar estado
     if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
