@@ -316,29 +316,27 @@ const ExploreModule = (() => {
       <article class="explore-card" data-eid="${item.eid}" tabindex="0" role="button" aria-haspopup="dialog">
         ${_cardCover(title)}
 
-        <div class="explore-body">
+        <div class="explore-body explore-body--compact">
           <div class="explore-top">
-            <div class="explore-title-row">
-              <h3 class="explore-title">${title}</h3>
-
-              <div class="explore-badges">
-                ${isNew ? _chipSvgNew() : ""}
-                ${item.__inLibrary ? `<span class="explore-chip">En biblioteca</span>` : ""}
-                ${item.__listsCount > 0
-                  ? `<span class="explore-chip">En ${item.__listsCount} lista${item.__listsCount > 1 ? "s" : ""}</span>`
-                  : ""}
-              </div>
-            </div>
-
-            <div class="explore-meta">
+            <div class="explore-meta-row">
               <span class="explore-type">${typeLabel}</span>
-              ${item.releaseDate ? `<span class="explore-dot" aria-hidden="true"></span><span class="explore-date">${_safeText(item.releaseDate)}</span>` : ""}
+              ${item.releaseDate ? `<span class="explore-date">${_safeText(item.releaseDate)}</span>` : ""}
             </div>
 
-            ${item.summary ? `<p class="explore-summary">${_safeText(item.summary)}</p>` : ""}
+            <h3 class="explore-title">${title}</h3>
+
+            <div class="explore-badges explore-badges--compact">
+              ${isNew ? _chipSvgNew() : ""}
+              ${item.__inLibrary ? `<span class="explore-chip">En biblioteca</span>` : ""}
+              ${item.__listsCount > 0
+                ? `<span class="explore-chip">En ${item.__listsCount} lista${item.__listsCount > 1 ? "s" : ""}</span>`
+                : ""}
+            </div>
+
+            ${item.summary ? `<p class="explore-summary explore-summary--clamped">${_safeText(item.summary)}</p>` : ""}
           </div>
 
-          <div class="explore-actions">
+          <div class="explore-actions explore-actions--compact">
             <button class="btn-primary explore-add-lib"
               type="button"
               data-action="add-library"
@@ -347,19 +345,21 @@ const ExploreModule = (() => {
               ${saving ? "Añadiendo..." : (saved ? "En biblioteca" : (__addToListMode?.listId ? "Añadir y guardar" : "Añadir a biblioteca"))}
             </button>
 
-            <button class="btn-ghost explore-add-list"
-              type="button"
-              data-action="add-lists"
-              ${(saving || __addToListMode?.listId) ? "disabled" : ""}>
-              ${__addToListMode?.listId ? "Modo lista activo" : "Añadir a listas"}
-            </button>
+            <div class="explore-secondary-actions">
+              <button class="btn-ghost explore-add-list"
+                type="button"
+                data-action="add-lists"
+                ${(saving || __addToListMode?.listId) ? "disabled" : ""}>
+                ${__addToListMode?.listId ? "Modo lista activo" : "Añadir a listas"}
+              </button>
 
-            <button class="btn-ghost explore-hide"
-              type="button"
-              data-action="dismiss"
-              ${saving ? "disabled" : ""}>
-              Ocultar
-            </button>
+              <button class="btn-ghost explore-hide"
+                type="button"
+                data-action="dismiss"
+                ${saving ? "disabled" : ""}>
+                Ocultar
+              </button>
+            </div>
           </div>
         </div>
       </article>
