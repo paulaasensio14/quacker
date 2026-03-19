@@ -310,13 +310,7 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   const prev = bucket.library[idx];
   const nowIso = new Date().toISOString();
 
-  const next = {
-    ...prev,
-    ...data,
-    id: prev.id,
-    createdAt: prev.createdAt,
-    updatedAt: new Date().toISOString()
-  };
+  const next = { ...prev, ...patch, id: prev.id, createdAt: prev.createdAt, updatedAt: new Date().toISOString() };
 
   if (Object.prototype.hasOwnProperty.call(patch, "title")) {
     const title = String(patch.title || "").replace(/\s+/g, " ").trim();
