@@ -200,11 +200,22 @@
           "type": "pelicula",
           "title": "Dune",
           "status": "watching",
-          "progress": 10,
+          "progress": 20,
           "meta": {},
           "cover": "",
           "createdAt": "2026-03-19T16:40:01.405Z",
-          "updatedAt": "2026-03-19T16:40:05.101Z"
+          "updatedAt": "2026-03-19T16:50:56.248Z"
+        },
+        {
+          "id": "u_1773939793816_caf3464564e568",
+          "type": "pelicula",
+          "title": "Dune: Part Two",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-19T17:03:13.816Z",
+          "updatedAt": "2026-03-19T17:03:13.816Z"
         }
       ]
     }
