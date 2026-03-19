@@ -1789,7 +1789,8 @@ const LibraryUI = (() => {
     setExternalFilters,
     setSearchTerm,
     showProgressErrors,
-    _captureAnchor: captureLibraryAnchor
+    _captureAnchor: captureLibraryAnchor,
+    _playQuickFx: playLibraryQuickFx
   };
 })();
 
@@ -1836,7 +1837,7 @@ async function saveLibraryItem(updatedItem) {
       Number(updatedItem.progress ?? 0) >= 100 || updatedItem.status === "completed";
 
     // Micro-feedback visual inmediato
-    playLibraryQuickFx(updatedItem.id, justCompleted ? "complete" : "progress");
+    window.LibraryUI?._playQuickFx?.(updatedItem.id, justCompleted ? "complete" : "progress");
 
     window.toast?.({
       title: justCompleted ? "Contenido completado" : "Progreso actualizado",
