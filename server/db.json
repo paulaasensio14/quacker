@@ -216,6 +216,50 @@
           "cover": "",
           "createdAt": "2026-03-19T17:03:13.816Z",
           "updatedAt": "2026-03-19T17:03:13.816Z"
+        },
+        {
+          "id": "u_1773940673727_75f17d1c5c1a78",
+          "type": "serie",
+          "title": "Shogun",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-19T17:17:53.727Z",
+          "updatedAt": "2026-03-19T17:17:53.727Z"
+        },
+        {
+          "id": "u_1773940712362_66c645b38842e8",
+          "type": "pelicula",
+          "title": "Poor Things",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-19T17:18:32.362Z",
+          "updatedAt": "2026-03-19T17:18:32.362Z"
+        },
+        {
+          "id": "u_1773941145725_454d1eacf45f",
+          "type": "pelicula",
+          "title": "The Zone of Interest",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-19T17:25:45.725Z",
+          "updatedAt": "2026-03-19T17:25:45.725Z"
+        },
+        {
+          "id": "u_1773941200575_a63d150b6cbf8",
+          "type": "book",
+          "title": "Tomorrow, and Tomorrow, and Tomorrow",
+          "status": "reading",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-19T17:26:40.575Z",
+          "updatedAt": "2026-03-19T17:26:40.575Z"
         }
       ]
     }

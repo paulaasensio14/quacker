@@ -428,8 +428,11 @@ const ApiClient = (() => {
   // === listas (por ahora simplemente devuelven lo del estado) ===
   async function getLists() {
     ensureListsSeeded();
+
     const state = _safeState();
-    return state.lists || [];
+    state.lists = Array.isArray(state.lists) ? state.lists : [];
+
+    return state.lists;
   }
 
   // Devuelve las listas donde está un item (para deshabilitar opciones y pintar estado)
@@ -454,19 +457,17 @@ const ApiClient = (() => {
 
     const state = _safeState();
     const lists = state.lists || [];
-    const library = state.library || [];
+    const library = _isHttp() ? await getLibrary() : (state.library || []);
 
-    // buscar item real en biblioteca
-    const libItem = library.find(
-      i =>
-        i.title?.toLowerCase() === title.toLowerCase() &&
-        i.type === type
+    const libItem = (library || []).find(
+      (i) =>
+        String(i?.title || "").trim().toLowerCase() === String(title).trim().toLowerCase() &&
+        String(i?.type || "") === String(type)
     );
 
     if (!libItem) return 0;
 
     const libId = String(libItem.id);
-
     let count = 0;
 
     for (const list of lists) {
@@ -481,7 +482,6 @@ const ApiClient = (() => {
     }
 
     return count;
-
   }
 
   // Devuelve un mapa de conteos por key "title::type" para toda la biblioteca.
@@ -489,23 +489,20 @@ const ApiClient = (() => {
   async function getListsCountMapByLibraryKey() {
     const state = _safeState();
     const lists = Array.isArray(state.lists) ? state.lists : [];
-    const library = Array.isArray(state.library) ? state.library : [];
+    const library = _isHttp() ? await getLibrary() : (Array.isArray(state.library) ? state.library : []);
 
-    // Mapa id -> "title::type"
     const idToKey = new Map();
-    for (const it of library) {
-      const title = (it?.title ?? "").toString().trim().toLowerCase();
-      const type = (it?.type ?? "").toString();
-      if (!it?.id) continue;
-      idToKey.set(String(it.id), `${title}::${type}`);
+
+    for (const item of (library || [])) {
+      if (!item?.id) continue;
+      const key = `${String(item?.title || "").trim().toLowerCase()}::${String(item?.type || "")}`;
+      idToKey.set(String(item.id), key);
     }
 
-    // Inicializamos todos a 0 para consistencia
-    const counts = {};
-    for (const key of idToKey.values()) counts[key] = 0;
+    const counts = Object.create(null);
 
     for (const list of lists) {
-      const items = Array.isArray(list?.items) ? list.items : [];
+      const items = Array.isArray(list.items) ? list.items : [];
 
       for (const entry of items) {
         const id = (typeof entry === "string") ? entry : entry?.id;
