@@ -1721,25 +1721,145 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: reto mensual ===
   async function getMonthlyChallenge() {
-    if (_isHttp()) return null;
-
-    const state = _safeState();
-    const goal = (state.goals && state.goals[0]) || null;
-    if (!goal) return null;
-
     const now = new Date();
-    const end = new Date(goal.periodEnd + "T23:59:59");
+    const year = now.getFullYear();
+    const month = now.getMonth();
+
+    const fallbackChallenges = [
+      {
+        id: "jan-reset",
+        title: "Reto de enero: Nuevo comienzo",
+        description: "Completa 1 contenido este mes.",
+        target: 1,
+        rewardLabel: "Insignia Nuevo Comienzo"
+      },
+      {
+        id: "feb-focus",
+        title: "Reto de febrero: Mes en foco",
+        description: "Completa 2 contenidos este mes.",
+        target: 2,
+        rewardLabel: "Insignia Mes en Foco"
+      },
+      {
+        id: "mar-momentum",
+        title: "Reto de marzo: Coge ritmo",
+        description: "Completa 2 contenidos este mes.",
+        target: 2,
+        rewardLabel: "Insignia Coge Ritmo"
+      },
+      {
+        id: "apr-spring",
+        title: "Reto de abril: Primavera activa",
+        description: "Completa 1 contenido este mes.",
+        target: 1,
+        rewardLabel: "Insignia Primavera Activa"
+      },
+      {
+        id: "may-streak",
+        title: "Reto de mayo: Sigue avanzando",
+        description: "Completa 2 contenidos este mes.",
+        target: 2,
+        rewardLabel: "Insignia Sigue Avanzando"
+      },
+      {
+        id: "jun-summer",
+        title: "Reto de junio: Empieza el verano",
+        description: "Completa 2 contenidos este mes.",
+        target: 2,
+        rewardLabel: "Insignia Inicio de Verano"
+      },
+      {
+        id: "jul-marathon",
+        title: "Reto de julio: Maratón de verano",
+        description: "Completa 3 contenidos este mes.",
+        target: 3,
+        rewardLabel: "Insignia Maratón de Verano"
+      },
+      {
+        id: "aug-chill",
+        title: "Reto de agosto: Relax con ritmo",
+        description: "Completa 1 contenido este mes.",
+        target: 1,
+        rewardLabel: "Insignia Relax con Ritmo"
+      },
+      {
+        id: "sep-back",
+        title: "Reto de septiembre: Vuelta al hábito",
+        description: "Completa 2 contenidos este mes.",
+        target: 2,
+        rewardLabel: "Insignia Vuelta al Hábito"
+      },
+      {
+        id: "oct-spooky",
+        title: "Reto de octubre: Especial de otoño",
+        description: "Completa 2 contenidos este mes.",
+        target: 2,
+        rewardLabel: "Insignia Especial de Otoño"
+      },
+      {
+        id: "nov-push",
+        title: "Reto de noviembre: Último empujón",
+        description: "Completa 2 contenidos este mes.",
+        target: 2,
+        rewardLabel: "Insignia Último Empujón"
+      },
+      {
+        id: "dec-finish",
+        title: "Reto de diciembre: Cierra el año",
+        description: "Completa 3 contenidos este mes.",
+        target: 3,
+        rewardLabel: "Insignia Cierre del Año"
+      }
+    ];
+
+    const end = new Date(year, month + 1, 0, 23, 59, 59);
     const diffMs = end - now;
     const diffD = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
+    let library = [];
+    let state = null;
+
+    if (_isHttp()) {
+      library = await getLibrary();
+    } else {
+      state = _safeState();
+      library = state.library || [];
+    }
+
+    const persistedGoal = state?.goals?.[0] || null;
+    if (persistedGoal) {
+      const goalEnd = new Date(persistedGoal.periodEnd + "T23:59:59");
+      const goalDiffMs = goalEnd - now;
+      const goalDiffD = Math.max(0, Math.ceil(goalDiffMs / (1000 * 60 * 60 * 24)));
+
+      return {
+        id: persistedGoal.id,
+        title: persistedGoal.title,
+        description: persistedGoal.description,
+        current: persistedGoal.current,
+        target: persistedGoal.target,
+        daysRemaining: goalDiffD,
+        rewardLabel: persistedGoal.rewardLabel
+      };
+    }
+
+    const fallback = fallbackChallenges[month];
+
+    const completedThisMonth = library.filter((item) => {
+      if (item.status !== "completed") return false;
+      const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
+      if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
+      return updatedAt.getFullYear() === year && updatedAt.getMonth() === month;
+    }).length;
+
     return {
-      id: goal.id,
-      title: goal.title,
-      description: goal.description,
-      current: goal.current,
-      target: goal.target,
+      id: fallback.id,
+      title: fallback.title,
+      description: fallback.description,
+      current: Math.min(completedThisMonth, fallback.target),
+      target: fallback.target,
       daysRemaining: diffD,
-      rewardLabel: goal.rewardLabel
+      rewardLabel: fallback.rewardLabel
     };
   }
 
