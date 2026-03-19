@@ -238,7 +238,10 @@ app.post("/api/library", _requireAuth, (req, res) => {
     "totalPages",
     "totalChapters",
     "platform",
-    "author"
+    "author",
+    "season",
+    "episode",
+    "pagesRead"
   ]);
 
   const sanitizedMeta = {};
@@ -393,7 +396,10 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
         "totalPages",
         "totalChapters",
         "platform",
-        "author"
+        "author",
+        "season",
+        "episode",
+        "pagesRead"
       ]);
 
       const sanitizedMeta = {};
