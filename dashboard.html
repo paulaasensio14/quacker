@@ -709,7 +709,27 @@
 
               <div class="explore-drawer-actions">
                 <button class="btn-primary" type="button" id="exploreDrawerAddLibrary">Añadir a biblioteca</button>
+                <button class="btn-ghost" type="button" id="exploreDrawerAddLists">Añadir a una lista</button>
               </div>
+
+              <section class="explore-drawer-list-picker" id="exploreDrawerListPicker" hidden>
+                <label class="explore-drawer-list-label" for="exploreDrawerListSelect">Elegir lista</label>
+
+                <div class="explore-drawer-list-row">
+                  <select class="explore-drawer-list-select" id="exploreDrawerListSelect">
+                    <option value="">Selecciona una lista</option>
+                  </select>
+
+                  <button class="btn-primary" type="button" id="exploreDrawerConfirmList">
+                    Guardar en lista
+                  </button>
+
+                  <button class="btn-ghost" type="button" id="exploreDrawerCancelList">
+                    Cancelar
+                  </button>
+                </div>
+              </section>
+
               <div class="drawer-inline-note" id="exploreDrawerInlineNote" hidden aria-live="polite"></div>
             </div>
           </div>
