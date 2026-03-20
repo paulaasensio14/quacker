@@ -513,12 +513,16 @@ const ExploreModule = (() => {
     const expandBtn = document.getElementById("exploreDrawerExpand");
 
     if (!drawer || !details || !expandBtn) return;
-
     drawer.classList.toggle("is-expanded", __drawerExpanded);
+
     details.hidden = !__drawerExpanded;
 
     expandBtn.setAttribute("aria-pressed", __drawerExpanded ? "true" : "false");
-    expandBtn.textContent = __drawerExpanded ? "Contraer ficha" : "Ver ficha completa";
+    expandBtn.setAttribute(
+      "aria-label",
+      __drawerExpanded ? "Ocultar detalles" : "Ver más detalles"
+    );
+    expandBtn.textContent = __drawerExpanded ? "Ocultar detalles" : "Ver más detalles";
 
     if (__drawerExpanded) {
       _syncExploreDrawerViewport();
