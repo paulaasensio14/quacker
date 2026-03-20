@@ -5783,3 +5783,12 @@ body.modal-open{
     width: 100%;
   }
 }
+
+.explore-card--poster[data-action="open-item-detail"] {
+  cursor: pointer;
+}
+
+.explore-card--poster[data-action="open-item-detail"]:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
