@@ -649,14 +649,63 @@
             <div class="explore-drawer-cover" id="exploreDrawerCover" aria-hidden="true"></div>
 
             <div class="explore-drawer-content">
-              <div class="explore-drawer-title-row">
-                <h3 class="explore-drawer-title" id="exploreDrawerTitle">Título</h3>
-                <div id="exploreDrawerBadge"></div>
+              <div class="explore-drawer-head">
+                <div class="explore-drawer-title-row">
+                  <div class="explore-drawer-title-wrap">
+                    <h3 class="explore-drawer-title" id="exploreDrawerTitle">Título</h3>
+                    <div class="explore-drawer-meta" id="exploreDrawerMeta"></div>
+                  </div>
+
+                  <div class="explore-drawer-head-actions">
+                    <div id="exploreDrawerBadge"></div>
+
+                    <button
+                      type="button"
+                      class="btn-ghost explore-drawer-expand-btn"
+                      id="exploreDrawerExpand"
+                      aria-pressed="false"
+                      aria-label="Expandir detalle">
+                      Ver ficha completa
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div class="explore-drawer-meta" id="exploreDrawerMeta"></div>
-
               <p class="explore-drawer-summary" id="exploreDrawerSummary"></p>
+
+              <section class="explore-drawer-details" id="exploreDrawerDetails" hidden>
+                <div class="explore-detail-grid">
+                  <article class="explore-detail-card">
+                    <span class="explore-detail-label">Tipo</span>
+                    <strong class="explore-detail-value" id="exploreDetailType">—</strong>
+                  </article>
+
+                  <article class="explore-detail-card">
+                    <span class="explore-detail-label">Fecha de lanzamiento</span>
+                    <strong class="explore-detail-value" id="exploreDetailReleaseDate">—</strong>
+                  </article>
+
+                  <article class="explore-detail-card">
+                    <span class="explore-detail-label">Estado en biblioteca</span>
+                    <strong class="explore-detail-value" id="exploreDetailLibraryState">—</strong>
+                  </article>
+
+                  <article class="explore-detail-card">
+                    <span class="explore-detail-label">Listas</span>
+                    <strong class="explore-detail-value" id="exploreDetailListsCount">—</strong>
+                  </article>
+
+                  <article class="explore-detail-card explore-detail-card--full">
+                    <span class="explore-detail-label">Resumen</span>
+                    <p class="explore-detail-text" id="exploreDetailSummary">—</p>
+                  </article>
+
+                  <article class="explore-detail-card">
+                    <span class="explore-detail-label">ID Explore</span>
+                    <strong class="explore-detail-value" id="exploreDetailEid">—</strong>
+                  </article>
+                </div>
+              </section>
 
               <div class="explore-drawer-actions">
                 <button class="btn-primary" type="button" id="exploreDrawerAddLibrary">Añadir a biblioteca</button>
