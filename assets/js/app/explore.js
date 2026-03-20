@@ -10,9 +10,6 @@ const ExploreModule = (() => {
   let __listsChangedBound = false;
   let __viewChangeBound = false;
 
-  // Modo: añadir automáticamente a una lista concreta
-  let __addToListMode = null; // { listId, listName, addedCount }
-
   let sectionShownCount = {
     novedades: 0,
     tendencias: 0,
@@ -38,66 +35,13 @@ const ExploreModule = (() => {
 
   let __drawerListsPickerOpen = false;
 
-  function _renderAddToListModeChip() {
-    const wrap = document.getElementById("exploreAddToListMode");
-    const text = document.getElementById("exploreAddToListModeText");
-    if (!wrap || !text) return;
-
-    if (!__addToListMode?.listId) {
-      wrap.hidden = true;
-      return;
-    }
-
-    const name = __addToListMode.listName ? String(__addToListMode.listName) : "Lista";
-    const added = Number(__addToListMode.addedCount || 0);
-    const suffix = added > 0
-      ? ` · ${added} ${added === 1 ? "añadido" : "añadidos"}`
-      : "";
-
-    text.textContent = `Añadiendo a: ${name}${suffix}`;
-
-    wrap.hidden = false;
-
-    // micro feedback al mostrarse
-    wrap.classList.remove("is-pop");
-    requestAnimationFrame(() => wrap.classList.add("is-pop"));
-  }
-
-  function _exitAddToListMode({ clearLastAdd = true } = {}) {
-    __addToListMode = null;
-    if (clearLastAdd) window.__quackerLastListAdd = null;
-
-    _renderAddToListModeChip();
-    _renderDrawerAddCtaLabel();
-    _clearDrawerInlineNote();
-  }
-
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
     if (!btn) return;
 
-    // Si el botón está en estado busy ("Guardando…"), no tocamos el contenido
     if (btn.dataset?.busy === "1") return;
 
-    btn.textContent = __addToListMode?.listId
-      ? "Añadir y guardar en lista"
-      : "Añadir a biblioteca";
-  }
-
-  async function _hydrateAddToListModeName() {
-    // Si no hay modo o ya tenemos nombre, no hacemos nada
-    if (!__addToListMode?.listId) return;
-    if (__addToListMode.listName) return;
-
-    try {
-      const lists = await ApiClient.getLists();
-      const found = (lists || []).find(l => String(l.id) === String(__addToListMode.listId));
-      if (found?.name) __addToListMode.listName = String(found.name);
-    } catch (e) {
-      console.error("Explore: no se pudo resolver nombre de lista", e);
-    } finally {
-      _renderAddToListModeChip();
-    }
+    btn.textContent = "Añadir a biblioteca";
   }
 
   function _setExploreLoading(on) {
@@ -1065,42 +1009,109 @@ const ExploreModule = (() => {
   }
 
   function bind() {
-    // Activar modo "añadir a lista" cuando venimos desde Listas
-    document.addEventListener("quacker:lists-add-mode", (e) => {
-      const listId = e?.detail?.listId ? String(e.detail.listId) : null;
-      const listName = e?.detail?.listName ? String(e.detail.listName) : null;
 
-      __addToListMode = listId ? { listId, listName, addedCount: 0 } : null;
+    // Evita doble binding
+    if (bind._bound) return;
+    bind._bound = true;
 
-      _renderAddToListModeChip();
-      _renderDrawerAddCtaLabel();
+    // CLICK "+"
 
-      // Si no viene nombre, lo resolvemos
-      if (__addToListMode?.listId && !__addToListMode.listName) {
-        _hydrateAddToListModeName();
-      }
+    document.addEventListener("click", (e) => {
+      const addBtn = e.target.closest('button[data-action="open-add-modal"][data-eid]');
+      if (!addBtn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const item = _getExploreItemByEid(addBtn.dataset.eid);
+      if (!item) return;
+
+      activeEid = String(item.eid);
+
+      _syncExploreDrawerFromItem(item);
+      _renderExploreDrawerDetails?.(item); // si existe
+      _openExploreDrawer(addBtn);
     });
 
-    // Botón "Cancelar" del chip
-    const cancel = document.getElementById("exploreAddToListCancel");
-    if (cancel && !cancel.dataset.bound) {
-      cancel.dataset.bound = "1";
-      cancel.addEventListener("click", (e) => {
+    // BOTÓN CERRAR DRAWER
+
+    const closeDrawerBtn = document.getElementById("exploreDrawerClose");
+    if (closeDrawerBtn && !closeDrawerBtn.dataset.bound) {
+      closeDrawerBtn.dataset.bound = "1";
+
+      closeDrawerBtn.addEventListener("click", (e) => {
         e.preventDefault();
-        e.stopPropagation();
-
-        _exitAddToListMode({ clearLastAdd: true });
-
-        window.toast?.({
-          title: "Modo cancelado",
-          message: "Ya no se añadirá contenido a una lista automáticamente.",
-          type: "info",
-          duration: 2200
-        });
+        _closeExploreDrawer();
       });
     }
 
+    // BACKDROP
+
+    const backdrop = document.getElementById("exploreDrawerBackdrop");
+    if (backdrop && !backdrop.dataset.bound) {
+      backdrop.dataset.bound = "1";
+
+      backdrop.addEventListener("click", () => {
+        _closeExploreDrawer();
+      });
+    }
+
+    // ESC
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        _closeExploreDrawer();
+      }
+    });
+
+    // CLICK DENTRO DEL DRAWER
+
+    document.getElementById("exploreDrawer")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+    // AÑADIR A BIBLIOTECA
+
+    const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
+
+    if (addLibraryBtn && !addLibraryBtn.dataset.bound) {
+      addLibraryBtn.dataset.bound = "1";
+
+      addLibraryBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const item = _getActiveExploreItem();
+        if (!item) return;
+
+        _setDrawerButtonLoading(addLibraryBtn, true);
+
+        try {
+          const ensured = await _ensureInLibrary(item);
+          if (!ensured?.ok) return;
+
+          _showDrawerInlineNote("Añadido a biblioteca.");
+
+          await _syncInLibraryFlags();
+
+          const fresh = _getExploreItemByEid(item.eid);
+          if (fresh) {
+            _syncExploreDrawerFromItem(fresh);
+            _renderExploreDrawerDetails?.(fresh);
+          }
+
+          _render();
+        } finally {
+          _setDrawerButtonLoading(addLibraryBtn, false);
+          _renderDrawerAddCtaLabel();
+        }
+      });
+    }
+
+    // AÑADIR A LISTA (NUEVO)
+
     const addListsBtn = document.getElementById("exploreDrawerAddLists");
+
     if (addListsBtn && !addListsBtn.dataset.bound) {
       addListsBtn.dataset.bound = "1";
 
@@ -1108,29 +1119,15 @@ const ExploreModule = (() => {
         e.preventDefault();
         e.stopPropagation();
 
-        const item =
-          _getActiveExploreItem() ||
-          _getExploreItemByEid(addListsBtn.dataset.eid);
-
+        const item = _getActiveExploreItem();
         if (!item) return;
 
-        _syncExploreDrawerFromItem(item);
         await _openExploreListPicker();
       });
     }
 
-    const cancelListBtn = document.getElementById("exploreDrawerCancelList");
-    if (cancelListBtn && !cancelListBtn.dataset.bound) {
-      cancelListBtn.dataset.bound = "1";
-
-      cancelListBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        _closeExploreListPicker();
-      });
-    }
-
     const confirmListBtn = document.getElementById("exploreDrawerConfirmList");
+
     if (confirmListBtn && !confirmListBtn.dataset.bound) {
       confirmListBtn.dataset.bound = "1";
 
@@ -1139,10 +1136,10 @@ const ExploreModule = (() => {
         e.stopPropagation();
 
         const select = document.getElementById("exploreDrawerListSelect");
-        const listId = select?.value ? String(select.value) : "";
+        const listId = select?.value;
 
         if (!listId) {
-          _showDrawerInlineNotePersistent("Selecciona una lista antes de guardar.");
+          _showDrawerInlineNotePersistent("Selecciona una lista.");
           return;
         }
 
@@ -1150,807 +1147,25 @@ const ExploreModule = (() => {
       });
     }
 
-    // Botón "Volver" del chip (vuelve a la lista y reabre detalle)
-    const back = document.getElementById("exploreAddToListBack");
-    if (back && !back.dataset.bound) {
-      back.dataset.bound = "1";
-      back.addEventListener("click", (e) => {
+    const cancelListBtn = document.getElementById("exploreDrawerCancelList");
+
+    if (cancelListBtn && !cancelListBtn.dataset.bound) {
+      cancelListBtn.dataset.bound = "1";
+
+      cancelListBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (!__addToListMode?.listId) return;
-
-        const last = window.__quackerLastListAdd;
-
-        // UX: si el drawer está abierto, lo cerramos antes de saltar a Listas
-        _closeExploreDrawer();
-
-        document.dispatchEvent(new CustomEvent("quacker:lists-open-detail", {
-          detail: {
-            listId: String(__addToListMode.listId),
-            highlightItemId: (last && String(last.listId) === String(__addToListMode.listId))
-              ? String(last.itemId)
-              : null
-          }
-        }));
+        _closeExploreListPicker();
       });
     }
 
-    // Botón "Finalizar" del chip (vuelve a la lista y apaga el modo)
-    const finish = document.getElementById("exploreAddToListFinish");
-    if (finish && !finish.dataset.bound) {
-      finish.dataset.bound = "1";
-      finish.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    // FILTROS (NO TOCAR)
 
-        if (!__addToListMode?.listId) return;
-
-        const listId = String(__addToListMode.listId);
-        const last = window.__quackerLastListAdd;
-
-        // UX: cerrar drawer si está abierto
-        _closeExploreDrawer();
-
-        // Preparamos el highlight antes de apagar el modo
-        const highlightItemId =
-          (last && String(last.listId) === listId) ? String(last.itemId) : null;
-
-        _exitAddToListMode({ clearLastAdd: true });
-
-        // Volver a la lista con highlight
-        document.dispatchEvent(new CustomEvent("quacker:lists-open-detail", {
-          detail: { listId, highlightItemId }
-        }));
-
-        window.toast?.({
-          title: "Modo finalizado",
-          message: "Ya no se añadirá contenido a una lista automáticamente.",
-          type: "info",
-          duration: 2200
-        });
-      });
-    }
-
-    // Explore: "+" en portada → abrir drawer con item correcto
     document.addEventListener("click", (e) => {
-      const btn = e.target.closest('button[data-action="open-add-modal"][data-eid]');
-      if (!btn) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const item = _getExploreItemByEid(btn.dataset.eid);
-      if (!item) return;
-
-      _syncExploreDrawerFromItem(item);
-      _openExploreDrawer(btn);
+      const pill = e.target.closest("[data-filter]");
+      if (!pill) return;
     });
-
-    // Explore: "+" en portada -> abrir drawer con item correcto
-    document.addEventListener("click", (e) => {
-      const addBtn = e.target.closest('button[data-action="open-add-modal"][data-eid]');
-      if (!addBtn) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const item = feed.find((x) => String(x.eid) === String(addBtn.dataset.eid));
-      if (!item) return;
-
-      activeEid = String(item.eid);
-
-      const titleEl = document.getElementById("exploreDrawerTitle");
-      const metaEl = document.getElementById("exploreDrawerMeta");
-      const summaryEl = document.getElementById("exploreDrawerSummary");
-      const badgeEl = document.getElementById("exploreDrawerBadge");
-
-      if (titleEl) titleEl.textContent = _safeText(item.title) || "Sin título";
-
-      if (metaEl) {
-        metaEl.textContent = [
-          TYPE_LABELS[item.type] || "Contenido",
-          item.releaseDate ? _safeText(item.releaseDate) : ""
-        ].filter(Boolean).join(" · ");
-      }
-
-      if (summaryEl) {
-        summaryEl.textContent = _safeText(item.summary) || "Sin descripción disponible.";
-      }
-
-      if (badgeEl) {
-        const parts = [];
-        if (item.__inLibrary) parts.push("En biblioteca");
-        if (Number(item.__listsCount || 0) > 0) {
-          const count = Number(item.__listsCount || 0);
-          parts.push(`En ${count} lista${count === 1 ? "" : "s"}`);
-        }
-        badgeEl.textContent = parts.join(" · ");
-        badgeEl.hidden = parts.length === 0;
-      }
-
-      _renderExploreDrawerDetails(item);
-      _setExploreDrawerExpanded(false);
-
-      _clearDrawerInlineNote();
-      _renderDrawerAddCtaLabel();
-      _openExploreDrawer(addBtn);
-    });
-
-    // filtros pills
-    document.addEventListener("click", (e) => {
-    const btn = e.target.closest('.explore-pills .pill-btn[data-value]');
-    if (!btn) return;
-
-    typeFilter = btn.dataset.value || "all";
-    btn.parentElement.querySelectorAll(".pill-btn").forEach(b => b.classList.toggle("active", b === btn));
-    expandedSection = null;
-    sectionShownCount = { novedades: 0, tendencias: 0, recomendados: 0 };
-    _saveUIState(); // no esperamos; guardado en segundo plano
-    _scheduleApplyFilters();
-    });
-
-    // secciones: Ver más / Volver
-    document.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-explore-section-action]");
-      if (!btn) return;
-
-      const action = btn.dataset.exploreSectionAction;
-
-      if (action === "expand") {
-        expandedSection = btn.dataset.section || null;
-        _render();
-
-        const sectionEl = document.querySelector(`.explore-section[data-section="${expandedSection}"]`);
-        sectionEl?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-        return;
-      }
-
-      if (action === "load-more") {
-        const key = btn.dataset.section;
-        if (!key) return;
-
-        sectionShownCount[key] = (sectionShownCount[key] || 0) + LOAD_MORE_STEP;
-        _render();
-
-        // mantener el scroll en la sección
-        const sectionEl = document.querySelector(`.explore-section[data-section="${key}"]`);
-        sectionEl?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-        return;
-      }
-
-      if (action === "collapse") {
-        expandedSection = null;
-        _render();
-        return;
-      }
-    });
-
-    // Evita que clicks dentro del panel afecten a listeners globales
-    document.getElementById("exploreDrawer")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
-
-    const expandBtn = document.getElementById("exploreDrawerExpand");
-    if (expandBtn && !expandBtn.dataset.bound) {
-      expandBtn.dataset.bound = "1";
-
-      expandBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const item = _getExploreItemByEid(activeEid);
-        if (!item) return;
-
-        _renderExploreDrawerDetails(item);
-        _setExploreDrawerExpanded(!__drawerExpanded);
-      });
-    }
-
-    if (!document.documentElement.dataset.exploreDrawerResizeBound) {
-      document.documentElement.dataset.exploreDrawerResizeBound = "1";
-
-      window.addEventListener("resize", () => {
-        if (!__drawerOpen || !__drawerExpanded) return;
-        _syncExploreDrawerViewport();
-      });
-    }
-
-    // Drawer: focus trap (Tab se queda dentro)
-    if (!document.documentElement.dataset.drawerTrapBound) {
-      document.documentElement.dataset.drawerTrapBound = "1";
-      document.addEventListener("keydown", _trapFocusKeydown, true);
-    }
-
-    // Drawer: cerrar (evitar que el click “caiga” en la card de debajo y lo reabra)
-    document.getElementById("exploreDrawerClose")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      _closeExploreDrawer();
-    });
-
-    document.getElementById("exploreDrawerBackdrop")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      _closeExploreDrawer();
-    });
-
-    // Drawer: cerrar con Escape
-    if (!document.documentElement.dataset.drawerEscBound) {
-      document.documentElement.dataset.drawerEscBound = "1";
-      document.addEventListener("keydown", (e) => {
-        if (!__drawerOpen) return;
-        if (e.key === "Escape") {
-          e.preventDefault();
-          _closeExploreDrawer();
-        }
-      });
-    }
-
-    // Explorar: abrir drawer con teclado en la card (Enter / Espacio)
-    const exploreRoot = document.getElementById("view-explore");
-    if (exploreRoot && !exploreRoot.dataset.keyOpenBound) {
-      exploreRoot.dataset.keyOpenBound = "1";
-
-      exploreRoot.addEventListener("keydown", (e) => {
-        // Solo cuando el foco está en una card
-        const card = e.target?.closest?.(".explore-card");
-        if (!card) return;
-
-        // Si el evento viene desde un control interactivo, no hacemos nada
-        if (e.target.closest("button, a, input, select, textarea")) return;
-
-        const key = e.key;
-
-        if (key === "Enter" || key === " ") {
-          e.preventDefault();
-          e.stopPropagation();
-
-          // Simular el mismo flujo que el click en la card:
-          // 1) localizar item por eid
-          const eid = card.dataset.eid;
-          const item = feed.find((x) => _safeText(x.eid) === _safeText(eid));
-          if (!item) return;
-
-          // 2) reusar el mismo render de drawer que ya usas en click
-          //    Si tu click handler ya llama a una función tipo _renderDrawer(item),
-          //    aquí llama a esa misma.
-          //    Si no, esto delega: dispara un click programático en la card.
-          card.click();
-        }
-      });
-    }
-
-    // busqueda global (topbar) - solo cuando Explore esta activo
-    const global = document.getElementById("globalSearch");
-    if (global) { 
-        global.addEventListener("input", (e) => {
-            const isExploreActive = document.querySelector("#view-explore")?.classList.contains("is-active");
-            if (!isExploreActive) return;
-
-            searchTerm = (e.target.value || "").trim();
-            expandedSection = null;
-            sectionShownCount = { novedades: 0, tendencias: 0, recomendados: 0 };
-            _saveUIState(); // no esperamos; guardado en segundo plano
-            _scheduleApplyFilters();
-        });
-    }
-    
-    // sort
-    const sort = document.getElementById("exploreSort");
-    if (sort) {
-    sort.addEventListener("change", (e) => {
-        sortMode = e.target.value || "recent";
-        expandedSection = null;
-        sectionShownCount = { novedades: 0, tendencias: 0, recomendados: 0 };
-        _saveUIState(); // no esperamos; guardado en segundo plano
-        _scheduleApplyFilters();
-    });
-    }
-
-    // acciones cards (delegación)
-    document.addEventListener("click", async (e) => {
-
-    const cardClick = e.target.closest(".explore-card");
-    if (cardClick && !e.target.closest("button")) {
-      const eid = cardClick.dataset.eid;
-      const item = feed.find(x => _safeText(x.eid) === _safeText(eid));
-      if (!item) return;
-
-      // Guardamos activo para botones del drawer
-      activeEid = item.eid;
-
-      // Pintar contenido del drawer usando tus IDs actuales
-      const cover = document.getElementById("exploreDrawerCover");
-      const title = document.getElementById("exploreDrawerTitle");
-      const meta = document.getElementById("exploreDrawerMeta");
-      const summary = document.getElementById("exploreDrawerSummary");
-      const badge = document.getElementById("exploreDrawerBadge");
-
-      if (cover) {
-        const initials = (item.title || "Q").trim().slice(0, 1).toUpperCase();
-        cover.textContent = initials;
-      }
-      if (title) title.textContent = item.title || "Sin título";
-
-      const typeLabel = (TYPE_LABELS[item.type] || "Contenido");
-      const dateLabel = item.releaseDate ? item.releaseDate : "";
-
-      if (meta) {
-        meta.innerHTML = `
-          <span class="explore-chip">${typeLabel}</span>
-          ${dateLabel ? `<span class="explore-chip">${_safeText(dateLabel)}</span>` : ""}
-        `;
-      }
-
-      if (summary) summary.textContent = item.summary || "Sin descripción.";
-      if (badge) badge.innerHTML = _isNewByDate(item.releaseDate) ? _chipSvgNew() : "";
-
-      // Reset nota inline del drawer antes de pintar contenido
-      _clearDrawerInlineNote();
-
-      // Nota: en modo "añadir a lista", avisamos dónde se guardará
-      if (__addToListMode?.listId) {
-        const name = (__addToListMode.listName || "la lista").trim();
-        _showDrawerInlineNotePersistent(`Se guardará en: ${name}`);
-      }
-
-      const btnLib = document.getElementById("exploreDrawerAddLibrary");
-      const btnLists = document.getElementById("exploreDrawerAddLists");
-      if (btnLib) {
-        const saved = !!item.__inLibrary;
-        const saving = !!item.__saving;
-        btnLib.disabled = saved || saving;
-        btnLib.textContent = saving ? "Añadiendo..." : (saved ? "En biblioteca" : "Añadir a biblioteca");
-      }
-      _renderDrawerAddCtaLabel();
-      if (btnLists) {
-        btnLists.disabled = !!item.__saving || !!__addToListMode?.listId;
-      }
-
-      // Abrir drawer premium y devolver foco al cerrar
-      _openExploreDrawer(cardClick);
-      return;
-    }
-
-    const openAddModalBtn = e.target.closest('[data-action="open-add-modal"]');
-    if (openAddModalBtn) {
-      e.stopPropagation();
-
-      const eid = openAddModalBtn.dataset.eid;
-      if (!eid) return;
-
-      const item = feed.find(x => _safeText(x.eid) === _safeText(eid));
-      if (!item) return;
-
-      activeEid = item.eid;
-
-      openAddToLibraryModal(eid);
-      return;
-    }
-
-    // ===== FIX: botón + en portada =====
-    const openAddBtn = e.target.closest('[data-action="open-add-modal"]');
-    if (openAddBtn) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const card = openAddBtn.closest(".explore-card");
-      const eid = openAddBtn.dataset.eid || card?.dataset?.eid;
-      if (!eid) return;
-
-      activeEid = String(eid);
-
-      _openExploreDrawer(openAddBtn);
-      return;
-    }
-
-    const actionBtn = e.target.closest(".explore-card button[data-action]");
-    if (!actionBtn) return;
-
-    const card = actionBtn.closest(".explore-card");
-    const eid = card?.dataset?.eid;
-    if (!eid) return;
-
-    const item = feed.find(x => _safeText(x.eid) === _safeText(eid));
-    if (!item) return;
-
-    const action = actionBtn.dataset.action;
-
-    if (action === "add-library") {
-      const res = await _ensureInLibrary(item);
-      if (!res?.ok) return;
-
-      // Feedback inmediato en la card (sin esperar a un re-render completo)
-      const cardEl = actionBtn.closest(".explore-card");
-      if (cardEl) {
-        cardEl.classList.remove("is-pop");
-        requestAnimationFrame(() => cardEl.classList.add("is-pop"));
-      }
-
-      // Actualizar CTA de la card con tick temporal y luego "En biblioteca"
-      if (actionBtn) {
-        actionBtn.disabled = true;
-        actionBtn.innerHTML = `  Guardado `;
-        window.setTimeout(() => {
-          if (!document.body.contains(actionBtn)) return;
-          actionBtn.innerHTML = "En biblioteca";
-        }, 650);
-      }
-
-      // Si estamos en modo "añadir a lista", añadimos automáticamente
-      if (__addToListMode?.listId) {
-        const libraryId =
-          res.createdId ||
-          await _findLibraryItemIdByTitleType(item.title, item.type);
-
-        if (libraryId) {
-          try {
-            await ApiClient.addLibraryItemToList(__addToListMode.listId, libraryId);
-
-            if (__addToListMode?.listId) {
-              __addToListMode.addedCount = Number(__addToListMode.addedCount || 0) + 1;
-              _renderAddToListModeChip();
-            }
-
-            const listName = (__addToListMode?.listName || "la lista").trim();
-            const total = Number(__addToListMode?.addedCount || 0);
-
-            window.toast?.({
-              title: "Guardado en lista",
-              message: `Se ha guardado en: ${listName}. Total en esta sesión: ${total}.`,
-              type: "success",
-              duration: 3200
-            });
-
-            window.__quackerLastListAdd = {
-              listId: String(__addToListMode.listId),
-              itemId: String(libraryId)
-            };
-
-          } catch (e) {
-            console.error(e);
-            window.toast?.({
-              title: "No se pudo añadir a la lista",
-              message: "Inténtalo de nuevo.",
-              type: "error",
-              duration: 3000
-            });
-          }
-        }
-      }
-
-      return;
-    }
-
-    if (action === "dismiss") {
-      try {
-        await ApiClient.dismissExploreItem(item.eid);
-        dismissed.add(String(item.eid));
-
-        // Si había un debounce pendiente (tecleo/filtros), lo cancelamos para evitar re-render extra
-        if (__applyTimer) {
-          clearTimeout(__applyTimer);
-          __applyTimer = null;
-        }
-        if (__loadingMinTimer) {
-          clearTimeout(__loadingMinTimer);
-          __loadingMinTimer = null;
-        }
-        _setExploreLoading(false);
-
-        // animación rápida de salida
-        const cardEl = document.querySelector(`.explore-card[data-eid="${String(item.eid)}"]`);
-        if (cardEl) {
-          cardEl.style.transition = "transform 160ms ease, opacity 160ms ease";
-          cardEl.style.opacity = "0";
-          cardEl.style.transform = "translateY(6px)";
-          setTimeout(() => {
-            _applyFilters();
-          }, 170);
-        } else {
-          _applyFilters();
-        }
-
-        window.toast?.({
-          title: "Actualizado",
-          message: "Ocultado de Explorar.",
-          type: "success",
-          duration: 2200
-        });
-      } catch (e) {
-        console.error(e);
-        window.toast?.({
-          title: "No se pudo ocultar",
-          message: "Inténtalo de nuevo.",
-          type: "error",
-          duration: 3000
-        });
-      }
-      return;
-    }
-
-    if (action === "add-lists") {
-      // 1) asegurar biblioteca
-      const res = await _ensureInLibrary(item);
-      if (!res.ok) return;
-
-      // 2) buscar id real de library (por si createLibraryItem no devuelve id)
-      const id = res.createdId || await _findLibraryItemIdByTitleType(item.title, item.type);
-      if (!id) {
-      window.toast?.({
-        title: "No se pudo preparar",
-        message: "Inténtalo de nuevo.",
-        type: "error",
-        duration: 3000
-      });
-      return;
-      }
-
-      // 3) abrir modal multi-lista existente (lo tienes en library.js)
-      if (typeof window.openAddToListModal === "function") {
-      window.openAddToListModal(id);
-      } else if (typeof openAddToListModal === "function") {
-      openAddToListModal(id);
-      } else {
-      window.toast?.({
-        title: "No disponible",
-        message: "No se encontró el selector de listas.",
-        type: "error",
-        duration: 3000
-      });
-      }
-      return;
-    }
-
-    // ===== MODAL ADD FROM EXPLORE =====
-
-    const addLibBtn = e.target.closest("#modalAddToLibrary");
-    if (addLibBtn) {
-      const modal = document.getElementById("addFromExploreModal");
-      const eid = modal?.dataset?.eid;
-      if (!eid) return;
-
-      const item = feed.find(x => _safeText(x.eid) === _safeText(eid));
-      if (!item) return;
-
-      try {
-        await ApiClient.addLibraryItem({
-          title: item.title,
-          type: item.type,
-          releaseDate: item.releaseDate
-        });
-
-        closeAddFromExploreModal();
-
-        // refrescar UI
-        item.__inLibrary = true;
-        _render();
-
-      } catch (err) {
-        console.error(err);
-      }
-
-      return;
-    }
-
-    // abrir flujo de listas EXISTENTE
-    const addListBtn = e.target.closest("#modalAddToLists");
-    if (addListBtn) {
-      const modal = document.getElementById("addFromExploreModal");
-      const eid = modal?.dataset?.eid;
-      if (!eid) return;
-
-      const item = feed.find(x => _safeText(x.eid) === _safeText(eid));
-      if (!item) return;
-
-      closeAddFromExploreModal();
-
-      // reutiliza tu flujo actual
-      openAddToListsModal(item);
-
-      return;
-    }
-
-    // cancelar
-    const cancelBtn = e.target.closest("#modalCancelExplore");
-    if (cancelBtn) {
-      closeAddFromExploreModal();
-      return;
-    }
-    });
-
-    document.getElementById("exploreDrawerAddLibrary")?.addEventListener("click", async () => {
-      if (!activeEid) return;
-
-      const btnLib = document.getElementById("exploreDrawerAddLibrary");
-      if (!btnLib) return;
-
-      const item = feed.find(x => _safeText(x.eid) === _safeText(activeEid));
-      if (!item || item.__saving) return;
-
-      // Preparar botón
-      btnLib.classList.add("drawer-btn");
-      const originalText = btnLib.textContent;
-
-      // Loading ON
-      _setDrawerButtonLoading(btnLib, true);
-      btnLib.textContent = "Guardando…";
-      btnLib.dataset.busy = "1";
-
-      try {
-        await _ensureInLibrary(item);
-        // Si estamos en modo "añadir a lista", añadir automáticamente
-        if (__addToListMode?.listId) {
-          const libraryId =
-            await _findLibraryItemIdByTitleType(item.title, item.type);
-
-          if (libraryId) {
-            try {
-              await ApiClient.addLibraryItemToList(__addToListMode.listId, libraryId);
-
-              if (__addToListMode?.listId) {
-                __addToListMode.addedCount = Number(__addToListMode.addedCount || 0) + 1;
-                _renderAddToListModeChip();
-              }
-
-              const listName = (__addToListMode?.listName || "la lista").trim();
-              _showDrawerInlineNote(`Guardado en: ${listName}`);
-
-              const total = Number(__addToListMode?.addedCount || 0);
-
-              window.toast?.({
-                title: "Guardado en lista",
-                message: `Se ha guardado en: ${listName}. Total en esta sesión: ${total}.`,
-                type: "success",
-                duration: 3200
-              });
-
-              // Mantener el modo activo para permitir añadir varios contenidos seguidos.
-              // Guardamos el último item añadido para poder resaltarlo al volver a la lista.
-              window.__quackerLastListAdd = {
-                listId: String(__addToListMode.listId),
-                itemId: String(libraryId)
-              };
-            } catch (e) {
-              console.error(e);
-              window.toast?.({
-                title: "No se pudo añadir a la lista",
-                message: "Inténtalo de nuevo.",
-                type: "error",
-                duration: 3000
-              });
-            }
-          }
-        }
-      } finally {
-        // Loading OFF
-        _setDrawerButtonLoading(btnLib, false);
-        btnLib.dataset.busy = "0";
-
-        // Estado final real
-        const refreshed = feed.find(x => _safeText(x.eid) === _safeText(activeEid));
-        btnLib.textContent = refreshed?.__inLibrary
-          ? "En biblioteca"
-          : originalText;
-
-        _renderDrawerAddCtaLabel();
-        btnLib.disabled = !!refreshed?.__inLibrary;
-        if (refreshed?.__inLibrary) _showDrawerInlineNote("Añadido a tu biblioteca");
-      }
-    });
-
-    document.getElementById("exploreDrawerAddLists")?.addEventListener("click", async () => {
-        if (!activeEid) return;
-        const item = feed.find(x => _safeText(x.eid) === _safeText(activeEid));
-        if (!item) return;
-
-        const res = await _ensureInLibrary(item);
-        if (!res.ok) return;
-
-        const id = res.createdId || await _findLibraryItemIdByTitleType(item.title, item.type);
-        if (!id) {
-            window.toast?.({
-              title: "No se pudo preparar",
-              message: "Inténtalo de nuevo.",
-              type: "error",
-              duration: 3000
-            });
-            return;
-        }
-
-        _closeExploreDrawer();
-
-        if (typeof window.openAddToListModal === "function") {
-            window.openAddToListModal(id);
-        } else {
-            window.toast?.({
-              title: "No disponible",
-              message: "No se encontró el selector de listas.",
-              type: "error",
-              duration: 3000
-            });
-        }
-    });
-
-    document.getElementById("exploreClearDismissed")?.addEventListener("click", async () => {
-        try {
-            await ApiClient.clearExploreDismissed();
-            dismissed = new Set();
-            await load();
-            window.toast?.({
-              title: "Explorar restablecido",
-              message: "Se han recuperado los contenidos ocultados.",
-              type: "success",
-              duration: 2200
-            });
-        } catch (e) {
-          console.error(e);
-          window.toast?.({
-            title: "No se pudo restablecer",
-            message: "Inténtalo de nuevo.",
-            type: "error",
-            duration: 3000
-          });
-        }
-    });
-
-    // Cuando cambian listas desde otras vistas (Biblioteca / Listas),
-    // refrescamos contadores "En X listas" sin recargar el feed.
-    if (!__listsChangedBound) {
-      __listsChangedBound = true;
-
-      document.addEventListener("quacker:lists-changed", async () => {
-        try {
-          const isExploreActive =
-            document.querySelector("#view-explore")?.classList.contains("is-active");
-          if (!isExploreActive) return;
-
-          await _syncInLibraryFlags();
-          _scheduleApplyFilters();
-        } catch (e) {
-          console.error("Explore: no se pudo refrescar tras lists-changed", e);
-        }
-      });
-    }
-
-    // Empty state: restablecer filtros + búsqueda
-    const emptyReset = document.getElementById("exploreEmptyReset");
-    if (emptyReset && !emptyReset.dataset.bound) {
-      emptyReset.dataset.bound = "1";
-
-      emptyReset.addEventListener("click", () => {
-        // Reset estado
-        typeFilter = "all";
-        sortMode = "recent";
-        searchTerm = "";
-        expandedSection = null;
-        sectionShownCount = { novedades: 0, tendencias: 0, recomendados: 0 };
-
-        // Reset UI (pills)
-        document.querySelectorAll(".explore-pills .pill-btn[data-value]").forEach((b) => {
-          b.classList.toggle("active", (b.dataset.value || "all") === "all");
-        });
-
-        // Reset UI (sort)
-        const sortSel = document.getElementById("exploreSort");
-        if (sortSel) sortSel.value = "recent";
-
-        // Reset UI (buscador global cuando estamos en Explorar)
-        const global = document.getElementById("globalSearch");
-        if (global) global.value = "";
-
-        _saveUIState();
-        _scheduleApplyFilters();
-
-        // UX: volver arriba
-        const view = document.getElementById("view-explore");
-        view?.scrollTo?.({ top: 0, behavior: "smooth" });
-        view?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-      });
-    }
 
   }
 
