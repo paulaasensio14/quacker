@@ -580,7 +580,6 @@ const ExploreModule = (() => {
     const summaryEl = document.getElementById("exploreDrawerSummary");
     const badgeEl = document.getElementById("exploreDrawerBadge");
     const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
-    const addListsBtn = document.getElementById("exploreDrawerAddLists");
 
     const metaParts = [
       TYPE_LABELS[item.type] || "Contenido",
@@ -607,11 +606,6 @@ const ExploreModule = (() => {
     if (addLibraryBtn) {
       addLibraryBtn.dataset.eid = String(item.eid);
       addLibraryBtn.disabled = !!item.__saving;
-    }
-
-    if (addListsBtn) {
-      addListsBtn.dataset.eid = String(item.eid);
-      addListsBtn.disabled = !!item.__saving;
     }
 
     _clearDrawerInlineNote();
