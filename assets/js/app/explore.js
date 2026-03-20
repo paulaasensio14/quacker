@@ -36,6 +36,8 @@ const ExploreModule = (() => {
 
   let __drawerLastFocusEl = null;
 
+  let __drawerListsPickerOpen = false;
+
   function _renderAddToListModeChip() {
     const wrap = document.getElementById("exploreAddToListMode");
     const text = document.getElementById("exploreAddToListModeText");
@@ -478,10 +480,24 @@ const ExploreModule = (() => {
     }
 
     _setExploreDrawerExpanded(false);
+
     document.documentElement.style.removeProperty("--explore-expanded-left");
+
     document.documentElement.style.removeProperty("--explore-expanded-top");
+
     document.documentElement.style.removeProperty("--explore-expanded-right");
+
     document.documentElement.style.removeProperty("--explore-expanded-bottom");
+
+    const listPicker = document.getElementById("exploreDrawerListPicker");
+    const listSelect = document.getElementById("exploreDrawerListSelect");
+    const confirmListBtn = document.getElementById("exploreDrawerConfirmList");
+
+    __drawerListsPickerOpen = false;
+
+    if (listPicker) listPicker.hidden = true;
+    if (listSelect) listSelect.value = "";
+    if (confirmListBtn) confirmListBtn.disabled = false;
 
     const back = __drawerLastFocusEl;
     __drawerLastFocusEl = null;
@@ -612,6 +628,121 @@ const ExploreModule = (() => {
     _renderDrawerAddCtaLabel();
 
     return item;
+  }
+
+  async function _populateExploreListPicker(preselectedListId = null) {
+    const select = document.getElementById("exploreDrawerListSelect");
+    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
+    if (!select) return;
+
+    let lists = [];
+    try {
+      lists = await ApiClient.getLists();
+    } catch (e) {
+      console.error("Explore: no se pudieron cargar las listas", e);
+      lists = [];
+    }
+
+    const safeLists = Array.isArray(lists) ? lists : [];
+
+    const options = ['<option value="">Selecciona una lista</option>'];
+
+    for (const list of safeLists) {
+      if (!list?.id) continue;
+      const name = _safeText(list.name) || "Lista sin nombre";
+      options.push(`<option value="${String(list.id)}">${name}</option>`);
+    }
+
+    select.innerHTML = options.join("");
+
+    if (preselectedListId) {
+      select.value = String(preselectedListId);
+    }
+
+    const hasLists = safeLists.length > 0;
+    select.disabled = !hasLists;
+
+    if (confirmBtn) {
+      confirmBtn.disabled = !hasLists;
+    }
+
+    if (!hasLists) {
+      select.innerHTML = '<option value="">No hay listas disponibles</option>';
+    }
+  }
+
+  async function _openExploreListPicker() {
+    const picker = document.getElementById("exploreDrawerListPicker");
+    if (!picker) return;
+
+    await _populateExploreListPicker(__addToListMode?.listId || null);
+
+    __drawerListsPickerOpen = true;
+    picker.hidden = false;
+
+    const select = document.getElementById("exploreDrawerListSelect");
+    requestAnimationFrame(() => select?.focus?.());
+  }
+
+  function _closeExploreListPicker() {
+    const picker = document.getElementById("exploreDrawerListPicker");
+    const select = document.getElementById("exploreDrawerListSelect");
+
+    __drawerListsPickerOpen = false;
+
+    if (picker) picker.hidden = true;
+    if (select) select.value = "";
+  }
+
+  async function _saveActiveExploreItemToList(listId) {
+    const item = _getActiveExploreItem();
+    if (!item || !listId) return;
+
+    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
+    _setDrawerButtonLoading(confirmBtn, true);
+
+    try {
+      const ensured = await _ensureInLibrary(item);
+      if (!ensured?.ok) return;
+
+      const libraryItemId =
+        ensured.createdId ||
+        await _findLibraryItemIdByTitleType(item.title, item.type);
+
+      if (!libraryItemId) {
+        _showDrawerInlineNotePersistent(
+          "Se añadió a biblioteca, pero no se pudo resolver el item para guardarlo en la lista."
+        );
+        return;
+      }
+
+      const result = await ApiClient.addLibraryItemToList(
+        String(listId),
+        String(libraryItemId)
+      );
+
+      if (result?.ok && !result?.already) {
+        _showDrawerInlineNote("Añadido a la lista.");
+      } else if (result?.already) {
+        _showDrawerInlineNotePersistent("Ese contenido ya estaba en la lista.");
+      } else {
+        _showDrawerInlineNotePersistent("No se pudo añadir a la lista.");
+        return;
+      }
+
+      await _syncInLibraryFlags();
+
+      const fresh = _getExploreItemByEid(item.eid);
+      if (fresh) {
+        _syncExploreDrawerFromItem(fresh);
+        _renderExploreDrawerDetails(fresh);
+      }
+
+      _render();
+      _closeExploreListPicker();
+    } finally {
+      _setDrawerButtonLoading(confirmBtn, false);
+    }
   }
 
   async function _syncInLibraryFlags() {
@@ -966,6 +1097,56 @@ const ExploreModule = (() => {
           type: "info",
           duration: 2200
         });
+      });
+    }
+
+    const addListsBtn = document.getElementById("exploreDrawerAddLists");
+    if (addListsBtn && !addListsBtn.dataset.bound) {
+      addListsBtn.dataset.bound = "1";
+
+      addListsBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const item =
+          _getActiveExploreItem() ||
+          _getExploreItemByEid(addListsBtn.dataset.eid);
+
+        if (!item) return;
+
+        _syncExploreDrawerFromItem(item);
+        await _openExploreListPicker();
+      });
+    }
+
+    const cancelListBtn = document.getElementById("exploreDrawerCancelList");
+    if (cancelListBtn && !cancelListBtn.dataset.bound) {
+      cancelListBtn.dataset.bound = "1";
+
+      cancelListBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        _closeExploreListPicker();
+      });
+    }
+
+    const confirmListBtn = document.getElementById("exploreDrawerConfirmList");
+    if (confirmListBtn && !confirmListBtn.dataset.bound) {
+      confirmListBtn.dataset.bound = "1";
+
+      confirmListBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const select = document.getElementById("exploreDrawerListSelect");
+        const listId = select?.value ? String(select.value) : "";
+
+        if (!listId) {
+          _showDrawerInlineNotePersistent("Selecciona una lista antes de guardar.");
+          return;
+        }
+
+        await _saveActiveExploreItemToList(listId);
       });
     }
 
