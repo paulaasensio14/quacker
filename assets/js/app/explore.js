@@ -687,8 +687,8 @@ const ExploreModule = (() => {
       const freshItem = _getExploreItemByEid(item.eid);
 
       const libraryItemId =
-        freshItem?.__libraryItemId ||
         ensured.createdId ||
+        freshItem?.__libraryItemId ||
         null;
 
       if (!libraryItemId) {
