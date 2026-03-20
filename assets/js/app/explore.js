@@ -462,24 +462,15 @@ const ExploreModule = (() => {
   function _syncExploreDrawerViewport() {
     if (!__drawerExpanded) return;
 
-    const sidebar = document.getElementById("sidebar");
-    const main = document.querySelector("main.app-main");
     const root = document.documentElement;
+    if (!root) return;
 
-    if (!main || !root) return;
+    const inset = window.innerWidth <= 980 ? 16 : 20;
 
-    const sidebarRect = sidebar?.getBoundingClientRect?.();
-    const mainRect = main.getBoundingClientRect();
-
-    const left = sidebarRect?.right ?? mainRect.left;
-    const top = mainRect.top + 8;
-    const right = Math.max(20, window.innerWidth - mainRect.right + 8);
-    const bottom = 20;
-
-    root.style.setProperty("--explore-expanded-left", `${Math.round(left)}px`);
-    root.style.setProperty("--explore-expanded-top", `${Math.round(top)}px`);
-    root.style.setProperty("--explore-expanded-right", `${Math.round(right)}px`);
-    root.style.setProperty("--explore-expanded-bottom", `${Math.round(bottom)}px`);
+    root.style.setProperty("--explore-expanded-left", `${inset}px`);
+    root.style.setProperty("--explore-expanded-top", `${inset}px`);
+    root.style.setProperty("--explore-expanded-right", `${inset}px`);
+    root.style.setProperty("--explore-expanded-bottom", `${inset}px`);
   }
 
   function _renderExploreDrawerDetails(item) {
