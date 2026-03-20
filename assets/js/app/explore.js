@@ -513,8 +513,38 @@ const ExploreModule = (() => {
     };
   }
 
+  function _buildExploreDrawerTextModel(item) {
+    const count = Number(item?.__listsCount || 0);
+
+    const metaParts = [
+      TYPE_LABELS[item?.type] || "Contenido",
+      item?.releaseDate ? _safeText(item.releaseDate) : ""
+    ].filter(Boolean);
+
+    const badgeParts = [];
+
+    if (item?.__inLibrary) badgeParts.push("En biblioteca");
+    if (count > 0) {
+      badgeParts.push(`En ${count} lista${count === 1 ? "" : "s"}`);
+    }
+
+    return {
+      title: _safeText(item?.title) || "Sin título",
+      meta: metaParts.join(" · "),
+      summary: _safeText(item?.summary) || "Sin descripción disponible.",
+      detailType: TYPE_LABELS[item?.type] || "Contenido",
+      detailReleaseDate: item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha",
+      detailLibraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
+      detailListsCount:
+        count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
+      detailEid: item?.eid ? String(item.eid) : "—",
+      badge: badgeParts.join(" · "),
+      hasBadge: badgeParts.length > 0
+    };
+  }
+
   function _renderExploreDrawerDetails(item) {
-    const vm = _mapExploreItemToDrawerDetails(item);
+    const vm = _buildExploreDrawerTextModel(item);
 
     const typeEl = document.getElementById("exploreDetailType");
     const releaseEl = document.getElementById("exploreDetailReleaseDate");
@@ -523,12 +553,12 @@ const ExploreModule = (() => {
     const summaryEl = document.getElementById("exploreDetailSummary");
     const eidEl = document.getElementById("exploreDetailEid");
 
-    if (typeEl) typeEl.textContent = vm.type;
-    if (releaseEl) releaseEl.textContent = vm.releaseDate;
-    if (libraryEl) libraryEl.textContent = vm.libraryState;
-    if (listsEl) listsEl.textContent = vm.listsCount;
+    if (typeEl) typeEl.textContent = vm.detailType;
+    if (releaseEl) releaseEl.textContent = vm.detailReleaseDate;
+    if (libraryEl) libraryEl.textContent = vm.detailLibraryState;
+    if (listsEl) listsEl.textContent = vm.detailListsCount;
     if (summaryEl) summaryEl.textContent = vm.summary;
-    if (eidEl) eidEl.textContent = vm.eid;
+    if (eidEl) eidEl.textContent = vm.detailEid;
   }
 
   function _setExploreDrawerExpanded(next) {
@@ -564,6 +594,8 @@ const ExploreModule = (() => {
 
     activeEid = String(item.eid);
 
+    const vm = _buildExploreDrawerTextModel(item);
+
     const titleEl = document.getElementById("exploreDrawerTitle");
     const metaEl = document.getElementById("exploreDrawerMeta");
     const summaryEl = document.getElementById("exploreDrawerSummary");
@@ -571,26 +603,16 @@ const ExploreModule = (() => {
     const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
     const addListsBtn = document.getElementById("exploreDrawerAddLists");
 
-    const metaParts = [
-      TYPE_LABELS[item.type] || "Contenido",
-      item.releaseDate ? _safeText(item.releaseDate) : ""
-    ].filter(Boolean);
+    if (titleEl) titleEl.textContent = vm.title;
+    if (metaEl) metaEl.textContent = vm.meta;
 
-    if (titleEl) titleEl.textContent = _safeText(item.title) || "Sin título";
-    if (metaEl) metaEl.textContent = metaParts.join(" · ");
     if (summaryEl) {
-      summaryEl.textContent = _safeText(item.summary) || "Sin descripción disponible.";
+      summaryEl.textContent = vm.summary;
     }
 
     if (badgeEl) {
-      const parts = [];
-      if (item.__inLibrary) parts.push("En biblioteca");
-      if (Number(item.__listsCount || 0) > 0) {
-        const count = Number(item.__listsCount || 0);
-        parts.push(`En ${count} lista${count === 1 ? "" : "s"}`);
-      }
-      badgeEl.textContent = parts.join(" · ");
-      badgeEl.hidden = parts.length === 0;
+      badgeEl.textContent = vm.badge;
+      badgeEl.hidden = !vm.hasBadge;
     }
 
     if (addLibraryBtn) {
