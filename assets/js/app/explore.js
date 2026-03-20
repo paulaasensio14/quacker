@@ -509,6 +509,19 @@ const ExploreModule = (() => {
       libraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
       listsCount: count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
       summary: item?.summary ? _safeText(item.summary) : "Sin descripción disponible.",
+      eid: item?.eid ? String(item.eid) : "—"
+    };
+  }
+
+  function _mapExploreItemToDrawerDetails(item) {
+    const count = Number(item?.__listsCount || 0);
+
+    return {
+      type: TYPE_LABELS[item?.type] || "Contenido",
+      releaseDate: item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha",
+      libraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
+      listsCount: count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
+      summary: item?.summary ? _safeText(item.summary) : "Sin descripción disponible.",
       eid: item?.eid ? String(item.eid) : "—",
     };
   }
