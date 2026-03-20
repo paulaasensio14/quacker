@@ -257,24 +257,28 @@ const ExploreModule = (() => {
     const title = _safeText(item.title);
     const typeLabel = TYPE_LABELS[item.type] || "Contenido";
     const isNew = _isNewByDate(item.releaseDate);
-
     const saved = !!item.__inLibrary;
     const saving = !!item.__saving;
 
     return `
-      <article class="explore-card explore-card--poster" data-eid="${item.eid}">
-
+      <article
+        class="explore-card explore-card--poster"
+        data-eid="${item.eid}"
+        data-action="open-item-detail"
+        tabindex="0"
+        role="button"
+        aria-label="Abrir detalle de ${title}">
         ${_cardCover(title)}
-
         <div class="explore-card-overlay">
-          <button 
+          <button
             class="explore-card-add"
-            data-action="open-add-modal"
-            data-eid="${item.eid}">
+            type="button"
+            data-action="open-item-detail"
+            data-eid="${item.eid}"
+            aria-label="Abrir detalle de ${title}">
             +
           </button>
         </div>
-
       </article>
     `;
   };
@@ -1018,20 +1022,37 @@ const ExploreModule = (() => {
     // CLICK "+"
 
     document.addEventListener("click", (e) => {
-      const addBtn = e.target.closest('button[data-action="open-add-modal"][data-eid]');
-      if (!addBtn) return;
+      const detailTrigger = e.target.closest('[data-action="open-item-detail"][data-eid]');
+      if (detailTrigger) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const item = _getExploreItemByEid(detailTrigger.dataset.eid);
+        if (!item) return;
+
+        _syncExploreDrawerFromItem(item);
+        _renderExploreDrawerDetails(item);
+        _setExploreDrawerExpanded(false);
+        _openExploreDrawer(detailTrigger);
+        return;
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      const card = e.target.closest('[data-action="open-item-detail"][data-eid]');
+      if (!card) return;
+
+      if (e.key !== "Enter" && e.key !== " ") return;
 
       e.preventDefault();
-      e.stopPropagation();
 
-      const item = _getExploreItemByEid(addBtn.dataset.eid);
+      const item = _getExploreItemByEid(card.dataset.eid);
       if (!item) return;
 
-      activeEid = String(item.eid);
-
       _syncExploreDrawerFromItem(item);
-      _renderExploreDrawerDetails?.(item); // si existe
-      _openExploreDrawer(addBtn);
+      _renderExploreDrawerDetails(item);
+      _setExploreDrawerExpanded(false);
+      _openExploreDrawer(card);
     });
 
     // BOTÓN CERRAR DRAWER
