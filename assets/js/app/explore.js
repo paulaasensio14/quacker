@@ -221,6 +221,24 @@ const ExploreModule = (() => {
     ].join("");
   }
 
+  function _buildExploreCardViewModel(item) {
+    const title = _safeText(item?.title) || "Sin título";
+    const typeLabel = TYPE_LABELS[item?.type] || "Contenido";
+    const isNew = _isNewByDate(item?.releaseDate);
+    const saved = !!item?.__inLibrary;
+    const saving = !!item?.__saving;
+    const eid = item?.eid ? String(item.eid) : "";
+
+    return {
+      title,
+      typeLabel,
+      isNew,
+      saved,
+      saving,
+      eid
+    };
+  }
+
   function _render() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
@@ -281,28 +299,24 @@ const ExploreModule = (() => {
 
   // Helper para renderizar cards (reutiliza tu HTML actual)
   const renderCard = (item) => {
-    const title = _safeText(item.title);
-    const typeLabel = TYPE_LABELS[item.type] || "Contenido";
-    const isNew = !!item.__isNew;
-    const saved = !!item.__inLibrary;
-    const saving = !!item.__saving;
+    const vm = _buildExploreCardViewModel(item);
 
     return `
       <article
         class="explore-card explore-card--poster"
-        data-eid="${item.eid}"
+        data-eid="${vm.eid}"
         data-action="open-item-detail"
         tabindex="0"
         role="button"
-        aria-label="Abrir detalle de ${title}">
-        ${_cardCover(title)}
+        aria-label="Abrir detalle de ${vm.title}">
+        ${_cardCover(vm.title)}
         <div class="explore-card-overlay">
           <button
             class="explore-card-add"
             type="button"
             data-action="open-item-detail"
-            data-eid="${item.eid}"
-            aria-label="Abrir detalle de ${title}">
+            data-eid="${vm.eid}"
+            aria-label="Abrir detalle de ${vm.title}">
             +
           </button>
         </div>
