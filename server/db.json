@@ -260,6 +260,17 @@
           "cover": "",
           "createdAt": "2026-03-19T17:26:40.575Z",
           "updatedAt": "2026-03-19T17:26:40.575Z"
+        },
+        {
+          "id": "u_1773998922955_44f4b74be6b18",
+          "type": "book",
+          "title": "Klara and the Sun",
+          "status": "reading",
+          "progress": 0,
+          "meta": {},
+          "cover": "",
+          "createdAt": "2026-03-20T09:28:42.955Z",
+          "updatedAt": "2026-03-20T09:28:42.955Z"
         }
       ]
     }
