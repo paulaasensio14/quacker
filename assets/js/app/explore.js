@@ -521,11 +521,6 @@ const ExploreModule = (() => {
     }
   }
 
-  function _getExploreItemByEid(eid) {
-    if (!eid) return null;
-    return feed.find((x) => String(x.eid) === String(eid)) || null;
-  }
-
   function _getActiveExploreItem() {
     return _getExploreItemByEid(activeEid);
   }
@@ -540,6 +535,7 @@ const ExploreModule = (() => {
     const summaryEl = document.getElementById("exploreDrawerSummary");
     const badgeEl = document.getElementById("exploreDrawerBadge");
     const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
+    const addListsBtn = document.getElementById("exploreDrawerAddLists");
 
     const metaParts = [
       TYPE_LABELS[item.type] || "Contenido",
@@ -566,6 +562,11 @@ const ExploreModule = (() => {
     if (addLibraryBtn) {
       addLibraryBtn.dataset.eid = String(item.eid);
       addLibraryBtn.disabled = !!item.__saving;
+    }
+
+    if (addListsBtn) {
+      addListsBtn.dataset.eid = String(item.eid);
+      addListsBtn.disabled = !!item.__saving;
     }
 
     _clearDrawerInlineNote();
@@ -619,7 +620,7 @@ const ExploreModule = (() => {
     const picker = document.getElementById("exploreDrawerListPicker");
     if (!picker) return;
 
-    await _populateExploreListPicker(__addToListMode?.listId || null);
+    await _populateExploreListPicker();
 
     __drawerListsPickerOpen = true;
     picker.hidden = false;
