@@ -877,8 +877,17 @@ const ExploreModule = (() => {
         }
       }
 
-      // quitar saving
-      feed = feed.map(x => x.eid === eid ? { ...x, __saving: false } : x);
+      // quitar saving + guardar id real recién creado
+      feed = feed.map((x) =>
+        x.eid === eid
+          ? {
+              ...x,
+              __saving: false,
+              __inLibrary: true,
+              __libraryItemId: created?.id ? String(created.id) : (x.__libraryItemId ?? null)
+            }
+          : x
+      );
       _applyFilters();
 
       // UX: animar badge "En biblioteca" en la card
