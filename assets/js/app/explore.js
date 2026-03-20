@@ -99,6 +99,25 @@ const ExploreModule = (() => {
     return _safeText(s).trim().toLowerCase();
   }
 
+  function _normalizeExploreItem(rawItem, index = 0) {
+    const raw = rawItem && typeof rawItem === "object" ? rawItem : {};
+
+    const eid = raw.eid ?? `explore_${index + 1}`;
+    const title = _safeText(raw.title).trim() || "Sin título";
+    const type = _safeText(raw.type).trim();
+    const releaseDate = _safeText(raw.releaseDate).trim();
+    const summary = _safeText(raw.summary).trim();
+
+    return {
+      ...raw,
+      eid: String(eid),
+      title,
+      type,
+      releaseDate,
+      summary
+    };
+  }
+
   function _daysBetween(a, b) {
     const ms = Math.abs(a.getTime() - b.getTime());
     return Math.floor(ms / (1000 * 60 * 60 * 24));
@@ -743,8 +762,10 @@ const ExploreModule = (() => {
     _renderExploreSkeleton();
 
     try {
-      feed = await ApiClient.getExploreFeed();
-      if (!Array.isArray(feed)) feed = [];
+      const rawFeed = await ApiClient.getExploreFeed();
+      const safeFeed = Array.isArray(rawFeed) ? rawFeed : [];
+
+      feed = safeFeed.map((item, index) => _normalizeExploreItem(item, index));
     } catch (e) {
       console.error("ExploreModule.load error", e);
       feed = [];
