@@ -684,9 +684,12 @@ const ExploreModule = (() => {
       const ensured = await _ensureInLibrary(item);
       if (!ensured?.ok) return;
 
+      const freshItem = _getExploreItemByEid(item.eid);
+
       const libraryItemId =
+        freshItem?.__libraryItemId ||
         ensured.createdId ||
-        await _findLibraryItemIdByTitleType(item.title, item.type);
+        null;
 
       if (!libraryItemId) {
         _showDrawerInlineNotePersistent(
@@ -734,14 +737,23 @@ const ExploreModule = (() => {
       lib = [];
     }
 
-    const keySet = new Set(
-      lib.map(i => `${_norm(i.title)}::${_safeText(i.type)}`)
+    const libraryMap = new Map(
+      lib.map(i => [
+        `${_norm(i.title)}::${_safeText(i.type)}`,
+        i
+      ])
     );
 
-    // marcar si está en biblioteca
+    // marcar si está en biblioteca y guardar id real de biblioteca
     feed = feed.map(x => {
       const key = `${_norm(x.title)}::${_safeText(x.type)}`;
-      return { ...x, __inLibrary: keySet.has(key) };
+      const libraryItem = libraryMap.get(key);
+
+      return {
+        ...x,
+        __inLibrary: !!libraryItem,
+        __libraryItemId: libraryItem?.id ? String(libraryItem.id) : null
+      };
     });
 
     // contar listas (en bloque, sin 1 llamada por item)
@@ -813,6 +825,16 @@ const ExploreModule = (() => {
 
       const created = await ApiClient.createLibraryItem(payload);
 
+      feed = feed.map(x =>
+        x.eid === eid
+          ? {
+              ...x,
+              __inLibrary: true,
+              __libraryItemId: created?.id ? String(created.id) : x.__libraryItemId ?? null
+            }
+          : x
+      );
+
       // refrescamos flags
       await _syncInLibraryFlags();
 
@@ -859,19 +881,6 @@ const ExploreModule = (() => {
       });
 
       return { ok: false, createdId: null };
-    }
-  }
-
-  async function _findLibraryItemIdByTitleType(title, type) {
-    try {
-      const lib = await ApiClient.getLibrary();
-      const hit = (lib || []).find(i =>
-        _norm(i.title) === _norm(title) && _safeText(i.type) === _safeText(type)
-      );
-      return hit?.id ?? null;
-    } catch (e) {
-      console.error(e);
-      return null;
     }
   }
 
