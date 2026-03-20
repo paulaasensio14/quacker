@@ -473,7 +473,22 @@ const ExploreModule = (() => {
     root.style.setProperty("--explore-expanded-bottom", `${inset}px`);
   }
 
+  function _mapExploreItemToDrawerDetails(item) {
+    const count = Number(item?.__listsCount || 0);
+
+    return {
+      type: TYPE_LABELS[item?.type] || "Contenido",
+      releaseDate: item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha",
+      libraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
+      listsCount: count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
+      summary: item?.summary ? _safeText(item.summary) : "Sin descripción disponible.",
+      eid: item?.eid ? String(item.eid) : "—",
+    };
+  }
+
   function _renderExploreDrawerDetails(item) {
+    const vm = _mapExploreItemToDrawerDetails(item);
+
     const typeEl = document.getElementById("exploreDetailType");
     const releaseEl = document.getElementById("exploreDetailReleaseDate");
     const libraryEl = document.getElementById("exploreDetailLibraryState");
@@ -481,19 +496,12 @@ const ExploreModule = (() => {
     const summaryEl = document.getElementById("exploreDetailSummary");
     const eidEl = document.getElementById("exploreDetailEid");
 
-    if (typeEl) typeEl.textContent = TYPE_LABELS[item?.type] || "Contenido";
-    if (releaseEl) releaseEl.textContent = item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha";
-    if (libraryEl) libraryEl.textContent = item?.__inLibrary ? "En biblioteca" : "No guardado";
-    if (listsEl) {
-      const count = Number(item?.__listsCount || 0);
-      listsEl.textContent = count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`;
-    }
-    if (summaryEl) {
-      summaryEl.textContent = item?.summary
-        ? _safeText(item.summary)
-        : "Sin descripción disponible.";
-    }
-    if (eidEl) eidEl.textContent = item?.eid ? String(item.eid) : "—";
+    if (typeEl) typeEl.textContent = vm.type;
+    if (releaseEl) releaseEl.textContent = vm.releaseDate;
+    if (libraryEl) libraryEl.textContent = vm.libraryState;
+    if (listsEl) listsEl.textContent = vm.listsCount;
+    if (summaryEl) summaryEl.textContent = vm.summary;
+    if (eidEl) eidEl.textContent = vm.eid;
   }
 
   function _setExploreDrawerExpanded(next) {
