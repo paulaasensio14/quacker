@@ -108,13 +108,21 @@ const ExploreModule = (() => {
     const releaseDate = _safeText(raw.releaseDate).trim();
     const summary = _safeText(raw.summary).trim();
 
+    const releaseDateObj = releaseDate ? new Date(releaseDate) : null;
+    const releaseTs =
+      releaseDateObj && !Number.isNaN(releaseDateObj.getTime())
+        ? releaseDateObj.getTime()
+        : null;
+
     return {
       ...raw,
       eid: String(eid),
       title,
       type,
       releaseDate,
-      summary
+      summary,
+      __releaseTs: releaseTs,
+      __isNew: releaseDate ? _isNewByDate(releaseDate) : false
     };
   }
 
@@ -222,7 +230,7 @@ const ExploreModule = (() => {
     if (!isActive) return;
 
   // --- Secciones Explore v1.4 (con “Ver más”) ---
-  const isNewItem = (it) => _isNewByDate(it.releaseDate);
+  const isNewItem = (it) => !!it.__isNew;
 
   // Novedades: todo lo “nuevo” (<= 30 días)
   const novedadesAll = visible.filter(isNewItem);
@@ -275,7 +283,7 @@ const ExploreModule = (() => {
   const renderCard = (item) => {
     const title = _safeText(item.title);
     const typeLabel = TYPE_LABELS[item.type] || "Contenido";
-    const isNew = _isNewByDate(item.releaseDate);
+    const isNew = !!item.__isNew;
     const saved = !!item.__inLibrary;
     const saving = !!item.__saving;
 
