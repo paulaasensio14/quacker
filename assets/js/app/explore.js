@@ -1125,6 +1125,22 @@ const ExploreModule = (() => {
       return;
     }
 
+    // ===== FIX: botón + en portada =====
+    const openAddBtn = e.target.closest('[data-action="open-add-modal"]');
+    if (openAddBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const card = openAddBtn.closest(".explore-card");
+      const eid = openAddBtn.dataset.eid || card?.dataset?.eid;
+      if (!eid) return;
+
+      activeEid = String(eid);
+
+      _openExploreDrawer(openAddBtn);
+      return;
+    }
+
     const actionBtn = e.target.closest(".explore-card button[data-action]");
     if (!actionBtn) return;
 
