@@ -1188,9 +1188,7 @@ const ExploreModule = (() => {
           }
 
           // Entramos en Explorar: pintar chip + CTA según el modo actual
-          _renderAddToListModeChip();
           _renderDrawerAddCtaLabel();
-          _hydrateAddToListModeName();
 
           if (e.detail?.viewId !== "explore") return;
 
