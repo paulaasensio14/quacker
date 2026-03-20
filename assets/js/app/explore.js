@@ -31,6 +31,9 @@ const ExploreModule = (() => {
   let __loadingStartedAt = 0;
 
   let __drawerOpen = false;
+
+  let __drawerExpanded = false;
+
   let __drawerLastFocusEl = null;
 
   function _renderAddToListModeChip() {
@@ -441,6 +444,8 @@ const ExploreModule = (() => {
     drawer.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
 
+    _syncExploreDrawerViewport();
+
     // Bloquear scroll (reutilizamos tu patrón existente)
     document.body.classList.add("modal-open");
 
@@ -472,10 +477,87 @@ const ExploreModule = (() => {
       note.textContent = "";
     }
 
+    _setExploreDrawerExpanded(false);
+    document.documentElement.style.removeProperty("--explore-expanded-left");
+    document.documentElement.style.removeProperty("--explore-expanded-top");
+    document.documentElement.style.removeProperty("--explore-expanded-right");
+    document.documentElement.style.removeProperty("--explore-expanded-bottom");
+
     const back = __drawerLastFocusEl;
     __drawerLastFocusEl = null;
     if (back && typeof back.focus === "function") {
       requestAnimationFrame(() => back.focus());
+    }
+  }
+
+  function _getExploreItemByEid(eid) {
+    if (!eid) return null;
+    return feed.find((x) => String(x.eid) === String(eid)) || null;
+  }
+
+  function _syncExploreDrawerViewport() {
+    if (!__drawerExpanded) return;
+
+    const sidebar = document.getElementById("sidebar");
+    const main = document.querySelector("main.app-main");
+    const root = document.documentElement;
+
+    if (!main || !root) return;
+
+    const sidebarRect = sidebar?.getBoundingClientRect?.();
+    const mainRect = main.getBoundingClientRect();
+
+    const left = sidebarRect?.right ?? mainRect.left;
+    const top = mainRect.top + 8;
+    const right = Math.max(20, window.innerWidth - mainRect.right + 8);
+    const bottom = 20;
+
+    root.style.setProperty("--explore-expanded-left", `${Math.round(left)}px`);
+    root.style.setProperty("--explore-expanded-top", `${Math.round(top)}px`);
+    root.style.setProperty("--explore-expanded-right", `${Math.round(right)}px`);
+    root.style.setProperty("--explore-expanded-bottom", `${Math.round(bottom)}px`);
+  }
+
+  function _renderExploreDrawerDetails(item) {
+    const typeEl = document.getElementById("exploreDetailType");
+    const releaseEl = document.getElementById("exploreDetailReleaseDate");
+    const libraryEl = document.getElementById("exploreDetailLibraryState");
+    const listsEl = document.getElementById("exploreDetailListsCount");
+    const summaryEl = document.getElementById("exploreDetailSummary");
+    const eidEl = document.getElementById("exploreDetailEid");
+
+    if (typeEl) typeEl.textContent = TYPE_LABELS[item?.type] || "Contenido";
+    if (releaseEl) releaseEl.textContent = item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha";
+    if (libraryEl) libraryEl.textContent = item?.__inLibrary ? "En biblioteca" : "No guardado";
+    if (listsEl) {
+      const count = Number(item?.__listsCount || 0);
+      listsEl.textContent = count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`;
+    }
+    if (summaryEl) {
+      summaryEl.textContent = item?.summary
+        ? _safeText(item.summary)
+        : "Sin descripción disponible.";
+    }
+    if (eidEl) eidEl.textContent = item?.eid ? String(item.eid) : "—";
+  }
+
+  function _setExploreDrawerExpanded(next) {
+    __drawerExpanded = !!next;
+
+    const drawer = document.getElementById("exploreDrawer");
+    const details = document.getElementById("exploreDrawerDetails");
+    const expandBtn = document.getElementById("exploreDrawerExpand");
+
+    if (!drawer || !details || !expandBtn) return;
+
+    drawer.classList.toggle("is-expanded", __drawerExpanded);
+    details.hidden = !__drawerExpanded;
+
+    expandBtn.setAttribute("aria-pressed", __drawerExpanded ? "true" : "false");
+    expandBtn.textContent = __drawerExpanded ? "Contraer ficha" : "Ver ficha completa";
+
+    if (__drawerExpanded) {
+      _syncExploreDrawerViewport();
     }
   }
 
@@ -1012,6 +1094,9 @@ const ExploreModule = (() => {
         badgeEl.hidden = parts.length === 0;
       }
 
+      _renderExploreDrawerDetails(item);
+      _setExploreDrawerExpanded(false);
+
       _clearDrawerInlineNote();
       _renderDrawerAddCtaLabel();
       _openExploreDrawer(addBtn);
@@ -1072,6 +1157,31 @@ const ExploreModule = (() => {
     document.getElementById("exploreDrawer")?.addEventListener("click", (e) => {
       e.stopPropagation();
     });
+
+    const expandBtn = document.getElementById("exploreDrawerExpand");
+    if (expandBtn && !expandBtn.dataset.bound) {
+      expandBtn.dataset.bound = "1";
+
+      expandBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const item = _getExploreItemByEid(activeEid);
+        if (!item) return;
+
+        _renderExploreDrawerDetails(item);
+        _setExploreDrawerExpanded(!__drawerExpanded);
+      });
+    }
+
+    if (!document.documentElement.dataset.exploreDrawerResizeBound) {
+      document.documentElement.dataset.exploreDrawerResizeBound = "1";
+
+      window.addEventListener("resize", () => {
+        if (!__drawerOpen || !__drawerExpanded) return;
+        _syncExploreDrawerViewport();
+      });
+    }
 
     // Drawer: focus trap (Tab se queda dentro)
     if (!document.documentElement.dataset.drawerTrapBound) {
