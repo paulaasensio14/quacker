@@ -479,6 +479,65 @@ const ExploreModule = (() => {
     }
   }
 
+  function _getExploreItemByEid(eid) {
+    if (!eid) return null;
+    return feed.find((x) => String(x.eid) === String(eid)) || null;
+  }
+
+  function _getActiveExploreItem() {
+    return _getExploreItemByEid(activeEid);
+  }
+
+  function _syncExploreDrawerFromItem(item) {
+    if (!item) return null;
+
+    activeEid = String(item.eid);
+
+    const titleEl = document.getElementById("exploreDrawerTitle");
+    const metaEl = document.getElementById("exploreDrawerMeta");
+    const summaryEl = document.getElementById("exploreDrawerSummary");
+    const badgeEl = document.getElementById("exploreDrawerBadge");
+    const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
+    const addListsBtn = document.getElementById("exploreDrawerAddLists");
+
+    const metaParts = [
+      TYPE_LABELS[item.type] || "Contenido",
+      item.releaseDate ? _safeText(item.releaseDate) : ""
+    ].filter(Boolean);
+
+    if (titleEl) titleEl.textContent = _safeText(item.title) || "Sin título";
+    if (metaEl) metaEl.textContent = metaParts.join(" · ");
+    if (summaryEl) {
+      summaryEl.textContent = _safeText(item.summary) || "Sin descripción disponible.";
+    }
+
+    if (badgeEl) {
+      const parts = [];
+      if (item.__inLibrary) parts.push("En biblioteca");
+      if (Number(item.__listsCount || 0) > 0) {
+        const count = Number(item.__listsCount || 0);
+        parts.push(`En ${count} lista${count === 1 ? "" : "s"}`);
+      }
+      badgeEl.textContent = parts.join(" · ");
+      badgeEl.hidden = parts.length === 0;
+    }
+
+    if (addLibraryBtn) {
+      addLibraryBtn.dataset.eid = String(item.eid);
+      addLibraryBtn.disabled = !!item.__saving;
+    }
+
+    if (addListsBtn) {
+      addListsBtn.dataset.eid = String(item.eid);
+      addListsBtn.disabled = !!item.__saving;
+    }
+
+    _clearDrawerInlineNote();
+    _renderDrawerAddCtaLabel();
+
+    return item;
+  }
+
   async function _syncInLibraryFlags() {
     let lib = [];
     try {
@@ -894,6 +953,51 @@ const ExploreModule = (() => {
           duration: 2200
         });
       });
+    }
+
+    // Explore: "+" en portada → abrir drawer con item correcto
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest('button[data-action="open-add-modal"][data-eid]');
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const item = _getExploreItemByEid(btn.dataset.eid);
+      if (!item) return;
+
+      _syncExploreDrawerFromItem(item);
+      _openExploreDrawer(btn);
+    });
+
+    // "+" en Explore → abrir drawer con item correcto
+    const addBtn = e.target.closest('button[data-action="open-add-modal"][data-eid]');
+    if (addBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const item = feed.find((x) => String(x.eid) === String(addBtn.dataset.eid));
+      if (!item) return;
+
+      activeEid = String(item.eid);
+
+      const titleEl = document.getElementById("exploreDrawerTitle");
+      const metaEl = document.getElementById("exploreDrawerMeta");
+      const summaryEl = document.getElementById("exploreDrawerSummary");
+
+      if (titleEl) titleEl.textContent = item.title || "Sin título";
+      if (metaEl) {
+        metaEl.textContent = [
+          TYPE_LABELS[item.type] || "Contenido",
+          item.releaseDate || ""
+        ].filter(Boolean).join(" · ");
+      }
+      if (summaryEl) {
+        summaryEl.textContent = item.summary || "Sin descripción";
+      }
+
+      _openExploreDrawer(addBtn);
+      return;
     }
 
     // filtros pills
