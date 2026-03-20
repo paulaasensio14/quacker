@@ -167,7 +167,6 @@ app.get("/api/auth/me", (req, res) => {
 });
 
 // ===== EXPLORE =====
-
 const EXPLORE_FEED = [
   {
     eid: "ex_001",
@@ -352,10 +351,6 @@ const EXPLORE_FEED = [
     summary: "Investigación oscura, atmósfera densa y personajes complejos."
   }
 ];
-
-app.get("/api/explore", _requireAuth, (_req, res) => {
-  res.json({ items: EXPLORE_FEED });
-});
 
 app.get("/api/explore", _requireAuth, (_req, res) => {
   res.json({ items: EXPLORE_FEED });
