@@ -1081,11 +1081,20 @@ const ExploreModule = (() => {
       }
     });
 
-    // CLICK DENTRO DEL DRAWER
+    // EXPANDIR / CONTRAER DRAWER
 
-    document.getElementById("exploreDrawer")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
+    const expandDrawerBtn = document.getElementById("exploreDrawerExpand");
+
+    if (expandDrawerBtn && !expandDrawerBtn.dataset.bound) {
+      expandDrawerBtn.dataset.bound = "1";
+
+      expandDrawerBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        _setExploreDrawerExpanded(!__drawerExpanded);
+      });
+    }
 
     // AÑADIR A BIBLIOTECA
 
