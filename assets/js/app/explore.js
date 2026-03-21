@@ -35,6 +35,8 @@ const ExploreModule = (() => {
 
   let __drawerListsPickerOpen = false;
 
+  let __pendingLibraryEnsures = new Map();
+
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
     if (!btn) return;
