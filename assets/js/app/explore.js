@@ -842,17 +842,38 @@ const ExploreModule = (() => {
   }
 
   async function _ensureInLibrary(item) {
-    // si ya está guardado, no hacemos nada
-    if (item.__inLibrary) return { ok: true, createdId: null };
+    const eid = item?.eid ? String(item.eid) : "";
+    if (!eid) return { ok: false, createdId: null };
 
-    const cardElBefore = document.querySelector(`.explore-card[data-eid="${String(item.eid)}"]`);
+    const current = _getExploreItemByEid(eid);
 
-    const eid = item.eid;
-    feed = feed.map(x => x.eid === eid ? { ...x, __saving: true } : x);
+    // Ya existe en biblioteca: no repetir write
+    if (current?.__inLibrary) {
+      return {
+        ok: true,
+        createdId: current.__libraryItemId ? String(current.__libraryItemId) : null
+      };
+    }
+
+    // Ya hay una creación en curso para este mismo item: no lanzar otra
+    if (current?.__saving) {
+      return {
+        ok: true,
+        createdId: current.__libraryItemId ? String(current.__libraryItemId) : null
+      };
+    }
+
+    const cardElBefore = document.querySelector(
+      `.explore-card[data-eid="${eid}"]`
+    );
+
+    feed = feed.map((x) =>
+      x.eid === eid ? { ...x, __saving: true } : x
+    );
+
     _applyFilters();
 
     try {
-      // Creamos item en biblioteca desde Explore
       const payload = {
         title: item.title,
         type: item.type,
@@ -861,7 +882,7 @@ const ExploreModule = (() => {
 
       const created = await ApiClient.createLibraryItem(payload);
 
-      feed = feed.map(x =>
+      feed = feed.map((x) =>
         x.eid === eid
           ? {
               ...x,
@@ -871,10 +892,8 @@ const ExploreModule = (() => {
           : x
       );
 
-      // refrescamos flags
       await _syncInLibraryFlags();
 
-      // toast
       window.toast?.({
         title: "Añadido a biblioteca",
         message: "Se ha guardado en tu biblioteca.",
@@ -882,7 +901,6 @@ const ExploreModule = (() => {
         duration: 2400
       });
 
-      // Refrescar Biblioteca para que se vea sin F5
       if (window.LibraryUI?.load) {
         try {
           await window.LibraryUI.load();
@@ -891,7 +909,6 @@ const ExploreModule = (() => {
         }
       }
 
-      // quitar saving + guardar id real recién creado
       feed = feed.map((x) =>
         x.eid === eid
           ? {
@@ -902,20 +919,52 @@ const ExploreModule = (() => {
             }
           : x
       );
+
       _applyFilters();
 
-      // UX: animar badge "En biblioteca" en la card
       requestAnimationFrame(() => {
-        const cardElAfter = document.querySelector(`.explore-card[data-eid="${String(item.eid)}"]`);
+        const cardElAfter = document.querySelector(
+          `.explore-card[data-eid="${eid}"]`
+        );
         _popExploreBadge(cardElAfter || cardElBefore);
       });
 
       return { ok: true, createdId: created?.id ?? null };
-
     } catch (err) {
+      // Caso real de doble write/race: el backend ya lo ha creado
+      if (err?.status === 409 || err?.error === "duplicate_item") {
+        try {
+          await _syncInLibraryFlags();
+        } catch (syncErr) {
+          console.error(syncErr);
+        }
+
+        feed = feed.map((x) =>
+          x.eid === eid
+            ? {
+                ...x,
+                __saving: false,
+                __inLibrary: true
+              }
+            : x
+        );
+
+        _applyFilters();
+
+        const fresh = _getExploreItemByEid(eid);
+
+        return {
+          ok: true,
+          createdId: fresh?.__libraryItemId ? String(fresh.__libraryItemId) : null
+        };
+      }
+
       console.error(err);
 
-      feed = feed.map(x => x.eid === eid ? { ...x, __saving: false } : x);
+      feed = feed.map((x) =>
+        x.eid === eid ? { ...x, __saving: false } : x
+      );
+
       _applyFilters();
 
       window.toast?.({
