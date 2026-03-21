@@ -1344,26 +1344,21 @@ const ExploreModule = (() => {
       bind();
 
       // Cargar Explore cuando el router active la vista
-      if (!__viewChangeBound) {
-        __viewChangeBound = true;
+      if (!init._viewChangeBound) {
+        init._viewChangeBound = true;
 
         document.addEventListener("quacker:view-change", (e) => {
-          // Si salimos de Explorar, limpiamos el modo "añadir a lista" y ocultamos el chip
           if (e.detail?.viewId !== "explore") {
-            _exitAddToListMode({ clearLastAdd: true });
+            _closeExploreListPicker();
+            _clearDrawerInlineNote();
             return;
           }
 
-          // Entramos en Explorar: pintar chip + CTA según el modo actual
           _renderDrawerAddCtaLabel();
 
-          if (e.detail?.viewId !== "explore") return;
-
-          // Sincroniza el buscador global con el término actual de Explore
           const global = document.getElementById("globalSearch");
           if (global) global.value = searchTerm;
 
-          // Carga feed + render
           load();
         });
       }
