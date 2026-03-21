@@ -726,10 +726,15 @@ const ExploreModule = (() => {
         String(libraryItemId)
       );
 
+      let drawerNoteMessage = "";
+      let drawerNotePersistent = false;
+
       if (result?.ok && !result?.already) {
-        _showDrawerInlineNote("Añadido a la lista.");
+        drawerNoteMessage = "Añadido a la lista.";
+        drawerNotePersistent = false;
       } else if (result?.already) {
-        _showDrawerInlineNotePersistent("Ese contenido ya estaba en la lista.");
+        drawerNoteMessage = "Ese contenido ya estaba en la lista.";
+        drawerNotePersistent = true;
       } else {
         _showDrawerInlineNotePersistent("No se pudo añadir a la lista.");
         return;
@@ -738,13 +743,23 @@ const ExploreModule = (() => {
       await _syncInLibraryFlags();
 
       const fresh = _getExploreItemByEid(item.eid);
+
       if (fresh) {
         _syncExploreDrawerFromItem(fresh);
         _renderExploreDrawerDetails(fresh);
       }
 
       _render();
+
       _closeExploreListPicker();
+
+      if (drawerNoteMessage) {
+        if (drawerNotePersistent) {
+          _showDrawerInlineNotePersistent(drawerNoteMessage);
+        } else {
+          _showDrawerInlineNote(drawerNoteMessage);
+        }
+      }
     } finally {
       _setDrawerButtonLoading(confirmBtn, false);
     }
