@@ -1,5 +1,5 @@
 // assets/js/app/explore.js
-// Explore v1 (mock feed) — UI → ApiClient (sin tocar FakeBackend directo)
+// Explore v1 — UI → ApiClient
 
 const ExploreModule = (() => {
   let feed = [];
@@ -7,8 +7,6 @@ const ExploreModule = (() => {
   let activeEid = null;
   let dismissed = new Set();
   let expandedSection = null;
-  let __listsChangedBound = false;
-  let __viewChangeBound = false;
 
   let sectionShownCount = {
     novedades: 0,
@@ -514,19 +512,6 @@ const ExploreModule = (() => {
     root.style.setProperty("--explore-expanded-top", `${inset}px`);
     root.style.setProperty("--explore-expanded-right", `${inset}px`);
     root.style.setProperty("--explore-expanded-bottom", `${inset}px`);
-  }
-
-  function _mapExploreItemToDrawerDetails(item) {
-    const count = Number(item?.__listsCount || 0);
-
-    return {
-      type: TYPE_LABELS[item?.type] || "Contenido",
-      releaseDate: item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha",
-      libraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
-      listsCount: count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
-      summary: item?.summary ? _safeText(item.summary) : "Sin descripción disponible.",
-      eid: item?.eid ? String(item.eid) : "—",
-    };
   }
 
   function _buildExploreDrawerTextModel(item) {
