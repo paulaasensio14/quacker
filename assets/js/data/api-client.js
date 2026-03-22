@@ -282,9 +282,8 @@ const ApiClient = (() => {
   async function getListsCountByLibraryMatch({ title, type }) {
     if (!title || !type) return 0;
 
-    const state = _safeState();
-    const lists = state.lists || [];
-    const library = _isHttp() ? await getLibrary() : (state.library || []);
+    const lists = await getLists();
+    const library = await getLibrary();
 
     const libItem = (library || []).find(
       (i) =>
@@ -297,11 +296,10 @@ const ApiClient = (() => {
     const libId = String(libItem.id);
     let count = 0;
 
-    for (const list of lists) {
-      const arr = Array.isArray(list.items) ? list.items : [];
-
+    for (const list of lists || []) {
+      const arr = Array.isArray(list?.items) ? list.items : [];
       const has = arr.some((entry) => {
-        const id = (typeof entry === "string") ? entry : entry?.id;
+        const id = typeof entry === "string" ? entry : entry?.id;
         return String(id) === libId;
       });
 
@@ -314,25 +312,25 @@ const ApiClient = (() => {
   // Devuelve un mapa de conteos por key "title::type" para toda la biblioteca.
   // Esto evita hacer 1 llamada por item desde Explore.
   async function getListsCountMapByLibraryKey() {
-    const state = _safeState();
-    const lists = Array.isArray(state.lists) ? state.lists : [];
-    const library = _isHttp() ? await getLibrary() : (Array.isArray(state.library) ? state.library : []);
+    const lists = await getLists();
+    const library = await getLibrary();
 
     const idToKey = new Map();
 
-    for (const item of (library || [])) {
+    for (const item of library || []) {
       if (!item?.id) continue;
+
       const key = `${String(item?.title || "").trim().toLowerCase()}::${String(item?.type || "")}`;
       idToKey.set(String(item.id), key);
     }
 
     const counts = Object.create(null);
 
-    for (const list of lists) {
-      const items = Array.isArray(list.items) ? list.items : [];
+    for (const list of lists || []) {
+      const items = Array.isArray(list?.items) ? list.items : [];
 
       for (const entry of items) {
-        const id = (typeof entry === "string") ? entry : entry?.id;
+        const id = typeof entry === "string" ? entry : entry?.id;
         if (!id) continue;
 
         const key = idToKey.get(String(id));
