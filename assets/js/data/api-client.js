@@ -516,6 +516,18 @@ const ApiClient = (() => {
   }
 
   async function updateUser(patch = {}) {
+    if (_isHttp()) {
+      const res = await _httpJson("PATCH", "/user", patch);
+      const user = res && res.user ? res.user : res;
+
+      _emitDataChanged({
+        kind: "user",
+        action: "update"
+      });
+
+      return user;
+    }
+
     const state = _safeState();
     state.user = { ...(state.user || {}), ...patch };
 
