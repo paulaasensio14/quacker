@@ -513,6 +513,52 @@ app.post("/api/lists", _requireAuth, (req, res) => {
   res.status(201).json(list);
 });
 
+app.put("/api/lists", _requireAuth, (req, res) => {
+  const incoming = Array.isArray(req.body?.lists) ? req.body.lists : null;
+
+  if (!incoming) {
+    return res.status(400).json({ error: "invalid_lists_payload" });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const nowIso = new Date().toISOString();
+
+  const safeLists = incoming.map((list) => {
+    const items = Array.isArray(list?.items) ? list.items : [];
+
+    const safeItems = items
+      .map((entry) => {
+        const rawId = typeof entry === "string" ? entry : entry?.id;
+        if (!rawId) return null;
+
+        return {
+          id: String(rawId),
+          addedAt: entry?.addedAt || nowIso
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      id: list?.id ? String(list.id) : _uid(),
+      name: String(list?.name || "").replace(/\s+/g, " ").trim() || "Sin nombre",
+      description: String(list?.description || "").trim(),
+      visibility: ["private", "public", "collab"].includes(String(list?.visibility || "").trim().toLowerCase())
+        ? String(list.visibility).trim().toLowerCase()
+        : "private",
+      items: safeItems,
+      itemsCount: safeItems.length,
+      createdAt: list?.createdAt || nowIso,
+      updatedAt: nowIso
+    };
+  });
+
+  bucket.lists = safeLists;
+  _writeDb(db);
+
+  res.json({ ok: true, lists: bucket.lists });
+});
+
 app.patch("/api/lists/:id", _requireAuth, (req, res) => {
   const id = String(req.params.id);
   const patch = req.body || {};

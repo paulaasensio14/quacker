@@ -577,6 +577,22 @@ const ApiClient = (() => {
   }
 
   async function setLists(nextLists = []) {
+    if (_isHttp()) {
+      const res = await _httpJson("PUT", "/lists", {
+        lists: Array.isArray(nextLists) ? nextLists : []
+      });
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "set_all"
+      });
+
+      return {
+        ok: true,
+        count: Array.isArray(res?.lists) ? res.lists.length : 0
+      };
+    }
+
     const state = _safeState();
     state.lists = Array.isArray(nextLists) ? nextLists : [];
 
