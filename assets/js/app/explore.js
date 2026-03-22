@@ -1260,17 +1260,17 @@ const ExploreModule = (() => {
           const ensured = await _ensureInLibrary(item);
           if (!ensured?.ok) return;
 
-          _showDrawerInlineNote("Añadido a biblioteca.");
-
           await _syncInLibraryFlags();
 
           const fresh = _getExploreItemByEid(item.eid);
           if (fresh) {
             _syncExploreDrawerFromItem(fresh);
-            _renderExploreDrawerDetails?.(fresh);
+            _renderExploreDrawerDetails(fresh);
           }
 
           _render();
+
+          _showDrawerInlineNote("Añadido a biblioteca.");
         } finally {
           _setDrawerButtonLoading(addLibraryBtn, false);
           _renderDrawerAddCtaLabel();
