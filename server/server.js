@@ -966,6 +966,21 @@ app.delete("/api/library/:id", _requireAuth, (req, res) => {
   }
 
   bucket.library.splice(idx, 1);
+
+  bucket.lists = Array.isArray(bucket.lists) ? bucket.lists : [];
+
+  for (const list of bucket.lists) {
+    const items = Array.isArray(list?.items) ? list.items : [];
+
+    list.items = items.filter((entry) => {
+      const entryId = typeof entry === "string" ? entry : entry?.id;
+      return String(entryId) !== id;
+    });
+
+    list.itemsCount = list.items.length;
+    list.updatedAt = new Date().toISOString();
+  }
+
   _writeDb(db);
 
   res.json({ ok: true, deleted: 1 });

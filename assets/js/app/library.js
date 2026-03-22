@@ -1573,6 +1573,14 @@ const LibraryUI = (() => {
       try {
         const itemToRestore = await ApiClient.getLibraryItemById(itemId);
 
+        let listsToRestore = [];
+      try {
+        listsToRestore = await ApiClient.getListsContainingItem(itemId);
+      } catch (e) {
+        console.error(e);
+        listsToRestore = [];
+      }
+
         // Si no existe, borramos sin undo
         if (!itemToRestore) {
           deleteLibraryItemAnimated(itemId, { silentToast: true });
@@ -1602,6 +1610,11 @@ const LibraryUI = (() => {
                 createdAt: itemToRestore.createdAt,
                 updatedAt: itemToRestore.updatedAt
               });
+
+              for (const list of listsToRestore || []) {
+                if (!list?.id) continue;
+                await ApiClient.addLibraryItemToList(String(list.id), String(itemToRestore.id));
+              }
 
               window.toast?.({
                 title: "Contenido restaurado",
