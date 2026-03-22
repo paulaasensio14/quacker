@@ -647,29 +647,41 @@ const ExploreModule = (() => {
 
     const safeLists = Array.isArray(lists) ? lists : [];
 
-    const options = ['<option value="">Selecciona una lista</option>'];
+    select.innerHTML = "";
+
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "Selecciona una lista";
+    select.appendChild(placeholderOption);
 
     for (const list of safeLists) {
       if (!list?.id) continue;
-      const name = _safeText(list.name) || "Lista sin nombre";
-      options.push(`<option value="${String(list.id)}">${name}</option>`);
-    }
 
-    select.innerHTML = options.join("");
-
-    if (preselectedListId) {
-      select.value = String(preselectedListId);
+      const option = document.createElement("option");
+      option.value = String(list.id);
+      option.textContent = _safeText(list.name) || "Lista sin nombre";
+      select.appendChild(option);
     }
 
     const hasLists = safeLists.length > 0;
+
+    if (!hasLists) {
+      select.innerHTML = "";
+
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = "No hay listas disponibles";
+      select.appendChild(emptyOption);
+    }
+
+    if (preselectedListId && hasLists) {
+      select.value = String(preselectedListId);
+    }
+
     select.disabled = !hasLists;
 
     if (confirmBtn) {
       confirmBtn.disabled = !hasLists;
-    }
-
-    if (!hasLists) {
-      select.innerHTML = '<option value="">No hay listas disponibles</option>';
     }
   }
 
