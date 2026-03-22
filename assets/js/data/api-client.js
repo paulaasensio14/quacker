@@ -250,11 +250,15 @@ const ApiClient = (() => {
 
   // === listas (por ahora simplemente devuelven lo del estado) ===
   async function getLists() {
+    if (_isHttp()) {
+      const res = await _httpJson("GET", "/lists");
+      return Array.isArray(res) ? res : [];
+    }
+
     ensureListsSeeded();
 
     const state = _safeState();
     state.lists = Array.isArray(state.lists) ? state.lists : [];
-
     return state.lists;
   }
 
@@ -342,6 +346,18 @@ const ApiClient = (() => {
   }
 
   async function createList(listData) {
+    if (_isHttp()) {
+      const res = await _httpJson("POST", "/lists", listData);
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "create",
+        listId: String(res?.id || "")
+      });
+
+      return res;
+    }
+
     const state = _safeState();
     state.lists = state.lists || [];
 
@@ -361,12 +377,32 @@ const ApiClient = (() => {
       FakeBackend.saveState(state);
     }
 
-    _emitDataChanged({ kind: "lists", action: "create", listId: String(newList.id) });
+    _emitDataChanged({
+      kind: "lists",
+      action: "create",
+      listId: String(newList.id)
+    });
 
     return newList;
   }
 
   async function updateList(listId, patch = {}) {
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "PATCH",
+        `/lists/${encodeURIComponent(listId)}`,
+        patch
+      );
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "update",
+        listId: String(listId)
+      });
+
+      return res;
+    }
+
     const state = _safeState();
     state.lists = state.lists || [];
     const lists = state.lists;
@@ -375,34 +411,54 @@ const ApiClient = (() => {
     if (idx === -1) return null;
 
     const prev = lists[idx];
-    const next = {
-      ...prev,
-      ...patch,
-      updatedAt: new Date().toISOString()
-    };
-
+    const next = { ...prev, ...patch, updatedAt: new Date().toISOString() };
     lists[idx] = next;
 
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
     }
 
-    _emitDataChanged({ kind: "lists", action: "update", listId: String(listId) });
+    _emitDataChanged({
+      kind: "lists",
+      action: "update",
+      listId: String(listId)
+    });
 
     return next;
   }
 
   async function deleteList(listId) {
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "DELETE",
+        `/lists/${encodeURIComponent(listId)}`
+      );
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "delete",
+        listId: String(listId)
+      });
+
+      return res;
+    }
+
     const state = _safeState();
     const before = (state.lists || []).length;
 
-    state.lists = (state.lists || []).filter(l => String(l.id) !== String(listId));
+    state.lists = (state.lists || []).filter(
+      l => String(l.id) !== String(listId)
+    );
 
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
     }
 
-    _emitDataChanged({ kind: "lists", action: "delete", listId: String(listId) });
+    _emitDataChanged({
+      kind: "lists",
+      action: "delete",
+      listId: String(listId)
+    });
 
     return { ok: true, deleted: before - state.lists.length };
   }
@@ -411,10 +467,27 @@ const ApiClient = (() => {
   async function addLibraryItemToList(listId, itemId) {
     if (!listId || !itemId) return { ok: false };
 
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "POST",
+        `/lists/${encodeURIComponent(listId)}/items`,
+        { itemId: String(itemId) }
+      );
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "add_item",
+        listId: String(listId),
+        itemId: String(itemId)
+      });
+
+      return res;
+    }
+
     ensureListsSeeded();
+
     const state = _safeState();
     state.lists = state.lists || [];
-
     const list = state.lists.find(l => String(l.id) === String(listId));
     if (!list) return { ok: false, reason: "list_not_found" };
 
@@ -433,7 +506,10 @@ const ApiClient = (() => {
       return { ok: true, already: true };
     }
 
-    list.items.push({ id: String(itemId), addedAt: new Date().toISOString() });
+    list.items.push({
+      id: String(itemId),
+      addedAt: new Date().toISOString()
+    });
     list.itemsCount = list.items.length;
     list.updatedAt = new Date().toISOString();
 
@@ -454,17 +530,32 @@ const ApiClient = (() => {
   async function removeLibraryItemFromList(listId, itemId) {
     if (!listId || !itemId) return { ok: false };
 
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "DELETE",
+        `/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`
+      );
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "remove_item",
+        listId: String(listId),
+        itemId: String(itemId)
+      });
+
+      return res;
+    }
+
     ensureListsSeeded();
 
     const state = _safeState();
     state.lists = state.lists || [];
-
     const list = state.lists.find(l => String(l.id) === String(listId));
     if (!list) return { ok: false, reason: "list_not_found" };
 
     list.items = Array.isArray(list.items) ? list.items : [];
-
     const before = list.items.length;
+
     list.items = list.items.filter(x => {
       const id = (typeof x === "string") ? x : x?.id;
       return String(id) !== String(itemId);
