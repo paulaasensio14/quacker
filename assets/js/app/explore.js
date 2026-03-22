@@ -787,17 +787,29 @@ const ExploreModule = (() => {
       lib = [];
     }
 
-    const libraryMap = new Map(
-      lib.map(i => [
-        `${_norm(i.title)}::${_safeText(i.type)}`,
-        i
+    const libraryById = new Map(
+      lib
+        .filter(item => item?.id)
+        .map(item => [String(item.id), item])
+    );
+
+    const libraryByKey = new Map(
+      lib.map(item => [
+        `${_norm(item.title)}::${_safeText(item.type)}`,
+        item
       ])
     );
 
-    // marcar si está en biblioteca y guardar id real de biblioteca
-    feed = feed.map(x => {
-      const key = `${_norm(x.title)}::${_safeText(x.type)}`;
-      const libraryItem = libraryMap.get(key);
+    // Mantener el vínculo por ID si ya existe.
+    // Solo usar title+type como fallback para items antiguos o aún no enlazados.
+    feed = feed.map((x) => {
+      const currentLibraryId = x.__libraryItemId ? String(x.__libraryItemId) : null;
+      const byId = currentLibraryId ? libraryById.get(currentLibraryId) : null;
+      const byKey = byId
+        ? null
+        : libraryByKey.get(`${_norm(x.title)}::${_safeText(x.type)}`);
+
+      const libraryItem = byId || byKey || null;
 
       return {
         ...x,
@@ -806,24 +818,45 @@ const ExploreModule = (() => {
       };
     });
 
-    // contar listas (en bloque, sin 1 llamada por item)
-    let countMap = {};
+    let lists = [];
     try {
-      countMap = await ApiClient.getListsCountMapByLibraryKey();
-      if (!countMap || typeof countMap !== "object") countMap = {};
+      lists = await ApiClient.getLists();
+      if (!Array.isArray(lists)) lists = [];
     } catch (e) {
       console.error(e);
-      countMap = {};
+      lists = [];
+    }
+
+    const listsCountByLibraryId = new Map();
+
+    for (const list of lists) {
+      const items = Array.isArray(list?.items) ? list.items : [];
+      const seenInList = new Set();
+
+      for (const entry of items) {
+        const rawId =
+          typeof entry === "string"
+            ? entry
+            : entry?.id;
+
+        if (!rawId) continue;
+
+        const safeId = String(rawId);
+        if (seenInList.has(safeId)) continue;
+        seenInList.add(safeId);
+
+        listsCountByLibraryId.set(
+          safeId,
+          Number(listsCountByLibraryId.get(safeId) || 0) + 1
+        );
+      }
     }
 
     for (const item of feed) {
-      if (!item.__inLibrary) {
-        item.__listsCount = 0;
-        continue;
-      }
-
-      const key = `${_norm(item.title)}::${_safeText(item.type)}`;
-      item.__listsCount = Number(countMap[key] || 0);
+      const safeLibraryId = item.__libraryItemId ? String(item.__libraryItemId) : null;
+      item.__listsCount = safeLibraryId
+        ? Number(listsCountByLibraryId.get(safeLibraryId) || 0)
+        : 0;
     }
   }
 
