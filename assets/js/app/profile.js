@@ -99,17 +99,17 @@ const ProfileModule = (() => {
   }
 
   function updateHeaderAvatars(avatarUrl) {
-    if (!avatarUrl) return;
+    const safeAvatar = String(avatarUrl || "").trim();
+    const fallbackAvatar = "assets/img/avatar-default.svg";
 
     const chipImg = document.querySelector("#profileChip .avatar-circle img");
-    if (chipImg) chipImg.src = avatarUrl;
+    if (chipImg) chipImg.src = safeAvatar || fallbackAvatar;
 
     const menuImg = document.querySelector("#profileMenu .profile-menu-avatar img");
-    if (menuImg) menuImg.src = avatarUrl;
+    if (menuImg) menuImg.src = safeAvatar || fallbackAvatar;
 
     const homeBannerImg = document.getElementById("homeBannerAvatar");
-    if (homeBannerImg) homeBannerImg.src = avatarUrl;
-
+    if (homeBannerImg) homeBannerImg.src = safeAvatar || fallbackAvatar;
   }
 
   function updateHeaderUI(user) {
@@ -132,7 +132,12 @@ const ProfileModule = (() => {
 
   function setAvatarPreview(dataUrl) {
     const img = $("#profileAvatarImg");
-    if (img && dataUrl) img.src = dataUrl;
+    if (!img) return;
+
+    const safeAvatar = String(dataUrl || "").trim();
+    const fallbackAvatar = "assets/img/avatar-default.svg";
+
+    img.src = safeAvatar || fallbackAvatar;
   }
 
   // ===== Avatares predefinidos =====
@@ -192,7 +197,7 @@ const ProfileModule = (() => {
     if ($("#profileLanguage")) $("#profileLanguage").value = user.language || "es";
     if ($("#profileBio")) $("#profileBio").value = user.bio || "";
 
-    if (user.avatar) setAvatarPreview(user.avatar);
+    setAvatarPreview(user.avatar || "");
 
     pendingAvatarDataUrl = null; // al cargar, no hay “avatar pendiente”
     initialData = {
