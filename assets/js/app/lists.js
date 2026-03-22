@@ -107,6 +107,19 @@ const ListsModule = (() => {
       updateFilterCounts();
       applyFilters();
 
+      const detailOpen = !_getEl("listDetail")?.hidden && !!activeListId;
+
+      if (detailOpen) {
+        const activeList = allLists.find(l => String(l.id) === String(activeListId));
+
+        if (!activeList) {
+          closeListDetail();
+        } else {
+          _renderActiveListDetailHeader(activeList);
+          await renderActiveListItems();
+        }
+      }
+
       function updateFilterCounts() {
         const cAll = document.getElementById("countAll");
         const cPublic = document.getElementById("countPublic");
@@ -234,6 +247,24 @@ const ListsModule = (() => {
 
   }
 
+  function _renderActiveListDetailHeader(list) {
+    if (!list) return;
+
+    const titleEl = _getEl("listDetailTitle");
+    const visibilityEl = _getEl("listDetailVisibility");
+    const descriptionEl = _getEl("listDetailDescription");
+    const countEl = _getEl("listDetailCount");
+
+    if (titleEl) titleEl.textContent = _safeText(list.name) || "Sin nombre";
+    if (visibilityEl) visibilityEl.textContent = _visibilityLabel(list.visibility);
+    if (descriptionEl) descriptionEl.textContent = _safeText(list.description) || "";
+
+    const count = _itemsCount(list);
+    if (countEl) {
+      countEl.textContent = `${count} elemento${count === 1 ? "" : "s"}`;
+    }
+  }
+
   async function openListDetail(listId) {
     activeListId = String(listId);
 
@@ -247,13 +278,7 @@ const ListsModule = (() => {
     _setHidden(grid, true);
     _setHidden(detail, false);
 
-    // Rellenamos UI
-    _getEl("listDetailTitle").textContent = _safeText(list.name) || "Sin nombre";
-    _getEl("listDetailVisibility").textContent = _visibilityLabel(list.visibility);
-    _getEl("listDetailDescription").textContent = _safeText(list.description) || "";
-
-    const count = _itemsCount(list);
-    _getEl("listDetailCount").textContent = `${count} elemento${count === 1 ? "" : "s"}`;
+    _renderActiveListDetailHeader(list);
 
     // Reset filtros al entrar al detalle
     detailSearch = "";
