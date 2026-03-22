@@ -363,6 +363,104 @@ app.get("/api/user", _requireAuth, (req, res) => {
   res.json(bucket.profile);
 });
 
+app.patch("/api/user", _requireAuth, (req, res) => {
+  const patch = req.body || {};
+
+  if (Object.keys(patch).length === 0) {
+    return res.status(400).json({ error: "empty_patch" });
+  }
+
+  const allowedFields = new Set([
+    "name",
+    "handle",
+    "email",
+    "language",
+    "bio",
+    "avatar",
+    "theme"
+  ]);
+
+  const safePatch = {};
+
+  for (const key of Object.keys(patch)) {
+    if (allowedFields.has(key)) {
+      safePatch[key] = patch[key];
+    }
+  }
+
+  if (Object.keys(safePatch).length === 0) {
+    return res.status(400).json({ error: "empty_patch" });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(safePatch, "name")) {
+    const safeName = String(safePatch.name || "").replace(/\s+/g, " ").trim();
+    if (!safeName || safeName.length < 2) {
+      return res.status(400).json({ error: "invalid_name" });
+    }
+    safePatch.name = safeName;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(safePatch, "handle")) {
+    let safeHandle = String(safePatch.handle || "").trim();
+    if (!safeHandle.startsWith("@")) safeHandle = `@${safeHandle}`;
+    const raw = safeHandle.slice(1);
+
+    if (!/^[a-zA-Z0-9_]{2,20}$/.test(raw)) {
+      return res.status(400).json({ error: "invalid_handle" });
+    }
+
+    safePatch.handle = safeHandle;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(safePatch, "email")) {
+    const safeEmail = String(safePatch.email || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail)) {
+      return res.status(400).json({ error: "invalid_email" });
+    }
+    safePatch.email = safeEmail;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(safePatch, "language")) {
+    const safeLanguage = String(safePatch.language || "").trim().toLowerCase();
+    if (!["es", "en"].includes(safeLanguage)) {
+      return res.status(400).json({ error: "invalid_language" });
+    }
+    safePatch.language = safeLanguage;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(safePatch, "bio")) {
+    const safeBio = String(safePatch.bio || "").trim();
+    if (safeBio.length > 180) {
+      return res.status(400).json({ error: "bio_too_long" });
+    }
+    safePatch.bio = safeBio;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(safePatch, "theme")) {
+    const safeTheme = String(safePatch.theme || "").trim().toLowerCase();
+    if (!["light", "dark"].includes(safeTheme)) {
+      return res.status(400).json({ error: "invalid_theme" });
+    }
+    safePatch.theme = safeTheme;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(safePatch, "avatar")) {
+    safePatch.avatar = String(safePatch.avatar || "").trim();
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.profile = {
+    ...(bucket.profile || {}),
+    ...safePatch
+  };
+
+  _writeDb(db);
+
+  res.json({ user: bucket.profile });
+});
+
 // ===== LIBRARY =====
 app.get("/api/library", _requireAuth, (req, res) => {
   const db = _readDb();
