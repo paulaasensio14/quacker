@@ -454,7 +454,13 @@ const ListsModule = (() => {
       // Actualizamos estado en memoria (sin tocar DOM manualmente)
       const listRef = (allLists || []).find(l => String(l.id) === String(listId));
       if (listRef && Array.isArray(listRef.items)) {
-        listRef.items = listRef.items.filter(x => String(x) !== String(id));
+        listRef.items = listRef.items.filter((x) => {
+          const entryId = typeof x === "string" ? x : x?.id;
+          return String(entryId) !== String(id);
+        });
+
+        listRef.itemsCount = listRef.items.length;
+        listRef.updatedAt = new Date().toISOString();
       }
 
       // Repintamos el detalle para reflejar el cambio al instante
@@ -482,8 +488,20 @@ const ListsModule = (() => {
             const listRef = (allLists || []).find(l => String(l.id) === String(listId));
             if (listRef && Array.isArray(listRef.items)) {
               // Evitar duplicados si el usuario deshace dos veces rápido
-              const exists = listRef.items.some(x => String(x) === String(id));
-              if (!exists) listRef.items.push(String(id));
+              const exists = listRef.items.some((x) => {
+                const entryId = typeof x === "string" ? x : x?.id;
+                return String(entryId) === String(id);
+              });
+
+              if (!exists) {
+                listRef.items.push({
+                  id: String(id),
+                  addedAt: new Date().toISOString()
+                });
+              }
+
+              listRef.itemsCount = listRef.items.length;
+              listRef.updatedAt = new Date().toISOString();
             }
 
             await renderActiveListItems();
