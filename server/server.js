@@ -83,8 +83,20 @@ function _requireAuth(req, res, next) {
 }
 
 function _getUserBucket(db, userId) {
-  db.users[userId] = db.users[userId] || { profile: null, library: [] };
-  db.users[userId].library = Array.isArray(db.users[userId].library) ? db.users[userId].library : [];
+  db.users[userId] = db.users[userId] || {
+    profile: null,
+    library: [],
+    lists: []
+  };
+
+  db.users[userId].library = Array.isArray(db.users[userId].library)
+    ? db.users[userId].library
+    : [];
+
+  db.users[userId].lists = Array.isArray(db.users[userId].lists)
+    ? db.users[userId].lists
+    : [];
+
   return db.users[userId];
 }
 
@@ -459,6 +471,170 @@ app.patch("/api/user", _requireAuth, (req, res) => {
   _writeDb(db);
 
   res.json({ user: bucket.profile });
+});
+
+app.get("/api/lists", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  res.json(bucket.lists);
+});
+
+app.post("/api/lists", _requireAuth, (req, res) => {
+  const data = req.body || {};
+  const name = String(data.name || "").replace(/\s+/g, " ").trim();
+  const description = String(data.description || "").trim();
+  const visibility = String(data.visibility || "private").trim().toLowerCase();
+
+  if (!name) return res.status(400).json({ error: "missing_name" });
+  if (name.length < 2) return res.status(400).json({ error: "name_too_short" });
+  if (name.length > 80) return res.status(400).json({ error: "name_too_long" });
+  if (!["private", "public", "collab"].includes(visibility)) {
+    return res.status(400).json({ error: "invalid_visibility" });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const nowIso = new Date().toISOString();
+
+  const list = {
+    id: _uid(),
+    name,
+    description,
+    visibility,
+    items: [],
+    itemsCount: 0,
+    createdAt: nowIso,
+    updatedAt: nowIso
+  };
+
+  bucket.lists.push(list);
+  _writeDb(db);
+
+  res.status(201).json(list);
+});
+
+app.patch("/api/lists/:id", _requireAuth, (req, res) => {
+  const id = String(req.params.id);
+  const patch = req.body || {};
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const idx = bucket.lists.findIndex((list) => String(list.id) === id);
+
+  if (idx === -1) return res.status(404).json({ error: "not_found" });
+
+  const prev = bucket.lists[idx];
+  const next = {
+    ...prev,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (Object.prototype.hasOwnProperty.call(patch, "name")) {
+    const safeName = String(patch.name || "").replace(/\s+/g, " ").trim();
+    if (!safeName) return res.status(400).json({ error: "missing_name" });
+    if (safeName.length < 2) return res.status(400).json({ error: "name_too_short" });
+    if (safeName.length > 80) return res.status(400).json({ error: "name_too_long" });
+    next.name = safeName;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "description")) {
+    next.description = String(patch.description || "").trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "visibility")) {
+    const safeVisibility = String(patch.visibility || "").trim().toLowerCase();
+    if (!["private", "public", "collab"].includes(safeVisibility)) {
+      return res.status(400).json({ error: "invalid_visibility" });
+    }
+    next.visibility = safeVisibility;
+  }
+
+  next.items = Array.isArray(prev.items) ? prev.items : [];
+  next.itemsCount = next.items.length;
+
+  bucket.lists[idx] = next;
+  _writeDb(db);
+
+  res.json(next);
+});
+
+app.delete("/api/lists/:id", _requireAuth, (req, res) => {
+  const id = String(req.params.id);
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const before = bucket.lists.length;
+
+  bucket.lists = bucket.lists.filter((list) => String(list.id) !== id);
+
+  if (bucket.lists.length === before) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  _writeDb(db);
+  res.json({ ok: true, deleted: 1 });
+});
+
+app.post("/api/lists/:id/items", _requireAuth, (req, res) => {
+  const listId = String(req.params.id);
+  const itemId = String(req.body?.itemId || "").trim();
+
+  if (!itemId) return res.status(400).json({ error: "missing_item_id" });
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  const list = bucket.lists.find((x) => String(x.id) === listId);
+  if (!list) return res.status(404).json({ error: "list_not_found" });
+
+  const libraryItem = bucket.library.find((x) => String(x.id) === itemId);
+  if (!libraryItem) return res.status(404).json({ error: "item_not_found" });
+
+  list.items = Array.isArray(list.items) ? list.items : [];
+
+  const already = list.items.some((entry) => {
+    const id = typeof entry === "string" ? entry : entry?.id;
+    return String(id) === itemId;
+  });
+
+  if (already) {
+    return res.json({ ok: true, already: true, listId, itemId });
+  }
+
+  list.items.push({
+    id: itemId,
+    addedAt: new Date().toISOString()
+  });
+  list.itemsCount = list.items.length;
+  list.updatedAt = new Date().toISOString();
+
+  _writeDb(db);
+  res.json({ ok: true, listId, itemId });
+});
+
+app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
+  const listId = String(req.params.id);
+  const itemId = String(req.params.itemId);
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  const list = bucket.lists.find((x) => String(x.id) === listId);
+  if (!list) return res.status(404).json({ error: "list_not_found" });
+
+  list.items = Array.isArray(list.items) ? list.items : [];
+  const before = list.items.length;
+
+  list.items = list.items.filter((entry) => {
+    const id = typeof entry === "string" ? entry : entry?.id;
+    return String(id) !== itemId;
+  });
+
+  list.itemsCount = list.items.length;
+  list.updatedAt = new Date().toISOString();
+
+  _writeDb(db);
+  res.json({ ok: true, removed: before - list.items.length });
 });
 
 // ===== LIBRARY =====
