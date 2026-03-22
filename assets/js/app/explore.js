@@ -849,7 +849,6 @@ const ExploreModule = (() => {
 
     const current = _getExploreItemByEid(eid);
 
-    // Ya existe en biblioteca: no repetir write
     if (current?.__inLibrary) {
       return {
         ok: true,
@@ -857,127 +856,130 @@ const ExploreModule = (() => {
       };
     }
 
-    // Ya hay una creación en curso para este mismo item: no lanzar otra
-    if (current?.__saving) {
-      return {
-        ok: true,
-        createdId: current.__libraryItemId ? String(current.__libraryItemId) : null
-      };
+    const pending = __pendingLibraryEnsures.get(eid);
+    if (pending) {
+      return pending;
     }
 
-    const cardElBefore = document.querySelector(
-      `.explore-card[data-eid="${eid}"]`
-    );
-
-    feed = feed.map((x) =>
-      x.eid === eid ? { ...x, __saving: true } : x
-    );
-
-    _applyFilters();
-
-    try {
-      const payload = {
-        title: item.title,
-        type: item.type,
-        progress: 0
-      };
-
-      const created = await ApiClient.createLibraryItem(payload);
-
-      feed = feed.map((x) =>
-        x.eid === eid
-          ? {
-              ...x,
-              __inLibrary: true,
-              __libraryItemId: created?.id ? String(created.id) : x.__libraryItemId ?? null
-            }
-          : x
+    const run = (async () => {
+      const cardElBefore = document.querySelector(
+        `.explore-card[data-eid="${eid}"]`
       );
 
-      await _syncInLibraryFlags();
-
-      window.toast?.({
-        title: "Añadido a biblioteca",
-        message: "Se ha guardado en tu biblioteca.",
-        type: "success",
-        duration: 2400
-      });
-
-      if (window.LibraryUI?.load) {
-        try {
-          await window.LibraryUI.load();
-        } catch (e) {
-          console.error("No se pudo refrescar LibraryUI tras añadir desde Explore", e);
-        }
-      }
-
       feed = feed.map((x) =>
-        x.eid === eid
-          ? {
-              ...x,
-              __saving: false,
-              __inLibrary: true,
-              __libraryItemId: created?.id ? String(created.id) : (x.__libraryItemId ?? null)
-            }
-          : x
+        x.eid === eid ? { ...x, __saving: true } : x
       );
 
       _applyFilters();
 
-      requestAnimationFrame(() => {
-        const cardElAfter = document.querySelector(
-          `.explore-card[data-eid="${eid}"]`
-        );
-        _popExploreBadge(cardElAfter || cardElBefore);
-      });
+      try {
+        const payload = {
+          title: item.title,
+          type: item.type,
+          progress: 0
+        };
 
-      return { ok: true, createdId: created?.id ?? null };
-    } catch (err) {
-      // Caso real de doble write/race: el backend ya lo ha creado
-      if (err?.status === 409 || err?.error === "duplicate_item") {
-        try {
-          await _syncInLibraryFlags();
-        } catch (syncErr) {
-          console.error(syncErr);
-        }
+        const created = await ApiClient.createLibraryItem(payload);
 
         feed = feed.map((x) =>
           x.eid === eid
             ? {
                 ...x,
                 __saving: false,
-                __inLibrary: true
+                __inLibrary: true,
+                __libraryItemId: created?.id
+                  ? String(created.id)
+                  : (x.__libraryItemId ?? null)
               }
             : x
         );
 
+        await _syncInLibraryFlags();
+
+        window.toast?.({
+          title: "Añadido a biblioteca",
+          message: "Se ha guardado en tu biblioteca.",
+          type: "success",
+          duration: 2400
+        });
+
+        if (window.LibraryUI?.load) {
+          try {
+            await window.LibraryUI.load();
+          } catch (e) {
+            console.error(
+              "No se pudo refrescar LibraryUI tras añadir desde Explore",
+              e
+            );
+          }
+        }
+
         _applyFilters();
 
-        const fresh = _getExploreItemByEid(eid);
+        requestAnimationFrame(() => {
+          const cardElAfter = document.querySelector(
+            `.explore-card[data-eid="${eid}"]`
+          );
+          _popExploreBadge(cardElAfter || cardElBefore);
+        });
 
         return {
           ok: true,
-          createdId: fresh?.__libraryItemId ? String(fresh.__libraryItemId) : null
+          createdId: created?.id ? String(created.id) : null
         };
+      } catch (err) {
+        if (err?.status === 409 || err?.error === "duplicate_item") {
+          try {
+            await _syncInLibraryFlags();
+          } catch (syncErr) {
+            console.error(syncErr);
+          }
+
+          feed = feed.map((x) =>
+            x.eid === eid
+              ? {
+                  ...x,
+                  __saving: false,
+                  __inLibrary: true
+                }
+              : x
+          );
+
+          _applyFilters();
+
+          const fresh = _getExploreItemByEid(eid);
+
+          return {
+            ok: true,
+            createdId: fresh?.__libraryItemId
+              ? String(fresh.__libraryItemId)
+              : null
+          };
+        }
+
+        console.error(err);
+
+        feed = feed.map((x) =>
+          x.eid === eid ? { ...x, __saving: false } : x
+        );
+
+        _applyFilters();
+
+        window.toast?.({
+          title: "No se pudo añadir",
+          message: "Inténtalo de nuevo.",
+          type: "error",
+          duration: 3000
+        });
+
+        return { ok: false, createdId: null };
+      } finally {
+        __pendingLibraryEnsures.delete(eid);
       }
+    })();
 
-      console.error(err);
-
-      feed = feed.map((x) =>
-        x.eid === eid ? { ...x, __saving: false } : x
-      );
-
-      _applyFilters();
-
-      window.toast?.({
-        title: "No se pudo añadir",
-        message: "Inténtalo de nuevo.",
-        type: "error",
-        duration: 3000
-      });
-
-      return { ok: false, createdId: null };
-    }
+    __pendingLibraryEnsures.set(eid, run);
+    return run;
   }
 
   async function _saveUIState() {
