@@ -624,8 +624,8 @@ const ExploreModule = (() => {
     if (metaEl) metaEl.textContent = vm.meta;
 
     if (summaryEl) {
-      summaryEl.textContent = "";
-      summaryEl.hidden = true;
+      summaryEl.textContent = vm.summary;
+      summaryEl.hidden = false;
     }
 
     if (badgeEl) {

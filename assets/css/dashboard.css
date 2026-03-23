@@ -5198,6 +5198,10 @@ body.dark-theme .notif-mark-btn:hover {
 
 #exploreDrawerBackdrop[hidden] { display: none; }
 
+#exploreDrawer.is-expanded #exploreDrawerSummary {
+  display: none;
+}
+
 .explore-drawer-backdrop{
   position: fixed;
   inset: 0;
