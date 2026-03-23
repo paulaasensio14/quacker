@@ -231,8 +231,8 @@ const ExploreModule = (() => {
     `;
 
     container.innerHTML = [
-      renderSkeletonSection("Novedades", 4),
-      renderSkeletonSection("Tendencias", 4),
+      renderSkeletonSection("Novedades", 6),
+      renderSkeletonSection("Tendencias", 6),
       renderSkeletonSection("Recomendados", 6)
     ].join("");
   }
@@ -278,27 +278,31 @@ const ExploreModule = (() => {
   const recomendadosAll = notNew.filter((it) => !tendenciaIdsAll.has(String(it.eid)));
 
   const SECTIONS = [
-    {
-      key: "novedades",
-      title: "Novedades",
-      subtitle: "Lanzamientos recientes para añadir a tu ocio",
-      limit: 4,
-      items: novedadesAll
-    },
-    {
-      key: "tendencias",
-      title: "Tendencias",
-      subtitle: "Lo más comentado y popular en tu feed",
-      limit: 4,
-      items: tendenciasAll
-    },
-    {
-      key: "recomendados",
-      title: "Recomendados",
-      subtitle: "Opciones que encajan con tu biblioteca",
-      limit: 6,
-      items: recomendadosAll
-    }
+
+  {
+  key: "novedades",
+  title: "Novedades",
+  subtitle: "Lanzamientos recientes para añadir a tu ocio",
+  limit: 6,
+  items: novedadesAll
+  },
+
+  {
+  key: "tendencias",
+  title: "Tendencias",
+  subtitle: "Lo más comentado y popular en tu feed",
+  limit: 6,
+  items: tendenciasAll
+  },
+
+  {
+  key: "recomendados",
+  title: "Recomendados",
+  subtitle: "Opciones que encajan con tu biblioteca",
+  limit: 6,
+  items: recomendadosAll
+  }
+
   ];
 
   // Inicializa shownCount si está a 0 (para modo expandido)
@@ -316,40 +320,26 @@ const ExploreModule = (() => {
   // Helper para renderizar cards (reutiliza tu HTML actual)
   const renderCard = (item) => {
     const vm = _buildExploreCardViewModel(item);
-
     return `
-      <article
-        class="explore-card explore-card--poster"
-        data-eid="${vm.eid}"
-        data-action="open-item-detail"
-        tabindex="0"
-        role="button"
-        aria-label="Abrir detalle de ${vm.title}">
-
-        ${_cardCover(item)}
-
-        <div class="explore-card-overlay">
-          <button
-            class="explore-card-add"
-            type="button"
-            data-action="open-item-detail"
-            data-eid="${vm.eid}"
-            aria-label="Abrir detalle de ${vm.title}">
-            +
-          </button>
-
-          <div class="explore-card-info">
-            <h3 class="explore-card-title">${vm.title}</h3>
-
-            <div class="explore-card-meta">
-              <span class="explore-card-pill">${vm.typeLabel}</span>
-              <span class="explore-card-pill">
-                ${item?.releaseDate ? String(item.releaseDate).slice(0, 4) : "—"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </article>
+    <article
+      class="explore-card explore-card--poster"
+      data-eid="${vm.eid}"
+      data-action="open-item-detail"
+      tabindex="0"
+      role="button"
+      aria-label="Abrir detalle de ${vm.title}">
+      ${_cardCover(item)}
+      <div class="explore-card-overlay">
+        <button
+          class="explore-card-add"
+          type="button"
+          data-action="open-item-detail"
+          data-eid="${vm.eid}"
+          aria-label="Abrir detalle de ${vm.title}">
+          +
+        </button>
+      </div>
+    </article>
     `;
   };
 
