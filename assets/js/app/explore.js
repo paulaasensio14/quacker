@@ -325,7 +325,9 @@ const ExploreModule = (() => {
         tabindex="0"
         role="button"
         aria-label="Abrir detalle de ${vm.title}">
+
         ${_cardCover(item)}
+
         <div class="explore-card-overlay">
           <button
             class="explore-card-add"
@@ -335,6 +337,17 @@ const ExploreModule = (() => {
             aria-label="Abrir detalle de ${vm.title}">
             +
           </button>
+
+          <div class="explore-card-info">
+            <h3 class="explore-card-title">${vm.title}</h3>
+
+            <div class="explore-card-meta">
+              <span class="explore-card-pill">${vm.typeLabel}</span>
+              <span class="explore-card-pill">
+                ${item?.releaseDate ? String(item.releaseDate).slice(0, 4) : "—"}
+              </span>
+            </div>
+          </div>
         </div>
       </article>
     `;
