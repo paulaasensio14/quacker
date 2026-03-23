@@ -553,15 +553,15 @@ main.app-main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 22px;
-  padding: 0 6px;
-  border-radius: 6px;
-  background: rgba(15, 23, 42, 0.82);
+  min-height: 20px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: rgba(15, 23, 42, 0.72);
   color: #fff;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   pointer-events: none;
 }
@@ -588,15 +588,16 @@ main.app-main {
 .explore-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .explore-section-header {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
+  margin-bottom: 2px;
 }
 
 .explore-section-title {
@@ -613,13 +614,14 @@ main.app-main {
 .explore-section-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .explore-section-count {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
+  font-weight: 600;
 }
 
 .explore-card {
@@ -684,18 +686,19 @@ main.app-main {
 .explore-loading {
   display: flex;
   justify-content: center;
-  margin-top: 18px;
+  margin-top: 8px;
+  margin-bottom: 2px;
 }
 
 .explore-loading-card {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 8px 12px;
   border-radius: 999px;
   background: #fff;
   border: 2px solid var(--border-strong);
-  box-shadow: 3px 3px 0 var(--border-strong);
+  box-shadow: 2px 2px 0 var(--border-strong);
 }
 
 .explore-loading-spinner {
@@ -705,9 +708,9 @@ main.app-main {
 }
 
 .explore-loading-text {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 600;
-}
+} 
 
 @media (max-width: 768px) {
   .explore-section-grid {
@@ -4427,7 +4430,7 @@ body.dark-theme .notif-mark-btn:hover {
 .explore-grid {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   width: 100%;
 }
 
@@ -4435,8 +4438,8 @@ body.dark-theme .notif-mark-btn:hover {
 
 .explore-section-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  gap: 12px;
   width: 100%;
 }
 
@@ -4769,20 +4772,6 @@ body.dark-theme .notif-mark-btn:hover {
   margin: 4px 0 0;
   font-size: 12px;
   opacity: 0.85;
-}
-
-.explore-section-count{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 34px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 2px solid var(--border);
-  background: var(--panel-2);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .explore-section-actions{
