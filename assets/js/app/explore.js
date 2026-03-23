@@ -619,7 +619,6 @@ const ExploreModule = (() => {
     const vm = _buildExploreDrawerTextModel(item);
     const titleEl = document.getElementById("exploreDrawerTitle");
     const metaEl = document.getElementById("exploreDrawerMeta");
-    const summaryEl = document.getElementById("exploreDrawerSummary");
     const coverEl = document.getElementById("exploreDrawerCover");
     const badgeEl = document.getElementById("exploreDrawerBadge");
     const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
@@ -627,10 +626,6 @@ const ExploreModule = (() => {
 
     if (titleEl) titleEl.textContent = vm.title;
     if (metaEl) metaEl.textContent = vm.meta;
-    if (summaryEl) {
-      summaryEl.textContent = vm.summary;
-      summaryEl.hidden = false;
-    }
 
     if (coverEl) {
       const backdrop = _safeText(item?.backdrop).trim();
