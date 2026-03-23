@@ -117,6 +117,7 @@ const ExploreModule = (() => {
               ? "game"
               : rawType;
 
+    const cover = _safeText(raw.cover).trim();
     const releaseDate = _safeText(raw.releaseDate).trim();
     const summary = _safeText(raw.summary).trim();
     const releaseDateObj = releaseDate ? new Date(releaseDate) : null;
@@ -127,6 +128,7 @@ const ExploreModule = (() => {
       eid: String(eid),
       title,
       type,
+      cover,
       releaseDate,
       summary,
       __releaseTs: releaseTs,
@@ -911,7 +913,9 @@ const ExploreModule = (() => {
       const rawFeed = await ApiClient.getExploreFeed(searchTerm);
       const safeFeed = Array.isArray(rawFeed) ? rawFeed : [];
 
-      feed = safeFeed.map((item, index) => _normalizeExploreItem(item, index));
+      feed = safeFeed
+        .map((item, index) => _normalizeExploreItem(item, index))
+        .filter((item) => item.cover);
     } catch (e) {
       console.error("ExploreModule.load error", e);
       feed = [];
