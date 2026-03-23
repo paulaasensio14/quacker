@@ -153,9 +153,24 @@ const ExploreModule = (() => {
     `;
   }
 
-  function _cardCover(title) {
-    const t = _safeText(title).trim();
-    const initials = t ? t.slice(0, 1).toUpperCase() : "Q";
+  function _cardCover(item) {
+    const title = _safeText(item?.title).trim();
+    const initials = title ? title.slice(0, 1).toUpperCase() : "Q";
+    const cover = _safeText(item?.cover).trim();
+
+    if (cover) {
+      return `
+        <div class="explore-cover">
+          <img
+            class="explore-cover-img"
+            src="${cover}"
+            alt="Portada de ${title || "contenido"}"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+          />
+        </div>
+      `;
+    }
 
     return `
       <div class="explore-cover" aria-hidden="true">
@@ -310,7 +325,7 @@ const ExploreModule = (() => {
         tabindex="0"
         role="button"
         aria-label="Abrir detalle de ${vm.title}">
-        ${_cardCover(vm.title)}
+        ${_cardCover(item)}
         <div class="explore-card-overlay">
           <button
             class="explore-card-add"
@@ -1224,8 +1239,9 @@ const ExploreModule = (() => {
 
       feed = feed.map((x) => (x.eid === item.eid ? merged : x));
 
-      if (__activeExploreEid === item.eid) {
-        __activeExploreItem = merged;
+      if (activeEid === item.eid) {
+        _syncExploreDrawerFromItem(merged);
+        _renderExploreDrawerDetails(merged);
       }
 
       return merged;
