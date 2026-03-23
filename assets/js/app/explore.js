@@ -955,7 +955,8 @@ const ExploreModule = (() => {
         const payload = {
           title: item.title,
           type: item.type,
-          progress: 0
+          progress: 0,
+          cover: _safeText(item?.cover).trim()
         };
 
         const created = await ApiClient.createLibraryItem(payload);
