@@ -634,7 +634,7 @@ const ExploreModule = (() => {
       summaryEl.textContent = vm.summary;
       summaryEl.hidden = false;
     }
-    
+
     if (coverEl) {
       const backdrop = _safeText(item?.backdrop).trim();
       const cover = _safeText(item?.cover).trim();
@@ -642,9 +642,6 @@ const ExploreModule = (() => {
 
       if (heroImage) {
         coverEl.style.backgroundImage = `url("${heroImage}")`;
-        coverEl.style.backgroundSize = "cover";
-        coverEl.style.backgroundPosition = "center";
-        coverEl.style.backgroundRepeat = "no-repeat";
       } else {
         coverEl.style.backgroundImage = "none";
         coverEl.style.backgroundSize = "";
