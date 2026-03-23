@@ -865,7 +865,7 @@ const ExploreModule = (() => {
     _renderExploreSkeleton();
 
     try {
-      const rawFeed = await ApiClient.getExploreFeed();
+      const rawFeed = await ApiClient.getExploreFeed(searchTerm);
       const safeFeed = Array.isArray(rawFeed) ? rawFeed : [];
 
       feed = safeFeed.map((item, index) => _normalizeExploreItem(item, index));
@@ -1197,6 +1197,38 @@ const ExploreModule = (() => {
     note.textContent = "";
   }
 
+  async function _hydrateExploreItemDetail(item) {
+    if (!item?.source || !item?.type || !item?.externalId) return item;
+    if (item.source !== "tmdb") return item;
+
+    try {
+      const detail = await ApiClient.getExploreItemDetail({
+        source: item.source,
+        type: item.type,
+        externalId: item.externalId
+      });
+
+      if (!detail || typeof detail !== "object") return item;
+
+      const merged = {
+        ...item,
+        ...detail,
+        eid: item.eid || detail.eid || item.eid
+      };
+
+      feed = feed.map((x) => (x.eid === item.eid ? merged : x));
+
+      if (__activeExploreEid === item.eid) {
+        __activeExploreItem = merged;
+      }
+
+      return merged;
+    } catch (e) {
+      console.error("Explore detail hydrate failed", e);
+      return item;
+    }
+  }
+
   function bind() {
 
     // Evita doble binding
@@ -1205,24 +1237,30 @@ const ExploreModule = (() => {
 
     // CLICK "+"
 
-    document.addEventListener("click", (e) => {
+    document.addEventListener("click", async (e) => {
       const detailTrigger = e.target.closest('[data-action="open-item-detail"][data-eid]');
       if (detailTrigger) {
         e.preventDefault();
         e.stopPropagation();
 
-        const item = _getExploreItemByEid(detailTrigger.dataset.eid);
-        if (!item) return;
+      const item = _getExploreItemByEid(detailTrigger.dataset.eid);
+      if (!item) return;
 
-        _syncExploreDrawerFromItem(item);
-        _renderExploreDrawerDetails(item);
-        _setExploreDrawerExpanded(false);
-        _openExploreDrawer(detailTrigger);
-        return;
+      _syncExploreDrawerFromItem(item);
+      _renderExploreDrawerDetails(item);
+      _setExploreDrawerExpanded(false);
+      _openExploreDrawer(detailTrigger);
+
+      const detailed = await _hydrateExploreItemDetail(item);
+      if (detailed?.eid === item.eid) {
+        _syncExploreDrawerFromItem(detailed);
+        _renderExploreDrawerDetails(detailed);
+      }
+      return;
       }
     });
 
-    document.addEventListener("keydown", (e) => {
+    document.addEventListener("keydown", async (e) => {
       const card = e.target.closest('[data-action="open-item-detail"][data-eid]');
       if (!card) return;
 
@@ -1237,6 +1275,12 @@ const ExploreModule = (() => {
       _renderExploreDrawerDetails(item);
       _setExploreDrawerExpanded(false);
       _openExploreDrawer(card);
+
+      const detailed = await _hydrateExploreItemDetail(item);
+      if (detailed?.eid === item.eid) {
+        _syncExploreDrawerFromItem(detailed);
+        _renderExploreDrawerDetails(detailed);
+      }
     });
 
     // BOTÓN CERRAR DRAWER

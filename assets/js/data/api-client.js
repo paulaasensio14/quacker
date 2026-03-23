@@ -235,17 +235,27 @@ const ApiClient = (() => {
     FakeBackend.saveState(state);
   }
 
-  async function getExploreFeed() {
+  async function getExploreFeed(query = "") {
     if (_isHttp()) {
-      const res = await _httpJson("GET", "/explore");
-
+      const q = String(query || "").trim();
+      const suffix = q ? `?q=${encodeURIComponent(q)}` : "";
+      const res = await _httpJson("GET", `/explore${suffix}`);
       if (Array.isArray(res)) return res;
       if (Array.isArray(res?.items)) return res.items;
-
       return [];
     }
 
     return [];
+  }
+
+  async function getExploreItemDetail({ source, type, externalId }) {
+    if (!_isHttp()) return null;
+    if (!source || !type || !externalId) return null;
+
+    return _httpJson(
+      "GET",
+      `/explore/item/${encodeURIComponent(source)}/${encodeURIComponent(type)}/${encodeURIComponent(externalId)}`
+    );
   }
 
   // === listas (por ahora simplemente devuelven lo del estado) ===
@@ -2187,6 +2197,7 @@ const ApiClient = (() => {
     getListsCountByLibraryMatch,
     getExploreUIState,
     setExploreUIState,
+    getExploreItemDetail,
     getListsCountMapByLibraryKey,
     getLibraryUIState,
     setLibraryUIState,
