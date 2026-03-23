@@ -5482,138 +5482,13 @@ body.dark-theme .notif-mark-btn:hover {
   display: none;
 }
 
-.explore-drawer-backdrop{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  z-index: 980;
-}
-
-.explore-drawer{
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100dvh;
-  width: min(420px, 92vw);
-  z-index: 990;
-
-  transform: translateX(110%);
-  transition: transform 220ms cubic-bezier(.2,.8,.2,1);
-  will-change: transform;
-}
-
 .explore-drawer.is-open{
   transform: translateX(0);
-}
-
-.explore-drawer-inner{
-  height: 100%;
-  display: grid;
-  grid-template-rows: 160px minmax(0, 1fr);
-  border-left: 3px solid var(--border-strong);
-  background: var(--bg-sidebar);
-  box-shadow: -10px 0 30px rgba(0,0,0,0.18);
-  position: relative;
-  min-height: 0;
-}
-
-.explore-drawer-close{
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 2px solid var(--border-strong);
-  background: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 var(--border-strong);
-  transition: transform 150ms ease, box-shadow 150ms ease;
 }
 
 .explore-drawer-close:hover{
   transform: translateY(1px);
   box-shadow: 1px 1px 0 var(--border-strong);
-}
-
-.explore-drawer-title-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.explore-drawer-title-wrap {
-  min-width: 0;
-}
-
-.explore-drawer-title {
-  margin: 0 0 6px;
-  color: #fff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.explore-drawer-meta {
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-#exploreDrawerBadge {
-  color: #fff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.explore-drawer-expand-btn {
-  align-self: flex-end;
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(4px);
-}
-
-.explore-drawer-summary {
-  margin-top: 10px;
-}
-
-.explore-drawer-title{
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.2;
-}
-
-.explore-drawer-summary{
-  margin: 0;
-  font-size: 13px;
-  opacity: 0.95;
-  line-height: 1.4;
-}
-
-.explore-drawer-actions{
-  position: sticky;
-  bottom: 0;
-
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-
-  margin-top: 10px;
-  padding: 12px 0 10px;
-
-  background: linear-gradient(
-    to top,
-    var(--bg-card) 70%,
-    rgba(255,255,255,0) 100%
-  );
-
-  border-top: 2px solid var(--border-soft);
 }
 
 /* Bloquear scroll cuando el drawer está abierto */
@@ -5628,11 +5503,6 @@ body.modal-open{
 }
 
 /* ===== Explore Drawer: header sticky (título + meta) ===== */
-
-/* Ajuste para que el contenido no quede “pegado” bajo los sticky */
-.explore-drawer-summary{
-  margin-top: 10px;
-}
 
 /* ===== Explore Drawer: animación suave del contenido ===== */
 
@@ -5747,20 +5617,6 @@ body.modal-open{
 
 .drawer-inline-note[hidden]{
   display: none;
-}
-
-.drawer-inline-note{
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 2px solid var(--border-soft);
-  border-radius: 12px;
-
-  background: rgba(255,255,255,0.06);
-  color: inherit;
-
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 160ms ease, transform 160ms ease;
 }
 
 .drawer-inline-note.is-visible{
@@ -5942,15 +5798,6 @@ body.modal-open{
   --explore-expanded-bottom: 20px;
 }
 
-.explore-drawer-cover {
-  position: relative;
-  height: 200px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  overflow: hidden;
-}
-
 .explore-drawer-cover::after {
   content: "";
   position: absolute;
@@ -5961,48 +5808,6 @@ body.modal-open{
     rgba(0, 0, 0, 0.45) 50%,
     rgba(0, 0, 0, 0.85) 100%
   );
-}
-
-.explore-drawer-head {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 16px 20px 18px;
-  max-width: 520px;
-  z-index: 2;
-}
-
-.explore-drawer-title {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.explore-drawer-meta {
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-#exploreDrawerBadge {
-  color: #fff;
-}
-
-.explore-drawer-head-actions {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.explore-drawer.is-expanded {
-  top: var(--explore-expanded-top);
-  left: var(--explore-expanded-left);
-  right: var(--explore-expanded-right);
-  bottom: var(--explore-expanded-bottom);
-  width: auto;
-  height: auto;
-  max-width: none;
-  border-radius: 28px;
 }
 
 .explore-drawer.is-expanded .explore-drawer-inner {
@@ -6017,44 +5822,6 @@ body.modal-open{
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
-}
-
-.explore-drawer-content {
-  padding-top: 16px;
-}
-
-.explore-drawer-details {
-  border-top: 2px solid rgba(17, 24, 39, 0.08);
-  padding-top: 14px;
-}
-
-.explore-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.explore-detail-card {
-  background: var(--bg-card);
-  border: 2px solid var(--border-strong);
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow: 3px 3px 0 var(--border-strong);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.explore-detail-card--full {
-  grid-column: 1 / -1;
-}
-
-.explore-detail-label {
-  font-size: 0.76rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
 }
 
 .explore-detail-value {
@@ -6085,41 +5852,6 @@ body.modal-open{
   .explore-detail-grid {
     grid-template-columns: 1fr;
   }
-} 
-
-.explore-drawer-list-picker {
-  margin-top: 14px;
-  padding: 14px;
-  border: 2px solid var(--border-strong);
-  border-radius: 18px;
-  background: var(--bg-body);
-}
-
-.explore-drawer-list-label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.explore-drawer-list-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.explore-drawer-list-select {
-  flex: 1 1 220px;
-  min-width: 220px;
-  border: 2px solid var(--border-strong);
-  border-radius: 14px;
-  padding: 10px 12px;
-  font: inherit;
-  background: var(--bg-card);
-  color: var(--text-main);
-  outline: none;
 }
 
 .explore-drawer-list-select:disabled {
