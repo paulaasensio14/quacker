@@ -4248,10 +4248,6 @@ body.dark-theme .notif-mark-btn:hover {
   gap: 24px;
 }
 
-.explore-card {
-  min-height: 0;
-}
-
 /* ===== Explore compact catalog ===== */
 
 .explore-section-grid {
@@ -4463,11 +4459,6 @@ body.dark-theme .notif-mark-btn:hover {
   gap: 14px;
 }
 
-.explore-card--poster {
-  position: relative;
-  cursor: pointer;
-}
-
 .explore-card--poster .explore-card-cover {
   aspect-ratio: 2 / 3;
   border-radius: 12px;
@@ -4511,15 +4502,8 @@ body.dark-theme .notif-mark-btn:hover {
 }
 
 .explore-card {
-  display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 12px;
-  border: 2px solid var(--border);
-  background: var(--panel);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow-soft);
-  transition: transform 160ms ease, border-color 160ms ease;
+  width: 132px;
+  flex: 0 0 132px;
 }
 
 .explore-card:hover {
@@ -4528,12 +4512,13 @@ body.dark-theme .notif-mark-btn:hover {
 }
 
 .explore-cover {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--panel-2);
-  border-right: 2px solid var(--border);
-}
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 28px;
+  background: transparent;
+  display: block;
+} 
 
 .explore-cover-initial {
   font-weight: 800;
@@ -5797,4 +5782,100 @@ body.modal-open{
 .explore-card--poster[data-action="open-item-detail"]:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
+}
+
+.explore-card--poster {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  background: transparent;
+  isolation: isolate;
+}
+
+.explore-cover-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  background: transparent;
+}
+
+.explore-card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0) 52%,
+      rgba(0, 0, 0, 0.32) 76%,
+      rgba(0, 0, 0, 0.72) 100%
+    );
+}
+
+.explore-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.explore-card-title {
+  margin: 0;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.explore-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.explore-card-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #101010;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.explore-card-add {
+  align-self: flex-end;
+  backdrop-filter: blur(8px);
+}
+
+.explore-card-add {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-weight: 800;
+  backdrop-filter: blur(6px);
+  z-index: 2;
+}
+
+.explore-card--poster {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.explore-card--poster:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
 }
