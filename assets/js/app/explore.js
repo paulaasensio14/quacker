@@ -149,19 +149,6 @@ const ExploreModule = (() => {
     return days <= 30;
   }
 
-  function _chipSvgNew() {
-    // pequeño “spark” sin emojis
-    return `
-      <span class="explore-chip" title="Nuevo">
-        <svg class="explore-chip-ico" width="14" height="14" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"></path>
-        </svg>
-        <span>Nuevo</span>
-      </span>
-    `;
-  }
-
   function _cardCover(item) {
     const title = _safeText(item?.title).trim();
     const initials = title ? title.slice(0, 1).toUpperCase() : "Q";
@@ -200,31 +187,17 @@ const ExploreModule = (() => {
 
     const renderSkeletonCard = () => `
       <article class="explore-card explore-card--skeleton" aria-hidden="true">
-        <div class="explore-card-cover explore-skel-cover"></div>
+        <div class="explore-cover explore-skel-cover"></div>
 
-        <div class="explore-card-body">
-          <div class="explore-skel-title"></div>
-
-          <div class="explore-skel-meta-row">
-            <span class="explore-skel-chip"></span>
-            <span class="explore-skel-chip short"></span>
-          </div>
-
-          <div class="explore-skel-line"></div>
-          <div class="explore-skel-line short"></div>
-
-          <div class="explore-card-actions">
-            <span class="explore-skel-btn"></span>
-            <span class="explore-skel-btn ghost"></span>
-            <span class="explore-skel-btn icon"></span>
-          </div>
+        <div class="explore-card-overlay">
+          <span class="explore-card-type explore-card-type--skeleton"></span>
         </div>
       </article>
     `;
 
     const renderSkeletonSection = (title, count) => `
       <section class="explore-section explore-section--skeleton" aria-hidden="true">
-        <header class="explore-section-head">
+        <header class="explore-section-header">
           <div>
             <div class="explore-skel-section-title"></div>
             <div class="explore-skel-section-subtitle"></div>
@@ -954,9 +927,6 @@ const ExploreModule = (() => {
     }
 
     const run = (async () => {
-      const cardElBefore = document.querySelector(
-        `.explore-card[data-eid="${eid}"]`
-      );
 
       feed = feed.map((x) =>
         x.eid === eid ? { ...x, __saving: true } : x
@@ -1007,13 +977,6 @@ const ExploreModule = (() => {
         }
 
         _applyFilters();
-
-        requestAnimationFrame(() => {
-          const cardElAfter = document.querySelector(
-            `.explore-card[data-eid="${eid}"]`
-          );
-          _popExploreBadge(cardElAfter || cardElBefore);
-        });
 
         return {
           ok: true,
@@ -1111,17 +1074,6 @@ const ExploreModule = (() => {
     ];
     return Array.from(el.querySelectorAll(selectors.join(",")))
       .filter((n) => n.offsetParent !== null);
-  }
-
-  function _popExploreBadge(cardEl) {
-    if (!cardEl) return;
-    const badge = cardEl.querySelector(".explore-chip");
-    if (!badge) return;
-
-    badge.classList.remove("is-pop");
-    // forzar reflow para reiniciar animación
-    void badge.offsetWidth;
-    badge.classList.add("is-pop");
   }
 
   function _setDrawerButtonLoading(btn, isLoading) {
