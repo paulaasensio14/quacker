@@ -5263,27 +5263,68 @@ body.dark-theme .notif-mark-btn:hover {
   position: relative;
   height: 200px;
   border-bottom: 2px solid rgba(15, 23, 42, 0.12);
-
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-
   overflow: hidden;
-
-  transition: background-image 0.2 ease;
 }
 
 .explore-drawer-cover::after {
   content: "";
   position: absolute;
   inset: 0;
-
   background: linear-gradient(
     to bottom,
-    rgba(0,0,0,0.25) 0%,
-    rgba(0,0,0,0.55) 60%,
-    rgba(0,0,0,0.75) 100%
+    rgba(0, 0, 0, 0.16) 0%,
+    rgba(0, 0, 0, 0.34) 45%,
+    rgba(0, 0, 0, 0.82) 100%
   );
+}
+
+.explore-drawer-content {
+  position: relative;
+  z-index: 1;
+  margin-top: -96px;
+  padding-top: 0;
+}
+
+.explore-drawer-head {
+  padding: 0 20px 14px;
+}
+
+.explore-drawer-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.explore-drawer-title-wrap {
+  min-width: 0;
+}
+
+.explore-drawer-title {
+  margin: 0 0 6px;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+.explore-drawer-meta {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+#exploreDrawerBadge {
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.explore-drawer-expand-btn {
+  align-self: flex-end;
+}
+
+.explore-drawer-summary {
+  margin-top: 10px;
 }
 
 .explore-drawer-content{
@@ -5295,25 +5336,10 @@ body.dark-theme .notif-mark-btn:hover {
   min-height: 0;
 }
 
-.explore-drawer-title-row{
-  display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
 .explore-drawer-title{
   margin: 0;
   font-size: 18px;
   line-height: 1.2;
-}
-
-.explore-drawer-meta{
-  display:flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 12px;
-  opacity: 0.9;
 }
 
 .explore-drawer-summary{
@@ -5356,30 +5382,6 @@ body.modal-open{
 }
 
 /* ===== Explore Drawer: header sticky (título + meta) ===== */
-
-.explore-drawer-title-row{
-  position: sticky;
-  top: 0;
-  z-index: 2;
-
-  padding: 12px 0 10px;
-  margin: 0;
-
-  background: var(--bg-card);
-  border-bottom: 2px solid var(--border-soft);
-}
-
-.explore-drawer-meta{
-  position: sticky;
-  top: 52px; /* queda debajo del title-row */
-  z-index: 2;
-
-  padding: 10px 0 12px;
-  margin: 0;
-
-  background: var(--bg-card);
-  border-bottom: 2px solid var(--border-soft);
-}
 
 /* Ajuste para que el contenido no quede “pegado” bajo los sticky */
 .explore-drawer-summary{
@@ -5694,28 +5696,11 @@ body.modal-open{
   --explore-expanded-bottom: 20px;
 }
 
-.explore-drawer-head {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.explore-drawer-title-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
 .explore-drawer-head-actions {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-.explore-drawer-expand-btn {
-  white-space: nowrap;
 }
 
 .explore-drawer.is-expanded {

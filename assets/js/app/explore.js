@@ -559,7 +559,6 @@ const ExploreModule = (() => {
       detailLibraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
       detailListsCount:
         count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
-      detailEid: item?.eid ? String(item.eid) : "—",
       badge: badgeParts.join(" · "),
       hasBadge: badgeParts.length > 0
     };
@@ -573,7 +572,6 @@ const ExploreModule = (() => {
     const libraryEl = document.getElementById("exploreDetailLibraryState");
     const listsEl = document.getElementById("exploreDetailListsCount");
     const summaryEl = document.getElementById("exploreDetailSummary");
-    const eidEl = document.getElementById("exploreDetailEid");
 
     if (typeEl) typeEl.textContent = vm.detailType;
     if (releaseEl) releaseEl.textContent = vm.detailReleaseDate;
@@ -583,7 +581,6 @@ const ExploreModule = (() => {
       summaryEl.textContent = vm.summary;
       summaryEl.hidden = false;
     }
-    if (eidEl) eidEl.textContent = vm.detailEid;
   }
 
   function _setExploreDrawerExpanded(next) {
