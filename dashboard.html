@@ -616,21 +616,29 @@
               </svg>
             </button>
 
-              <div class="explore-drawer-cover" id="exploreDrawerCover" aria-hidden="true">
-                <div class="explore-drawer-head">
-                  <div class="explore-drawer-title-row">
-                    <div class="explore-drawer-title-wrap">
-                      <h2 id="exploreDrawerTitle"></h2>
-                      <p id="exploreDrawerMeta"></p>
+            <div class="explore-drawer-cover" id="exploreDrawerCover" aria-hidden="true">
+              <div class="explore-drawer-head">
+                <div class="explore-drawer-title-row">
+                  <div class="explore-drawer-title-wrap">
+                    <h2 class="explore-drawer-title" id="exploreDrawerTitle"></h2>
+                    <p class="explore-drawer-meta" id="exploreDrawerMeta"></p>
+                  </div>
 
-                      <div class="explore-drawer-actions">
-                        <span id="exploreDrawerBadge"></span>
-                        <button ...>Ver más detalles</button>
-                      </div>
-                    </div>
+                  <div class="explore-drawer-head-actions">
+                    <span id="exploreDrawerBadge"></span>
+                    <button
+                      type="button"
+                      class="btn-ghost explore-drawer-expand-btn"
+                      id="exploreDrawerExpand"
+                      aria-pressed="false"
+                      aria-label="Ver más detalles"
+                    >
+                      Ver más detalles
+                    </button>
                   </div>
                 </div>
               </div>
+            </div>
 
               <div class="explore-drawer-content">
 
