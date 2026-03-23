@@ -862,6 +862,11 @@ const ExploreModule = (() => {
   }
 
   async function load() {
+    const globalSearch = document.getElementById("globalSearch");
+    if (globalSearch) {
+      searchTerm = String(globalSearch.value || "").trim();
+    }
+
     _setExploreLoading(true);
     _renderExploreSkeleton();
 
@@ -1231,6 +1236,44 @@ const ExploreModule = (() => {
   }
 
   function bind() {
+
+    const globalSearch = document.getElementById("globalSearch");
+    const globalSearchClear = document.getElementById("globalSearchClear");
+    const globalSearchBox = document.getElementById("globalSearchBox");
+
+    if (globalSearch && !globalSearch.__exploreBound) {
+      globalSearch.__exploreBound = true;
+
+      globalSearch.disabled = false;
+      globalSearchBox?.classList.remove("is-disabled");
+      globalSearchBox?.setAttribute("aria-disabled", "false");
+
+      globalSearch.addEventListener("input", () => {
+        searchTerm = String(globalSearch.value || "").trim();
+        _scheduleApplyFilters();
+      });
+
+      globalSearch.addEventListener("search", () => {
+        searchTerm = String(globalSearch.value || "").trim();
+        _scheduleApplyFilters();
+      });
+    }
+
+    if (globalSearchClear && !globalSearchClear.__exploreBound) {
+      globalSearchClear.__exploreBound = true;
+
+      globalSearchClear.removeAttribute("tabindex");
+
+      globalSearchClear.addEventListener("click", () => {
+        if (globalSearch) {
+          globalSearch.value = "";
+          globalSearch.focus();
+        }
+
+        searchTerm = "";
+        _scheduleApplyFilters();
+      });
+    }
 
     // Evita doble binding
     if (bind._bound) return;
