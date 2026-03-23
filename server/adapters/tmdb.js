@@ -122,9 +122,14 @@ export async function searchTmdb(query) {
   const merged = [...movies, ...series]
     .filter((item) => item.title)
     .sort((a, b) => {
-      const yearA = Number(a.year || 0);
-      const yearB = Number(b.year || 0);
+      const hasCoverA = Number(Boolean(a.cover));
+      const hasCoverB = Number(Boolean(b.cover));
+      if (hasCoverA !== hasCoverB) return hasCoverB - hasCoverA;
+
+      const yearA = Number(a.meta?.year || 0);
+      const yearB = Number(b.meta?.year || 0);
       if (yearA !== yearB) return yearB - yearA;
+
       return a.title.localeCompare(b.title, "es", { sensitivity: "base" });
     });
 
