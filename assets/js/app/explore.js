@@ -330,14 +330,9 @@ const ExploreModule = (() => {
       aria-label="Abrir detalle de ${vm.title}">
       ${_cardCover(item)}
       <div class="explore-card-overlay">
-        <button
-          class="explore-card-add"
-          type="button"
-          data-action="open-item-detail"
-          data-eid="${vm.eid}"
-          aria-label="Abrir detalle de ${vm.title}">
-          +
-        </button>
+        <span class="explore-card-type">
+          ${vm.typeLabel}
+        </span>
       </div>
     </article>
     `;
