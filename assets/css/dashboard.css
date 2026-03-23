@@ -5259,15 +5259,13 @@ body.dark-theme .notif-mark-btn:hover {
   box-shadow: 1px 1px 0 var(--border-strong);
 }
 
-.explore-drawer-cover{
-  background: var(--bg-body);
-  border-bottom: 2px solid var(--border-soft);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight: 900;
-  font-size: 36px;
-  opacity: 0.85;
+.explore-drawer-cover {
+  min-height: 180px;
+  border-bottom: 2px solid rgba(15, 23, 42, 0.12);
+  background-color: #e5e7eb;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .explore-drawer-content{

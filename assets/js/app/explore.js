@@ -118,6 +118,7 @@ const ExploreModule = (() => {
               : rawType;
 
     const cover = _safeText(raw.cover).trim();
+    const backdrop = _safeText(raw.backdrop).trim();
     const releaseDate = _safeText(raw.releaseDate).trim();
     const summary = _safeText(raw.summary).trim();
     const releaseDateObj = releaseDate ? new Date(releaseDate) : null;
@@ -129,6 +130,7 @@ const ExploreModule = (() => {
       title,
       type,
       cover,
+      backdrop,
       releaseDate,
       summary,
       __releaseTs: releaseTs,
@@ -471,7 +473,13 @@ const ExploreModule = (() => {
       note.hidden = true;
       note.textContent = "";
     }
-
+    const coverEl = document.getElementById("exploreDrawerCover");
+    if (coverEl) {
+      coverEl.style.backgroundImage = "none";
+      coverEl.style.backgroundSize = "";
+      coverEl.style.backgroundPosition = "";
+      coverEl.style.backgroundRepeat = "";
+    }
     _setExploreDrawerExpanded(false);
 
     document.documentElement.style.removeProperty("--explore-expanded-left");
@@ -612,22 +620,38 @@ const ExploreModule = (() => {
     activeEid = String(item.eid);
 
     const vm = _buildExploreDrawerTextModel(item);
-
     const titleEl = document.getElementById("exploreDrawerTitle");
     const metaEl = document.getElementById("exploreDrawerMeta");
     const summaryEl = document.getElementById("exploreDrawerSummary");
+    const coverEl = document.getElementById("exploreDrawerCover");
     const badgeEl = document.getElementById("exploreDrawerBadge");
     const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
     const addListsBtn = document.getElementById("exploreDrawerAddLists");
 
     if (titleEl) titleEl.textContent = vm.title;
     if (metaEl) metaEl.textContent = vm.meta;
-
     if (summaryEl) {
       summaryEl.textContent = vm.summary;
       summaryEl.hidden = false;
     }
+    
+    if (coverEl) {
+      const backdrop = _safeText(item?.backdrop).trim();
+      const cover = _safeText(item?.cover).trim();
+      const heroImage = backdrop || cover;
 
+      if (heroImage) {
+        coverEl.style.backgroundImage = `url("${heroImage}")`;
+        coverEl.style.backgroundSize = "cover";
+        coverEl.style.backgroundPosition = "center";
+        coverEl.style.backgroundRepeat = "no-repeat";
+      } else {
+        coverEl.style.backgroundImage = "none";
+        coverEl.style.backgroundSize = "";
+        coverEl.style.backgroundPosition = "";
+        coverEl.style.backgroundRepeat = "";
+      }
+    }
     if (badgeEl) {
       badgeEl.textContent = vm.badge;
       badgeEl.hidden = !vm.hasBadge;
