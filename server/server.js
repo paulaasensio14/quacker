@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { searchTmdb, getTmdbDetail } from "./adapters/tmdb.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -364,8 +365,57 @@ const EXPLORE_FEED = [
   }
 ];
 
-app.get("/api/explore", _requireAuth, (_req, res) => {
-  res.json({ items: EXPLORE_FEED });
+app.get("/api/explore", _requireAuth, async (req, res) => {
+  const q = String(req.query.q || "").trim();
+
+  try {
+    if (q) {
+      const items = await searchTmdb(q);
+      return res.json({ items });
+    }
+
+    const db = _readDb();
+    const bucket = _getUserBucket(db, req.session.userId);
+
+    const fallbackItems = (bucket.library || []).map((item) => ({
+      eid: item?.id ? `library:${String(item.id)}` : _uid(),
+      source: "library",
+      externalId: item?.id ? String(item.id) : "",
+      type: String(item?.type || "").trim(),
+      title: String(item?.title || "").trim(),
+      year: item?.meta?.year || null,
+      cover: String(item?.cover || "").trim(),
+      description: "",
+      meta: item?.meta || {}
+    }));
+
+    return res.json({ items: fallbackItems });
+  } catch (err) {
+    console.error("GET /api/explore error", err);
+    return res.status(err?.status || 500).json({
+      error: err?.message || "explore_fetch_failed"
+    });
+  }
+});
+
+app.get("/api/explore/item/:source/:type/:externalId", _requireAuth, async (req, res) => {
+  const source = String(req.params.source || "").trim().toLowerCase();
+  const type = String(req.params.type || "").trim().toLowerCase();
+  const externalId = String(req.params.externalId || "").trim();
+
+  try {
+    if (source !== "tmdb") {
+      return res.status(400).json({ error: "unsupported_source" });
+    }
+
+    const item = await getTmdbDetail({ type, externalId });
+    return res.json(item);
+  } catch (err) {
+    console.error("GET /api/explore/item error", err);
+    return res.status(err?.status || 500).json({
+      error: err?.message || "explore_detail_failed"
+    });
+  }
 });
 
 // ===== USER (mínimo) =====
