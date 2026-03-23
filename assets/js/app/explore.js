@@ -571,7 +571,10 @@ const ExploreModule = (() => {
     if (releaseEl) releaseEl.textContent = vm.detailReleaseDate;
     if (libraryEl) libraryEl.textContent = vm.detailLibraryState;
     if (listsEl) listsEl.textContent = vm.detailListsCount;
-    if (summaryEl) summaryEl.textContent = vm.summary;
+    if (summaryEl) {
+      summaryEl.textContent = vm.summary;
+      summaryEl.hidden = false;
+    }
     if (eidEl) eidEl.textContent = vm.detailEid;
   }
 
@@ -621,7 +624,8 @@ const ExploreModule = (() => {
     if (metaEl) metaEl.textContent = vm.meta;
 
     if (summaryEl) {
-      summaryEl.textContent = vm.summary;
+      summaryEl.textContent = "";
+      summaryEl.hidden = true;
     }
 
     if (badgeEl) {
