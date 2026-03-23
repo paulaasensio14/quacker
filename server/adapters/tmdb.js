@@ -59,35 +59,35 @@ function _yearFromDate(dateStr) {
 }
 
 function _baseSearchItemFromMovie(item) {
-  return {
+    return {
     eid: `tmdb:movie:${String(item.id)}`,
     source: "tmdb",
     externalId: String(item.id),
-    type: "movie",
+    type: "pelicula",
     title: String(item.title || item.original_title || "").trim(),
-    year: _yearFromDate(item.release_date),
+    releaseDate: String(item.release_date || "").trim(),
+    summary: String(item.overview || "").trim(),
     cover: _posterUrl(item.poster_path),
-    description: String(item.overview || "").trim(),
     meta: {
-      year: _yearFromDate(item.release_date)
+        year: _yearFromDate(item.release_date)
     }
-  };
+    };
 }
 
 function _baseSearchItemFromTv(item) {
-  return {
+    return {
     eid: `tmdb:series:${String(item.id)}`,
     source: "tmdb",
     externalId: String(item.id),
-    type: "series",
+    type: "serie",
     title: String(item.name || item.original_name || "").trim(),
-    year: _yearFromDate(item.first_air_date),
+    releaseDate: String(item.first_air_date || "").trim(),
+    summary: String(item.overview || "").trim(),
     cover: _posterUrl(item.poster_path),
-    description: String(item.overview || "").trim(),
     meta: {
-      year: _yearFromDate(item.first_air_date)
+        year: _yearFromDate(item.first_air_date)
     }
-  };
+    };
 }
 
 export async function searchTmdb(query) {
@@ -141,13 +141,13 @@ export async function getTmdbDetail({ type, externalId }) {
     throw err;
   }
 
-  if (!["movie", "series"].includes(safeType)) {
+    if (!["pelicula", "serie"].includes(safeType)) {
     const err = new Error("invalid_tmdb_type");
     err.status = 400;
     throw err;
-  }
+    }
 
-  if (safeType === "movie") {
+    if (safeType === "pelicula") {
     const data = await _tmdbGet(`/movie/${encodeURIComponent(safeId)}`, {
       language: "es-ES"
     });
@@ -156,10 +156,11 @@ export async function getTmdbDetail({ type, externalId }) {
       eid: `tmdb:movie:${safeId}`,
       source: "tmdb",
       externalId: safeId,
-      type: "movie",
+      type: "pelicula",
       title: String(data.title || data.original_title || "").trim(),
       originalTitle: String(data.original_title || "").trim(),
-      year: _yearFromDate(data.release_date),
+      releaseDate: String(data.release_date || "").trim(),
+      summary: String(data.overview || "").trim(),
       description: String(data.overview || "").trim(),
       cover: _posterUrl(data.poster_path),
       backdrop: _backdropUrl(data.backdrop_path),
@@ -167,12 +168,11 @@ export async function getTmdbDetail({ type, externalId }) {
       runtime: Number(data.runtime || 0) || null,
       rating: Number(data.vote_average || 0) || null,
       ratingCount: Number(data.vote_count || 0) || 0,
-      releaseDate: String(data.release_date || "").trim(),
       statusLabel: String(data.status || "").trim(),
       seasons: null,
       episodes: null,
       meta: {
-        year: _yearFromDate(data.release_date)
+       year: _yearFromDate(data.release_date)
       }
     };
   }
@@ -185,25 +185,25 @@ export async function getTmdbDetail({ type, externalId }) {
     eid: `tmdb:series:${safeId}`,
     source: "tmdb",
     externalId: safeId,
-    type: "series",
+    type: "serie",
     title: String(data.name || data.original_name || "").trim(),
     originalTitle: String(data.original_name || "").trim(),
-    year: _yearFromDate(data.first_air_date),
+    releaseDate: String(data.first_air_date || "").trim(),
+    summary: String(data.overview || "").trim(),
     description: String(data.overview || "").trim(),
     cover: _posterUrl(data.poster_path),
     backdrop: _backdropUrl(data.backdrop_path),
     genres: Array.isArray(data.genres) ? data.genres.map((g) => g.name).filter(Boolean) : [],
     runtime: Array.isArray(data.episode_run_time) && data.episode_run_time.length > 0
-      ? Number(data.episode_run_time[0] || 0) || null
-      : null,
+    ? Number(data.episode_run_time[0] || 0) || null
+    : null,
     rating: Number(data.vote_average || 0) || null,
     ratingCount: Number(data.vote_count || 0) || 0,
-    releaseDate: String(data.first_air_date || "").trim(),
     statusLabel: String(data.status || "").trim(),
     seasons: Number(data.number_of_seasons || 0) || 0,
     episodes: Number(data.number_of_episodes || 0) || 0,
     meta: {
-      year: _yearFromDate(data.first_air_date)
+    year: _yearFromDate(data.first_air_date)
     }
   };
 }
