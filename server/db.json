@@ -161,18 +161,15 @@
           "updatedAt": "2026-03-17T19:27:55.509Z"
         },
         {
-          "id": "u_1773916042849_f0abd7d09861c",
+          "id": "u_1774297610650_775d5eaa373918",
           "type": "serie",
-          "title": "La casa de papel",
+          "title": "Más que rivales",
           "status": "watching",
           "progress": 0,
-          "meta": {
-            "season": 1,
-            "episode": 2
-          },
-          "cover": "",
-          "createdAt": "2026-03-19T10:27:22.848Z",
-          "updatedAt": "2026-03-19T11:05:08.670Z"
+          "meta": {},
+          "cover": "https://image.tmdb.org/t/p/w500/rFZLFbuAOIQGZxXJT9XWhE87XMY.jpg",
+          "createdAt": "2026-03-23T20:26:50.650Z",
+          "updatedAt": "2026-03-23T20:26:50.650Z"
         }
       ],
       "lists": []
