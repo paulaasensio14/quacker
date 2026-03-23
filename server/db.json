@@ -40,7 +40,9 @@
         "name": "Paula Asensio Sánchez",
         "handle": "@user",
         "language": "es",
-        "theme": "light"
+        "theme": "light",
+        "bio": "",
+        "avatar": "assets/img/avatars/avatar-1.png"
       },
       "library": [
         {
@@ -172,7 +174,8 @@
           "createdAt": "2026-03-19T10:27:22.848Z",
           "updatedAt": "2026-03-19T11:05:08.670Z"
         }
-      ]
+      ],
+      "lists": []
     },
     "u_1773857207355_26cbd57dd68068": {
       "profile": {

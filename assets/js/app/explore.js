@@ -60,24 +60,25 @@ const ExploreModule = (() => {
   }
 
   function _scheduleApplyFilters() {
-    // Debounce: evita re-render por cada tecla
     if (__applyTimer) clearTimeout(__applyTimer);
-
     _setExploreLoading(true);
 
-    __applyTimer = setTimeout(() => {
-      _applyFilters();
+    __applyTimer = setTimeout(async () => {
+      try {
+        await load();
+      } catch (e) {
+        console.error("Explore remote search failed", e);
+      } finally {
+        const elapsed = performance.now() - __loadingStartedAt;
+        const minMs = 180;
+        const remaining = Math.max(0, minMs - elapsed);
 
-      // Duración mínima para que no parpadee
-      const elapsed = performance.now() - __loadingStartedAt;
-      const minMs = 180;
-      const remaining = Math.max(0, minMs - elapsed);
-
-      if (__loadingMinTimer) clearTimeout(__loadingMinTimer);
-      __loadingMinTimer = setTimeout(() => {
-        _setExploreLoading(false);
-      }, remaining);
-    }, 150);
+        if (__loadingMinTimer) clearTimeout(__loadingMinTimer);
+        __loadingMinTimer = setTimeout(() => {
+          _setExploreLoading(false);
+        }, remaining);
+      }
+    }, 250);
   }
 
   const TYPE_LABELS = window.TYPE_LABELS || {
