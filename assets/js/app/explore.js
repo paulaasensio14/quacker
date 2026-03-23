@@ -102,18 +102,25 @@ const ExploreModule = (() => {
 
   function _normalizeExploreItem(rawItem, index = 0) {
     const raw = rawItem && typeof rawItem === "object" ? rawItem : {};
-
     const eid = raw.eid ?? `explore_${index + 1}`;
     const title = _safeText(raw.title).trim() || "Sin título";
-    const type = _safeText(raw.type).trim();
+
+    const rawType = _norm(raw.type);
+    const type =
+      rawType === "serie" || rawType === "series" || rawType === "tv" || rawType === "show"
+        ? "serie"
+        : rawType === "pelicula" || rawType === "película" || rawType === "movie" || rawType === "film"
+          ? "pelicula"
+          : rawType === "book" || rawType === "libro" || rawType === "books"
+            ? "book"
+            : rawType === "game" || rawType === "videojuego" || rawType === "videogame"
+              ? "game"
+              : rawType;
+
     const releaseDate = _safeText(raw.releaseDate).trim();
     const summary = _safeText(raw.summary).trim();
-
     const releaseDateObj = releaseDate ? new Date(releaseDate) : null;
-    const releaseTs =
-      releaseDateObj && !Number.isNaN(releaseDateObj.getTime())
-        ? releaseDateObj.getTime()
-        : null;
+    const releaseTs = releaseDateObj && !Number.isNaN(releaseDateObj.getTime()) ? releaseDateObj.getTime() : null;
 
     return {
       ...raw,
@@ -239,7 +246,15 @@ const ExploreModule = (() => {
 
   function _buildExploreCardViewModel(item) {
     const title = _safeText(item?.title) || "Sin título";
-    const typeLabel = TYPE_LABELS[item?.type] || "Contenido";
+    const normalizedType = _norm(item?.type);
+    const typeLabel =
+      TYPE_LABELS[normalizedType] ||
+      (normalizedType === "tv" ? "Serie" : "") ||
+      (normalizedType === "movie" ? "Película" : "") ||
+      (normalizedType === "libro" ? "Libro" : "") ||
+      (normalizedType === "videojuego" ? "Videojuego" : "") ||
+      "Contenido";
+
     const isNew = _isNewByDate(item?.releaseDate);
     const saved = !!item?.__inLibrary;
     const saving = !!item?.__saving;
@@ -531,8 +546,17 @@ const ExploreModule = (() => {
   function _buildExploreDrawerTextModel(item) {
     const count = Number(item?.__listsCount || 0);
 
+    const normalizedType = _norm(item?.type);
+    const resolvedTypeLabel =
+      TYPE_LABELS[normalizedType] ||
+      (normalizedType === "tv" ? "Serie" : "") ||
+      (normalizedType === "movie" ? "Película" : "") ||
+      (normalizedType === "libro" ? "Libro" : "") ||
+      (normalizedType === "videojuego" ? "Videojuego" : "") ||
+      "Contenido";
+
     const metaParts = [
-      TYPE_LABELS[item?.type] || "Contenido",
+      resolvedTypeLabel,
       item?.releaseDate ? _safeText(item.releaseDate) : ""
     ].filter(Boolean);
 
@@ -547,7 +571,7 @@ const ExploreModule = (() => {
       title: _safeText(item?.title) || "Sin título",
       meta: metaParts.join(" · "),
       summary: _safeText(item?.summary) || "Sin descripción disponible.",
-      detailType: TYPE_LABELS[item?.type] || "Contenido",
+      detailType: resolvedTypeLabel,
       detailReleaseDate: item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha",
       detailLibraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
       detailListsCount:
