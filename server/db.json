@@ -148,6 +148,20 @@
           "cover": "https://image.tmdb.org/t/p/w500/aVYHMW8pdzJ9qG1OGRMKyGy9xor.jpg",
           "createdAt": "2026-03-24T14:21:28.878Z",
           "updatedAt": "2026-03-24T14:21:38.332Z"
+        },
+        {
+          "id": "u_1774378175114_e08322ac7079b8",
+          "type": "book",
+          "title": "Comerás flores",
+          "status": "reading",
+          "progress": 0,
+          "meta": {
+            "totalPages": 163,
+            "pagesRead": 0
+          },
+          "cover": "http://books.google.com/books/content?id=ADpuEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+          "createdAt": "2026-03-24T18:49:35.113Z",
+          "updatedAt": "2026-03-24T18:49:35.113Z"
         }
       ],
       "lists": [
