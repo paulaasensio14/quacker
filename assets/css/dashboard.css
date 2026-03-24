@@ -2509,7 +2509,7 @@ main.app-main {
 }
 
 .list-card {
-  padding: 0;
+  padding: 8px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
