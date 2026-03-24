@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { searchTmdb, getTmdbDetail } from "./adapters/tmdb.js";
+import { searchGoogleBooks, getGoogleBookDetail } from "./adapters/google-books.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -371,10 +372,18 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
 
   try {
     if (q) {
-      const items = await searchTmdb(q);
+      const [tmdbItems, googleBookItems] = await Promise.allSettled([
+        searchTmdb(q),
+        searchGoogleBooks(q)
+      ]);
+
+      const items = [
+        ...(tmdbItems.status === "fulfilled" && Array.isArray(tmdbItems.value) ? tmdbItems.value : []),
+        ...(googleBookItems.status === "fulfilled" && Array.isArray(googleBookItems.value) ? googleBookItems.value : [])
+      ];
+
       return res.json({ items });
     }
-
     const db = _readDb();
     const bucket = _getUserBucket(db, req.session.userId);
 
@@ -405,12 +414,17 @@ app.get("/api/explore/item/:source/:type/:externalId", _requireAuth, async (req,
   const externalId = String(req.params.externalId || "").trim();
 
   try {
-    if (source !== "tmdb") {
-      return res.status(400).json({ error: "unsupported_source" });
+    if (source === "tmdb") {
+      const item = await getTmdbDetail({ type, externalId });
+      return res.json(item);
     }
 
-    const item = await getTmdbDetail({ type, externalId });
-    return res.json(item);
+    if (source === "google_books") {
+      const item = await getGoogleBookDetail(externalId);
+      return res.json(item);
+    }
+
+    return res.status(400).json({ error: "unsupported_source" });
   } catch (err) {
     console.error("GET /api/explore/item error", err);
     return res.status(err?.status || 500).json({

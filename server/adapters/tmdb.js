@@ -10,6 +10,7 @@ function _tmdbKey() {
 
 function _tmdbHeaders() {
   const key = _tmdbKey();
+  console.log("TMDB KEY:", ENV.TMDB_API_KEY);
   if (!key) {
     const err = new Error("missing_tmdb_api_key");
     err.status = 500;
