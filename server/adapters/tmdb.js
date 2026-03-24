@@ -10,25 +10,43 @@ function _tmdbKey() {
 
 function _tmdbHeaders() {
   const key = _tmdbKey();
-  console.log("TMDB KEY:", ENV.TMDB_API_KEY);
+
   if (!key) {
     const err = new Error("missing_tmdb_api_key");
     err.status = 500;
     throw err;
   }
 
-  return {
-    Authorization: `Bearer ${key}`,
-    Accept: "application/json"
-  };
+  const looksLikeBearerToken = key.startsWith("eyJ");
+
+  return looksLikeBearerToken
+    ? {
+        Authorization: `Bearer ${key}`,
+        Accept: "application/json"
+      }
+    : {
+        Accept: "application/json"
+      };
 }
 
 async function _tmdbGet(path, params = {}) {
   const url = new URL(`${TMDB_BASE_URL}${path}`);
+  const key = _tmdbKey();
+  const looksLikeBearerToken = key.startsWith("eyJ");
 
-  for (const [key, value] of Object.entries(params)) {
+  for (const [paramKey, value] of Object.entries(params)) {
     if (value == null || value === "") continue;
-    url.searchParams.set(key, String(value));
+    url.searchParams.set(paramKey, String(value));
+  }
+
+  if (!key) {
+    const err = new Error("missing_tmdb_api_key");
+    err.status = 500;
+    throw err;
+  }
+
+  if (!looksLikeBearerToken) {
+    url.searchParams.set("api_key", key);
   }
 
   const res = await fetch(url, {
