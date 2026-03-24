@@ -1011,13 +1011,9 @@ const LibraryUI = (() => {
       // Marcador temporal para deshacer activities creadas por ESTE click
       const sinceIso = new Date(Date.now() - 2000).toISOString();
 
-      const res = await (ApiClient.applyQuickProgress
-        ? ApiClient.applyQuickProgress(itemId)
-        : ApiClient.progressLibraryItem(itemId, 5)
-      );
+      const res = await ApiClient.resumeLibraryItem(itemId);
 
       const justCompleted = !!res?.justCompleted;
-
       const title = justCompleted ? "Contenido completado" : "Progreso actualizado";
       const message = justCompleted
         ? "Se ha marcado como finalizado."
