@@ -795,14 +795,14 @@ app.post("/api/library", _requireAuth, (req, res) => {
   const allowedMetaKeys = new Set([
     "totalEpisodes",
     "totalSeasons",
-    "seasonBreakdown",
     "totalPages",
     "totalChapters",
     "platform",
     "author",
     "season",
     "episode",
-    "pagesRead"
+    "pagesRead",
+    "seasonBreakdown"
   ]);
 
   const sanitizedMeta = {};
@@ -951,18 +951,18 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
 
     if (patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta)) {
 
-      const allowedMetaKeys = new Set([
-        "totalEpisodes",
-        "totalSeasons",
-        "seasonBreakdown",
-        "totalPages",
-        "totalChapters",
-        "platform",
-        "author",
-        "season",
-        "episode",
-        "pagesRead"
-      ]);
+    const allowedMetaKeys = new Set([
+      "totalEpisodes",
+      "totalSeasons",
+      "totalPages",
+      "totalChapters",
+      "platform",
+      "author",
+      "season",
+      "episode",
+      "pagesRead",
+      "seasonBreakdown"
+    ]);
 
       const sanitizedMeta = {};
 

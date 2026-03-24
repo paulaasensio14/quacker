@@ -849,117 +849,114 @@ const ApiClient = (() => {
         nowIso;
 
       const lastDate = new Date(fallbackIso);
+
       const daysSinceLast = Math.max(
         0,
         Math.floor((now - lastDate) / (1000 * 60 * 60 * 24))
       );
 
+      if (item.type === "serie") {
+        const meta = { ...(item.meta || {}) };
+
+        const totalEpisodes = Math.max(0, Number(meta.totalEpisodes || 0));
+        const totalSeasons = Math.max(1, Number(meta.totalSeasons || 1));
+        const currentSeason = Math.max(1, Number(meta.season || 1));
+        const currentEpisode = Math.max(1, Number(meta.episode || 1));
+
+        const rawBreakdown = meta.seasonBreakdown;
+        const seasonBreakdown = Array.isArray(rawBreakdown)
+          ? rawBreakdown
+          : (rawBreakdown && typeof rawBreakdown === "object")
+            ? Object.entries(rawBreakdown)
+                .map(([season, episodes]) => ({
+                  seasonNumber: Number(season),
+                  episodeCount: Number(episodes)
+                }))
+                .filter((x) => Number.isFinite(x.seasonNumber) && Number.isFinite(x.episodeCount))
+                .sort((a, b) => a.seasonNumber - b.seasonNumber)
+            : [];
+
+        const getEpisodesInSeason = (seasonNumber) => {
+          const hit = seasonBreakdown.find(
+            (entry) => Number(entry?.seasonNumber) === Number(seasonNumber)
+          );
+          if (hit && Number(hit.episodeCount) > 0) return Number(hit.episodeCount);
+
+          if (totalSeasons === 1 && totalEpisodes > 0) return totalEpisodes;
+          return 0;
+        };
+
+        let nextSeason = currentSeason;
+        let nextEpisode = currentEpisode;
+        let nextStatus = "watching";
+        let justCompleted = false;
+
+        const currentSeasonEpisodes = getEpisodesInSeason(currentSeason);
+
+        if (currentSeasonEpisodes > 0 && currentEpisode < currentSeasonEpisodes) {
+          nextEpisode = currentEpisode + 1;
+        } else if (currentSeason < totalSeasons && getEpisodesInSeason(currentSeason + 1) > 0) {
+          nextSeason = currentSeason + 1;
+          nextEpisode = 1;
+        } else {
+          justCompleted = true;
+          nextStatus = "completed";
+        }
+
+        let completedEpisodes = 0;
+
+        if (justCompleted) {
+          completedEpisodes = totalEpisodes > 0 ? totalEpisodes : currentEpisode;
+        } else {
+          for (let s = 1; s < nextSeason; s += 1) {
+            completedEpisodes += getEpisodesInSeason(s);
+          }
+          completedEpisodes += nextEpisode;
+        }
+
+        const nextProgress =
+          totalEpisodes > 0
+            ? Math.max(0, Math.min(100, Math.round((completedEpisodes / totalEpisodes) * 100)))
+            : Number(item.progress || 0);
+
+        const updated = {
+          ...item,
+          status: nextStatus,
+          progress: justCompleted ? 100 : nextProgress,
+          updatedAt: nowIso,
+          lastActivityAt: nowIso,
+          meta: {
+            ...meta,
+            season: justCompleted ? currentSeason : nextSeason,
+            episode: justCompleted ? currentEpisode : nextEpisode
+          }
+        };
+
+        await updateLibraryItem(updated, { logActivity: false });
+
+        return {
+          ok: true,
+          daysSinceLast,
+          itemId: item.id,
+          title: item.title,
+          justCompleted,
+          deltaLabel: justCompleted
+            ? "Serie completada"
+            : `T${updated.meta.season} · E${updated.meta.episode}`
+        };
+      }
+
       let nextStatus = item.status;
 
       if (item.status === "not_started") {
-        if (item.type === "serie") nextStatus = "watching";
-        else if (item.type === "book") nextStatus = "reading";
+        if (item.type === "book") nextStatus = "reading";
         else if (item.type === "game") nextStatus = "playing";
         else nextStatus = "in_progress";
-      }
-
-      const nextMeta = { ...(item.meta || {}) };
-      let nextProgress = Math.max(0, Math.min(100, Number(item.progress ?? 0) || 0));
-
-      if (item.type === "serie") {
-        const rawBreakdown = Array.isArray(nextMeta.seasonBreakdown) ? nextMeta.seasonBreakdown : [];
-        const seasonBreakdown = rawBreakdown
-          .map((season) => ({
-            seasonNumber: Math.max(0, Number(season?.seasonNumber || 0) || 0),
-            episodeCount: Math.max(0, Number(season?.episodeCount || 0) || 0)
-          }))
-          .filter((season) => season.seasonNumber > 0 && season.episodeCount > 0)
-          .sort((a, b) => a.seasonNumber - b.seasonNumber);
-
-        let currentSeason = Math.max(1, Number(nextMeta.season || 1) || 1);
-        let currentEpisode = Math.max(1, Number(nextMeta.episode || 1) || 1);
-
-        if (seasonBreakdown.length) {
-          const currentSeasonData =
-            seasonBreakdown.find((season) => season.seasonNumber === currentSeason) ||
-            seasonBreakdown[0];
-
-          if (currentSeasonData) {
-            currentSeason = currentSeasonData.seasonNumber;
-
-            if (currentEpisode < currentSeasonData.episodeCount) {
-              currentEpisode += 1;
-            } else {
-              const currentIndex = seasonBreakdown.findIndex(
-                (season) => season.seasonNumber === currentSeasonData.seasonNumber
-              );
-              const nextSeasonData =
-                currentIndex >= 0 ? seasonBreakdown[currentIndex + 1] : null;
-
-              if (nextSeasonData) {
-                currentSeason = nextSeasonData.seasonNumber;
-                currentEpisode = 1;
-              } else {
-                currentEpisode = currentSeasonData.episodeCount;
-                nextStatus = "completed";
-                nextProgress = 100;
-              }
-            }
-
-            const watchedEpisodesBeforeCurrent =
-              seasonBreakdown
-                .filter((season) => season.seasonNumber < currentSeason)
-                .reduce((sum, season) => sum + season.episodeCount, 0);
-
-            const totalEpisodesFromBreakdown =
-              seasonBreakdown.reduce((sum, season) => sum + season.episodeCount, 0);
-
-            const watchedEpisodes = watchedEpisodesBeforeCurrent + currentEpisode;
-            if (totalEpisodesFromBreakdown > 0) {
-              nextProgress = Math.max(
-                0,
-                Math.min(100, Math.round((watchedEpisodes / totalEpisodesFromBreakdown) * 100))
-              );
-            }
-
-            nextMeta.totalSeasons = Math.max(
-              Number(nextMeta.totalSeasons || 0) || 0,
-              seasonBreakdown.length
-            );
-            nextMeta.totalEpisodes = Math.max(
-              Number(nextMeta.totalEpisodes || 0) || 0,
-              totalEpisodesFromBreakdown
-            );
-          }
-        } else {
-          const totalEpisodes = Math.max(0, Number(nextMeta.totalEpisodes || 0) || 0);
-
-          currentEpisode += 1;
-          nextMeta.totalEpisodes = totalEpisodes;
-
-          if (totalEpisodes > 0) {
-            nextProgress = Math.max(
-              0,
-              Math.min(100, Math.round((currentEpisode / totalEpisodes) * 100))
-            );
-
-            if (currentEpisode >= totalEpisodes) {
-              currentEpisode = totalEpisodes;
-              nextStatus = "completed";
-              nextProgress = 100;
-            }
-          }
-        }
-
-        nextMeta.season = currentSeason;
-        nextMeta.episode = currentEpisode;
       }
 
       const updated = {
         ...item,
         status: nextStatus,
-        progress: nextProgress,
-        meta: nextMeta,
         updatedAt: nowIso,
         lastActivityAt: nowIso
       };
@@ -1000,109 +997,92 @@ const ApiClient = (() => {
     }
 
     const daysSinceLast = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
-
     const nowIso = now.toISOString();
-    item.updatedAt = nowIso;
-
-    if ("lastActivityAt" in item) item.lastActivityAt = nowIso;
-
-    if (item.status === "not_started") {
-      if (item.type === "serie") item.status = "watching";
-      else if (item.type === "book") item.status = "reading";
-      else if (item.type === "game") item.status = "playing";
-      else item.status = "in_progress";
-    }
-
-    item.meta = { ...(item.meta || {}) };
-    item.progress = Math.max(0, Math.min(100, Number(item.progress ?? 0) || 0));
 
     if (item.type === "serie") {
-      const rawBreakdown = Array.isArray(item.meta.seasonBreakdown) ? item.meta.seasonBreakdown : [];
-      const seasonBreakdown = rawBreakdown
-        .map((season) => ({
-          seasonNumber: Math.max(0, Number(season?.seasonNumber || 0) || 0),
-          episodeCount: Math.max(0, Number(season?.episodeCount || 0) || 0)
-        }))
-        .filter((season) => season.seasonNumber > 0 && season.episodeCount > 0)
-        .sort((a, b) => a.seasonNumber - b.seasonNumber);
+      const meta = { ...(item.meta || {}) };
 
-      let currentSeason = Math.max(1, Number(item.meta.season || 1) || 1);
-      let currentEpisode = Math.max(1, Number(item.meta.episode || 1) || 1);
+      const totalEpisodes = Math.max(0, Number(meta.totalEpisodes || 0));
+      const totalSeasons = Math.max(1, Number(meta.totalSeasons || 1));
+      const currentSeason = Math.max(1, Number(meta.season || 1));
+      const currentEpisode = Math.max(1, Number(meta.episode || 1));
 
-      if (seasonBreakdown.length) {
-        const currentSeasonData =
-          seasonBreakdown.find((season) => season.seasonNumber === currentSeason) ||
-          seasonBreakdown[0];
+      const rawBreakdown = meta.seasonBreakdown;
+      const seasonBreakdown = Array.isArray(rawBreakdown)
+        ? rawBreakdown
+        : (rawBreakdown && typeof rawBreakdown === "object")
+          ? Object.entries(rawBreakdown)
+              .map(([season, episodes]) => ({
+                seasonNumber: Number(season),
+                episodeCount: Number(episodes)
+              }))
+              .filter((x) => Number.isFinite(x.seasonNumber) && Number.isFinite(x.episodeCount))
+              .sort((a, b) => a.seasonNumber - b.seasonNumber)
+          : [];
 
-        if (currentSeasonData) {
-          currentSeason = currentSeasonData.seasonNumber;
+      const getEpisodesInSeason = (seasonNumber) => {
+        const hit = seasonBreakdown.find(
+          (entry) => Number(entry?.seasonNumber) === Number(seasonNumber)
+        );
+        if (hit && Number(hit.episodeCount) > 0) return Number(hit.episodeCount);
 
-          if (currentEpisode < currentSeasonData.episodeCount) {
-            currentEpisode += 1;
-          } else {
-            const currentIndex = seasonBreakdown.findIndex(
-              (season) => season.seasonNumber === currentSeasonData.seasonNumber
-            );
-            const nextSeasonData =
-              currentIndex >= 0 ? seasonBreakdown[currentIndex + 1] : null;
+        if (totalSeasons === 1 && totalEpisodes > 0) return totalEpisodes;
+        return 0;
+      };
 
-            if (nextSeasonData) {
-              currentSeason = nextSeasonData.seasonNumber;
-              currentEpisode = 1;
-            } else {
-              currentEpisode = currentSeasonData.episodeCount;
-              item.status = "completed";
-              item.progress = 100;
-            }
-          }
+      let nextSeason = currentSeason;
+      let nextEpisode = currentEpisode;
+      let nextStatus = "watching";
 
-          const watchedEpisodesBeforeCurrent =
-            seasonBreakdown
-              .filter((season) => season.seasonNumber < currentSeason)
-              .reduce((sum, season) => sum + season.episodeCount, 0);
+      const currentSeasonEpisodes = getEpisodesInSeason(currentSeason);
 
-          const totalEpisodesFromBreakdown =
-            seasonBreakdown.reduce((sum, season) => sum + season.episodeCount, 0);
-
-          const watchedEpisodes = watchedEpisodesBeforeCurrent + currentEpisode;
-          if (totalEpisodesFromBreakdown > 0) {
-            item.progress = Math.max(
-              0,
-              Math.min(100, Math.round((watchedEpisodes / totalEpisodesFromBreakdown) * 100))
-            );
-          }
-
-          item.meta.totalSeasons = Math.max(
-            Number(item.meta.totalSeasons || 0) || 0,
-            seasonBreakdown.length
-          );
-          item.meta.totalEpisodes = Math.max(
-            Number(item.meta.totalEpisodes || 0) || 0,
-            totalEpisodesFromBreakdown
-          );
-        }
+      if (currentSeasonEpisodes > 0 && currentEpisode < currentSeasonEpisodes) {
+        nextEpisode = currentEpisode + 1;
+      } else if (currentSeason < totalSeasons && getEpisodesInSeason(currentSeason + 1) > 0) {
+        nextSeason = currentSeason + 1;
+        nextEpisode = 1;
       } else {
-        const totalEpisodes = Math.max(0, Number(item.meta.totalEpisodes || 0) || 0);
-
-        currentEpisode += 1;
-        item.meta.totalEpisodes = totalEpisodes;
-
-        if (totalEpisodes > 0) {
-          item.progress = Math.max(
-            0,
-            Math.min(100, Math.round((currentEpisode / totalEpisodes) * 100))
-          );
-
-          if (currentEpisode >= totalEpisodes) {
-            currentEpisode = totalEpisodes;
-            item.status = "completed";
-            item.progress = 100;
-          }
-        }
+        nextStatus = "completed";
       }
 
-      item.meta.season = currentSeason;
-      item.meta.episode = currentEpisode;
+      let completedEpisodes = 0;
+
+      if (nextStatus === "completed") {
+        completedEpisodes = totalEpisodes > 0 ? totalEpisodes : currentEpisode;
+      } else {
+        for (let s = 1; s < nextSeason; s += 1) {
+          completedEpisodes += getEpisodesInSeason(s);
+        }
+        completedEpisodes += nextEpisode;
+      }
+
+      item.status = nextStatus;
+      item.progress =
+        nextStatus === "completed"
+          ? 100
+          : (
+              totalEpisodes > 0
+                ? Math.max(0, Math.min(100, Math.round((completedEpisodes / totalEpisodes) * 100)))
+                : Number(item.progress || 0)
+            );
+
+      item.meta = {
+        ...meta,
+        season: nextStatus === "completed" ? currentSeason : nextSeason,
+        episode: nextStatus === "completed" ? currentEpisode : nextEpisode
+      };
+
+      item.updatedAt = nowIso;
+      if ("lastActivityAt" in item) item.lastActivityAt = nowIso;
+    } else {
+      item.updatedAt = nowIso;
+      if ("lastActivityAt" in item) item.lastActivityAt = nowIso;
+
+      if (item.status === "not_started") {
+        if (item.type === "book") item.status = "reading";
+        else if (item.type === "game") item.status = "playing";
+        else item.status = "in_progress";
+      }
     }
 
     if (typeof FakeBackend !== "undefined") {

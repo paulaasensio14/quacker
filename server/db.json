@@ -46,23 +46,115 @@
       },
       "library": [
         {
-          "id": "u_1774346150331_3523df2c1b3e28",
+          "id": "u_1774348121492_3669111dcc5c",
           "type": "serie",
-          "title": "Jujutsu Kaisen",
+          "title": "Key & Peele",
           "status": "watching",
-          "progress": 85,
+          "progress": 0,
           "meta": {
-            "totalSeasons": 1,
-            "totalEpisodes": 59,
+            "totalSeasons": 5,
+            "totalEpisodes": 53,
             "season": 1,
             "episode": 1
           },
-          "cover": "https://image.tmdb.org/t/p/w500/80eHrBl03xWcQYecoTO1LlkXpN1.jpg",
-          "createdAt": "2026-03-24T09:55:50.331Z",
-          "updatedAt": "2026-03-24T09:56:11.826Z"
+          "cover": "https://image.tmdb.org/t/p/w500/24csSdkE6gbYBCK6ngknvsJ1Zdj.jpg",
+          "createdAt": "2026-03-24T10:28:41.492Z",
+          "updatedAt": "2026-03-24T10:28:41.492Z"
+        },
+        {
+          "id": "u_1774348199580_c50f1aa98384a",
+          "type": "serie",
+          "title": "Community",
+          "status": "watching",
+          "progress": 0,
+          "meta": {
+            "totalSeasons": 6,
+            "totalEpisodes": 110,
+            "season": 1,
+            "episode": 1
+          },
+          "cover": "https://image.tmdb.org/t/p/w500/3KUjDt8XY7w2Ku70UE0SECmv1zP.jpg",
+          "createdAt": "2026-03-24T10:29:59.580Z",
+          "updatedAt": "2026-03-24T10:29:59.580Z"
+        },
+        {
+          "id": "u_1774348314070_ad0bf0bcdb051",
+          "type": "serie",
+          "title": "Kimetsu no Yaiba: Guardianes de la Noche",
+          "status": "watching",
+          "progress": 0,
+          "meta": {
+            "totalSeasons": 5,
+            "totalEpisodes": 63,
+            "season": 1,
+            "episode": 1
+          },
+          "cover": "https://image.tmdb.org/t/p/w500/inXU5hvbDbitrYOgLrq2QjYqiJD.jpg",
+          "createdAt": "2026-03-24T10:31:54.070Z",
+          "updatedAt": "2026-03-24T10:31:54.070Z"
+        },
+        {
+          "id": "u_1774348766470_4f195ad1fba82",
+          "type": "serie",
+          "title": "La casa de papel",
+          "status": "completed",
+          "progress": 100,
+          "meta": {
+            "totalSeasons": 3,
+            "totalEpisodes": 41,
+            "season": 1,
+            "episode": 2
+          },
+          "cover": "https://image.tmdb.org/t/p/w500/z01Dc0Ly2GmCpLe6Scx4d3dPP1S.jpg",
+          "createdAt": "2026-03-24T10:39:26.470Z",
+          "updatedAt": "2026-03-24T10:39:48.371Z"
         }
       ],
-      "lists": []
+      "lists": [
+        {
+          "id": "u_1774347819445_3f16831b1a3588",
+          "name": "TGE",
+          "description": "Cosas pendientes por subir a The Good Emmy",
+          "visibility": "private",
+          "items": [
+            {
+              "id": "u_1774348121492_3669111dcc5c",
+              "addedAt": "2026-03-24T10:28:41.508Z"
+            },
+            {
+              "id": "u_1774348199580_c50f1aa98384a",
+              "addedAt": "2026-03-24T10:29:59.593Z"
+            },
+            {
+              "id": "u_1774348314070_ad0bf0bcdb051",
+              "addedAt": "2026-03-24T10:31:54.101Z"
+            }
+          ],
+          "itemsCount": 3,
+          "createdAt": "2026-03-24T10:23:39.445Z",
+          "updatedAt": "2026-03-24T10:31:54.101Z"
+        },
+        {
+          "id": "u_1774347909764_1f28e27f9cd3c8",
+          "name": "Carmen",
+          "description": "Pendientes con Carmen o recomendaciones suyas",
+          "visibility": "private",
+          "items": [],
+          "itemsCount": 0,
+          "createdAt": "2026-03-24T10:25:09.764Z",
+          "updatedAt": "2026-03-24T10:25:09.764Z"
+        },
+        {
+          "id": "u_1774347928180_a7a7810f33e0e",
+          "name": "Andrea",
+          "description": "Pendientes para ver con ella o recomendaciones suyas",
+          "visibility": "private",
+          "items": [],
+          "itemsCount": 0,
+          "createdAt": "2026-03-24T10:25:28.180Z",
+          "updatedAt": "2026-03-24T10:25:28.180Z"
+        }
+      ]
     },
     "u_1773857207355_26cbd57dd68068": {
       "profile": {
