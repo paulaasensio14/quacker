@@ -377,6 +377,14 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
         searchGoogleBooks(q)
       ]);
 
+      if (tmdbResult.status === "rejected") {
+        console.error("[/api/explore] TMDB search failed:", tmdbResult.reason);
+      }
+
+      if (googleBooksResult.status === "rejected") {
+        console.error("[/api/explore] Google Books search failed:", googleBooksResult.reason);
+      }
+
       const tmdbItems =
         tmdbResult.status === "fulfilled" && Array.isArray(tmdbResult.value)
           ? tmdbResult.value
