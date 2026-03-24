@@ -904,8 +904,7 @@ const ExploreModule = (() => {
       const safeFeed = Array.isArray(rawFeed) ? rawFeed : [];
 
       feed = safeFeed
-        .map((item, index) => _normalizeExploreItem(item, index))
-        .filter((item) => item.cover);
+        .map((item, index) => _normalizeExploreItem(item, index));
     } catch (e) {
       console.error("ExploreModule.load error", e);
       feed = [];
