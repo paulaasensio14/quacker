@@ -880,17 +880,15 @@ const ApiClient = (() => {
           const hit = seasonBreakdown.find(
             (entry) => Number(entry?.seasonNumber) === Number(seasonNumber)
           );
+
           if (hit && Number(hit.episodeCount) > 0) return Number(hit.episodeCount);
 
-          // Fallback defensivo:
-          // si aún no tenemos breakdown persistido pero sí totalEpisodes,
-          // no podemos completar la serie al primer click.
-          // Tratamos temporalmente la temporada actual como una temporada larga.
           if (seasonBreakdown.length === 0 && totalEpisodes > 0) {
             return totalEpisodes;
           }
 
           if (totalSeasons === 1 && totalEpisodes > 0) return totalEpisodes;
+
           return 0;
         };
 
@@ -899,9 +897,12 @@ const ApiClient = (() => {
         let nextStatus = "watching";
         let justCompleted = false;
 
+        const hasEpisodeMetadata = seasonBreakdown.length > 0 || totalEpisodes > 0;
         const currentSeasonEpisodes = getEpisodesInSeason(currentSeason);
 
-        if (currentSeasonEpisodes > 0 && currentEpisode < currentSeasonEpisodes) {
+        if (!hasEpisodeMetadata) {
+          nextStatus = "watching";
+        } else if (currentSeasonEpisodes > 0 && currentEpisode < currentSeasonEpisodes) {
           nextEpisode = currentEpisode + 1;
         } else if (currentSeason < totalSeasons && getEpisodesInSeason(currentSeason + 1) > 0) {
           nextSeason = currentSeason + 1;
@@ -915,7 +916,7 @@ const ApiClient = (() => {
 
         if (justCompleted) {
           completedEpisodes = totalEpisodes > 0 ? totalEpisodes : currentEpisode;
-        } else {
+        } else if (hasEpisodeMetadata && totalEpisodes > 0) {
           for (let s = 1; s < nextSeason; s += 1) {
             completedEpisodes += getEpisodesInSeason(s);
           }
@@ -923,9 +924,11 @@ const ApiClient = (() => {
         }
 
         const nextProgress =
-          totalEpisodes > 0
-            ? Math.max(0, Math.min(100, Math.round((completedEpisodes / totalEpisodes) * 100)))
-            : Number(item.progress || 0);
+        !hasEpisodeMetadata
+        ? Math.max(1, Number(item.progress || 0))
+        : totalEpisodes > 0
+          ? Math.max(0, Math.min(100, Math.round((completedEpisodes / totalEpisodes) * 100)))
+          : Number(item.progress || 0);
 
         const updated = {
           ...item,
