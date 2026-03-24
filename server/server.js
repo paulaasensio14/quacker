@@ -6,7 +6,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { searchTmdb, getTmdbDetail } from "./adapters/tmdb.js";
-import { searchGoogleBooks, getGoogleBookDetail } from "./adapters/google-books.js";
+import { searchGoogleBooks } from "./adapters/google-books.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -372,17 +372,24 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
 
   try {
     if (q) {
-      const [tmdbItems, googleBookItems] = await Promise.allSettled([
+      const [tmdbResult, googleBooksResult] = await Promise.allSettled([
         searchTmdb(q),
         searchGoogleBooks(q)
       ]);
 
-      const items = [
-        ...(tmdbItems.status === "fulfilled" && Array.isArray(tmdbItems.value) ? tmdbItems.value : []),
-        ...(googleBookItems.status === "fulfilled" && Array.isArray(googleBookItems.value) ? googleBookItems.value : [])
-      ];
+      const tmdbItems =
+        tmdbResult.status === "fulfilled" && Array.isArray(tmdbResult.value)
+          ? tmdbResult.value
+          : [];
 
-      return res.json({ items });
+      const googleBooksItems =
+        googleBooksResult.status === "fulfilled" && Array.isArray(googleBooksResult.value)
+          ? googleBooksResult.value
+          : [];
+
+      return res.json({
+        items: [...tmdbItems, ...googleBooksItems]
+      });
     }
     const db = _readDb();
     const bucket = _getUserBucket(db, req.session.userId);
