@@ -2,9 +2,9 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 const TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
 
-function _tmdbKey() {
-  return String(process.env.TMDB_API_KEY || "").trim();
-}
+import { ENV } from "../config/env.js";
+
+ENV.TMDB_API_KEY
 
 function _tmdbHeaders() {
   const key = _tmdbKey();
