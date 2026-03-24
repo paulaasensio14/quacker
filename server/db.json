@@ -94,20 +94,60 @@
           "updatedAt": "2026-03-24T10:31:54.070Z"
         },
         {
-          "id": "u_1774349584562_a31cc1c0c4c55",
+          "id": "u_1774351402700_4379f9e11db34",
           "type": "serie",
           "title": "La casa de papel",
           "status": "watching",
-          "progress": 5,
+          "progress": 78,
           "meta": {
             "totalSeasons": 3,
             "totalEpisodes": 41,
-            "season": 1,
+            "seasonBreakdown": [
+              {
+                "seasonNumber": 1,
+                "episodeCount": 15
+              },
+              {
+                "seasonNumber": 2,
+                "episodeCount": 16
+              },
+              {
+                "seasonNumber": 3,
+                "episodeCount": 10
+              }
+            ],
+            "season": 3,
             "episode": 1
           },
           "cover": "https://image.tmdb.org/t/p/w500/z01Dc0Ly2GmCpLe6Scx4d3dPP1S.jpg",
-          "createdAt": "2026-03-24T10:53:04.562Z",
-          "updatedAt": "2026-03-24T11:02:59.403Z"
+          "createdAt": "2026-03-24T11:23:22.700Z",
+          "updatedAt": "2026-03-24T11:23:59.918Z"
+        },
+        {
+          "id": "u_1774361226854_d6ddcf15b60e38",
+          "type": "serie",
+          "title": "Hazbin Hotel",
+          "status": "watching",
+          "progress": 56,
+          "meta": {
+            "totalSeasons": 2,
+            "totalEpisodes": 16,
+            "seasonBreakdown": [
+              {
+                "seasonNumber": 1,
+                "episodeCount": 8
+              },
+              {
+                "seasonNumber": 2,
+                "episodeCount": 8
+              }
+            ],
+            "season": 2,
+            "episode": 1
+          },
+          "cover": "https://image.tmdb.org/t/p/w500/aVYHMW8pdzJ9qG1OGRMKyGy9xor.jpg",
+          "createdAt": "2026-03-24T14:07:06.854Z",
+          "updatedAt": "2026-03-24T14:09:11.539Z"
         }
       ],
       "lists": [
@@ -132,17 +172,22 @@
           ],
           "itemsCount": 3,
           "createdAt": "2026-03-24T10:23:39.445Z",
-          "updatedAt": "2026-03-24T10:51:40.887Z"
+          "updatedAt": "2026-03-24T14:06:56.874Z"
         },
         {
           "id": "u_1774347909764_1f28e27f9cd3c8",
           "name": "Carmen",
           "description": "Pendientes con Carmen o recomendaciones suyas",
           "visibility": "private",
-          "items": [],
-          "itemsCount": 0,
+          "items": [
+            {
+              "id": "u_1774361226854_d6ddcf15b60e38",
+              "addedAt": "2026-03-24T14:07:06.868Z"
+            }
+          ],
+          "itemsCount": 1,
           "createdAt": "2026-03-24T10:25:09.764Z",
-          "updatedAt": "2026-03-24T10:51:40.887Z"
+          "updatedAt": "2026-03-24T14:07:06.868Z"
         },
         {
           "id": "u_1774347928180_a7a7810f33e0e",
@@ -152,7 +197,7 @@
           "items": [],
           "itemsCount": 0,
           "createdAt": "2026-03-24T10:25:28.180Z",
-          "updatedAt": "2026-03-24T10:51:40.887Z"
+          "updatedAt": "2026-03-24T14:06:56.874Z"
         }
       ]
     },

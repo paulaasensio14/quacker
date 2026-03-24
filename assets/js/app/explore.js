@@ -997,21 +997,39 @@ const ExploreModule = (() => {
         ? detailMeta.seasonBreakdown
         : [];
 
-        const payload = {
-          title: item.title,
-          type: item.type,
-          progress: 0,
-          cover: String(item?.cover || "").trim(),
-          meta:
-          String(item?.type || "").trim() === "serie"
-          ? {
+        const normalizedType = String(item?.type || "").trim();
+
+        let meta = {};
+
+        if (normalizedType === "serie") {
+          meta = {
             totalSeasons,
             totalEpisodes,
             seasonBreakdown,
             season: 1,
             episode: 1
-          }
-          : undefined
+          };
+        }
+
+        if (normalizedType === "book") {
+          meta = {
+            totalPages: item?.meta?.totalPages || null,
+            pagesRead: 0
+          };
+        }
+
+        if (normalizedType === "game") {
+          meta = {
+            platform: item?.meta?.platform || null
+          };
+        }
+
+        const payload = {
+          title: item.title,
+          type: normalizedType,
+          progress: 0,
+          cover: String(item?.cover || "").trim(),
+          meta
         };
 
         const created = await ApiClient.createLibraryItem(payload);
