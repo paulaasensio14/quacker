@@ -157,27 +157,41 @@ export async function getTmdbDetail({ type, externalId }) {
       language: "es-ES"
     });
 
+    const seasonBreakdown = Array.isArray(data.seasons)
+      ? data.seasons
+          .filter((season) => Number(season?.season_number || 0) > 0)
+          .map((season) => ({
+            seasonNumber: Number(season.season_number || 0) || 0,
+            episodeCount: Number(season.episode_count || 0) || 0,
+            name: String(season.name || "").trim()
+          }))
+          .filter((season) => season.seasonNumber > 0)
+      : [];
+      
     return {
-      eid: `tmdb:movie:${safeId}`,
+      eid: `tmdb:series:${safeId}`,
       source: "tmdb",
       externalId: safeId,
-      type: "pelicula",
-      title: String(data.title || data.original_title || "").trim(),
-      originalTitle: String(data.original_title || "").trim(),
-      releaseDate: String(data.release_date || "").trim(),
+      type: "serie",
+      title: String(data.name || data.original_name || "").trim(),
+      originalTitle: String(data.original_name || "").trim(),
+      releaseDate: String(data.first_air_date || "").trim(),
       summary: String(data.overview || "").trim(),
       description: String(data.overview || "").trim(),
       cover: _posterUrl(data.poster_path),
       backdrop: _backdropUrl(data.backdrop_path),
       genres: Array.isArray(data.genres) ? data.genres.map((g) => g.name).filter(Boolean) : [],
-      runtime: Number(data.runtime || 0) || null,
+      runtime: Array.isArray(data.episode_run_time) && data.episode_run_time.length > 0
+        ? Number(data.episode_run_time[0] || 0) || null
+        : null,
       rating: Number(data.vote_average || 0) || null,
       ratingCount: Number(data.vote_count || 0) || 0,
       statusLabel: String(data.status || "").trim(),
-      seasons: null,
-      episodes: null,
+      seasons: Number(data.number_of_seasons || 0) || 0,
+      episodes: Number(data.number_of_episodes || 0) || 0,
+      seasonBreakdown,
       meta: {
-       year: _yearFromDate(data.release_date)
+        year: _yearFromDate(data.first_air_date)
       }
     };
   }

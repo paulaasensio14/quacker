@@ -46,22 +46,6 @@
       },
       "library": [
         {
-          "id": "u_1773741666647_40bd58a16eaa2",
-          "type": "book",
-          "title": "Comerás flores",
-          "status": "completed",
-          "progress": 100,
-          "meta": {
-            "pagesRead": 100,
-            "totalPages": 300
-          },
-          "cover": "",
-          "createdAt": "2026-03-17T10:01:06.646Z",
-          "updatedAt": "2026-03-17T16:44:21.140Z",
-          "logActivity": false,
-          "lastActivityAt": "2026-03-17T11:33:04.271Z"
-        },
-        {
           "id": "u_1773749633000_3b2c4f0eccd8d",
           "type": "book",
           "title": "Tomorrow, and Tomorrow, and Tomorrow",
@@ -73,103 +57,15 @@
           "updatedAt": "2026-03-17T12:13:53.000Z"
         },
         {
-          "id": "u_1773749633982_55133b13ec1d4",
-          "type": "book",
-          "title": "Project Hail Mary",
-          "status": "reading",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T12:13:53.982Z",
-          "updatedAt": "2026-03-17T12:13:53.982Z"
-        },
-        {
-          "id": "u_1773749651864_85bd8d3e8f1208",
-          "type": "book",
-          "title": "Atomic Habits",
-          "status": "reading",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T12:14:11.864Z",
-          "updatedAt": "2026-03-17T12:14:11.864Z"
-        },
-        {
-          "id": "u_1773764917277_82f76f84bdcc8",
-          "type": "book",
-          "title": "Klara and the Sun",
-          "status": "reading",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T16:28:37.277Z",
-          "updatedAt": "2026-03-17T16:28:37.277Z"
-        },
-        {
-          "id": "u_1773775669077_8842b4a2c45ed8",
-          "type": "pelicula",
-          "title": "Dune: Part Two",
-          "status": "watching",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T19:27:49.077Z",
-          "updatedAt": "2026-03-17T19:27:49.077Z"
-        },
-        {
-          "id": "u_1773775670393_a2e533ce301008",
-          "type": "pelicula",
-          "title": "The Zone of Interest",
-          "status": "watching",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T19:27:50.392Z",
-          "updatedAt": "2026-03-17T19:27:50.392Z"
-        },
-        {
-          "id": "u_1773775671691_585316e5e909e",
-          "type": "pelicula",
-          "title": "Poor Things",
-          "status": "watching",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T19:27:51.691Z",
-          "updatedAt": "2026-03-17T19:27:51.691Z"
-        },
-        {
-          "id": "u_1773775674659_0195eff6476f2",
-          "type": "game",
-          "title": "Baldur's Gate 3",
-          "status": "completed",
-          "progress": 100,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T19:27:54.659Z",
-          "updatedAt": "2026-03-19T09:44:11.710Z"
-        },
-        {
-          "id": "u_1773775675509_fbab2744dbe568",
-          "type": "game",
-          "title": "Elden Ring",
-          "status": "playing",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T19:27:55.509Z",
-          "updatedAt": "2026-03-17T19:27:55.509Z"
-        },
-        {
           "id": "u_1774297610650_775d5eaa373918",
           "type": "serie",
           "title": "Más que rivales",
           "status": "watching",
-          "progress": 0,
+          "progress": 5,
           "meta": {},
           "cover": "https://image.tmdb.org/t/p/w500/rFZLFbuAOIQGZxXJT9XWhE87XMY.jpg",
           "createdAt": "2026-03-23T20:26:50.650Z",
-          "updatedAt": "2026-03-23T20:26:50.650Z"
+          "updatedAt": "2026-03-23T20:46:32.467Z"
         }
       ],
       "lists": []

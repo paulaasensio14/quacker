@@ -795,6 +795,7 @@ app.post("/api/library", _requireAuth, (req, res) => {
   const allowedMetaKeys = new Set([
     "totalEpisodes",
     "totalSeasons",
+    "seasonBreakdown",
     "totalPages",
     "totalChapters",
     "platform",
@@ -953,6 +954,7 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
       const allowedMetaKeys = new Set([
         "totalEpisodes",
         "totalSeasons",
+        "seasonBreakdown",
         "totalPages",
         "totalChapters",
         "platform",
