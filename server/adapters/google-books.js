@@ -1,8 +1,6 @@
 const GOOGLE_BOOKS_BASE_URL = "https://www.googleapis.com/books/v1";
 
-function _googleBooksKey() {
-  return String(process.env.GOOGLE_BOOKS_API_KEY || "").trim();
-}
+import { ENV } from "../config/env.js";
 
 function _googleBooksImage(volumeInfo = {}) {
   const links = volumeInfo?.imageLinks || {};
@@ -41,7 +39,7 @@ async function _googleBooksGet(path, params = {}) {
     url.searchParams.set(key, String(value));
   }
 
-  const apiKey = _googleBooksKey();
+  const apiKey = ENV.GOOGLE_BOOKS_API_KEY;
   if (apiKey) {
     url.searchParams.set("key", apiKey);
   }
