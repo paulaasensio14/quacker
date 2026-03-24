@@ -4,7 +4,9 @@ const TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
 
 import { ENV } from "../config/env.js";
 
-ENV.TMDB_API_KEY
+function _tmdbKey() {
+  return String(ENV.TMDB_API_KEY || "").trim();
+}
 
 function _tmdbHeaders() {
   const key = _tmdbKey();
