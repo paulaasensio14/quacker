@@ -402,13 +402,9 @@ const ExploreModule = (() => {
     let out = [...feed];
 
     // quitar ocultados
-    out = out.filter(x => !dismissed.has(String(x.eid)));   
+    out = out.filter(x => !dismissed.has(String(x.eid)));
 
     if (t !== "all") out = out.filter(x => x.type === t);
-
-    if (q) {
-      out = out.filter(x => _norm(x.title).includes(q));
-    }
 
     if (sortMode === "title") {
       out.sort((a, b) => _safeText(a.title).localeCompare(_safeText(b.title), "es", { sensitivity: "base" }));
