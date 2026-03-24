@@ -970,15 +970,32 @@ const ExploreModule = (() => {
           }
         }
 
+        const detailMeta =
+        detail && typeof detail.meta === "object" && !Array.isArray(detail.meta)
+        ? detail.meta
+        : {};
+
         const totalSeasons =
-          String(item?.type || "").trim() === "serie"
-            ? Math.max(0, Number(detail?.seasons || item?.seasons || 0) || 0)
-            : 0;
+        String(item?.type || "").trim() === "serie"
+        ? Math.max(
+            0,
+            Number(detailMeta.totalSeasons || detail?.seasons || item?.seasons || 0) || 0
+          )
+        : 0;
 
         const totalEpisodes =
-          String(item?.type || "").trim() === "serie"
-            ? Math.max(0, Number(detail?.episodes || item?.episodes || 0) || 0)
-            : 0;
+        String(item?.type || "").trim() === "serie"
+        ? Math.max(
+            0,
+            Number(detailMeta.totalEpisodes || detail?.episodes || item?.episodes || 0) || 0
+          )
+        : 0;
+
+        const seasonBreakdown =
+        String(item?.type || "").trim() === "serie" &&
+        Array.isArray(detailMeta.seasonBreakdown)
+        ? detailMeta.seasonBreakdown
+        : [];
 
         const payload = {
           title: item.title,
@@ -986,14 +1003,15 @@ const ExploreModule = (() => {
           progress: 0,
           cover: String(item?.cover || "").trim(),
           meta:
-            String(item?.type || "").trim() === "serie"
-              ? {
-                  totalSeasons,
-                  totalEpisodes,
-                  season: totalSeasons > 0 ? 1 : 0,
-                  episode: totalEpisodes > 0 ? 1 : 0
-                }
-              : undefined
+          String(item?.type || "").trim() === "serie"
+          ? {
+            totalSeasons,
+            totalEpisodes,
+            seasonBreakdown,
+            season: 1,
+            episode: 1
+          }
+          : undefined
         };
 
         const created = await ApiClient.createLibraryItem(payload);
