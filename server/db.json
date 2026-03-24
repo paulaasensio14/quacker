@@ -66,6 +66,22 @@
           "cover": "https://image.tmdb.org/t/p/w500/rFZLFbuAOIQGZxXJT9XWhE87XMY.jpg",
           "createdAt": "2026-03-23T20:26:50.650Z",
           "updatedAt": "2026-03-23T20:46:32.467Z"
+        },
+        {
+          "id": "u_1774344909649_d4734f312ac868",
+          "type": "serie",
+          "title": "Jujutsu Kaisen",
+          "status": "watching",
+          "progress": 15,
+          "meta": {
+            "totalSeasons": 1,
+            "totalEpisodes": 59,
+            "season": 1,
+            "episode": 1
+          },
+          "cover": "https://image.tmdb.org/t/p/w500/80eHrBl03xWcQYecoTO1LlkXpN1.jpg",
+          "createdAt": "2026-03-24T09:35:09.649Z",
+          "updatedAt": "2026-03-24T09:42:41.834Z"
         }
       ],
       "lists": []
