@@ -46,33 +46,11 @@
       },
       "library": [
         {
-          "id": "u_1773749633000_3b2c4f0eccd8d",
-          "type": "book",
-          "title": "Tomorrow, and Tomorrow, and Tomorrow",
-          "status": "reading",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-17T12:13:53.000Z",
-          "updatedAt": "2026-03-17T12:13:53.000Z"
-        },
-        {
-          "id": "u_1774297610650_775d5eaa373918",
-          "type": "serie",
-          "title": "Más que rivales",
-          "status": "watching",
-          "progress": 5,
-          "meta": {},
-          "cover": "https://image.tmdb.org/t/p/w500/rFZLFbuAOIQGZxXJT9XWhE87XMY.jpg",
-          "createdAt": "2026-03-23T20:26:50.650Z",
-          "updatedAt": "2026-03-23T20:46:32.467Z"
-        },
-        {
-          "id": "u_1774344909649_d4734f312ac868",
+          "id": "u_1774346150331_3523df2c1b3e28",
           "type": "serie",
           "title": "Jujutsu Kaisen",
           "status": "watching",
-          "progress": 15,
+          "progress": 85,
           "meta": {
             "totalSeasons": 1,
             "totalEpisodes": 59,
@@ -80,8 +58,8 @@
             "episode": 1
           },
           "cover": "https://image.tmdb.org/t/p/w500/80eHrBl03xWcQYecoTO1LlkXpN1.jpg",
-          "createdAt": "2026-03-24T09:35:09.649Z",
-          "updatedAt": "2026-03-24T09:42:41.834Z"
+          "createdAt": "2026-03-24T09:55:50.331Z",
+          "updatedAt": "2026-03-24T09:56:11.826Z"
         }
       ],
       "lists": []
