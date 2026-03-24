@@ -196,9 +196,24 @@ export async function getTmdbDetail({ type, externalId }) {
     };
   }
 
-  const data = await _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
-    language: "es-ES"
-  });
+const data = await _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
+  language: "es-ES"
+});
+
+const seasonBreakdown = Array.isArray(data.seasons)
+  ? data.seasons
+      .map((season) => ({
+        seasonNumber: Number(season?.season_number || 0) || 0,
+        episodeCount: Number(season?.episode_count || 0) || 0
+      }))
+      .filter((season) => season.seasonNumber > 0 && season.episodeCount > 0)
+      .sort((a, b) => a.seasonNumber - b.seasonNumber)
+  : [];
+
+  const totalEpisodesFromBreakdown = seasonBreakdown.reduce(
+    (sum, season) => sum + season.episodeCount,
+    0
+  );
 
   return {
     eid: `tmdb:series:${safeId}`,
@@ -214,15 +229,18 @@ export async function getTmdbDetail({ type, externalId }) {
     backdrop: _backdropUrl(data.backdrop_path),
     genres: Array.isArray(data.genres) ? data.genres.map((g) => g.name).filter(Boolean) : [],
     runtime: Array.isArray(data.episode_run_time) && data.episode_run_time.length > 0
-    ? Number(data.episode_run_time[0] || 0) || null
-    : null,
+      ? Number(data.episode_run_time[0] || 0) || null
+      : null,
     rating: Number(data.vote_average || 0) || null,
     ratingCount: Number(data.vote_count || 0) || 0,
     statusLabel: String(data.status || "").trim(),
-    seasons: Number(data.number_of_seasons || 0) || 0,
-    episodes: Number(data.number_of_episodes || 0) || 0,
+    seasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
+    episodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
     meta: {
-    year: _yearFromDate(data.first_air_date)
+      year: _yearFromDate(data.first_air_date),
+      totalSeasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
+      totalEpisodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
+      seasonBreakdown
     }
   };
 }
