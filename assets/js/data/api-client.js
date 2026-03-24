@@ -882,6 +882,14 @@ const ApiClient = (() => {
           );
           if (hit && Number(hit.episodeCount) > 0) return Number(hit.episodeCount);
 
+          // Fallback defensivo:
+          // si aún no tenemos breakdown persistido pero sí totalEpisodes,
+          // no podemos completar la serie al primer click.
+          // Tratamos temporalmente la temporada actual como una temporada larga.
+          if (seasonBreakdown.length === 0 && totalEpisodes > 0) {
+            return totalEpisodes;
+          }
+
           if (totalSeasons === 1 && totalEpisodes > 0) return totalEpisodes;
           return 0;
         };
