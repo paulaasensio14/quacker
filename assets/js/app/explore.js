@@ -330,6 +330,40 @@ const ExploreModule = (() => {
     `;
   };
 
+  const normalizedSearch = _norm(searchTerm);
+
+  if (normalizedSearch) {
+    const titleSuffix = typeFilter !== "all"
+      ? ` · ${TYPE_LABELS[typeFilter] || typeFilter}`
+      : "";
+
+    const hasAny = visible.length > 0;
+
+    container.innerHTML = hasAny
+      ? `
+        <section class="explore-section explore-section--search-results" data-section="search-results">
+          <header class="explore-section-header">
+            <div>
+              <h2 class="explore-section-title">Resultados para “${searchTerm}”</h2>
+              <p class="explore-section-sub">Mostrando ${visible.length} resultado(s)${titleSuffix}</p>
+            </div>
+            <div class="explore-section-actions">
+              <span class="explore-section-count">${visible.length}</span>
+            </div>
+          </header>
+
+          <div class="explore-section-grid">
+            ${visible.map(renderCard).join("")}
+          </div>
+        </section>
+      `
+      : "";
+
+    container.hidden = !hasAny;
+    if (empty) empty.hidden = hasAny;
+    return;
+  }
+
   const renderSection = (section) => {
     const { key, title, subtitle, items, limit } = section;
     if (!items || items.length === 0) return "";
@@ -890,6 +924,10 @@ const ExploreModule = (() => {
     const globalSearch = document.getElementById("globalSearch");
     if (globalSearch) {
       searchTerm = String(globalSearch.value || "").trim();
+    }
+
+    if (searchTerm) {
+      expandedSection = null;
     }
 
     _setExploreLoading(true);
