@@ -952,11 +952,48 @@ const ExploreModule = (() => {
       _applyFilters();
 
       try {
+        let detail = null;
+
+        if (
+          String(item?.type || "").trim() === "serie" &&
+          item?.source &&
+          item?.externalId
+        ) {
+          try {
+            detail = await ApiClient.getExploreItemDetail({
+              source: String(item.source),
+              type: String(item.type),
+              externalId: String(item.externalId)
+            });
+          } catch (e) {
+            console.error("Explore: no se pudo cargar el detalle de la serie", e);
+          }
+        }
+
+        const totalSeasons =
+          String(item?.type || "").trim() === "serie"
+            ? Math.max(0, Number(detail?.seasons || item?.seasons || 0) || 0)
+            : 0;
+
+        const totalEpisodes =
+          String(item?.type || "").trim() === "serie"
+            ? Math.max(0, Number(detail?.episodes || item?.episodes || 0) || 0)
+            : 0;
+
         const payload = {
           title: item.title,
           type: item.type,
           progress: 0,
-          cover: _safeText(item?.cover).trim()
+          cover: String(item?.cover || "").trim(),
+          meta:
+            String(item?.type || "").trim() === "serie"
+              ? {
+                  totalSeasons,
+                  totalEpisodes,
+                  season: totalSeasons > 0 ? 1 : 0,
+                  episode: totalEpisodes > 0 ? 1 : 0
+                }
+              : undefined
         };
 
         const created = await ApiClient.createLibraryItem(payload);
