@@ -88,7 +88,6 @@ export async function searchGoogleBooks(query) {
 
   const data = await _googleBooksGet("/volumes", {
     q,
-    langRestrict: "es",
     maxResults: 20,
     printType: "books",
     orderBy: "relevance"
