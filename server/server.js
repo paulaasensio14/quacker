@@ -193,6 +193,7 @@ function _tokenizeExploreQuery(value) {
 
 function _scoreExploreSearchItem(item, query) {
   const q = _normalizeExploreQueryText(query);
+
   if (!q) return 0;
 
   const title = _normalizeExploreQueryText(item?.title);
@@ -200,40 +201,70 @@ function _scoreExploreSearchItem(item, query) {
   const summary = _normalizeExploreQueryText(item?.summary);
   const tokens = _tokenizeExploreQuery(q);
 
-  const suffixAfterPrefix = title.startsWith(q) ? title.slice(q.length).trim() : "";
+  const matchedTitleTokens = tokens.filter((token) => title.includes(token));
+  const missingTitleTokens = tokens.filter((token) => !title.includes(token));
+
+  const titleStartsWithQuery = title.startsWith(q);
+  const titleEqualsQuery = title === q;
+  const titleContainsQuery = title.includes(q);
+
+  const suffixAfterPrefix = titleStartsWithQuery ? title.slice(q.length).trim() : "";
+
+  const derivativePattern =
+    /\b(?:vol\.?|volume|tomo|book|gu[ií]a|guide|strategy|artbook|art\s*book|comic|manga|novel|novela|season|temporada|episode|episodio|part|parte|chapter|cap[ií]tulo|collection|complete\s+collection|bundle|dlc|soundtrack|ost|expansion|remaster|remastered|definitive|edition|deluxe|ultimate|gold|goty|ii|iii|iv|v|\d+)\b/i;
 
   const isDerivativeEdition = Boolean(
-    suffixAfterPrefix &&
-      /^(?:[:\-–—]|\b(?:vol\.?|volume|tomo|book|gu[ií]a|guide|strategy|artbook|art\s*book|comic|manga|novel|novela|season|temporada|part|parte|ii|iii|iv|v|\d+)\b)/i.test(
-        suffixAfterPrefix
-      )
+    suffixAfterPrefix && /^(?:[:\-–—]|\()/.test(suffixAfterPrefix) && derivativePattern.test(suffixAfterPrefix)
   );
+
+  const hasDerivativeSignalsAnywhere =
+    derivativePattern.test(title) && !titleEqualsQuery && !titleStartsWithQuery;
 
   let score = 0;
 
   // EXACT MATCH DOMINANTE
-  if (title === q) {
+  if (titleEqualsQuery) {
     score += 1000;
-  } else if (title.startsWith(q)) {
-    score += 180;
-  } else if (title.includes(q)) {
-    score += 45;
+  } else if (titleStartsWithQuery) {
+    score += 220;
+  } else if (titleContainsQuery) {
+    score += 60;
   }
 
-  if (isDerivativeEdition) {
-    score -= 90;
+  // COBERTURA COMPLETA DEL QUERY EN TITLE
+  if (tokens.length > 0 && matchedTitleTokens.length === tokens.length) {
+    score += 220;
+  } else if (matchedTitleTokens.length >= Math.max(1, tokens.length - 1)) {
+    score += 70;
   }
 
+  // PENALIZAR MATCHES PARCIALES
+  if (missingTitleTokens.length > 0) {
+    score -= missingTitleTokens.length * 22;
+  }
+
+  // TOKEN SIGNALS
   for (const token of tokens) {
-    if (title.includes(token)) score += 12;
-    if (author.includes(token)) score += 5;
-    if (summary.includes(token)) score += 2;
+    if (title.includes(token)) score += 14;
+    if (author.includes(token)) score += 4;
+    if (summary.includes(token)) score += 1;
   }
 
-  // PENALIZAR MATCHES DÉBILES
-  const missingTokens = tokens.filter((t) => !title.includes(t));
-  if (missingTokens.length > 0) {
-    score -= missingTokens.length * 15;
+  // CANONICAL BOOST:
+  // si empieza por la query y no parece una edición/derivado, se impulsa mucho
+  if (titleStartsWithQuery && !suffixAfterPrefix) {
+    score += 140;
+  } else if (titleStartsWithQuery && !isDerivativeEdition) {
+    score += 70;
+  }
+
+  // PENALIZACIONES DE DERIVADOS / RUIDO
+  if (isDerivativeEdition) {
+    score -= 140;
+  }
+
+  if (hasDerivativeSignalsAnywhere) {
+    score -= 60;
   }
 
   if (item?.cover) score += 6;
