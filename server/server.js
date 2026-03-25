@@ -223,7 +223,17 @@ function _scoreExploreSearchItem(item, query) {
 }
 
 function _rankAndMixExploreItems(query, tmdbItems = [], googleBooksItems = []) {
-  const ranked = [...tmdbItems, ...googleBooksItems]
+  const seen = new Set();
+
+  const deduped = [...tmdbItems, ...googleBooksItems].filter((item) => {
+    const key = `${String(item.title || "").toLowerCase()}|${String(item.meta?.year || "")}`;
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const ranked = deduped
     .map((item) => ({
       ...item,
       __score: _scoreExploreSearchItem(item, query)
