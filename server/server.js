@@ -271,14 +271,21 @@ function _scoreExploreSearchItem(item, query) {
   return score;
 }
 
-function _rankAndMixExploreItems(query, tmdbItems = [], googleBooksItems = []) {
+function _rankAndMixExploreItems(
+  query,
+  tmdbItems = [],
+  googleBooksItems = [],
+  rawgItems = []
+) {
   const seen = new Set();
 
-  const deduped = [...tmdbItems, ...googleBooksItems].filter((item) => {
-    const key = `${String(item.title || "").toLowerCase()}|${String(item.meta?.year || "")}`;
+  const deduped = [...tmdbItems, ...googleBooksItems, ...rawgItems].filter((item) => {
+    const key = `${String(item?.title || "").trim().toLowerCase()}|${String(item?.meta?.year || "")}`;
 
     if (seen.has(key)) return false;
+
     seen.add(key);
+
     return true;
   });
 
@@ -293,10 +300,12 @@ function _rankAndMixExploreItems(query, tmdbItems = [], googleBooksItems = []) {
 
       const yearA = Number(a?.meta?.year || 0);
       const yearB = Number(b?.meta?.year || 0);
+
       if (yearB !== yearA) return yearB - yearA;
 
       const coverA = Number(Boolean(a?.cover));
       const coverB = Number(Boolean(b?.cover));
+
       if (coverB !== coverA) return coverB - coverA;
 
       return String(a?.title || "").localeCompare(String(b?.title || ""), "es", {
@@ -316,6 +325,7 @@ function _rankAndMixExploreItems(query, tmdbItems = [], googleBooksItems = []) {
 
     if (blockedSource) {
       const alternativeIndex = pool.findIndex((item) => item.source !== blockedSource);
+
       if (alternativeIndex >= 0) pickIndex = alternativeIndex;
     }
 
@@ -549,21 +559,10 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
         ? rawgResult.value
         : [];
         
-      const tmdbTop = tmdbItems.slice(0, 20);
-      const booksTop = googleBooksItems.slice(0, 20);
-      const rawgTop = rawgItems.slice(0, 20);
-
-      const mixedItems = [];
-      const maxLen = Math.max(tmdbTop.length, booksTop.length, rawgTop.length);
-
-      for (let i = 0; i < maxLen; i += 1) {
-        if (tmdbTop[i]) mixedItems.push(tmdbTop[i]);
-        if (booksTop[i]) mixedItems.push(booksTop[i]);
-        if (rawgTop[i]) mixedItems.push(rawgTop[i]);
-      }
+      const rankedItems = _rankAndMixExploreItems(q, tmdbItems, googleBooksItems, rawgItems);
 
       return res.json({
-        items: mixedItems,
+        items: rankedItems,
         debug: {
           tmdb: {
             status: tmdbResult.status,
