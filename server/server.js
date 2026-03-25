@@ -218,7 +218,15 @@ function _scoreExploreSearchItem(item, query) {
 
   if (item?.cover) score += 6;
   if (item?.summary) score += 3;
-  if (item?.source === "tmdb") score += 2;
+
+  // BALANCE REAL DE PROVIDERS
+  if (item?.source === "tmdb") {
+    score += 8;
+  } else if (item?.source === "rawg") {
+    score += 5;
+  } else if (item?.source === "google_books") {
+    score += 1;
+  }
 
   return score;
 }
