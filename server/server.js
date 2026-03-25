@@ -202,18 +202,25 @@ function _scoreExploreSearchItem(item, query) {
 
   let score = 0;
 
+  // EXACT MATCH DOMINANTE
   if (title === q) {
-    score += 120;
+    score += 1000;
   } else if (title.startsWith(q)) {
-    score += 70;
+    score += 200;
   } else if (title.includes(q)) {
-    score += 40;
+    score += 60;
   }
 
   for (const token of tokens) {
     if (title.includes(token)) score += 12;
     if (author.includes(token)) score += 5;
     if (summary.includes(token)) score += 2;
+  }
+
+  // PENALIZAR MATCHES DÉBILES
+  const missingTokens = tokens.filter((t) => !title.includes(t));
+  if (missingTokens.length > 0) {
+    score -= missingTokens.length * 15;
   }
 
   if (item?.cover) score += 6;
