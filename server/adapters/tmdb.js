@@ -221,59 +221,43 @@ export async function getTmdbDetail({ type, externalId }) {
     throw err;
   }
 
-    if (!["pelicula", "serie"].includes(safeType)) {
-    const err = new Error("invalid_tmdb_type");
-    err.status = 400;
-    throw err;
-    }
+  if (!["pelicula", "serie"].includes(safeType)) {
+  const err = new Error("invalid_tmdb_type");
+  err.status = 400;
+  throw err;
+  }
 
-    if (safeType === "pelicula") {
+  if (safeType === "pelicula") {
     const data = await _tmdbGet(`/movie/${encodeURIComponent(safeId)}`, {
       language: "es-ES"
     });
 
-    const seasonBreakdown = Array.isArray(data.seasons)
-      ? data.seasons
-          .filter((season) => Number(season?.season_number || 0) > 0)
-          .map((season) => ({
-            seasonNumber: Number(season.season_number || 0) || 0,
-            episodeCount: Number(season.episode_count || 0) || 0,
-            name: String(season.name || "").trim()
-          }))
-          .filter((season) => season.seasonNumber > 0)
-      : [];
-      
     return {
-      eid: `tmdb:series:${safeId}`,
+      eid: `tmdb:movie:${safeId}`,
       source: "tmdb",
       externalId: safeId,
-      type: "serie",
-      title: String(data.name || data.original_name || "").trim(),
-      originalTitle: String(data.original_name || "").trim(),
-      releaseDate: String(data.first_air_date || "").trim(),
+      type: "pelicula",
+      title: String(data.title || data.original_title || "").trim(),
+      originalTitle: String(data.original_title || "").trim(),
+      releaseDate: String(data.release_date || "").trim(),
       summary: String(data.overview || "").trim(),
       description: String(data.overview || "").trim(),
       cover: _posterUrl(data.poster_path),
       backdrop: _backdropUrl(data.backdrop_path),
       genres: Array.isArray(data.genres) ? data.genres.map((g) => g.name).filter(Boolean) : [],
-      runtime: Array.isArray(data.episode_run_time) && data.episode_run_time.length > 0
-        ? Number(data.episode_run_time[0] || 0) || null
-        : null,
+      runtime: Number(data.runtime || 0) || null,
       rating: Number(data.vote_average || 0) || null,
       ratingCount: Number(data.vote_count || 0) || 0,
       statusLabel: String(data.status || "").trim(),
-      seasons: Number(data.number_of_seasons || 0) || 0,
-      episodes: Number(data.number_of_episodes || 0) || 0,
-      seasonBreakdown,
       meta: {
-        year: _yearFromDate(data.first_air_date)
+        year: _yearFromDate(data.release_date)
       }
     };
   }
 
-const data = await _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
-  language: "es-ES"
-});
+  const data = await _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
+    language: "es-ES"
+  });
 
 const seasonBreakdown = Array.isArray(data.seasons)
   ? data.seasons
