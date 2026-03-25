@@ -86,10 +86,35 @@ export async function searchRawg(query) {
 
   const results = Array.isArray(data?.results) ? data.results : [];
 
-  return results
-    .map(_baseSearchItemFromRawgGame)
-    .filter((item) => item.externalId && item.title)
-    .slice(0, 20);
+const normalizedQuery = String(q).trim().toLowerCase();
+const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+
+return results
+  .map(_baseSearchItemFromRawgGame)
+  .filter((item) => {
+    if (!item?.externalId || !item?.title) return false;
+
+    const title = String(item.title || "").toLowerCase();
+
+    // MATCH FUERTE (igual que Books)
+    const strongMatch =
+      title === normalizedQuery ||
+      title.startsWith(normalizedQuery) ||
+      queryTokens.every((token) => title.includes(token));
+
+    if (!strongMatch) return false;
+
+    // FILTRO DE CALIDAD
+    const rating = Number(item?.meta?.rating || 0);
+
+    if (rating < 2) return false;
+
+    // EVITAR BASURA SIN COVER
+    if (!item.cover) return false;
+
+    return true;
+  })
+  .slice(0, 20);
 }
 
 export async function getRawgDetail(externalId) {
