@@ -394,8 +394,19 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
           ? googleBooksResult.value
           : [];
 
+      const tmdbTop = tmdbItems.slice(0, 20);
+      const booksTop = googleBooksItems.slice(0, 20);
+
+      const mixedItems = [];
+      const maxLen = Math.max(tmdbTop.length, booksTop.length);
+
+      for (let i = 0; i < maxLen; i += 1) {
+        if (tmdbTop[i]) mixedItems.push(tmdbTop[i]);
+        if (booksTop[i]) mixedItems.push(booksTop[i]);
+      }
+
       return res.json({
-        items: [...tmdbItems, ...googleBooksItems],
+        items: mixedItems,
         debug: {
           tmdb: {
             status: tmdbResult.status,
