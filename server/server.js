@@ -6,6 +6,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { searchTmdb, getTmdbDetail } from "./adapters/tmdb.js";
 import { searchGoogleBooks, getGoogleBookDetail } from "./adapters/google-books.js";
+import { searchRawg, getRawgDetail } from "./adapters/rawg.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -467,9 +468,10 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
 
   try {
     if (q) {
-      const [tmdbResult, googleBooksResult] = await Promise.allSettled([
+      const [tmdbResult, googleBooksResult, rawgResult] = await Promise.allSettled([
         searchTmdb(q),
-        searchGoogleBooks(q)
+        searchGoogleBooks(q),
+        searchRawg(q)
       ]);
 
       if (tmdbResult.status === "rejected") {
@@ -478,6 +480,10 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
 
       if (googleBooksResult.status === "rejected") {
         console.error("[/api/explore] Google Books search failed:", googleBooksResult.reason);
+      }
+
+      if (rawgResult.status === "rejected") {
+        console.error("[/api/explore] RAWG search failed:", rawgResult.reason);
       }
 
       const tmdbItems =
@@ -490,11 +496,23 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
           ? googleBooksResult.value
           : [];
 
+      const rawgItems =
+      rawgResult.status === "fulfilled" && Array.isArray(rawgResult.value)
+        ? rawgResult.value
+        : [];
+        
       const tmdbTop = tmdbItems.slice(0, 20);
-
       const booksTop = googleBooksItems.slice(0, 20);
+      const rawgTop = rawgItems.slice(0, 20);
 
-      const mixedItems = _rankAndMixExploreItems(q, tmdbTop, booksTop);
+      const mixedItems = [];
+      const maxLen = Math.max(tmdbTop.length, booksTop.length, rawgTop.length);
+
+      for (let i = 0; i < maxLen; i += 1) {
+        if (tmdbTop[i]) mixedItems.push(tmdbTop[i]);
+        if (booksTop[i]) mixedItems.push(booksTop[i]);
+        if (rawgTop[i]) mixedItems.push(rawgTop[i]);
+      }
 
       return res.json({
         items: mixedItems,
@@ -513,6 +531,14 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
             error:
               googleBooksResult.status === "rejected"
                 ? String(googleBooksResult.reason?.message || googleBooksResult.reason)
+                : null
+          },
+          rawg: {
+            status: rawgResult.status,
+            count: rawgItems.length,
+            error:
+              rawgResult.status === "rejected"
+                ? String(rawgResult.reason?.message || rawgResult.reason)
                 : null
           }
         }
@@ -555,6 +581,11 @@ app.get("/api/explore/item/:source/:type/:externalId", _requireAuth, async (req,
 
     if (source === "google_books") {
       const item = await getGoogleBookDetail(externalId);
+      return res.json(item);
+    }
+
+    if (source === "rawg") {
+      const item = await getRawgDetail(externalId);
       return res.json(item);
     }
 
