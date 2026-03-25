@@ -441,9 +441,12 @@ const ExploreModule = (() => {
     if (t !== "all") out = out.filter(x => x.type === t);
 
     if (sortMode === "title") {
-      out.sort((a, b) => _safeText(a.title).localeCompare(_safeText(b.title), "es", { sensitivity: "base" }));
-    } else {
-      // recent: releaseDate desc (si no hay, al final)
+      out.sort((a, b) =>
+        _safeText(a.title).localeCompare(_safeText(b.title), "es", { sensitivity: "base" })
+      );
+    } else if (!q) {
+      // En búsquedas, respetamos el ranking/mezcla que ya viene del backend.
+      // Solo aplicamos "Más reciente" al feed sin query.
       out.sort((a, b) => {
         const da = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
         const db = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
