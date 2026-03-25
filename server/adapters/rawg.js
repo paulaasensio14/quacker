@@ -68,8 +68,9 @@ function _baseSearchItemFromRawgGame(item) {
     summary: _safeText(item.slug),
     cover: _rawgImageUrl(item),
     meta: {
-      year: _yearFromDate(item.released),
-      rating: Number(item.rating || 0) || null
+    year: _yearFromDate(item.released),
+    rating: Number(item.rating || 0) || null,
+    ratingCount: Number(item.ratings_count || 0) || 0
     }
   };
 }
