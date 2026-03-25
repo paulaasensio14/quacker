@@ -39,11 +39,6 @@ async function _googleBooksGet(path, params = {}) {
     url.searchParams.set(key, String(value));
   }
 
-  const apiKey = ENV.GOOGLE_BOOKS_API_KEY;
-  if (apiKey) {
-    url.searchParams.set("key", apiKey);
-  }
-
   const res = await fetch(url, {
     method: "GET",
     headers: {
