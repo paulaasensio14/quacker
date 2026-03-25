@@ -367,6 +367,7 @@ const EXPLORE_FEED = [
 ];
 
 app.get("/api/explore", _requireAuth, async (req, res) => {
+  res.set("Cache-Control", "no-store");
   const q = String(req.query.q || "").trim();
 
   try {
