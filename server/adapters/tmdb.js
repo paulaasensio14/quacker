@@ -119,9 +119,10 @@ function _baseSearchItemFromTv(item) {
 
 export async function searchTmdb(query) {
   const q = String(query || "").trim();
+
   if (!q) return [];
 
-  const [moviesData, tvData] = await Promise.allSettled([
+  const [moviesData, tvData] = await Promise.all([
     _tmdbGet("/search/movie", {
       query: q,
       include_adult: false,
@@ -136,15 +137,13 @@ export async function searchTmdb(query) {
     })
   ]);
 
-  const movies =
-    moviesData.status === "fulfilled" && Array.isArray(moviesData.value?.results)
-      ? moviesData.value.results.map(_baseSearchItemFromMovie)
-      : [];
+  const movies = Array.isArray(moviesData?.results)
+    ? moviesData.results.map(_baseSearchItemFromMovie)
+    : [];
 
-  const series =
-    tvData.status === "fulfilled" && Array.isArray(tvData.value?.results)
-      ? tvData.value.results.map(_baseSearchItemFromTv)
-      : [];
+  const series = Array.isArray(tvData?.results)
+    ? tvData.results.map(_baseSearchItemFromTv)
+    : [];
 
   const merged = [...movies, ...series]
     .filter((item) => item.title)
@@ -155,6 +154,7 @@ export async function searchTmdb(query) {
 
       const yearA = Number(a.meta?.year || 0);
       const yearB = Number(b.meta?.year || 0);
+
       if (yearA !== yearB) return yearB - yearA;
 
       return a.title.localeCompare(b.title, "es", { sensitivity: "base" });
