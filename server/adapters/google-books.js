@@ -79,6 +79,7 @@ function _baseSearchItemFromVolume(item) {
 
 export async function searchGoogleBooks(query) {
   const q = String(query || "").trim();
+
   if (!q) return [];
 
   const data = await _googleBooksGet("/volumes", {
@@ -89,10 +90,28 @@ export async function searchGoogleBooks(query) {
   });
 
   const items = Array.isArray(data?.items) ? data.items : [];
+  const normalizedQuery = String(q).trim().toLowerCase();
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
 
   return items
     .map(_baseSearchItemFromVolume)
-    .filter((item) => item.externalId && item.title)
+    .filter((item) => {
+      if (!item?.externalId || !item?.title) return false;
+
+      const title = String(item.title || "").trim().toLowerCase();
+      const author = String(item?.meta?.author || "").trim().toLowerCase();
+
+      const strongMatch =
+        title === normalizedQuery ||
+        title.startsWith(normalizedQuery) ||
+        queryTokens.every((token) => title.includes(token) || author.includes(token));
+
+      const hasMinimumMetadata = Boolean(
+        item.cover || author || item.releaseDate || item.summary
+      );
+
+      return strongMatch && hasMinimumMetadata;
+    })
     .slice(0, 20);
 }
 
