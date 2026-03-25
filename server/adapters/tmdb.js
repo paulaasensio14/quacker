@@ -117,6 +117,43 @@ function _baseSearchItemFromTv(item) {
     };
 }
 
+function _normalizeTmdbSearchText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function _tokenizeTmdbSearchText(value) {
+  return _normalizeTmdbSearchText(value).split(/\s+/).filter(Boolean);
+}
+
+function _scoreTmdbSearchItem(item, query) {
+  const q = _normalizeTmdbSearchText(query);
+  if (!q) return 0;
+
+  const title = _normalizeTmdbSearchText(item?.title);
+  const summary = _normalizeTmdbSearchText(item?.summary);
+  const tokens = _tokenizeTmdbSearchText(q);
+
+  let score = 0;
+
+  if (title === q) {
+    score += 120;
+  } else if (title.startsWith(q)) {
+    score += 70;
+  } else if (title.includes(q)) {
+    score += 40;
+  }
+
+  for (const token of tokens) {
+    if (title.includes(token)) score += 12;
+    if (summary.includes(token)) score += 2;
+  }
+
+  if (item?.cover) score += 6;
+  if (item?.summary) score += 3;
+
+  return score;
+}
+
 export async function searchTmdb(query) {
   const q = String(query || "").trim();
 
@@ -149,9 +186,17 @@ export async function searchTmdb(query) {
 
   const merged = [...movies, ...series]
     .filter((item) => item.title)
+    .map((item) => ({
+      ...item,
+      __score: _scoreTmdbSearchItem(item, q)
+    }))
+    .filter((item) => item.__score > 0)
     .sort((a, b) => {
+      if (b.__score !== a.__score) return b.__score - a.__score;
+
       const hasCoverA = Number(Boolean(a.cover));
       const hasCoverB = Number(Boolean(b.cover));
+
       if (hasCoverA !== hasCoverB) return hasCoverB - hasCoverA;
 
       const yearA = Number(a.meta?.year || 0);
@@ -160,7 +205,8 @@ export async function searchTmdb(query) {
       if (yearA !== yearB) return yearB - yearA;
 
       return a.title.localeCompare(b.title, "es", { sensitivity: "base" });
-    });
+    })
+    .map(({ __score, ...item }) => item);
 
   return merged.slice(0, 40);
 }
