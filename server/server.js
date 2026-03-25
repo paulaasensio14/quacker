@@ -235,15 +235,21 @@ function _scoreExploreSearchItem(item, query) {
     }
   }
 
-  if (title.length > q.length + 25) {
-    coreMatchConfidence -= 40;
+  // penalizar SOLO si claramente es derivado / ruido
+  const extraWords = title.split(/\s+/).slice(tokens.length);
+
+  if (
+    extraWords.length > 0 &&
+    extraWords.every((w) =>
+      /^(guide|analysis|review|recap|summary|explained|ending|theory|collection|edition)$/i.test(w)
+    )
+  ) {
+    coreMatchConfidence -= 80;
   }
 
-  const titleWordCount = title.split(/\s+/).length;
-  const queryWordCount = tokens.length;
-
-  if (titleWordCount > queryWordCount + 3) {
-    coreMatchConfidence -= 50;
+  // boost si es exactamente la franquicia (muy importante)
+  if (title === q) {
+    score += 200;
   }
 
   if (/logic|explained|analysis|review|recap|summary|ending|theory/i.test(title)) {
@@ -329,6 +335,33 @@ function _scoreExploreSearchItem(item, query) {
     score += Math.min(8, Math.floor(Math.log10(Math.max(1, ratingCount))) * 3);
   }
 
+  // TYPE INTENT BOOST (suave, no dominante)
+
+  let typeIntent = null;
+
+  if (q.includes("game") || q.includes("elden") || q.includes("witcher 3")) {
+    typeIntent = "game";
+  } else if (q.includes("book") || q.includes("novel")) {
+    typeIntent = "book";
+  } else {
+    typeIntent = "movie";
+  }
+
+  if (typeIntent === "movie") {
+    if (item.type === "movie") score += 8;
+    if (item.type === "series") score += 4;
+    if (item.type === "game") score -= 3;
+  }
+
+  if (typeIntent === "game") {
+    if (item.type === "game") score += 10;
+    if (item.type === "movie") score -= 3;
+  }
+
+  if (typeIntent === "book") {
+    if (item.type === "book") score += 8;
+  }
+
   return score;
 }
 
@@ -340,13 +373,24 @@ function _rankAndMixExploreItems(
 ) {
   const seen = new Set();
 
+  const normalizeDedupTitle = (value) =>
+    String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\([^)]*\)/g, " ")
+      .replace(/[:\-–—]/g, " ")
+      .replace(/\b(part|episode|season|temporada|episodio)\b\s*\d*/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
   const deduped = [...tmdbItems, ...googleBooksItems, ...rawgItems].filter((item) => {
-    const key = `${String(item?.title || "").trim().toLowerCase()}|${String(item?.meta?.year || "")}`;
+    const normalizedTitle = normalizeDedupTitle(item?.title);
+    const year = String(item?.meta?.year || "");
+    const key = `${normalizedTitle}|${year}`;
 
     if (seen.has(key)) return false;
-
     seen.add(key);
-
     return true;
   });
 
@@ -361,12 +405,10 @@ function _rankAndMixExploreItems(
 
       const yearA = Number(a?.meta?.year || 0);
       const yearB = Number(b?.meta?.year || 0);
-
       if (yearB !== yearA) return yearB - yearA;
 
       const coverA = Number(Boolean(a?.cover));
       const coverB = Number(Boolean(b?.cover));
-
       if (coverB !== coverA) return coverB - coverA;
 
       return String(a?.title || "").localeCompare(String(b?.title || ""), "es", {
@@ -386,14 +428,13 @@ function _rankAndMixExploreItems(
 
     if (blockedSource) {
       const alternativeIndex = pool.findIndex((item) => item.source !== blockedSource);
-
       if (alternativeIndex >= 0) pickIndex = alternativeIndex;
     }
 
     mixed.push(pool.splice(pickIndex, 1)[0]);
   }
 
-  return mixed.slice(0, 40).map(({ __score, ...item }) => item);
+  return mixed.slice(0, 30).map(({ __score, ...item }) => item);
 }
 
 const EXPLORE_FEED = [
