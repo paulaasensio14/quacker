@@ -96,9 +96,12 @@ function _baseSearchItemFromMovie(item) {
     summary: String(item.overview || "").trim(),
     cover: _posterUrl(item.poster_path),
     meta: {
-        year: _yearFromDate(item.release_date)
+      year: _yearFromDate(item.release_date),
+      popularity: Number(item.popularity || 0) || 0,
+      rating: Number(item.vote_average || 0) || null,
+      ratingCount: Number(item.vote_count || 0) || 0
     }
-    };
+  };
 }
 
 function _baseSearchItemFromTv(item) {
@@ -112,9 +115,12 @@ function _baseSearchItemFromTv(item) {
     summary: String(item.overview || "").trim(),
     cover: _posterUrl(item.poster_path),
     meta: {
-        year: _yearFromDate(item.first_air_date)
+      year: _yearFromDate(item.first_air_date),
+      popularity: Number(item.popularity || 0) || 0,
+      rating: Number(item.vote_average || 0) || null,
+      ratingCount: Number(item.vote_count || 0) || 0
     }
-    };
+  };
 }
 
 function _normalizeTmdbSearchText(value) {

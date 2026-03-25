@@ -72,7 +72,9 @@ function _baseSearchItemFromVolume(item) {
     meta: {
       year: _yearFromDate(volumeInfo.publishedDate),
       author: authors.join(", "),
-      totalPages: Number(volumeInfo.pageCount || 0) || null
+      totalPages: Number(volumeInfo.pageCount || 0) || null,
+      rating: Number(volumeInfo.averageRating || 0) || null,
+      ratingCount: Number(volumeInfo.ratingsCount || 0) || 0
     }
   };
 }

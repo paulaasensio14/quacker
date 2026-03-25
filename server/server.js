@@ -200,15 +200,28 @@ function _scoreExploreSearchItem(item, query) {
   const summary = _normalizeExploreQueryText(item?.summary);
   const tokens = _tokenizeExploreQuery(q);
 
+  const suffixAfterPrefix = title.startsWith(q) ? title.slice(q.length).trim() : "";
+
+  const isDerivativeEdition = Boolean(
+    suffixAfterPrefix &&
+      /^(?:[:\-–—]|\b(?:vol\.?|volume|tomo|book|gu[ií]a|guide|strategy|artbook|art\s*book|comic|manga|novel|novela|season|temporada|part|parte|ii|iii|iv|v|\d+)\b)/i.test(
+        suffixAfterPrefix
+      )
+  );
+
   let score = 0;
 
   // EXACT MATCH DOMINANTE
   if (title === q) {
     score += 1000;
   } else if (title.startsWith(q)) {
-    score += 200;
+    score += 180;
   } else if (title.includes(q)) {
-    score += 60;
+    score += 45;
+  }
+
+  if (isDerivativeEdition) {
+    score -= 90;
   }
 
   for (const token of tokens) {
@@ -233,6 +246,26 @@ function _scoreExploreSearchItem(item, query) {
     score += 5;
   } else if (item?.source === "google_books") {
     score += 1;
+  }
+
+  const popularity = Number(item?.meta?.popularity || 0);
+  const rating = Number(item?.meta?.rating || 0);
+  const ratingCount = Number(item?.meta?.ratingCount || 0);
+
+  if (item?.source === "tmdb") {
+    score += Math.min(18, Math.floor(Math.log10(Math.max(1, popularity))) * 6);
+    score += Math.min(12, Math.floor(Math.log10(Math.max(1, ratingCount))) * 4);
+  }
+
+  if (item?.source === "rawg") {
+    if (rating >= 4) score += 12;
+    else if (rating >= 3.5) score += 8;
+
+    score += Math.min(20, Math.floor(Math.log10(Math.max(1, ratingCount))) * 5);
+  }
+
+  if (item?.source === "google_books") {
+    score += Math.min(8, Math.floor(Math.log10(Math.max(1, ratingCount))) * 3);
   }
 
   return score;
