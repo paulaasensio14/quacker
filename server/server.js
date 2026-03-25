@@ -181,6 +181,91 @@ app.get("/api/auth/me", (req, res) => {
 });
 
 // ===== EXPLORE =====
+
+function _normalizeExploreQueryText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function _tokenizeExploreQuery(value) {
+  return _normalizeExploreQueryText(value).split(/\s+/).filter(Boolean);
+}
+
+function _scoreExploreSearchItem(item, query) {
+  const q = _normalizeExploreQueryText(query);
+  if (!q) return 0;
+
+  const title = _normalizeExploreQueryText(item?.title);
+  const author = _normalizeExploreQueryText(item?.meta?.author);
+  const summary = _normalizeExploreQueryText(item?.summary);
+  const tokens = _tokenizeExploreQuery(q);
+
+  let score = 0;
+
+  if (title === q) {
+    score += 120;
+  } else if (title.startsWith(q)) {
+    score += 70;
+  } else if (title.includes(q)) {
+    score += 40;
+  }
+
+  for (const token of tokens) {
+    if (title.includes(token)) score += 12;
+    if (author.includes(token)) score += 5;
+    if (summary.includes(token)) score += 2;
+  }
+
+  if (item?.cover) score += 6;
+  if (item?.summary) score += 3;
+  if (item?.source === "tmdb") score += 2;
+
+  return score;
+}
+
+function _rankAndMixExploreItems(query, tmdbItems = [], googleBooksItems = []) {
+  const ranked = [...tmdbItems, ...googleBooksItems]
+    .map((item) => ({
+      ...item,
+      __score: _scoreExploreSearchItem(item, query)
+    }))
+    .filter((item) => item.__score > 0)
+    .sort((a, b) => {
+      if (b.__score !== a.__score) return b.__score - a.__score;
+
+      const yearA = Number(a?.meta?.year || 0);
+      const yearB = Number(b?.meta?.year || 0);
+      if (yearB !== yearA) return yearB - yearA;
+
+      const coverA = Number(Boolean(a?.cover));
+      const coverB = Number(Boolean(b?.cover));
+      if (coverB !== coverA) return coverB - coverA;
+
+      return String(a?.title || "").localeCompare(String(b?.title || ""), "es", {
+        sensitivity: "base"
+      });
+    });
+
+  const mixed = [];
+  const pool = [...ranked];
+
+  while (pool.length) {
+    const lastSource = mixed[mixed.length - 1]?.source || null;
+    const prevSource = mixed[mixed.length - 2]?.source || null;
+    const blockedSource = lastSource && lastSource === prevSource ? lastSource : null;
+
+    let pickIndex = 0;
+
+    if (blockedSource) {
+      const alternativeIndex = pool.findIndex((item) => item.source !== blockedSource);
+      if (alternativeIndex >= 0) pickIndex = alternativeIndex;
+    }
+
+    mixed.push(pool.splice(pickIndex, 1)[0]);
+  }
+
+  return mixed.slice(0, 40).map(({ __score, ...item }) => item);
+}
+
 const EXPLORE_FEED = [
   {
     eid: "ex_001",
@@ -396,15 +481,10 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
           : [];
 
       const tmdbTop = tmdbItems.slice(0, 20);
+
       const booksTop = googleBooksItems.slice(0, 20);
 
-      const mixedItems = [];
-      const maxLen = Math.max(tmdbTop.length, booksTop.length);
-
-      for (let i = 0; i < maxLen; i += 1) {
-        if (tmdbTop[i]) mixedItems.push(tmdbTop[i]);
-        if (booksTop[i]) mixedItems.push(booksTop[i]);
-      }
+      const mixedItems = _rankAndMixExploreItems(q, tmdbTop, booksTop);
 
       return res.json({
         items: mixedItems,
