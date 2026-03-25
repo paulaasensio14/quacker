@@ -222,6 +222,36 @@ function _scoreExploreSearchItem(item, query) {
 
   let score = 0;
 
+  // CORE ENTITY CONFIDENCE
+  let coreMatchConfidence = 0;
+
+  if (tokens.length > 0) {
+    const coverage = matchedTitleTokens.length / tokens.length;
+
+    if (coverage === 1) {
+      coreMatchConfidence += 120;
+    } else if (coverage >= 0.75) {
+      coreMatchConfidence += 60;
+    }
+  }
+
+  if (title.length > q.length + 25) {
+    coreMatchConfidence -= 40;
+  }
+
+  const titleWordCount = title.split(/\s+/).length;
+  const queryWordCount = tokens.length;
+
+  if (titleWordCount > queryWordCount + 3) {
+    coreMatchConfidence -= 50;
+  }
+
+  if (/logic|explained|analysis|review|recap|summary|ending|theory/i.test(title)) {
+    coreMatchConfidence -= 120;
+  }
+
+  score += coreMatchConfidence;
+
   // EXACT MATCH DOMINANTE
   if (titleEqualsQuery) {
     score += 1000;
