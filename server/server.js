@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { searchTmdb, getTmdbDetail } from "./adapters/tmdb.js";
-import { searchGoogleBooks } from "./adapters/google-books.js";
+import { searchGoogleBooks, getGoogleBookDetail } from "./adapters/google-books.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
