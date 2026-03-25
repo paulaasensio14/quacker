@@ -1,8 +1,10 @@
+import { ENV } from "../config/env.js";
+
 const RAWG_BASE_URL = "https://api.rawg.io/api";
 
 function _getRawgApiKey() {
   const fromEnv =
-    process.env.RAWG_API_KEY ||
+    ENV.RAWG_API_KEY ||
     process.env.RAWG_KEY ||
     "";
 
