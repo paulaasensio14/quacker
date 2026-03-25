@@ -396,7 +396,25 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
           : [];
 
       return res.json({
-        items: [...tmdbItems, ...googleBooksItems]
+        items: [...tmdbItems, ...googleBooksItems],
+        debug: {
+          tmdb: {
+            status: tmdbResult.status,
+            count: tmdbItems.length,
+            error:
+              tmdbResult.status === "rejected"
+                ? String(tmdbResult.reason?.message || tmdbResult.reason)
+                : null
+          },
+          googleBooks: {
+            status: googleBooksResult.status,
+            count: googleBooksItems.length,
+            error:
+              googleBooksResult.status === "rejected"
+                ? String(googleBooksResult.reason?.message || googleBooksResult.reason)
+                : null
+          }
+        }
       });
     }
     const db = _readDb();
