@@ -193,7 +193,6 @@ function _tokenizeExploreQuery(value) {
 
 function _scoreExploreSearchItem(item, query) {
   const q = _normalizeExploreQueryText(query);
-
   if (!q) return 0;
 
   const title = _normalizeExploreQueryText(item?.title);
@@ -206,7 +205,7 @@ function _scoreExploreSearchItem(item, query) {
 
   const queryWords = normalizedQuery.split(" ").filter(Boolean);
 
-  // 🔴 FILTRO DURO: al menos una palabra completa debe aparecer
+  // FILTRO DURO: al menos una palabra completa debe aparecer
   const hasStrongMatch = queryWords.some(word =>
     normalizedTitle.split(" ").includes(word)
   );
