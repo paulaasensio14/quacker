@@ -569,22 +569,23 @@
       <section class="view" id="view-explore" data-view-id="explore">
         <div class="explore-toolbar">
           <div class="explore-toolbar-left">
-            <div class="explore-pills" data-explore-type>
-              <button class="pill-btn active" type="button" data-value="all">Todo</button>
-              <button class="pill-btn" type="button" data-value="serie">Series</button>
-              <button class="pill-btn" type="button" data-value="pelicula">Películas</button>
-              <button class="pill-btn" type="button" data-value="book">Libros</button>
-              <button class="pill-btn" type="button" data-value="game">Videojuegos</button>
+            <div class="explore-pills library-pills" data-explore-type>
+              <button class="pill-btn pill-filter-sm active" type="button" data-value="all">Todo</button>
+              <button class="pill-btn pill-filter-sm" type="button" data-value="serie">Series</button>
+              <button class="pill-btn pill-filter-sm" type="button" data-value="pelicula">Películas</button>
+              <button class="pill-btn pill-filter-sm" type="button" data-value="book">Libros</button>
+              <button class="pill-btn pill-filter-sm" type="button" data-value="game">Videojuegos</button>
             </div>
           </div>
 
           <div class="explore-toolbar-right">
-            <label class="select-wrap">
+            <label class="select-wrap library-sort">
               <select id="exploreSort">
                 <option value="recent" selected>Más reciente</option>
                 <option value="title">Título</option>
               </select>
             </label>
+
             <button type="button" class="btn-ghost" id="exploreClearDismissed">
               Restablecer
             </button>
