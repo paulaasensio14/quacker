@@ -201,6 +201,19 @@ function _scoreExploreSearchItem(item, query) {
   const tokens = _tokenizeExploreQuery(q);
   const titleWords = title.split(/\s+/).filter(Boolean);
 
+  // HARD FILTER para queries de 1 palabra (evitar ruido tipo "Zelda película random")
+  if (tokens.length === 1) {
+    const token = tokens[0];
+
+    const isExact = title === token;
+    const startsWith = title.startsWith(token + " ");
+    const containsStrong = title.includes(` ${token} `);
+
+    if (!isExact && !startsWith && !containsStrong) {
+      return 0;
+    }
+  }
+
   const matchedTitleTokens = tokens.filter((token) => titleWords.includes(token));
 
   const missingTitleTokens = tokens.filter((token) => !titleWords.includes(token));
