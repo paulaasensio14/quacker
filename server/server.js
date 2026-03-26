@@ -221,6 +221,19 @@ function _scoreExploreSearchItem(item, query) {
     if (!isExact && !startsWith && !containsStrong) {
       return 0;
     }
+
+    const isVeryShortQuery = token.length <= 2;
+
+    if (isVeryShortQuery) {
+      const isStandaloneWord = new RegExp(`^${token}$`).test(title);
+      const isStrongStart = title.startsWith(token + " ");
+      const isKnownPattern =
+        new RegExp(`^${token}[:\\-–—]`).test(title); // IT: Chapter Two
+
+      if (!isStandaloneWord && !isStrongStart && !isKnownPattern) {
+        return 0;
+      }
+    }
   }
 
   const matchedTitleTokens = tokens.filter((token) => titleWords.includes(token));
