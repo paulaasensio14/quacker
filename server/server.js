@@ -207,7 +207,8 @@ function _scoreExploreSearchItem(item, query) {
 
   const titleStartsWithQuery = title.startsWith(q);
   const titleEqualsQuery = title === q;
-  const titleContainsQuery = title.includes(q);
+  const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const titleContainsQuery = new RegExp(`(^|\\s)${escapedQuery}(\\s|$)`).test(title);
 
   const suffixAfterPrefix = titleStartsWithQuery ? title.slice(q.length).trim() : "";
 
