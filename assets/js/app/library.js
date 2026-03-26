@@ -655,7 +655,7 @@ const LibraryUI = (() => {
       const btnLabel = primaryButtonLabel(item);
 
       const coverStyle = item.cover
-        ? `style="background-image:url('${item.cover}');"`
+        ? `style="background-image:url('${item.cover}'); background-size:contain; background-position:center; background-repeat:no-repeat; background-color:#f8fafc;"`
         : "";
 
         const isInAnyList = itemsInAnyList.has(String(item.id));
