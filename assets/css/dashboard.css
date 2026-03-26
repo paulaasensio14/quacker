@@ -865,6 +865,71 @@ main.app-main {
   flex-wrap: wrap;
 }
 
+.explore-toolbar-right .library-sort {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 2px 2px 0 var(--border-strong);
+}
+
+.explore-toolbar-right .library-sort select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main);
+  padding-right: 18px;
+  cursor: pointer;
+  outline: none;
+}
+
+.explore-toolbar-right .library-sort {
+  position: relative;
+}
+
+.explore-toolbar-right .library-sort::after {
+  content: "⌄";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-52%);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  pointer-events: none;
+}
+
+.explore-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  box-shadow: 2px 2px 0 var(--border-strong);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.explore-reset-btn:hover {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
 .explore-section {
   display: flex;
   flex-direction: column;
