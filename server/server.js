@@ -201,13 +201,22 @@ function _scoreExploreSearchItem(item, query) {
   const tokens = _tokenizeExploreQuery(q);
   const titleWords = title.split(/\s+/).filter(Boolean);
 
+  const normalizedTitle = title;
+  const normalizedQuery = q;
+
+  // match fuerte tipo franquicia
+  const isStrongFranchiseMatch =
+    normalizedTitle.startsWith(normalizedQuery) ||
+    normalizedTitle.includes(` ${normalizedQuery}`) ||
+    normalizedTitle.includes(`${normalizedQuery}:`);
+
   // HARD FILTER para queries de 1 palabra (evitar ruido tipo "Zelda película random")
   if (tokens.length === 1) {
     const token = tokens[0];
 
     const isExact = title === token;
     const startsWith = title.startsWith(token + " ");
-    const containsStrong = title.includes(` ${token} `);
+    const containsStrong = new RegExp(`(^|\\s)${token}(\\s|$)`).test(title);
 
     if (!isExact && !startsWith && !containsStrong) {
       return 0;
@@ -219,7 +228,7 @@ function _scoreExploreSearchItem(item, query) {
   const missingTitleTokens = tokens.filter((token) => !titleWords.includes(token));
 
   // HARD FILTER: require at least one strong title token match
-  if (tokens.length > 0 && matchedTitleTokens.length === 0) {
+  if (tokens.length > 1 && matchedTitleTokens.length === 0) {
     return 0;
   }
 
@@ -227,6 +236,10 @@ function _scoreExploreSearchItem(item, query) {
   const titleEqualsQuery = title === q;
   const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const titleContainsQuery = new RegExp(`(^|\\s)${escapedQuery}(\\s|$)`).test(title);
+
+  const isSingleTokenCanonicalFranchise =
+    tokens.length === 1 &&
+    new RegExp(`\\b(?:the\\s+legend\\s+of|the)\\s+${escapedQuery}(?:\\b|:)`).test(title);
 
   const suffixAfterPrefix = titleStartsWithQuery ? title.slice(q.length).trim() : "";
 
@@ -249,7 +262,7 @@ function _scoreExploreSearchItem(item, query) {
     const coverage = matchedTitleTokens.length / tokens.length;
 
     if (coverage === 1) {
-      coreMatchConfidence += 120;
+      coreMatchConfidence += tokens.length === 1 ? 30 : 120;
     } else if (coverage >= 0.75) {
       coreMatchConfidence += 60;
     }
@@ -267,11 +280,6 @@ function _scoreExploreSearchItem(item, query) {
     coreMatchConfidence -= 80;
   }
 
-  // boost exacto solo fuerte en queries multi-token
-  if (title === q) {
-    score += tokens.length === 1 ? 40 : 200;
-  }
-
   const strongDerivativePattern =
     /\b(?:logic|explained|analysis|review|recap|summary|ending|theory|breakdown|easter\s*eggs|facts)\b/i;
 
@@ -282,18 +290,26 @@ function _scoreExploreSearchItem(item, query) {
 
   score += coreMatchConfidence;
 
+  if (isStrongFranchiseMatch) {
+    score += 400;
+  }
+
+  if (isSingleTokenCanonicalFranchise) {
+    score += 260;
+  }
+
   // EXACT MATCH DOMINANTE
   if (titleEqualsQuery) {
-    score += tokens.length === 1 ? 180 : 1000;
+    score += tokens.length === 1 ? 40 : 1000;
   } else if (titleStartsWithQuery) {
-    score += 220;
+    score += tokens.length === 1 ? 80 : 220;
   } else if (titleContainsQuery) {
     score += 60;
   }
 
   // COBERTURA COMPLETA DEL QUERY EN TITLE
   if (tokens.length > 0 && matchedTitleTokens.length === tokens.length) {
-    score += 220;
+    score += tokens.length === 1 ? 60 : 220;
   } else if (matchedTitleTokens.length >= Math.max(1, tokens.length - 1)) {
     score += 70;
   }
