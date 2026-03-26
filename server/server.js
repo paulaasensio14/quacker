@@ -200,35 +200,6 @@ function _scoreExploreSearchItem(item, query) {
   const summary = _normalizeExploreQueryText(item?.summary);
   const tokens = _tokenizeExploreQuery(q);
 
-  const normalizedTitle = normalize(title);
-  const normalizedQuery = normalize(query);
-
-  const queryWords = normalizedQuery.split(" ").filter(Boolean);
-
-  // FILTRO DURO: al menos una palabra completa debe aparecer
-  const hasStrongMatch = queryWords.some(word =>
-    normalizedTitle.split(" ").includes(word)
-  );
-
-  if (!hasStrongMatch) {
-    return 0;
-  }
-
-  // Exact match boost
-  if (normalizedTitle === normalizedQuery) {
-    score += 100;
-  }
-
-  // Starts with query
-  if (normalizedTitle.startsWith(normalizedQuery)) {
-    score += 40;
-  }
-
-  // All words match
-  if (queryWords.every(word => normalizedTitle.includes(word))) {
-    score += 30;
-  }
-
   const matchedTitleTokens = tokens.filter((token) => title.includes(token));
   const missingTitleTokens = tokens.filter((token) => !title.includes(token));
 
