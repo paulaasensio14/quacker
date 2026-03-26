@@ -199,9 +199,11 @@ function _scoreExploreSearchItem(item, query) {
   const author = _normalizeExploreQueryText(item?.meta?.author);
   const summary = _normalizeExploreQueryText(item?.summary);
   const tokens = _tokenizeExploreQuery(q);
+  const titleWords = title.split(/\s+/).filter(Boolean);
 
-  const matchedTitleTokens = tokens.filter((token) => title.includes(token));
-  const missingTitleTokens = tokens.filter((token) => !title.includes(token));
+  const matchedTitleTokens = tokens.filter((token) => titleWords.includes(token));
+
+  const missingTitleTokens = tokens.filter((token) => !titleWords.includes(token));
 
   const titleStartsWithQuery = title.startsWith(q);
   const titleEqualsQuery = title === q;
@@ -278,9 +280,8 @@ function _scoreExploreSearchItem(item, query) {
     score -= missingTitleTokens.length * 22;
   }
 
-  // TOKEN SIGNALS
   for (const token of tokens) {
-    if (title.includes(token)) score += 14;
+    if (titleWords.includes(token)) score += 14;
     if (author.includes(token)) score += 4;
     if (summary.includes(token)) score += 1;
   }
