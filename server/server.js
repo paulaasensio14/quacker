@@ -340,15 +340,15 @@ function _scoreExploreSearchItem(item, query) {
     score += Math.min(8, Math.floor(Math.log10(Math.max(1, ratingCount))) * 3);
   }
 
-  // TYPE INTENT BOOST (suave, no dominante)
+  // TYPE INTENT BOOST (solo cuando la query lo indica de verdad)
 
   let typeIntent = null;
 
-  if (q.includes("game") || q.includes("elden") || q.includes("witcher 3")) {
+  if (q.includes("game") || q.includes("videojuego") || q.includes("elden") || q.includes("witcher 3")) {
     typeIntent = "game";
-  } else if (q.includes("book") || q.includes("novel")) {
+  } else if (q.includes("book") || q.includes("novel") || q.includes("libro")) {
     typeIntent = "book";
-  } else {
+  } else if (q.includes("movie") || q.includes("film") || q.includes("pelicula") || q.includes("serie") || q.includes("series")) {
     typeIntent = "movie";
   }
 
