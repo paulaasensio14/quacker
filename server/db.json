@@ -176,6 +176,19 @@
           "cover": "http://books.google.com/books/content?id=K3xgDwAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
           "createdAt": "2026-03-25T18:09:53.290Z",
           "updatedAt": "2026-03-25T18:10:01.609Z"
+        },
+        {
+          "id": "u_1774522107382_39d745b4b318f8",
+          "type": "game",
+          "title": "It Takes Two",
+          "status": "completed",
+          "progress": 100,
+          "meta": {
+            "platform": null
+          },
+          "cover": "https://media.rawg.io/media/games/d47/d479582ed0a46496ad34f65c7099d7e5.jpg",
+          "createdAt": "2026-03-26T10:48:27.382Z",
+          "updatedAt": "2026-03-26T10:48:39.734Z"
         }
       ],
       "lists": [
@@ -215,11 +228,15 @@
             {
               "id": "u_1774462193290_97cf7b1546ada",
               "addedAt": "2026-03-25T18:09:53.303Z"
+            },
+            {
+              "id": "u_1774522107382_39d745b4b318f8",
+              "addedAt": "2026-03-26T10:48:27.448Z"
             }
           ],
-          "itemsCount": 2,
+          "itemsCount": 3,
           "createdAt": "2026-03-24T10:25:09.764Z",
-          "updatedAt": "2026-03-25T18:09:53.303Z"
+          "updatedAt": "2026-03-26T10:48:27.448Z"
         },
         {
           "id": "u_1774347928180_a7a7810f33e0e",
