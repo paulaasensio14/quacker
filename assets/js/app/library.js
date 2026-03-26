@@ -673,11 +673,6 @@ const LibraryUI = (() => {
               aria-label="${listAriaLabel}"
               title="${listLabel}"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-                aria-hidden="true" focusable="false">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-              </svg>
               <span class="lib-list-label sr-only">${listLabel}</span>
             </button>
           </div>
