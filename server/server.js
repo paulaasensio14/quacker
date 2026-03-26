@@ -254,12 +254,16 @@ function _scoreExploreSearchItem(item, query) {
     coreMatchConfidence -= 80;
   }
 
-  // boost si es exactamente la franquicia (muy importante)
+  // boost exacto solo fuerte en queries multi-token
   if (title === q) {
-    score += 200;
+    score += tokens.length === 1 ? 40 : 200;
   }
 
-  if (/logic|explained|analysis|review|recap|summary|ending|theory/i.test(title)) {
+  const strongDerivativePattern =
+    /\b(?:logic|explained|analysis|review|recap|summary|ending|theory|breakdown|easter\s*eggs|facts)\b/i;
+
+  if (strongDerivativePattern.test(title)) {
+    score -= 300;
     coreMatchConfidence -= 120;
   }
 
@@ -267,7 +271,7 @@ function _scoreExploreSearchItem(item, query) {
 
   // EXACT MATCH DOMINANTE
   if (titleEqualsQuery) {
-    score += 1000;
+    score += tokens.length === 1 ? 180 : 1000;
   } else if (titleStartsWithQuery) {
     score += 220;
   } else if (titleContainsQuery) {
@@ -285,8 +289,11 @@ function _scoreExploreSearchItem(item, query) {
   if (missingTitleTokens.length > 0) {
     score -= missingTitleTokens.length * 40;
   }
+
   for (const token of tokens) {
-    if (titleWords.includes(token)) score += 14;
+    if (titleWords.includes(token)) {
+      score += tokens.length === 1 ? 6 : 14;
+    }
     if (author.includes(token)) score += 4;
     if (summary.includes(token)) score += 1;
   }
