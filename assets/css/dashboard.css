@@ -4589,6 +4589,17 @@ body.dark-theme .notif-mark-btn:hover {
   gap: 10px;
 }
 
+/* Botón secundario tipo pill para Explore */
+.explore-reset-btn {
+  opacity: 0.7;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.explore-reset-btn:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
 /* ===== Explore: modo "Añadir a lista" ===== */
 .explore-mode-chip{
   display: inline-flex;
