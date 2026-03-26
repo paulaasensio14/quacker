@@ -214,9 +214,11 @@ function _scoreExploreSearchItem(item, query) {
   if (tokens.length === 1) {
     const token = tokens[0];
 
+    const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     const isExact = title === token;
     const startsWith = title.startsWith(token + " ");
-    const containsStrong = new RegExp(`(^|\\s)${token}(\\s|$)`).test(title);
+    const containsStrong = new RegExp(`(^|\\s)${escapedToken}(\\s|$)`).test(title);
 
     if (!isExact && !startsWith && !containsStrong) {
       return 0;
@@ -225,10 +227,9 @@ function _scoreExploreSearchItem(item, query) {
     const isVeryShortQuery = token.length <= 2;
 
     if (isVeryShortQuery) {
-      const isStandaloneWord = new RegExp(`^${token}$`).test(title);
+      const isStandaloneWord = new RegExp(`^${escapedToken}$`).test(title);
+      const isKnownPattern = new RegExp(`^${escapedToken}[:\\-–—]`).test(title);
       const isStrongStart = title.startsWith(token + " ");
-      const isKnownPattern =
-        new RegExp(`^${token}[:\\-–—]`).test(title); // IT: Chapter Two
 
       if (!isStandaloneWord && !isStrongStart && !isKnownPattern) {
         return 0;
