@@ -21,7 +21,9 @@ const ExploreModule = (() => {
   let searchTerm = "";
 
   // Soft loading / debounce (Explorar)
+
   let __applyTimer = null;
+  let __toolbarBound = false;
   let __loadingMinTimer = null;
   let __loadingStartedAt = 0;
 
@@ -430,9 +432,9 @@ const ExploreModule = (() => {
   }
 
   function _applyFilters() {
+
     const t = typeFilter;
     const q = _norm(searchTerm);
-
     let out = [...feed];
 
     // quitar ocultados
@@ -441,21 +443,83 @@ const ExploreModule = (() => {
     if (t !== "all") out = out.filter(x => x.type === t);
 
     if (sortMode === "title") {
+
       out.sort((a, b) =>
         _safeText(a.title).localeCompare(_safeText(b.title), "es", { sensitivity: "base" })
       );
+
     } else if (!q) {
+
       // En búsquedas, respetamos el ranking/mezcla que ya viene del backend.
       // Solo aplicamos "Más reciente" al feed sin query.
       out.sort((a, b) => {
         const da = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
         const db = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
+
         return db - da;
       });
+
     }
 
     visible = out;
+
     _render();
+
+  }
+
+  function _syncExploreToolbarUI() {
+    const pillsRoot = document.querySelector("[data-explore-type]");
+    const sortSelect = document.getElementById("exploreSort");
+
+    if (pillsRoot) {
+      pillsRoot.querySelectorAll(".pill-btn[data-value]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.value === typeFilter);
+        btn.setAttribute("aria-pressed", btn.dataset.value === typeFilter ? "true" : "false");
+      });
+    }
+
+    if (sortSelect && sortSelect.value !== sortMode) {
+      sortSelect.value = sortMode;
+    }
+  }
+
+  function _bindExploreToolbar() {
+    if (__toolbarBound) return;
+    __toolbarBound = true;
+
+    const pillsRoot = document.querySelector("[data-explore-type]");
+    const sortSelect = document.getElementById("exploreSort");
+
+    if (pillsRoot) {
+      pillsRoot.addEventListener("click", (e) => {
+        const btn = e.target.closest(".pill-btn[data-value]");
+        if (!btn) return;
+
+        const nextType = String(btn.dataset.value || "all");
+        if (nextType === typeFilter) return;
+
+        typeFilter = nextType;
+        expandedSection = null;
+
+        _syncExploreToolbarUI();
+        _applyFilters();
+      });
+    }
+
+    if (sortSelect) {
+      sortSelect.addEventListener("change", () => {
+        const nextSort = String(sortSelect.value || "recent");
+        if (nextSort === sortMode) return;
+
+        sortMode = nextSort;
+        expandedSection = null;
+
+        _syncExploreToolbarUI();
+        _applyFilters();
+      });
+    }
+
+    _syncExploreToolbarUI();
   }
 
   function _openExploreDrawer(triggerEl) {
@@ -924,41 +988,64 @@ const ExploreModule = (() => {
   }
 
   async function load() {
+    _bindExploreToolbar();
+
     const globalSearch = document.getElementById("globalSearch");
+
     if (globalSearch) {
+
       searchTerm = String(globalSearch.value || "").trim();
+
     }
 
     if (searchTerm) {
+
       expandedSection = null;
+
     }
 
     _setExploreLoading(true);
+
     _renderExploreSkeleton();
 
     try {
+
       const rawFeed = await ApiClient.getExploreFeed(searchTerm);
+
       const safeFeed = Array.isArray(rawFeed) ? rawFeed : [];
 
       feed = safeFeed
         .map((item, index) => _normalizeExploreItem(item, index));
+
     } catch (e) {
       console.error("ExploreModule.load error", e);
+
       feed = [];
     }
 
     // cargar ocultados persistentes
+
     try {
-        const arr = await ApiClient.getExploreDismissed();
-        dismissed = new Set((arr || []).map(String));
+
+      const arr = await ApiClient.getExploreDismissed();
+
+      dismissed = new Set((arr || []).map(String));
+
     } catch (e) {
-        console.error(e);
-        dismissed = new Set();
+
+      console.error(e);
+
+      dismissed = new Set();
+
     }
 
     await _syncInLibraryFlags();
+
+    _syncExploreToolbarUI();
     _applyFilters();
+
     _setExploreLoading(false);
+
   }
 
   async function _ensureInLibrary(item) {
