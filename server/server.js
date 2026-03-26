@@ -283,9 +283,8 @@ function _scoreExploreSearchItem(item, query) {
 
   // PENALIZAR MATCHES PARCIALES
   if (missingTitleTokens.length > 0) {
-    score -= missingTitleTokens.length * 22;
+    score -= missingTitleTokens.length * 40;
   }
-
   for (const token of tokens) {
     if (titleWords.includes(token)) score += 14;
     if (author.includes(token)) score += 4;
