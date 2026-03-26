@@ -205,6 +205,11 @@ function _scoreExploreSearchItem(item, query) {
 
   const missingTitleTokens = tokens.filter((token) => !titleWords.includes(token));
 
+  // HARD FILTER: require at least one strong title token match
+  if (tokens.length > 0 && matchedTitleTokens.length === 0) {
+    return 0;
+  }
+
   const titleStartsWithQuery = title.startsWith(q);
   const titleEqualsQuery = title === q;
   const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
