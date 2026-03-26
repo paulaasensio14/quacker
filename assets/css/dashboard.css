@@ -3889,10 +3889,48 @@ body.dark-theme .notif-mark-btn:hover {
 }
 
 .lib-cover {
-  height:140px;
-  background-size:cover;
-  background-position:center;
-  background-color:rgba(0,0,0,0.05);
+  position: relative;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: rgba(0,0,0,0.05);
+}
+
+#view-library .lib-cover {
+  height: auto;
+  aspect-ratio: 2 / 3;
+}
+
+#view-library .lib-cover-list-btn{
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 34px;
+  height: 44px;
+  padding: 0 0 8px;
+  border: 2px solid var(--border-strong);
+  background: #fff;
+  color: var(--text);
+  box-shadow: 3px 3px 0 var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+  z-index: 1;
+}
+
+#view-library .lib-cover-list-btn:hover{
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
+  background: rgba(255, 204, 0, 0.18);
+}
+
+#view-library .lib-cover-list-btn.is-added{
+  background: rgba(255, 204, 0, 0.28);
 }
 
 .lib-body {
@@ -4209,9 +4247,6 @@ body.dark-theme .notif-mark-btn:hover {
 }
 
 /* Compactar cards para grids densos */
-#view-library .lib-cover {
-  height: 110px;
-}
 
 #view-library .lib-body {
   padding: 12px;

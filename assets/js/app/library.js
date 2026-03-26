@@ -658,11 +658,30 @@ const LibraryUI = (() => {
         ? `style="background-image:url('${item.cover}'); background-size:contain; background-position:center; background-repeat:no-repeat; background-color:#f8fafc;"`
         : "";
 
-        const isInAnyList = itemsInAnyList.has(String(item.id));
+      const isInAnyList = itemsInAnyList.has(String(item.id));
+      const listLabel = isInAnyList ? "En listas" : "Lista";
+      const listAriaLabel = isInAnyList ? "Quitar de listas" : "Añadir a listas";
 
       return `
         <article class="lib-card ${window.__lastCreatedLibraryItemId == item.id ? "is-highlight" : ""}" data-id="${item.id}">
-          <div class="lib-cover" ${coverStyle}></div>
+          <div class="lib-cover" ${coverStyle}>
+            <button
+              class="lib-cover-list-btn lib-list-btn ${isInAnyList ? "is-added" : ""}"
+              type="button"
+              data-action="add-to-list"
+              data-id="${item.id}"
+              aria-label="${listAriaLabel}"
+              title="${listLabel}"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true" focusable="false">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span class="lib-list-label sr-only">${listLabel}</span>
+            </button>
+          </div>
+
           <div class="lib-body">
             <div class="lib-title">${item.title || "Sin título"}</div>
             <div class="lib-type">${typeName}</div>
@@ -684,20 +703,6 @@ const LibraryUI = (() => {
 
                 <!-- FILA 2: botones -->
                 <div class="lib-footer-actions">
-                  <button
-                    class="lib-list-btn ${isInAnyList ? "is-added" : ""}"
-                    type="button"
-                    data-action="add-to-list"
-                    data-id="${item.id}"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-                      aria-hidden="true" focusable="false">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <span class="lib-list-label">${isInAnyList ? "En listas" : "Lista"}</span>
-                  </button>
-
                   <button
                     class="lib-edit-btn"
                     type="button"
