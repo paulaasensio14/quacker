@@ -688,6 +688,7 @@ const LibraryUI = (() => {
       const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
       const typeName = TYPE_LABELS[item.type] || "Contenido";
       const typeIcon = renderLibraryTypeIcon(item.type);
+      const statusKey = logicalStatus(item);
       const statusLabel = statusToLabel(item);
       const pText = progressText(item);
       const btnLabel = primaryButtonLabel(item);
@@ -735,7 +736,10 @@ const LibraryUI = (() => {
           <div class="lib-body">
             <div class="lib-title">${item.title || "Sin título"}</div>
 
-            <div class="lib-progress-text">${pText}</div>
+            <div class="lib-meta-row">
+              <span class="lib-status-badge is-${statusKey}">${statusLabel}</span>
+              <div class="lib-progress-text">${pText}</div>
+            </div>
 
             <div class="lib-footer">
 
