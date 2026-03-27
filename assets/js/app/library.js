@@ -738,12 +738,8 @@ const LibraryUI = (() => {
             <div class="lib-progress-text">${pText}</div>
 
             <div class="lib-footer">
-              <div class="lib-status-row">
-                <span class="lib-status ${logicalStatus(item)}">
-                  ${statusLabel}
-                </span>
-              </div>
 
+              <!-- FILA: botones -->
               <div class="lib-footer-actions">
                 ${
                   btnLabel
