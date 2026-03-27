@@ -675,6 +675,10 @@ const LibraryUI = (() => {
             >
               <span class="lib-list-label sr-only">${listLabel}</span>
             </button>
+
+            <div class="lib-cover-progress" aria-hidden="true">
+              <div class="lib-cover-progress-fill" style="width:${pct}%;"></div>
+            </div>
           </div>
 
           <div class="lib-body">
@@ -682,9 +686,6 @@ const LibraryUI = (() => {
             <div class="lib-type">${typeName}</div>
             ${formatLibraryMeta(item) ? `<div class="lib-meta">${formatLibraryMeta(item)}</div>` : ""}
 
-            <div class="lib-progress-bar">
-              <div class="lib-progress-fill" style="width:${pct}%;"></div>
-            </div>
             <div class="lib-progress-text">${pText}</div>
 
               <div class="lib-footer">
