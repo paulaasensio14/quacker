@@ -398,6 +398,50 @@ const LibraryUI = (() => {
     return "";
   }
 
+  function renderLibraryTypeIcon(type) {
+    if (type === "serie") {
+      return `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <rect x="3.5" y="5.5" width="17" height="13" rx="2"></rect>
+          <path d="M8 19.5h8"></path>
+        </svg>
+      `;
+    }
+
+    if (type === "pelicula") {
+      return `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5 7.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"></path>
+          <path d="M8.5 7.5l2-3"></path>
+          <path d="M13.5 7.5l2-3"></path>
+        </svg>
+      `;
+    }
+
+    if (type === "book") {
+      return `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M6 5.5h9.5a2.5 2.5 0 0 1 2.5 2.5v10.5H8.5A2.5 2.5 0 0 0 6 21V5.5z"></path>
+          <path d="M6 18.5c0-1.38 1.12-2.5 2.5-2.5H18"></path>
+        </svg>
+      `;
+    }
+
+    if (type === "game") {
+      return `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M7.5 9.5h9a4 4 0 0 1 3.8 5.2l-1 3A2.5 2.5 0 0 1 15 19l-2.2-1.6a1.4 1.4 0 0 0-1.6 0L9 19a2.5 2.5 0 0 1-4.3-1.3l-1-3a4 4 0 0 1 3.8-5.2z"></path>
+          <path d="M8.5 12.5h3"></path>
+          <path d="M10 11v3"></path>
+          <circle cx="15.5" cy="12.5" r=".9"></circle>
+          <circle cx="17.8" cy="14.2" r=".9"></circle>
+        </svg>
+      `;
+    }
+
+    return "";
+  }
+
   function primaryButtonLabel(item) {
     const st = logicalStatus(item);
     if (st === "completed") return "";
@@ -650,14 +694,13 @@ const LibraryUI = (() => {
     grid.innerHTML = filtered.map((item) => {
       const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
       const typeName = TYPE_LABELS[item.type] || "Contenido";
+      const typeIcon = renderLibraryTypeIcon(item.type);
       const statusLabel = statusToLabel(item);
       const pText = progressText(item);
       const btnLabel = primaryButtonLabel(item);
-
       const coverStyle = item.cover
         ? `style="background-image:url('${item.cover}'); background-size:contain; background-position:center; background-repeat:no-repeat; background-color:#f8fafc;"`
         : "";
-
       const isInAnyList = itemsInAnyList.has(String(item.id));
       const listLabel = isInAnyList ? "En listas" : "Lista";
       const listAriaLabel = isInAnyList ? "Quitar de listas" : "Añadir a listas";
@@ -676,6 +719,10 @@ const LibraryUI = (() => {
               <span class="lib-list-label sr-only">${listLabel}</span>
             </button>
 
+            <span class="lib-cover-type-icon" role="img" aria-label="${typeName}" title="${typeName}">
+              ${typeIcon}
+            </span>
+
             <div class="lib-cover-progress" aria-hidden="true">
               <div class="lib-cover-progress-fill" style="width:${pct}%;"></div>
             </div>
@@ -683,7 +730,7 @@ const LibraryUI = (() => {
 
           <div class="lib-body">
             <div class="lib-title">${item.title || "Sin título"}</div>
-            <div class="lib-type">${typeName}</div>
+            ${formatLibraryMeta(item) ? `<div class="lib-meta">${formatLibraryMeta(item)}</div>` : ""}
 
             <div class="lib-progress-text">${pText}</div>
 
