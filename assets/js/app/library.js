@@ -750,7 +750,6 @@ const LibraryUI = (() => {
                         data-id="${item.id}"
                       >
                         <span>${btnLabel}</span>
-                        <svg ...></svg>
                       </button>`
                     : ""
                 }
