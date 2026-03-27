@@ -692,8 +692,9 @@ const LibraryUI = (() => {
       const statusLabel = statusToLabel(item);
       const pText = progressText(item);
       const btnLabel = primaryButtonLabel(item);
+      const coverFit = item.type === "game" ? "cover" : "contain";
       const coverStyle = item.cover
-        ? `style="background-image:url('${item.cover}'); background-size:contain; background-position:center; background-repeat:no-repeat; background-color:#f8fafc;"`
+        ? `style="background-image:url('${item.cover}'); background-size:${coverFit}; background-position:center; background-repeat:no-repeat; background-color:#f8fafc;"`
         : "";
       const isInAnyList = itemsInAnyList.has(String(item.id));
       const listLabel = isInAnyList ? "En listas" : "Lista";
