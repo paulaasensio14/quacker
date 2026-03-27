@@ -738,7 +738,7 @@ const LibraryUI = (() => {
 
             <div class="lib-meta-row">
               <span class="lib-status-badge is-${statusKey}">${statusLabel}</span>
-              <div class="lib-progress-text">${pText}</div>
+              ${statusKey !== "completed" ? `<div class="lib-progress-text">${pText}</div>` : ``}
             </div>
 
             <div class="lib-footer">
