@@ -684,7 +684,6 @@ const LibraryUI = (() => {
           <div class="lib-body">
             <div class="lib-title">${item.title || "Sin título"}</div>
             <div class="lib-type">${typeName}</div>
-            ${formatLibraryMeta(item) ? `<div class="lib-meta">${formatLibraryMeta(item)}</div>` : ""}
 
             <div class="lib-progress-text">${pText}</div>
 

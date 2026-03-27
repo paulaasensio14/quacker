@@ -4027,7 +4027,7 @@ body.dark-theme .notif-mark-btn:hover {
 
 #view-library .lib-cover-progress-fill {
   height: 100%;
-  background: var(--color-green);
+  background: var(--bg-yellow);
 }
 
 @keyframes quackerBtnPop{

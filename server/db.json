@@ -66,16 +66,16 @@
           "type": "serie",
           "title": "Community",
           "status": "watching",
-          "progress": 0,
+          "progress": 3,
           "meta": {
             "totalSeasons": 6,
             "totalEpisodes": 110,
             "season": 1,
-            "episode": 1
+            "episode": 3
           },
           "cover": "https://image.tmdb.org/t/p/w500/3KUjDt8XY7w2Ku70UE0SECmv1zP.jpg",
           "createdAt": "2026-03-24T10:29:59.580Z",
-          "updatedAt": "2026-03-24T10:29:59.580Z"
+          "updatedAt": "2026-03-27T09:09:57.344Z"
         },
         {
           "id": "u_1774348314070_ad0bf0bcdb051",
@@ -98,7 +98,7 @@
           "type": "serie",
           "title": "La casa de papel",
           "status": "watching",
-          "progress": 78,
+          "progress": 83,
           "meta": {
             "totalSeasons": 3,
             "totalEpisodes": 41,
@@ -117,11 +117,11 @@
               }
             ],
             "season": 3,
-            "episode": 1
+            "episode": 3
           },
           "cover": "https://image.tmdb.org/t/p/w500/z01Dc0Ly2GmCpLe6Scx4d3dPP1S.jpg",
           "createdAt": "2026-03-24T11:23:22.700Z",
-          "updatedAt": "2026-03-24T11:23:59.918Z"
+          "updatedAt": "2026-03-27T09:13:51.195Z"
         },
         {
           "id": "u_1774362088878_cacad63ddcd2b",
