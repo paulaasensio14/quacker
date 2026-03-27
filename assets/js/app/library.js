@@ -716,6 +716,17 @@ const LibraryUI = (() => {
               ${typeIcon}
             </span>
 
+            <button
+              class="lib-cover-menu-btn"
+              type="button"
+              data-action="edit-progress"
+              data-id="${item.id}"
+              aria-label="Editar progreso"
+              title="Editar"
+            >
+              <span aria-hidden="true">⋮</span>
+            </button>
+
             <div class="lib-cover-progress" aria-hidden="true">
               <div class="lib-cover-progress-fill" style="width:${pct}%;"></div>
             </div>
@@ -726,62 +737,46 @@ const LibraryUI = (() => {
 
             <div class="lib-progress-text">${pText}</div>
 
-              <div class="lib-footer">
-
-                <!-- FILA 1: estado -->
-                <div class="lib-status-row">
-                  <span class="lib-status ${logicalStatus(item)}">
-                    ${statusLabel}
-                  </span>
-                </div>
-
-                <!-- FILA 2: botones -->
-                <div class="lib-footer-actions">
-                  <button
-                    class="lib-edit-btn"
-                    type="button"
-                    data-action="edit-progress"
-                    data-id="${item.id}"
-                  >
-                    Editar
-                  </button>
-                
-                  ${
-                    logicalStatus(item) !== "completed"
-                      ? `<button
-                          class="lib-complete-btn"
-                          type="button"
-                          data-id="${item.id}"
-                        >
-                          Hecho
-                        </button>`
-                      : ""
-                  }
-
-                  ${
-                    btnLabel
-                      ? `<button
-                          class="lib-primary-btn"
-                          type="button"
-                          data-action="primary"
-                          data-id="${item.id}"
-                        >
-                          <span>${btnLabel}</span>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-                            aria-hidden="true" focusable="false">
-                            <path d="M5 12h13"></path>
-                            <path d="M13 6l6 6-6 6"></path>
-                          </svg>
-                        </button>`
-                      : ""
-                  }
-                </div>
-
+            <div class="lib-footer">
+              <div class="lib-status-row">
+                <span class="lib-status ${logicalStatus(item)}">
+                  ${statusLabel}
+                </span>
               </div>
 
-            </div>
+              <div class="lib-footer-actions">
+                ${
+                  logicalStatus(item) !== "completed"
+                    ? `<button
+                        class="lib-complete-btn"
+                        type="button"
+                        data-id="${item.id}"
+                      >
+                        Hecho
+                      </button>`
+                    : ""
+                }
 
+                ${
+                  btnLabel
+                    ? `<button
+                        class="lib-primary-btn"
+                        type="button"
+                        data-action="primary"
+                        data-id="${item.id}"
+                      >
+                        <span>${btnLabel}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                          aria-hidden="true" focusable="false">
+                          <path d="M5 12h13"></path>
+                          <path d="M13 6l6 6-6 6"></path>
+                        </svg>
+                      </button>`
+                    : ""
+                }
+              </div>
+            </div>
           </div>
         </article>
       `;
