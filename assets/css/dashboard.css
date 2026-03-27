@@ -4010,6 +4010,26 @@ body.dark-theme .notif-mark-btn:hover {
   animation: quackerBtnPop 260ms ease;
 }
 
+#view-library .lib-cover {
+  position: relative;
+  overflow: hidden;
+}
+
+#view-library .lib-cover-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.12);
+  z-index: 1;
+}
+
+#view-library .lib-cover-progress-fill {
+  height: 100%;
+  background: var(--color-green);
+}
+
 @keyframes quackerBtnPop{
   0%   { transform: scale(1); }
   45%  { transform: scale(1.04); }
