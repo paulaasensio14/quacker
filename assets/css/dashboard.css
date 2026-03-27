@@ -4056,30 +4056,23 @@ body.dark-theme .notif-mark-btn:hover {
 
 #view-library .lib-cover-menu-btn {
   position: absolute;
-  right: 8px;
-  bottom: 10px;
-  width: 28px;
-  height: 28px;
-  border: 1px solid rgba(17, 24, 39, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #111827;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
+  right: 0px;
+  bottom: 6px;
+  background: none;
+  border: none;
+  padding: 4px;
+  color: rgba(0, 0, 0, 0.7);
   cursor: pointer;
   z-index: 2;
 }
 
-#view-library .lib-cover-menu-btn:hover {
-  background: rgba(255, 255, 255, 1);
+#view-library .lib-cover-menu-btn span {
+  font-size: 35px;
+  line-height: 1;
 }
 
-#view-library .lib-cover-menu-btn span {
-  font-size: 16px;
-  line-height: 1;
-  transform: translateY(-1px);
+#view-library .lib-cover-menu-btn:hover {
+  color: rgba(0, 0, 0, 1);
 }
 
 @keyframes quackerBtnPop{
@@ -4207,11 +4200,26 @@ body.dark-theme .notif-mark-btn:hover {
 #progressModal.is-open { display:flex; }
 
 
-#view-library .lib-footer-actions{
+#view-library .lib-footer-actions {
   display: flex;
-  flex-wrap: wrap;           /* clave: ya no se cortan */
+  align-items: stretch;
   gap: 8px;
-  align-items: center;
+}
+
+#view-library .lib-complete-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+#view-library .lib-primary-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#view-library .lib-primary-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Acciones pequeñas (Lista / Editar / Hecho) */
