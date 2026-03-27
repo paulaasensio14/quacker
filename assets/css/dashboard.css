@@ -3975,17 +3975,7 @@ body.dark-theme .notif-mark-btn:hover {
   gap: 8px;
 }
 
-.lib-status {
-  font-size:0.85rem;
-  color:var(--text-muted);
-}
-
 /* Fila del estado */
-.lib-status-row{
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
 
 /* Fila de botones: todos alineados */
 .lib-footer-actions{
