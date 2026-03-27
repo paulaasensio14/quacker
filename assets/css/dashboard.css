@@ -4212,8 +4212,28 @@ body.dark-theme .notif-mark-btn:hover {
 }
 
 #view-library .lib-primary-btn {
-  flex: 1 1 auto;
-  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  padding: 10px 12px;
+
+  background: var(--bg-yellow);
+  color: #111;
+
+  border: 2px solid var(--border-strong);
+  box-shadow: 3px 3px 0 var(--border-strong);
+
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+#view-library .lib-primary-btn:hover {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
 }
 
 #view-library .lib-primary-btn span {
