@@ -746,18 +746,6 @@ const LibraryUI = (() => {
 
               <div class="lib-footer-actions">
                 ${
-                  logicalStatus(item) !== "completed"
-                    ? `<button
-                        class="lib-complete-btn"
-                        type="button"
-                        data-id="${item.id}"
-                      >
-                        Hecho
-                      </button>`
-                    : ""
-                }
-
-                ${
                   btnLabel
                     ? `<button
                         class="lib-primary-btn"
@@ -766,11 +754,22 @@ const LibraryUI = (() => {
                         data-id="${item.id}"
                       >
                         <span>${btnLabel}</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-                          aria-hidden="true" focusable="false">
-                          <path d="M5 12h13"></path>
-                          <path d="M13 6l6 6-6 6"></path>
+                        <svg ...></svg>
+                      </button>`
+                    : ""
+                }
+
+                ${
+                  logicalStatus(item) !== "completed"
+                    ? `<button
+                        class="lib-complete-btn"
+                        type="button"
+                        data-id="${item.id}"
+                        aria-label="Marcar como completado"
+                        title="Marcar como completado"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                       </button>`
                     : ""

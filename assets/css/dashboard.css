@@ -4202,21 +4202,48 @@ body.dark-theme .notif-mark-btn:hover {
 
 #view-library .lib-footer-actions {
   display: flex;
-  align-items: stretch;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
 }
 
 #view-library .lib-complete-btn {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
 
-#view-library .lib-primary-btn {
+  border: 2px solid var(--border-strong);
+  background: #fff;
+  color: var(--border-strong);
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
 
+  padding: 0;
+  cursor: pointer;
+
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+#view-library .lib-complete-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+#view-library .lib-complete-btn:hover {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
+#view-library .lib-primary-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 12px;
 
   background: var(--bg-yellow);
@@ -4237,7 +4264,6 @@ body.dark-theme .notif-mark-btn:hover {
 }
 
 #view-library .lib-primary-btn span {
-  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
