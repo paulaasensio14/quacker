@@ -189,6 +189,17 @@
           "cover": "https://media.rawg.io/media/games/d47/d479582ed0a46496ad34f65c7099d7e5.jpg",
           "createdAt": "2026-03-26T10:48:27.382Z",
           "updatedAt": "2026-03-26T10:48:39.734Z"
+        },
+        {
+          "id": "u_1774604761939_1c390020c5dae8",
+          "type": "pelicula",
+          "title": "Spider-Man",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "https://image.tmdb.org/t/p/w500/bCDaKZLRkrVVtPNyHxUfKvepW1N.jpg",
+          "createdAt": "2026-03-27T09:46:01.939Z",
+          "updatedAt": "2026-03-27T09:46:01.939Z"
         }
       ],
       "lists": [
