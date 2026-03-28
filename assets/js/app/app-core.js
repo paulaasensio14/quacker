@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // Acciones del menú
-    profileMenu.addEventListener("click", (e) => {
+    profileMenu.addEventListener("click", async (e) => {
       const item = e.target.closest(".profile-menu-item");
       if (!item) return;
 
@@ -185,25 +185,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       switch (action) {
         case "profile": {
-          // Navegar a la vista de perfil usando el mismo sistema de la sidebar
           const profileBtn = document.querySelector('.nav-item-btn[data-view="profile"]');
           if (profileBtn) profileBtn.click();
           break;
         }
+
         case "settings": {
-          // De momento podemos llevar también a perfil (luego podrás crear vista "settings")
           const profileBtn = document.querySelector('.nav-item-btn[data-view="profile"]');
           if (profileBtn) profileBtn.click();
           break;
         }
+
         case "theme": {
           const themeToggle = $("#themeToggle");
           if (themeToggle) themeToggle.click();
           break;
         }
+
         case "logout": {
-          // Versión sencilla: volver a la landing
-          window.location.href = "index.html";
+          try {
+            await ApiClient.logout();
+          } catch (err) {
+            console.error(err);
+          } finally {
+            window.location.href = "index.html";
+          }
           break;
         }
       }
@@ -211,7 +217,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       profileMenu.classList.remove("is-open");
       profileMenu.setAttribute("aria-hidden", "true");
     });
-  }
 
   // ===== LANG TOGGLE (persistente en user via ApiClient) =====
   const langBtns = $all(".lang-btn");

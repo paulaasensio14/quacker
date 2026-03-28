@@ -6215,7 +6215,7 @@ body.modal-open{
   border: 3px solid #101828;
   border-radius: 28px;
   background: #fffdf7;
-  box-shadow: 0 10px 0 #101828;
+  box-shadow:4px 4px 0 var(--border-strong);
 }
 
 .lib-empty-state-card--error {
