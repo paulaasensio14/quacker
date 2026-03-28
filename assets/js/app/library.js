@@ -458,6 +458,50 @@ const LibraryUI = (() => {
       .replace(/\s+/g, " ");
   }
 
+  function clearLibrarySearch() {
+    searchTerm = "";
+    _saveUIState();
+
+    const localSearchInput = document.querySelector(".library-search-input");
+    if (localSearchInput) localSearchInput.value = "";
+
+    const topbarSearchInput = document.getElementById("globalSearch");
+    if (topbarSearchInput) topbarSearchInput.value = "";
+
+    const topbarSearchBox = document.getElementById("globalSearchBox");
+    if (topbarSearchBox) topbarSearchBox.classList.remove("has-value");
+  }
+
+  function getEmptyStateConfig() {
+    const hasSearch = !!normalizeSearchText(searchTerm);
+    const hasFilters = typeFilter !== "all" || statusFilter !== "all";
+
+    if (hasSearch && hasFilters) {
+      return {
+        title: "No hay resultados",
+        description: "No hay contenidos que coincidan con tu búsqueda y los filtros actuales.",
+        actionLabel: "Limpiar búsqueda y filtros",
+        action: "reset_all"
+      };
+    }
+
+    if (hasSearch) {
+      return {
+        title: "Sin resultados para tu búsqueda",
+        description: `No encontramos contenidos para “${searchTerm.trim()}” en tu biblioteca.`,
+        actionLabel: "Limpiar búsqueda",
+        action: "clear_search"
+      };
+    }
+
+    return {
+      title: "No hay contenidos con esos filtros",
+      description: "Prueba a cambiar o restablecer los filtros para ver más contenidos.",
+      actionLabel: "Restablecer filtros",
+      action: "reset_filters"
+    };
+  }
+
   function matchesFilters(item) {
     if (typeFilter !== "all" && item.type !== typeFilter) return false;
 
@@ -588,13 +632,13 @@ const LibraryUI = (() => {
 
     grid.innerHTML = `
       <div class="lib-empty-state" style="grid-column:1/-1;">
-        <div class="lib-empty-state-card" role="status" aria-live="polite">
+        <div class="lib-empty-state-card lib-empty-state-card--error" role="status" aria-live="polite">
+          <div class="lib-empty-state-icon" aria-hidden="true">!</div>
+          <div class="lib-empty-state-kicker">Biblioteca</div>
           <div class="lib-empty-state-title">No se pudo cargar tu biblioteca</div>
-
           <div class="lib-empty-state-text">
             Revisa la conexión o vuelve a intentarlo en unos segundos.
           </div>
-
           <div class="empty-state-actions">
             <button type="button" class="btn-primary" id="libRetryLoadBtn">
               Reintentar
@@ -636,54 +680,60 @@ const LibraryUI = (() => {
 
       if (!hasAnyItems) {
         grid.innerHTML = `
-        <div class="lib-empty-state" style="grid-column:1/-1;">
-          <div class="lib-empty-state-card" role="status" aria-live="polite">
-            <div class="lib-empty-state-title">Tu biblioteca está vacía</div>
-
-            <div class="lib-empty-state-text">
-              Empieza añadiendo una serie, película, libro o videojuego.
-            </div>
-
-            <div class="empty-state-actions">
-              <button type="button" class="btn-primary" id="libEmptyAddBtn">
-                + Añadir contenido
-              </button>
+          <div class="lib-empty-state">
+            <div class="lib-empty-state-card" role="status" aria-live="polite">
+              <div class="lib-empty-state-icon" aria-hidden="true">📚</div>
+              <div class="lib-empty-state-kicker">Mi biblioteca</div>
+              <h3 class="lib-empty-state-title">Tu biblioteca está vacía</h3>
+              <p class="lib-empty-state-text">
+                Empieza añadiendo una serie, película, libro o videojuego.
+              </p>
+              <div class="lib-empty-state-actions">
+                <button id="libEmptyAddBtn" class="btn btn-primary">+ Añadir contenido</button>
+              </div>
             </div>
           </div>
-        </div>
-      `;
-
+        `;
         requestAnimationFrame(() => {
           document.getElementById("libEmptyAddBtn")?.addEventListener("click", openAddLibraryModal);
         });
-
         return;
       }
 
+      const emptyState = getEmptyStateConfig();
+
       grid.innerHTML = `
-        <div class="lib-empty-state" style="grid-column:1/-1;">
-          <div class="lib-empty-state-card">
-            <div class="lib-empty-state-title">No hay resultados</div>
-            <div class="lib-empty-state-text">
-              No hay contenidos que coincidan con los filtros actuales.
+        <div class="lib-empty-state">
+          <div class="lib-empty-state-card" role="status" aria-live="polite">
+            <div class="lib-empty-state-icon" aria-hidden="true">${emptyState.icon}</div>
+            <div class="lib-empty-state-kicker">${emptyState.kicker}</div>
+            <h3 class="lib-empty-state-title">${emptyState.title}</h3>
+            <p class="lib-empty-state-text">${emptyState.description}</p>
+            <div class="lib-empty-state-actions">
+              <button id="libEmptyResetBtn" class="btn btn-secondary">${emptyState.actionLabel}</button>
             </div>
-            <button type="button" class="btn-secondary" id="libEmptyResetBtn">
-              Restablecer filtros
-            </button>
           </div>
         </div>
       `;
 
       requestAnimationFrame(() => {
         document.getElementById("libEmptyResetBtn")?.addEventListener("click", () => {
-          document.querySelector('.lib-type-pill[data-type="all"]')?.click();
-          document.querySelector('.lib-status-pill[data-status="all"]')?.click();
-
-          const sort = document.getElementById("librarySort");
-          if (sort) {
-            sort.value = "recent";
-            sort.dispatchEvent(new Event("change"));
+          if (emptyState.action === "clear_search" || emptyState.action === "reset_all") {
+            clearLibrarySearch();
           }
+
+          if (emptyState.action === "reset_filters" || emptyState.action === "reset_all") {
+            document.querySelector('.lib-type-pill[data-type="all"]')?.click();
+            document.querySelector('.lib-status-pill[data-status="all"]')?.click();
+
+            const sort = document.getElementById("librarySort");
+            if (sort) {
+              sort.value = "recent";
+              sort.dispatchEvent(new Event("change"));
+            }
+          }
+
+          render();
         });
       });
 

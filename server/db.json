@@ -294,19 +294,8 @@
         "language": "es",
         "theme": "light"
       },
-      "library": [
-        {
-          "id": "u_1774171348302_1a49a3efe05038",
-          "type": "pelicula",
-          "title": "Dune: Part Two",
-          "status": "watching",
-          "progress": 0,
-          "meta": {},
-          "cover": "",
-          "createdAt": "2026-03-22T09:22:28.302Z",
-          "updatedAt": "2026-03-22T09:22:28.302Z"
-        }
-      ]
+      "library": [],
+      "lists": []
     }
   }
 }
