@@ -24,15 +24,17 @@ const app = express();
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 
+const isProduction = process.env.NODE_ENV === "production";
+
 app.use(
   session({
-    secret: "quacker-dev-secret-change-me",
+    secret: process.env.SESSION_SECRET || "dev-secret-fallback",
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax"
-      // secure: true  // solo si usas https
+      sameSite: "lax",
+      secure: isProduction
     }
   })
 );
