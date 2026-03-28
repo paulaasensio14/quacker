@@ -39,24 +39,6 @@ app.use(
   })
 );
 
-app.use((req, _res, next) => {
-  const isApi = req.path.startsWith("/api/");
-  if (!isApi) return next();
-
-  const sid = req.sessionID || null;
-  const uid = req.session?.userId || null;
-
-  // Ojo: no imprimimos la cookie completa por seguridad, solo si existe
-  const hasCookieHeader = !!req.headers.cookie;
-  const hasConnectSid = typeof req.headers.cookie === "string" && req.headers.cookie.includes("connect.sid=");
-
-  console.log(
-    `[DEV][${new Date().toISOString()}] ${req.method} ${req.path} | sid=${sid} uid=${uid} cookieHeader=${hasCookieHeader} connectSid=${hasConnectSid}`
-  );
-
-  next();
-});
-
 // ===== Helpers DB =====
 function _readDb() {
   if (!fs.existsSync(DB_PATH)) {
@@ -765,33 +747,7 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
       const rankedItems = _rankAndMixExploreItems(q, tmdbItems, googleBooksItems, rawgItems);
 
       return res.json({
-        items: rankedItems,
-        debug: {
-          tmdb: {
-            status: tmdbResult.status,
-            count: tmdbItems.length,
-            error:
-              tmdbResult.status === "rejected"
-                ? String(tmdbResult.reason?.message || tmdbResult.reason)
-                : null
-          },
-          googleBooks: {
-            status: googleBooksResult.status,
-            count: googleBooksItems.length,
-            error:
-              googleBooksResult.status === "rejected"
-                ? String(googleBooksResult.reason?.message || googleBooksResult.reason)
-                : null
-          },
-          rawg: {
-            status: rawgResult.status,
-            count: rawgItems.length,
-            error:
-              rawgResult.status === "rejected"
-                ? String(rawgResult.reason?.message || rawgResult.reason)
-                : null
-          }
-        }
+        items: rankedItems
       });
     }
     const db = _readDb();
