@@ -353,17 +353,17 @@
           "updatedAt": "2026-03-28T09:57:58.399Z"
         },
         {
-          "id": "u_1774691881428_8b82c72d140c",
+          "id": "u_1774692445513_e2021a0375973",
           "type": "game",
-          "title": "Spider-Man 2: Enter Electro",
+          "title": "Marvel's Spider-Man",
           "status": "playing",
           "progress": 0,
           "meta": {
             "platform": null
           },
-          "cover": "https://media.rawg.io/media/games/c84/c8492b7730fbcce76ff501adb9c49428.jpg",
-          "createdAt": "2026-03-28T09:58:01.428Z",
-          "updatedAt": "2026-03-28T09:58:01.428Z"
+          "cover": "https://media.rawg.io/media/games/9aa/9aa42d16d425fa6f179fc9dc2f763647.jpg",
+          "createdAt": "2026-03-28T10:07:25.513Z",
+          "updatedAt": "2026-03-28T10:07:25.513Z"
         }
       ],
       "lists": []

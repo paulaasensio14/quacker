@@ -3,6 +3,7 @@ import session from "express-session";
 import cookieParser from "cookie-parser";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { searchTmdb, getTmdbDetail } from "./adapters/tmdb.js";
 import { searchGoogleBooks, getGoogleBookDetail } from "./adapters/google-books.js";
@@ -78,6 +79,29 @@ function _uid() {
   return `u_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
+function _hashPassword(password) {
+  const normalizedPassword = String(password || "");
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(normalizedPassword, salt, 64).toString("hex");
+
+  return { salt, hash };
+}
+
+function _verifyPassword(password, auth) {
+  const normalizedPassword = String(password || "");
+  const salt = String(auth?.passwordSalt || "");
+  const storedHash = String(auth?.passwordHash || "");
+
+  if (!salt || !storedHash) return false;
+
+  const computedHash = crypto.scryptSync(normalizedPassword, salt, 64);
+  const storedBuffer = Buffer.from(storedHash, "hex");
+
+  if (storedBuffer.length !== computedHash.length) return false;
+
+  return crypto.timingSafeEqual(storedBuffer, computedHash);
+}
+
 function _requireAuth(req, res, next) {
   if (!req.session?.userId) {
     return res.status(401).json({ error: "not_authenticated" });
@@ -112,16 +136,21 @@ app.get("/api/health", (req, res) => {
 app.post("/api/auth/register", (req, res) => {
   const { email, password, name } = req.body || {};
   const normalizedEmail = String(email || "").trim().toLowerCase();
+
   if (!normalizedEmail || !password || !name) {
     return res.status(400).json({ error: "missing_fields" });
   }
-  const db = _readDb();
-  // email único (dev)
-  const existing = Object.entries(db.users).find(([, u]) => String(u?.profile?.email || "").trim().toLowerCase() === normalizedEmail);
 
+  const db = _readDb();
+
+  const existing = Object.entries(db.users).find(([, u]) =>
+    String(u?.profile?.email || "").trim().toLowerCase() === normalizedEmail
+  );
   if (existing) return res.status(409).json({ error: "email_in_use" });
 
   const userId = _uid();
+  const { salt, hash } = _hashPassword(password);
+
   db.users[userId] = {
     profile: {
       id: userId,
@@ -131,7 +160,10 @@ app.post("/api/auth/register", (req, res) => {
       language: "es",
       theme: "light"
     },
-    // NOTA: en backend real aquí irán también lists/activities/notifications...
+    auth: {
+      passwordSalt: salt,
+      passwordHash: hash
+    },
     library: []
   };
 
@@ -139,7 +171,6 @@ app.post("/api/auth/register", (req, res) => {
 
   req.session.userId = userId;
 
-  // IMPORTANTE: asegurar que la sesión se guarda antes de responder
   req.session.save((err) => {
     if (err) return res.status(500).json({ error: "session_save_failed" });
     res.json({ user: db.users[userId].profile });
@@ -149,25 +180,38 @@ app.post("/api/auth/register", (req, res) => {
 app.post("/api/auth/login", (req, res) => {
   const { email, password } = req.body || {};
   const normalizedEmail = String(email || "").trim().toLowerCase();
-  if (!normalizedEmail || !password) return res.status(400).json({ error: "missing_fields" });
-  const db = _readDb();
-  const found = Object.entries(db.users).find(([, u]) => String(u?.profile?.email || "").trim().toLowerCase() === normalizedEmail);
 
-  // DEV: no validamos password de verdad (solo para levantar pipeline)
+  if (!normalizedEmail || !password) {
+    return res.status(400).json({ error: "missing_fields" });
+  }
+
+  const db = _readDb();
+  const found = Object.entries(db.users).find(([, u]) =>
+    String(u?.profile?.email || "").trim().toLowerCase() === normalizedEmail
+  );
+
   if (!found) return res.status(401).json({ error: "invalid_credentials" });
 
-  const [userId] = found;
+  const [userId, userBucket] = found;
+  const isValidPassword = _verifyPassword(password, userBucket?.auth);
+
+  if (!isValidPassword) {
+    return res.status(401).json({ error: "invalid_credentials" });
+  }
+
   req.session.userId = userId;
 
-  // IMPORTANTE: asegurar que la sesión se guarda antes de responder
   req.session.save((err) => {
     if (err) return res.status(500).json({ error: "session_save_failed" });
-    res.json({ user: db.users[userId].profile });
+    res.json({ user: userBucket.profile });
   });
 });
 
 app.post("/api/auth/logout", (req, res) => {
-  req.session.destroy(() => {
+  req.session.destroy((err) => {
+    if (err) return res.status(500).json({ error: "logout_failed" });
+
+    res.clearCookie("connect.sid");
     res.json({ ok: true });
   });
 });
