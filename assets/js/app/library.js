@@ -682,7 +682,12 @@ const LibraryUI = (() => {
         grid.innerHTML = `
           <div class="lib-empty-state">
             <div class="lib-empty-state-card" role="status" aria-live="polite">
-              <div class="lib-empty-state-icon" aria-hidden="true">📚</div>
+              <div class="lib-empty-state-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="lib-empty-state-icon-svg">
+                  <path d="M6 4.75A2.75 2.75 0 0 1 8.75 2h8.5A1.75 1.75 0 0 1 19 3.75v13.5A1.75 1.75 0 0 1 17.25 19h-8.5A2.75 2.75 0 0 0 6 21.75V4.75Zm2.75-1.25A1.25 1.25 0 0 0 7.5 4.75v12.38c.39-.23.84-.38 1.25-.38h8.5a.25.25 0 0 0 .25-.25V3.75a.25.25 0 0 0-.25-.25h-8.5Z"/>
+                  <path d="M8.75 6.5h6.5v1.5h-6.5V6.5Zm0 3h6.5V11h-6.5V9.5Zm0 3h4.5V14h-4.5v-1.5Z"/>
+                </svg>
+              </div>
               <div class="lib-empty-state-kicker">Mi biblioteca</div>
               <h3 class="lib-empty-state-title">Tu biblioteca está vacía</h3>
               <p class="lib-empty-state-text">
@@ -705,8 +710,6 @@ const LibraryUI = (() => {
       grid.innerHTML = `
         <div class="lib-empty-state">
           <div class="lib-empty-state-card" role="status" aria-live="polite">
-            <div class="lib-empty-state-icon" aria-hidden="true">${emptyState.icon}</div>
-            <div class="lib-empty-state-kicker">${emptyState.kicker}</div>
             <h3 class="lib-empty-state-title">${emptyState.title}</h3>
             <p class="lib-empty-state-text">${emptyState.description}</p>
             <div class="lib-empty-state-actions">

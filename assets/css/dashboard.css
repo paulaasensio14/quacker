@@ -6222,29 +6222,8 @@ body.modal-open{
   background: #fff7f7;
 }
 
-.lib-empty-state-icon {
-  width: 72px;
-  height: 72px;
-  display: grid;
-  place-items: center;
-  border: 3px solid #101828;
-  border-radius: 999px;
-  background: #ffd43b;
-  font-size: 32px;
-  line-height: 1;
-  box-shadow: 0 4px 0 #101828;
-}
-
 .lib-empty-state-card--error .lib-empty-state-icon {
   background: #ffb4b4;
-}
-
-.lib-empty-state-kicker {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #667085;
 }
 
 .lib-empty-state-title {
