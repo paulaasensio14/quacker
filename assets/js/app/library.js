@@ -869,9 +869,16 @@ const LibraryUI = (() => {
   }
 
   async function load() {
+    const grid = document.getElementById("libraryGrid");
+    const shouldRenderSkeleton = !grid || grid.children.length === 0;
+
     try {
       setLibraryRefreshing(true);
-      renderLibrarySkeleton();
+
+      if (shouldRenderSkeleton) {
+        renderLibrarySkeleton();
+      }
+
       allItems = await ApiClient.getLibrary();
 
       // Construimos un Set con todos los itemId que ya están en alguna lista
@@ -890,12 +897,9 @@ const LibraryUI = (() => {
       }
 
       render();
-
     } catch (e) {
-
       console.error("LibraryUI.load error", e);
       renderLibraryLoadError();
-
     } finally {
       setLibraryRefreshing(false);
     }

@@ -292,13 +292,16 @@
         "name": "Usuario de prueba",
         "handle": "@isma_garcia_toti",
         "language": "es",
-        "theme": "light"
+        "theme": "light",
+        "bio": "",
+        "avatar": "assets/img/avatars/avatar-3.png"
       },
       "auth": {
         "passwordSalt": "e9b2b46005f4f98f6828121ed905752b",
         "passwordHash": "3fc4265ce28155939d1f1edba8f87a70cfa6d6958cbb88ada590f6aca925ac3cdc726e3ddddb05eefd2b101ed03804f68eb141a45be5496f02bd30b5721cf633"
       },
-      "library": []
+      "library": [],
+      "lists": []
     }
   }
 }
