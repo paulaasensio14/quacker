@@ -66,7 +66,7 @@ function _baseSearchItemFromRawgGame(item) {
     title: _safeText(item.name),
     releaseDate: _safeText(item.released),
     summary: _safeText(item.slug),
-    cover: _rawgImageUrl(item),
+    cover: "",
     backdrop: _rawgImageUrl(item),
     meta: {
       year: _yearFromDate(item.released),
@@ -88,34 +88,31 @@ export async function searchRawg(query) {
 
   const results = Array.isArray(data?.results) ? data.results : [];
 
-const normalizedQuery = String(q).trim().toLowerCase();
-const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  const normalizedQuery = String(q).trim().toLowerCase();
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
 
-return results
-  .map(_baseSearchItemFromRawgGame)
-  .filter((item) => {
-    if (!item?.externalId || !item?.title) return false;
+  return results
+    .map(_baseSearchItemFromRawgGame)
+    .filter((item) => {
+      if (!item?.externalId || !item?.title) return false;
 
-    const title = String(item.title || "").toLowerCase();
+      const title = String(item.title || "").toLowerCase();
 
-    // MATCH FUERTE (igual que Books)
-    const strongMatch =
-      title === normalizedQuery ||
-      title.startsWith(normalizedQuery) ||
-      queryTokens.every((token) => title.includes(token));
+      const strongMatch =
+        title === normalizedQuery ||
+        title.startsWith(normalizedQuery) ||
+        queryTokens.every((token) => title.includes(token));
 
-    if (!strongMatch) return false;
+      if (!strongMatch) return false;
 
-    // FILTRO DE CALIDAD
-    const rating = Number(item?.meta?.rating || 0);
-    if (rating < 2) return false;
+      const rating = Number(item?.meta?.rating || 0);
+      if (rating < 2) return false;
 
-    // EVITAR BASURA SIN COVER
-    if (!item.cover && !item.backdrop) return false;
+      if (!item.cover && !item.backdrop) return false;
 
-    return true;
-  })
-  .slice(0, 20);
+      return true;
+    })
+    .slice(0, 20);
 }
 
 export async function getRawgDetail(externalId) {
