@@ -169,7 +169,7 @@ const ExploreModule = (() => {
             loading="lazy"
             referrerpolicy="no-referrer"
             onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback');"
-            ${isGame ? 'style="object-fit: cover; object-position: center top;"' : ""}
+            ${isGame ? 'style="object-fit: cover; padding: 0;"' : ""}
           />
           <span class="explore-cover-initial">${initials}</span>
         </div>
