@@ -108,11 +108,10 @@ return results
 
     // FILTRO DE CALIDAD
     const rating = Number(item?.meta?.rating || 0);
-
     if (rating < 2) return false;
 
-    // EVITAR BASURA SIN COVER
-    if (!item.cover) return false;
+    // Para juegos aceptamos backdrop aunque no haya cover vertical real
+    if (!item.cover && !item.backdrop) return false;
 
     return true;
   })
