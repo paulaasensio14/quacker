@@ -66,7 +66,7 @@ function _baseSearchItemFromRawgGame(item) {
     title: _safeText(item.name),
     releaseDate: _safeText(item.released),
     summary: _safeText(item.slug),
-    cover: "",
+    cover: _rawgImageUrl(item),
     backdrop: _rawgImageUrl(item),
     meta: {
       year: _yearFromDate(item.released),
@@ -110,8 +110,8 @@ return results
     const rating = Number(item?.meta?.rating || 0);
     if (rating < 2) return false;
 
-    // Para juegos aceptamos backdrop aunque no haya cover vertical real
-    if (!item.cover && !item.backdrop) return false;
+    // EVITAR BASURA SIN COVER
+    if (!item.cover) return false;
 
     return true;
   })
@@ -139,7 +139,7 @@ export async function getRawgDetail(externalId) {
     releaseDate: _safeText(data.released),
     summary: _stripHtml(data.description_raw || data.description || ""),
     description: _stripHtml(data.description_raw || data.description || ""),
-    cover: "",
+    cover: _rawgImageUrl(data),
     backdrop: _rawgImageUrl(data),
     genres: Array.isArray(data?.genres)
       ? data.genres.map((g) => _safeText(g?.name)).filter(Boolean)
