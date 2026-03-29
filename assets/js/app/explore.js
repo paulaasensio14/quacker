@@ -157,19 +157,21 @@ const ExploreModule = (() => {
     const title = _safeText(item?.title).trim();
     const initials = title ? title.slice(0, 1).toUpperCase() : "Q";
     const cover = _safeText(item?.cover).trim();
+    const backdrop = _safeText(item?.backdrop).trim();
     const isGame = _norm(item?.type) === "game";
+    const imageUrl = isGame ? (cover || backdrop) : cover;
 
-    if (cover) {
+    if (imageUrl) {
       return `
         <div class="explore-cover${isGame ? " explore-cover--game" : ""}">
           <img
             class="explore-cover-img${isGame ? " explore-cover-img--game" : ""}"
-            src="${cover}"
+            src="${imageUrl}"
             alt="Portada de ${title || "contenido"}"
             loading="lazy"
             referrerpolicy="no-referrer"
             onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback');"
-            ${isGame ? 'style="object-fit: cover; padding: 0;"' : ""}
+            ${isGame ? 'style="object-fit: cover; object-position: center top;"' : ""}
           />
           <span class="explore-cover-initial">${initials}</span>
         </div>
