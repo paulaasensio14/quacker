@@ -60,6 +60,24 @@ function setHomeDashboardLoading(isLoading) {
     homeView.setAttribute("aria-busy", isLoading ? "true" : "false");
   }
 
+  const markBtn = document.querySelector("#btnMarkLastActivity");
+  if (markBtn && isLoading) {
+    markBtn.dataset.itemId = "";
+    markBtn.innerHTML = "Cargando…";
+    markBtn.disabled = true;
+    markBtn.classList.remove("completed");
+  }
+
+  const backlogContainer = $("#backlogList");
+  if (backlogContainer && isLoading) {
+    backlogContainer.innerHTML = `
+      <article class="home-empty-card home-empty-card--compact" aria-live="polite">
+        <h3>Cargando backlog…</h3>
+        <p>Estamos revisando qué contenidos llevan tiempo sin movimiento.</p>
+      </article>
+    `;
+  }
+
   if (!isLoading) return;
 
   const textTargets = [
