@@ -285,88 +285,20 @@
       },
       "library": []
     },
-    "u_1773914163464_d83189b84775d": {
+    "u_1774788476771_5c432896a7a41": {
       "profile": {
-        "id": "u_1773914163464_d83189b84775d",
+        "id": "u_1774788476771_5c432896a7a41",
         "email": "isma_garcia_toti@gmail.com",
-        "name": "Sujeto de prueba",
+        "name": "Usuario de prueba",
         "handle": "@isma_garcia_toti",
         "language": "es",
-        "theme": "light",
-        "bio": "",
-        "avatar": "assets/img/avatars/avatar-2.png"
+        "theme": "light"
       },
-      "library": [
-        {
-          "id": "u_1774691872848_b84a5a2bd790f",
-          "type": "pelicula",
-          "title": "Spider-Man",
-          "status": "watching",
-          "progress": 0,
-          "meta": {},
-          "cover": "https://image.tmdb.org/t/p/w500/bCDaKZLRkrVVtPNyHxUfKvepW1N.jpg",
-          "createdAt": "2026-03-28T09:57:52.848Z",
-          "updatedAt": "2026-03-28T09:57:52.848Z"
-        },
-        {
-          "id": "u_1774691875956_7532a8f9c0653",
-          "type": "serie",
-          "title": "Spider-Man",
-          "status": "watching",
-          "progress": 0,
-          "meta": {
-            "totalSeasons": 3,
-            "totalEpisodes": 77,
-            "seasonBreakdown": [
-              {
-                "seasonNumber": 1,
-                "episodeCount": 38
-              },
-              {
-                "seasonNumber": 2,
-                "episodeCount": 19
-              },
-              {
-                "seasonNumber": 3,
-                "episodeCount": 20
-              }
-            ],
-            "season": 1,
-            "episode": 1
-          },
-          "cover": "https://image.tmdb.org/t/p/w500/3vpKx5Cx06OePP1VQEpjS0ybl6t.jpg",
-          "createdAt": "2026-03-28T09:57:55.956Z",
-          "updatedAt": "2026-03-28T09:57:55.956Z"
-        },
-        {
-          "id": "u_1774691878399_683a674a85e67",
-          "type": "book",
-          "title": "Spider-Man",
-          "status": "reading",
-          "progress": 0,
-          "meta": {
-            "totalPages": 308,
-            "pagesRead": 0
-          },
-          "cover": "http://books.google.com/books/content?id=RdgcGh7y1OkC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
-          "createdAt": "2026-03-28T09:57:58.399Z",
-          "updatedAt": "2026-03-28T09:57:58.399Z"
-        },
-        {
-          "id": "u_1774692445513_e2021a0375973",
-          "type": "game",
-          "title": "Marvel's Spider-Man",
-          "status": "playing",
-          "progress": 0,
-          "meta": {
-            "platform": null
-          },
-          "cover": "https://media.rawg.io/media/games/9aa/9aa42d16d425fa6f179fc9dc2f763647.jpg",
-          "createdAt": "2026-03-28T10:07:25.513Z",
-          "updatedAt": "2026-03-28T10:07:25.513Z"
-        }
-      ],
-      "lists": []
+      "auth": {
+        "passwordSalt": "e9b2b46005f4f98f6828121ed905752b",
+        "passwordHash": "3fc4265ce28155939d1f1edba8f87a70cfa6d6958cbb88ada590f6aca925ac3cdc726e3ddddb05eefd2b101ed03804f68eb141a45be5496f02bd30b5721cf633"
+      },
+      "library": []
     }
   }
 }
