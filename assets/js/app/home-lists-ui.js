@@ -53,7 +53,43 @@ function getWeekdayLabelEs(date = new Date()) {
   return dias[date.getDay()];
 }
 
+function setHomeDashboardLoading(isLoading) {
+  const homeView = document.getElementById("view-home");
+  if (homeView) {
+    homeView.classList.toggle("is-loading", isLoading);
+    homeView.setAttribute("aria-busy", isLoading ? "true" : "false");
+  }
+
+  if (!isLoading) return;
+
+  const textTargets = [
+    ["#metricWeeklyTime", "Cargando…"],
+    ["#metricInProgress", "…"],
+    ["#metricCompletedYear", "…"],
+    ["#metricStreak", "…"],
+    ["#lastActivityTitle", "Cargando actividad…"],
+    ["#lastActivityMeta", "Estamos preparando tu resumen."],
+    ["#lastActivityTime", ""],
+    ["#lastActivityProgressLabel", ""],
+    ["#challengeTitle", "Cargando reto…"],
+    ["#challengeDescription", "Estamos preparando tu progreso mensual."]
+  ];
+
+  textTargets.forEach(([selector, value]) => {
+    const el = $(selector);
+    if (el) el.textContent = value;
+  });
+
+  const lastActivityBar = $("#lastActivityProgressFill");
+  if (lastActivityBar) lastActivityBar.style.width = "0%";
+
+  const challengeBar = $("#challengeProgressFill");
+  if (challengeBar) challengeBar.style.width = "0%";
+}
+
 async function renderHomeDashboard() {
+  setHomeDashboardLoading(true);
+
   try {
     const [
       stats,
@@ -618,8 +654,9 @@ async function renderHomeDashboard() {
     }
   } catch (err) {
     console.error("Error al renderizar el dashboard de inicio", err);
+  } finally {
+    setHomeDashboardLoading(false);
   }
-
 }
 
   function animateNumber(el, to, suffix = "", duration = 400) {
