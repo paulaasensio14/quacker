@@ -249,12 +249,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const lang = btn.dataset.lang;
       if (!lang) return;
 
-      // feedback inmediato
       applyActiveLang(lang);
 
       try {
         await ApiClient.setUserLanguage(lang);
-
         window.toast?.({
           title: "Idioma actualizado",
           message: "Preferencia guardada.",
@@ -263,7 +261,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
       } catch (e) {
         console.error(e);
-
         window.toast?.({
           title: "No se pudo guardar el idioma",
           message: "Inténtalo de nuevo.",
@@ -273,6 +270,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   });
+}
 
   // 2) Router el último (dispara el primer view-change al init)
   Router.init();
