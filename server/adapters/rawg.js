@@ -111,7 +111,7 @@ return results
     if (rating < 2) return false;
 
     // EVITAR BASURA SIN COVER
-    if (!item.cover) return false;
+    if (!item.cover && !item.backdrop) return false;
 
     return true;
   })
