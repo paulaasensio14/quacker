@@ -1,6 +1,9 @@
 // assets/js/app/app-core.js
 // Punto de entrada del dashboard.
 
+const $ = (selector, root = document) => root.querySelector(selector);
+const $all = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
 document.addEventListener("DOMContentLoaded", async () => {
   await UITheme.init();
 
