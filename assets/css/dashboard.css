@@ -1020,6 +1020,19 @@ main.app-main {
   color: rgba(255, 255, 255, 0.92);
 }
 
+.explore-cover .explore-cover-initial {
+  display: none;
+}
+
+.explore-cover.is-fallback .explore-cover-initial {
+  display: inline-flex;
+}
+
+.explore-cover.is-fallback {
+  align-items: center;
+  justify-content: center;
+}
+
 /* Blindaje por si queda markup legacy durante recargas */
 .explore-card-info,
 .explore-card-title,

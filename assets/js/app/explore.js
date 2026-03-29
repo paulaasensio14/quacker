@@ -168,14 +168,16 @@ const ExploreModule = (() => {
             alt="Portada de ${title || "contenido"}"
             loading="lazy"
             referrerpolicy="no-referrer"
+            onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback');"
             ${isGame ? 'style="object-fit: contain; padding: 8px; background: #0f172a;"' : ""}
           />
+          <span class="explore-cover-initial">${initials}</span>
         </div>
       `;
     }
 
     return `
-      <div class="explore-cover" aria-hidden="true">
+      <div class="explore-cover is-fallback" aria-hidden="true">
         <span class="explore-cover-initial">${initials}</span>
       </div>
     `;
