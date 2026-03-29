@@ -157,16 +157,18 @@ const ExploreModule = (() => {
     const title = _safeText(item?.title).trim();
     const initials = title ? title.slice(0, 1).toUpperCase() : "Q";
     const cover = _safeText(item?.cover).trim();
+    const isGame = _norm(item?.type) === "game";
 
     if (cover) {
       return `
-        <div class="explore-cover">
+        <div class="explore-cover${isGame ? " explore-cover--game" : ""}">
           <img
-            class="explore-cover-img"
+            class="explore-cover-img${isGame ? " explore-cover-img--game" : ""}"
             src="${cover}"
             alt="Portada de ${title || "contenido"}"
             loading="lazy"
             referrerpolicy="no-referrer"
+            ${isGame ? 'style="object-fit: contain; padding: 8px; background: #0f172a;"' : ""}
           />
         </div>
       `;
