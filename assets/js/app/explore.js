@@ -576,6 +576,8 @@ const ExploreModule = (() => {
     }
     const coverEl = document.getElementById("exploreDrawerCover");
     if (coverEl) {
+      coverEl.innerHTML = "";
+      coverEl.classList.remove("is-fallback");
       coverEl.style.backgroundImage = "none";
       coverEl.style.backgroundSize = "";
       coverEl.style.backgroundPosition = "";
@@ -732,10 +734,29 @@ const ExploreModule = (() => {
       const backdrop = _safeText(item?.backdrop).trim();
       const cover = _safeText(item?.cover).trim();
       const heroImage = backdrop || cover;
+      const title = _safeText(item?.title).trim();
+      const initials = title ? title.slice(0, 1).toUpperCase() : "Q";
 
       if (heroImage) {
-        coverEl.style.backgroundImage = `url("${heroImage}")`;
+        coverEl.innerHTML = `
+          <img
+            class="explore-drawer-cover-img"
+            src="${heroImage}"
+            alt="Imagen de ${title || "contenido"}"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback');"
+          />
+          <span class="explore-drawer-cover-initial">${initials}</span>
+        `;
+        coverEl.classList.remove("is-fallback");
+        coverEl.style.backgroundImage = "none";
+        coverEl.style.backgroundSize = "";
+        coverEl.style.backgroundPosition = "";
+        coverEl.style.backgroundRepeat = "";
       } else {
+        coverEl.innerHTML = `<span class="explore-drawer-cover-initial">${initials}</span>`;
+        coverEl.classList.add("is-fallback");
         coverEl.style.backgroundImage = "none";
         coverEl.style.backgroundSize = "";
         coverEl.style.backgroundPosition = "";
