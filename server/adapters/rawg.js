@@ -66,11 +66,12 @@ function _baseSearchItemFromRawgGame(item) {
     title: _safeText(item.name),
     releaseDate: _safeText(item.released),
     summary: _safeText(item.slug),
-    cover: _rawgImageUrl(item),
+    cover: "",
+    backdrop: _rawgImageUrl(item),
     meta: {
-    year: _yearFromDate(item.released),
-    rating: Number(item.rating || 0) || null,
-    ratingCount: Number(item.ratings_count || 0) || 0
+      year: _yearFromDate(item.released),
+      rating: Number(item.rating || 0) || null,
+      ratingCount: Number(item.ratings_count || 0) || 0
     }
   };
 }
@@ -139,7 +140,7 @@ export async function getRawgDetail(externalId) {
     releaseDate: _safeText(data.released),
     summary: _stripHtml(data.description_raw || data.description || ""),
     description: _stripHtml(data.description_raw || data.description || ""),
-    cover: _rawgImageUrl(data),
+    cover: "",
     backdrop: _rawgImageUrl(data),
     genres: Array.isArray(data?.genres)
       ? data.genres.map((g) => _safeText(g?.name)).filter(Boolean)
