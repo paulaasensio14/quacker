@@ -560,6 +560,9 @@ const ExploreModule = (() => {
     __drawerDetailError = false;
     _syncExploreDrawerDetailFeedback();
 
+    __drawerListsPickerOpen = false;
+    _syncExploreDrawerListPicker();
+
     const activeItem = _getActiveExploreItem();
     if (activeItem) {
       _hydrateExploreDrawerDetail(activeItem);
@@ -576,7 +579,10 @@ const ExploreModule = (() => {
     activeEid = null;
     __drawerDetailLoading = false;
     __drawerDetailError = false;
+    __drawerListsPickerOpen = false;
     _syncExploreDrawerDetailFeedback();
+    _syncExploreDrawerListPicker();
+    _renderDrawerAddCtaLabel(null);
 
     drawer.classList.remove("is-open");
     drawer.setAttribute("aria-hidden", "true");
@@ -632,6 +638,38 @@ const ExploreModule = (() => {
 
   function _getActiveExploreItem() {
     return _getExploreItemByEid(activeEid);
+  }
+
+  function _syncExploreDrawerListPicker() {
+    const picker = document.getElementById("exploreDrawerListPicker");
+    const addListsBtn = document.getElementById("exploreDrawerAddLists");
+
+    if (picker) {
+      picker.hidden = !__drawerListsPickerOpen;
+    }
+
+    if (addListsBtn) {
+      addListsBtn.setAttribute(
+        "aria-expanded",
+        __drawerListsPickerOpen ? "true" : "false"
+      );
+
+      if (__drawerListsPickerOpen) {
+        addListsBtn.classList.add("is-active");
+      } else {
+        addListsBtn.classList.remove("is-active");
+      }
+    }
+  }
+
+  function _toggleExploreDrawerListPicker(forceOpen = null) {
+    const nextState =
+      typeof forceOpen === "boolean"
+        ? forceOpen
+        : !__drawerListsPickerOpen;
+
+    __drawerListsPickerOpen = nextState;
+    _syncExploreDrawerListPicker();
   }
 
   function _syncExploreDrawerDetailFeedback() {
@@ -969,6 +1007,7 @@ const ExploreModule = (() => {
 
     _clearDrawerInlineNote();
     _renderDrawerAddCtaLabel();
+    _syncExploreDrawerListPicker();
 
     return item;
   }
@@ -1847,7 +1886,7 @@ const ExploreModule = (() => {
         const item = _getActiveExploreItem();
         if (!item) return;
 
-        await _openExploreListPicker();
+        _toggleExploreDrawerListPicker();
       });
     }
 
