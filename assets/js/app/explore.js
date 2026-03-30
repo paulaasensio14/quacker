@@ -662,16 +662,6 @@ const ExploreModule = (() => {
     }
   }
 
-  function _toggleExploreDrawerListPicker(forceOpen = null) {
-    const nextState =
-      typeof forceOpen === "boolean"
-        ? forceOpen
-        : !__drawerListsPickerOpen;
-
-    __drawerListsPickerOpen = nextState;
-    _syncExploreDrawerListPicker();
-  }
-
   function _syncExploreDrawerDetailFeedback() {
     const loadingEl = document.getElementById("exploreDrawerDetailLoading");
     const errorEl = document.getElementById("exploreDrawerDetailError");
@@ -1007,7 +997,6 @@ const ExploreModule = (() => {
 
     _clearDrawerInlineNote();
     _renderDrawerAddCtaLabel();
-    _syncExploreDrawerListPicker();
 
     return item;
   }
@@ -1067,20 +1056,31 @@ const ExploreModule = (() => {
 
   async function _openExploreListPicker(preselectedListId = null) {
     const picker = document.getElementById("exploreDrawerListPicker");
+    const select = document.getElementById("exploreDrawerListSelect");
+    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
+
     if (!picker) return;
 
     await _populateExploreListPicker(preselectedListId);
 
     __drawerListsPickerOpen = true;
     picker.hidden = false;
+
+    if (confirmBtn) {
+      confirmBtn.disabled = !select?.value;
+    }
   }
 
   function _closeExploreListPicker() {
     const picker = document.getElementById("exploreDrawerListPicker");
-    if (!picker) return;
+    const select = document.getElementById("exploreDrawerListSelect");
+    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
 
     __drawerListsPickerOpen = false;
-    picker.hidden = true;
+
+    if (picker) picker.hidden = true;
+    if (select) select.value = "";
+    if (confirmBtn) confirmBtn.disabled = true;
   }
 
   async function _openExploreListPicker() {
