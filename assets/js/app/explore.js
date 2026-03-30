@@ -28,14 +28,12 @@ const ExploreModule = (() => {
   let __loadingStartedAt = 0;
 
   let __drawerOpen = false;
-
   let __drawerExpanded = false;
-
   let __drawerLastFocusEl = null;
-
   let __drawerListsPickerOpen = false;
-
   let __pendingLibraryEnsures = new Map();
+  let __drawerDetailReqSeq = 0;
+  const __drawerDetailCache = new Map();
 
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
@@ -532,18 +530,18 @@ const ExploreModule = (() => {
     const drawer = document.getElementById("exploreDrawer");
     const backdrop = document.getElementById("exploreDrawerBackdrop");
     const closeBtn = document.getElementById("exploreDrawerClose");
+
     if (!drawer || !backdrop) return;
 
     const wasOpen = drawer.classList.contains("is-open");
-
     __drawerOpen = true;
+
     if (!wasOpen) __drawerLastFocusEl = triggerEl || document.activeElement;
 
     // Mostrar overlay + abrir panel
     backdrop.hidden = false;
     drawer.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
-
     _syncExploreDrawerViewport();
 
     // Bloquear scroll (reutilizamos tu patrón existente)
@@ -554,6 +552,11 @@ const ExploreModule = (() => {
       requestAnimationFrame(() => {
         (closeBtn || drawer).focus?.();
       });
+    }
+
+    const activeItem = _getActiveExploreItem();
+    if (activeItem) {
+      _hydrateExploreDrawerDetail(activeItem);
     }
   }
 
@@ -658,12 +661,14 @@ const ExploreModule = (() => {
     return {
       title: _safeText(item?.title) || "Sin título",
       meta: metaParts.join(" · "),
-      summary: _safeText(item?.summary) || "Sin descripción disponible.",
+      summary:
+        _safeText(item?.description) ||
+        _safeText(item?.summary) ||
+        "Sin descripción disponible.",
       detailType: resolvedTypeLabel,
       detailReleaseDate: item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha",
       detailLibraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
-      detailListsCount:
-        count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
+      detailListsCount: count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
       badge: badgeParts.join(" · "),
       hasBadge: badgeParts.length > 0
     };
@@ -714,6 +719,65 @@ const ExploreModule = (() => {
 
   function _getActiveExploreItem() {
     return _getExploreItemByEid(activeEid);
+  }
+
+  async function _hydrateExploreDrawerDetail(item) {
+    if (!item) return;
+
+    const source = _safeText(item?.source).trim();
+    const type = _safeText(item?.type).trim();
+    const externalId = _safeText(item?.externalId).trim();
+    const eid = _safeText(item?.eid).trim();
+
+    if (!source || !type || !externalId || !eid) return;
+
+    const cacheKey = `${source}:${type}:${externalId}`;
+
+    if (__drawerDetailCache.has(cacheKey)) {
+      if (activeEid !== eid) return;
+
+      const cachedDetail = __drawerDetailCache.get(cacheKey);
+      const mergedItem = {
+        ...item,
+        ...cachedDetail,
+        eid,
+        __inLibrary: item.__inLibrary,
+        __listsCount: item.__listsCount,
+        __libraryItemId: item.__libraryItemId,
+        __saving: item.__saving
+      };
+
+      _syncExploreDrawerFromItem(mergedItem);
+      _renderExploreDrawerDetails(mergedItem);
+      return;
+    }
+
+    const reqSeq = ++__drawerDetailReqSeq;
+
+    try {
+      const detail = await ApiClient.getExploreItemDetail({ source, type, externalId });
+
+      if (!detail) return;
+      if (reqSeq !== __drawerDetailReqSeq) return;
+      if (activeEid !== eid) return;
+
+      __drawerDetailCache.set(cacheKey, detail);
+
+      const mergedItem = {
+        ...item,
+        ...detail,
+        eid,
+        __inLibrary: item.__inLibrary,
+        __listsCount: item.__listsCount,
+        __libraryItemId: item.__libraryItemId,
+        __saving: item.__saving
+      };
+
+      _syncExploreDrawerFromItem(mergedItem);
+      _renderExploreDrawerDetails(mergedItem);
+    } catch (err) {
+      console.error("[Explore] drawer detail hydration failed", err);
+    }
   }
 
   function _syncExploreDrawerFromItem(item) {
