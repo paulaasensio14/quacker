@@ -643,15 +643,24 @@ main.app-main {
 }
 
 .explore-drawer-head {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 2;
-  padding: 18px 18px 0;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  padding: 18px;
 }
 
 .explore-drawer-body {
-  background: #fff;
   position: relative;
   z-index: 3;
+  background: #fff;
+  margin-top: -10px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
 }
 
 .explore-drawer-title-row {
@@ -6036,6 +6045,13 @@ body.modal-open{
   --explore-expanded-top: 88px;
   --explore-expanded-right: 20px;
   --explore-expanded-bottom: 20px;
+}
+
+.explore-drawer-cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #0f172a;
 }
 
 .explore-drawer-cover::after {
