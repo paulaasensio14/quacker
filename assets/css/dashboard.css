@@ -656,12 +656,13 @@ main.app-main {
 .explore-drawer-head {
   position: relative;
   z-index: 1;
+  padding: 18px 18px 0;
 }
 
 .explore-drawer-title-row {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .explore-drawer-title-wrap {
@@ -673,16 +674,20 @@ main.app-main {
 
 .explore-drawer-title {
   margin: 0;
-  font-size: 2rem;
-  line-height: 1.05;
+  font-size: 2.1rem;
+  line-height: 1.08;
+  font-weight: 800;
   color: #fff;
   text-wrap: balance;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.42);
 }
 
 .explore-drawer-meta {
   margin: 0;
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.98rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.32);
 }
 
 .explore-drawer-head-actions {
@@ -695,24 +700,26 @@ main.app-main {
 #exploreDrawerBadge {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 7px 13px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
 }
 
 .explore-drawer-expand-btn {
-  min-height: 34px;
-  padding: 6px 12px;
+  min-height: 36px;
+  padding: 7px 13px;
   border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.22);
-  background: rgba(15, 23, 42, 0.44);
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  background: rgba(15, 23, 42, 0.52);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
 }
 
 .explore-drawer-content {
@@ -786,9 +793,10 @@ main.app-main {
 
 .explore-drawer-actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
-  padding-top: 14px;
+  padding-top: 16px;
+  margin-top: 4px;
   border-top: 2px solid var(--border-soft);
 }
 
