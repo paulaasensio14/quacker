@@ -1065,6 +1065,24 @@ const ExploreModule = (() => {
     }
   }
 
+  async function _openExploreListPicker(preselectedListId = null) {
+    const picker = document.getElementById("exploreDrawerListPicker");
+    if (!picker) return;
+
+    await _populateExploreListPicker(preselectedListId);
+
+    __drawerListsPickerOpen = true;
+    picker.hidden = false;
+  }
+
+  function _closeExploreListPicker() {
+    const picker = document.getElementById("exploreDrawerListPicker");
+    if (!picker) return;
+
+    __drawerListsPickerOpen = false;
+    picker.hidden = true;
+  }
+
   async function _openExploreListPicker() {
     const picker = document.getElementById("exploreDrawerListPicker");
     if (!picker) return;
@@ -1887,12 +1905,11 @@ const ExploreModule = (() => {
         if (!item) return;
 
         if (__drawerListsPickerOpen) {
-          _toggleExploreDrawerListPicker(false);
+          _closeExploreListPicker();
           return;
         }
 
         await _openExploreListPicker();
-        _toggleExploreDrawerListPicker(true);
       });
     }
 
