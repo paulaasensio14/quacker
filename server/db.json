@@ -300,7 +300,46 @@
         "passwordSalt": "e9b2b46005f4f98f6828121ed905752b",
         "passwordHash": "3fc4265ce28155939d1f1edba8f87a70cfa6d6958cbb88ada590f6aca925ac3cdc726e3ddddb05eefd2b101ed03804f68eb141a45be5496f02bd30b5721cf633"
       },
-      "library": [],
+      "library": [
+        {
+          "id": "u_1774867995138_5d1b9bf60f3e6",
+          "type": "serie",
+          "title": "The Batman",
+          "status": "watching",
+          "progress": 0,
+          "meta": {
+            "totalSeasons": 5,
+            "totalEpisodes": 65,
+            "seasonBreakdown": [
+              {
+                "seasonNumber": 1,
+                "episodeCount": 13
+              },
+              {
+                "seasonNumber": 2,
+                "episodeCount": 13
+              },
+              {
+                "seasonNumber": 3,
+                "episodeCount": 13
+              },
+              {
+                "seasonNumber": 4,
+                "episodeCount": 13
+              },
+              {
+                "seasonNumber": 5,
+                "episodeCount": 13
+              }
+            ],
+            "season": 1,
+            "episode": 1
+          },
+          "cover": "https://image.tmdb.org/t/p/w500/3w7koeOR2x71XYMJDGpygxYtScI.jpg",
+          "createdAt": "2026-03-30T10:53:15.138Z",
+          "updatedAt": "2026-03-30T10:53:15.138Z"
+        }
+      ],
       "lists": []
     }
   }

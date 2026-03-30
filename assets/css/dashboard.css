@@ -827,6 +827,7 @@ main.app-main {
   border-radius: 18px;
   background: rgba(15, 23, 42, 0.04);
   border: 2px solid var(--border-soft);
+  display: none !important; /* solo se muestra si JS lo habilita */
 }
 
 .explore-drawer-list-label {
