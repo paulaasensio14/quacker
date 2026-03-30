@@ -625,6 +625,11 @@ const ExploreModule = (() => {
     }
   }
 
+  function _getExploreItemByEid(eid) {
+    if (!eid) return null;
+    return feed.find((x) => String(x.eid) === String(eid)) || null;
+  }
+
   function _getActiveExploreItem() {
     return _getExploreItemByEid(activeEid);
   }
