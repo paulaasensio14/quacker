@@ -32,6 +32,8 @@ const ExploreModule = (() => {
   let __drawerLastFocusEl = null;
   let __drawerListsPickerOpen = false;
   let __pendingLibraryEnsures = new Map();
+  let __drawerDetailLoading = false;
+  let __drawerDetailError = false;
   let __drawerDetailReqSeq = 0;
   const __drawerDetailCache = new Map();
 
@@ -554,6 +556,10 @@ const ExploreModule = (() => {
       });
     }
 
+    __drawerDetailLoading = false;
+    __drawerDetailError = false;
+    _syncExploreDrawerDetailFeedback();
+
     const activeItem = _getActiveExploreItem();
     if (activeItem) {
       _hydrateExploreDrawerDetail(activeItem);
@@ -568,6 +574,9 @@ const ExploreModule = (() => {
     __drawerOpen = false;
     __drawerDetailReqSeq += 1;
     activeEid = null;
+    __drawerDetailLoading = false;
+    __drawerDetailError = false;
+    _syncExploreDrawerDetailFeedback();
 
     drawer.classList.remove("is-open");
     drawer.setAttribute("aria-hidden", "true");
@@ -616,9 +625,21 @@ const ExploreModule = (() => {
     }
   }
 
-  function _getExploreItemByEid(eid) {
-    if (!eid) return null;
-    return feed.find((x) => String(x.eid) === String(eid)) || null;
+  function _getActiveExploreItem() {
+    return _getExploreItemByEid(activeEid);
+  }
+
+  function _syncExploreDrawerDetailFeedback() {
+    const loadingEl = document.getElementById("exploreDrawerDetailLoading");
+    const errorEl = document.getElementById("exploreDrawerDetailError");
+
+    if (loadingEl) {
+      loadingEl.hidden = !__drawerDetailLoading;
+    }
+
+    if (errorEl) {
+      errorEl.hidden = !__drawerDetailError;
+    }
   }
 
   function _replaceExploreItemByEid(nextItem) {
@@ -809,8 +830,14 @@ const ExploreModule = (() => {
 
     const cacheKey = `${source}:${type}:${externalId}`;
 
+    __drawerDetailError = false;
+
     if (__drawerDetailCache.has(cacheKey)) {
       if (activeEid !== eid) return;
+
+      __drawerDetailLoading = false;
+      __drawerDetailError = false;
+      _syncExploreDrawerDetailFeedback();
 
       const cachedDetail = __drawerDetailCache.get(cacheKey);
       const mergedItem = {
@@ -832,12 +859,20 @@ const ExploreModule = (() => {
 
     const reqSeq = ++__drawerDetailReqSeq;
 
+    __drawerDetailLoading = true;
+    __drawerDetailError = false;
+    _syncExploreDrawerDetailFeedback();
+
     try {
       const detail = await ApiClient.getExploreItemDetail({ source, type, externalId });
 
       if (!detail) return;
       if (reqSeq !== __drawerDetailReqSeq) return;
       if (activeEid !== eid) return;
+
+      __drawerDetailLoading = false;
+      __drawerDetailError = false;
+      _syncExploreDrawerDetailFeedback();
 
       __drawerDetailCache.set(cacheKey, detail);
 
@@ -856,6 +891,9 @@ const ExploreModule = (() => {
       _syncExploreDrawerFromItem(persistedItem);
       _renderExploreDrawerDetails(persistedItem);
     } catch (err) {
+      __drawerDetailLoading = false;
+      __drawerDetailError = activeEid === eid;
+      _syncExploreDrawerDetailFeedback();
       console.error("[Explore] drawer detail hydration failed", err);
     }
   }
