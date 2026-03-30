@@ -633,19 +633,6 @@ main.app-main {
   z-index: 2;
 }
 
-.explore-drawer-cover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(15, 23, 42, 0.2) 0%,
-    rgba(15, 23, 42, 0.65) 60%,
-    rgba(15, 23, 42, 0.9) 100%
-  );
-  pointer-events: none;
-}
-
 .explore-drawer-cover::before {
   content: "";
   position: absolute;
@@ -6055,19 +6042,23 @@ body.modal-open{
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.15) 0%,
-    rgba(0, 0, 0, 0.45) 50%,
-    rgba(0, 0, 0, 0.85) 100%
+    rgba(15, 23, 42, 0.2) 0%,
+    rgba(15, 23, 42, 0.65) 60%,
+    rgba(15, 23, 42, 0.9) 100%
   );
+  pointer-events: none;
 }
 
 .explore-drawer-cover-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  z-index: 0;
 }
 
 .explore-drawer-cover-initial {
