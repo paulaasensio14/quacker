@@ -1886,7 +1886,13 @@ const ExploreModule = (() => {
         const item = _getActiveExploreItem();
         if (!item) return;
 
-        _toggleExploreDrawerListPicker();
+        if (__drawerListsPickerOpen) {
+          _toggleExploreDrawerListPicker(false);
+          return;
+        }
+
+        await _openExploreListPicker();
+        _toggleExploreDrawerListPicker(true);
       });
     }
 
