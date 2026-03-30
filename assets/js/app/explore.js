@@ -695,19 +695,74 @@ const ExploreModule = (() => {
     };
   }
 
+  function _buildExploreDrawerDetailMeta(item) {
+    const genres = Array.isArray(item?.genres)
+      ? item.genres.map((genre) => _safeText(genre).trim()).filter(Boolean)
+      : [];
+
+    const ratingNumber = Number(item?.rating || 0);
+    const rating =
+      Number.isFinite(ratingNumber) && ratingNumber > 0
+        ? `${ratingNumber.toFixed(1)} / 10`
+        : "Sin puntuación";
+
+    const author = _safeText(item?.meta?.author).trim();
+    const platforms = _safeText(item?.meta?.platforms).trim();
+    const statusLabel = _safeText(item?.statusLabel).trim();
+    const runtimeNumber = Number(item?.runtime || 0);
+    const totalPagesNumber = Number(item?.meta?.totalPages || 0);
+
+    let primaryLabel = "Detalle";
+    let primaryValue = "Sin información adicional";
+
+    if (author) {
+      primaryLabel = "Autor";
+      primaryValue = author;
+    } else if (runtimeNumber > 0) {
+      primaryLabel = "Duración";
+      primaryValue = `${runtimeNumber} min`;
+    } else if (platforms) {
+      primaryLabel = "Plataformas";
+      primaryValue = platforms;
+    } else if (totalPagesNumber > 0) {
+      primaryLabel = "Páginas";
+      primaryValue = `${totalPagesNumber} páginas`;
+    } else if (statusLabel) {
+      primaryLabel = "Estado";
+      primaryValue = statusLabel;
+    }
+
+    return {
+      genres: genres.length ? genres.join(", ") : "Sin géneros",
+      rating,
+      primaryLabel,
+      primaryValue
+    };
+  }
+
   function _renderExploreDrawerDetails(item) {
     const vm = _buildExploreDrawerTextModel(item);
+    const metaVm = _buildExploreDrawerDetailMeta(item);
 
     const typeEl = document.getElementById("exploreDetailType");
     const releaseEl = document.getElementById("exploreDetailReleaseDate");
     const libraryEl = document.getElementById("exploreDetailLibraryState");
     const listsEl = document.getElementById("exploreDetailListsCount");
+    const ratingEl = document.getElementById("exploreDetailRating");
+    const genresEl = document.getElementById("exploreDetailGenres");
+    const metaPrimaryLabelEl = document.getElementById("exploreDetailMetaPrimaryLabel");
+    const metaPrimaryValueEl = document.getElementById("exploreDetailMetaPrimaryValue");
     const summaryEl = document.getElementById("exploreDetailSummary");
 
     if (typeEl) typeEl.textContent = vm.detailType;
     if (releaseEl) releaseEl.textContent = vm.detailReleaseDate;
     if (libraryEl) libraryEl.textContent = vm.detailLibraryState;
     if (listsEl) listsEl.textContent = vm.detailListsCount;
+    if (ratingEl) ratingEl.textContent = metaVm.rating;
+    if (genresEl) genresEl.textContent = metaVm.genres;
+    if (metaPrimaryLabelEl) metaPrimaryLabelEl.textContent = metaVm.primaryLabel;
+    if (metaPrimaryValueEl) metaPrimaryValueEl.textContent = metaVm.primaryValue;
+
     if (summaryEl) {
       summaryEl.textContent = vm.summary;
       summaryEl.hidden = false;
