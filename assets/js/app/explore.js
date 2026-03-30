@@ -1061,10 +1061,27 @@ const ExploreModule = (() => {
 
     if (!picker) return;
 
-    await _populateExploreListPicker(preselectedListId);
-
     __drawerListsPickerOpen = true;
     picker.hidden = false;
+
+    if (select) {
+      select.innerHTML = "";
+      const loadingOption = document.createElement("option");
+      loadingOption.value = "";
+      loadingOption.textContent = "Cargando listas...";
+      select.appendChild(loadingOption);
+      select.disabled = true;
+    }
+
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+    }
+
+    try {
+      await _populateExploreListPicker(preselectedListId);
+    } catch (e) {
+      console.error("Explore: no se pudo preparar el picker de listas", e);
+    }
 
     if (confirmBtn) {
       confirmBtn.disabled = !select?.value;
@@ -1765,6 +1782,8 @@ const ExploreModule = (() => {
       if (addListsBtn) {
         e.preventDefault();
         e.stopPropagation();
+
+        console.log("click list button");
 
         const item = _getActiveExploreItem();
         if (!item) return;
