@@ -1069,6 +1069,8 @@ const ExploreModule = (() => {
     if (confirmBtn) {
       confirmBtn.disabled = !select?.value;
     }
+
+    requestAnimationFrame(() => select?.focus?.());
   }
 
   function _closeExploreListPicker() {
@@ -1081,29 +1083,6 @@ const ExploreModule = (() => {
     if (picker) picker.hidden = true;
     if (select) select.value = "";
     if (confirmBtn) confirmBtn.disabled = true;
-  }
-
-  async function _openExploreListPicker() {
-    const picker = document.getElementById("exploreDrawerListPicker");
-    if (!picker) return;
-
-    await _populateExploreListPicker();
-
-    __drawerListsPickerOpen = true;
-    picker.hidden = false;
-
-    const select = document.getElementById("exploreDrawerListSelect");
-    requestAnimationFrame(() => select?.focus?.());
-  }
-
-  function _closeExploreListPicker() {
-    const picker = document.getElementById("exploreDrawerListPicker");
-    const select = document.getElementById("exploreDrawerListSelect");
-
-    __drawerListsPickerOpen = false;
-
-    if (picker) picker.hidden = true;
-    if (select) select.value = "";
   }
 
   async function _saveActiveExploreItemToList(listId) {
