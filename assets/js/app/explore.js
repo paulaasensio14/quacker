@@ -566,11 +566,12 @@ const ExploreModule = (() => {
     if (!drawer || !backdrop) return;
 
     __drawerOpen = false;
+    __drawerDetailReqSeq += 1;
+    activeEid = null;
 
     drawer.classList.remove("is-open");
     drawer.setAttribute("aria-hidden", "true");
     backdrop.hidden = true;
-
     document.body.classList.remove("modal-open");
 
     const note = document.getElementById("exploreDrawerInlineNote");
@@ -618,6 +619,26 @@ const ExploreModule = (() => {
   function _getExploreItemByEid(eid) {
     if (!eid) return null;
     return feed.find((x) => String(x.eid) === String(eid)) || null;
+  }
+
+  function _replaceExploreItemByEid(nextItem) {
+    if (!nextItem?.eid) return nextItem || null;
+
+    const targetEid = String(nextItem.eid);
+
+    feed = feed.map((entry) =>
+      String(entry?.eid) === targetEid
+        ? { ...entry, ...nextItem, eid: targetEid }
+        : entry
+    );
+
+    visible = visible.map((entry) =>
+      String(entry?.eid) === targetEid
+        ? { ...entry, ...nextItem, eid: targetEid }
+        : entry
+    );
+
+    return _getExploreItemByEid(targetEid);
   }
 
   function _syncExploreDrawerViewport() {
@@ -747,8 +768,10 @@ const ExploreModule = (() => {
         __saving: item.__saving
       };
 
-      _syncExploreDrawerFromItem(mergedItem);
-      _renderExploreDrawerDetails(mergedItem);
+      const persistedItem = _replaceExploreItemByEid(mergedItem) || mergedItem;
+
+      _syncExploreDrawerFromItem(persistedItem);
+      _renderExploreDrawerDetails(persistedItem);
       return;
     }
 
@@ -773,8 +796,10 @@ const ExploreModule = (() => {
         __saving: item.__saving
       };
 
-      _syncExploreDrawerFromItem(mergedItem);
-      _renderExploreDrawerDetails(mergedItem);
+      const persistedItem = _replaceExploreItemByEid(mergedItem) || mergedItem;
+
+      _syncExploreDrawerFromItem(persistedItem);
+      _renderExploreDrawerDetails(persistedItem);
     } catch (err) {
       console.error("[Explore] drawer detail hydration failed", err);
     }
