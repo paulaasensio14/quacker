@@ -799,9 +799,24 @@ main.app-main {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  padding-top: 16px;
-  margin-top: 4px;
+  padding-top: 18px;
+  margin-top: 6px;
   border-top: 2px solid var(--border-soft);
+}
+
+.explore-drawer-actions .btn,
+.explore-drawer-actions button {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.98rem;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    opacity 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease;
 }
 
 .explore-drawer-list-picker {
@@ -5729,6 +5744,48 @@ body.dark-theme .notif-mark-btn:hover {
 
 #exploreDrawer.is-expanded #exploreDrawerSummary {
   display: none;
+}
+
+#exploreDrawerAddLibrary {
+  background: var(--brand-yellow);
+  color: var(--text-main);
+  border: 2px solid var(--border-strong);
+  box-shadow: 0 6px 0 rgba(15, 23, 42, 0.14);
+}
+
+#exploreDrawerAddLists {
+  background: #fff;
+  color: var(--text-main);
+  border: 2px solid var(--border-strong);
+  box-shadow: 0 4px 0 rgba(15, 23, 42, 0.08);
+}
+
+#exploreDrawerAddLibrary:hover,
+#exploreDrawerAddLibrary:focus-visible,
+#exploreDrawerAddLists:hover,
+#exploreDrawerAddLists:focus-visible {
+  transform: translateY(-1px);
+}
+
+#exploreDrawerAddLibrary:focus-visible,
+#exploreDrawerAddLists:focus-visible {
+  outline: 3px solid rgba(255, 204, 0, 0.35);
+  outline-offset: 2px;
+}
+
+#exploreDrawerAddLibrary[disabled],
+#exploreDrawerAddLibrary[aria-disabled="true"] {
+  background: #e5e7eb;
+  color: var(--text-muted);
+  border-color: #cbd5e1;
+  box-shadow: none;
+  cursor: default;
+  transform: none;
+}
+
+#exploreDrawerAddLists:hover,
+#exploreDrawerAddLists:focus-visible {
+  background: #f8fafc;
 }
 
 .explore-drawer.is-open{
