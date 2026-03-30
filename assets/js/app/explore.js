@@ -1763,6 +1763,23 @@ const ExploreModule = (() => {
     document.addEventListener("click", async (e) => {
       const detailTrigger = e.target.closest('[data-action="open-item-detail"][data-eid]');
       if (detailTrigger) {
+        const addListsBtn = e.target.closest("#exploreDrawerAddLists");
+        if (addListsBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const item = _getActiveExploreItem();
+          if (!item) return;
+
+          if (__drawerListsPickerOpen) {
+            _closeExploreListPicker();
+            return;
+          }
+
+          await _openExploreListPicker();
+          return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
 
@@ -1891,27 +1908,6 @@ const ExploreModule = (() => {
     }
 
     // AÑADIR A LISTA (NUEVO)
-
-    const addListsBtn = document.getElementById("exploreDrawerAddLists");
-
-    if (addListsBtn && !addListsBtn.dataset.bound) {
-      addListsBtn.dataset.bound = "1";
-
-      addListsBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const item = _getActiveExploreItem();
-        if (!item) return;
-
-        if (__drawerListsPickerOpen) {
-          _closeExploreListPicker();
-          return;
-        }
-
-        await _openExploreListPicker();
-      });
-    }
 
     const confirmListBtn = document.getElementById("exploreDrawerConfirmList");
 
