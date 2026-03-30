@@ -1763,40 +1763,40 @@ const ExploreModule = (() => {
     document.addEventListener("click", async (e) => {
       const detailTrigger = e.target.closest('[data-action="open-item-detail"][data-eid]');
       if (detailTrigger) {
-        const addListsBtn = e.target.closest("#exploreDrawerAddLists");
-        if (addListsBtn) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const item = _getActiveExploreItem();
-          if (!item) return;
-
-          if (__drawerListsPickerOpen) {
-            _closeExploreListPicker();
-            return;
-          }
-
-          await _openExploreListPicker();
-          return;
-        }
-
         e.preventDefault();
         e.stopPropagation();
 
-      const item = _getExploreItemByEid(detailTrigger.dataset.eid);
-      if (!item) return;
+        const item = _getExploreItemByEid(detailTrigger.dataset.eid);
+        if (!item) return;
 
-      _syncExploreDrawerFromItem(item);
-      _renderExploreDrawerDetails(item);
-      _setExploreDrawerExpanded(false);
-      _openExploreDrawer(detailTrigger);
+        _syncExploreDrawerFromItem(item);
+        _renderExploreDrawerDetails(item);
+        _setExploreDrawerExpanded(false);
+        _openExploreDrawer(detailTrigger);
 
-      const detailed = await _hydrateExploreItemDetail(item);
-      if (detailed?.eid === item.eid) {
-        _syncExploreDrawerFromItem(detailed);
-        _renderExploreDrawerDetails(detailed);
+        const detailed = await _hydrateExploreItemDetail(item);
+        if (detailed?.eid === item.eid) {
+          _syncExploreDrawerFromItem(detailed);
+          _renderExploreDrawerDetails(detailed);
+        }
+        return;
       }
-      return;
+
+      const addListsBtn = e.target.closest("#exploreDrawerAddLists");
+      if (addListsBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const item = _getActiveExploreItem();
+        if (!item) return;
+
+        if (__drawerListsPickerOpen) {
+          _closeExploreListPicker();
+          return;
+        }
+
+        await _openExploreListPicker();
+        return;
       }
     });
 
