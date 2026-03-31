@@ -340,7 +340,18 @@
           "updatedAt": "2026-03-30T10:53:15.138Z"
         }
       ],
-      "lists": []
+      "lists": [
+        {
+          "id": "u_1774888628840_9e2f00e9292e78",
+          "name": "Series 2025",
+          "description": "",
+          "visibility": "private",
+          "items": [],
+          "itemsCount": 0,
+          "createdAt": "2026-03-30T16:37:08.840Z",
+          "updatedAt": "2026-03-30T16:37:08.840Z"
+        }
+      ]
     }
   }
 }
