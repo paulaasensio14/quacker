@@ -937,10 +937,14 @@ const ExploreModule = (() => {
     if (!source || !type || !externalId || !eid) return;
 
     const cacheKey = `${source}:${type}:${externalId}`;
+    const reqSeq = ++__drawerDetailReqSeq;
 
+    __drawerDetailLoading = true;
     __drawerDetailError = false;
+    _syncExploreDrawerDetailFeedback();
 
     if (__drawerDetailCache.has(cacheKey)) {
+      if (reqSeq !== __drawerDetailReqSeq) return;
       if (activeEid !== eid) return;
 
       __drawerDetailLoading = false;
@@ -965,22 +969,21 @@ const ExploreModule = (() => {
       return;
     }
 
-    const reqSeq = ++__drawerDetailReqSeq;
-
-    __drawerDetailLoading = true;
-    __drawerDetailError = false;
-    _syncExploreDrawerDetailFeedback();
-
     try {
       const detail = await ApiClient.getExploreItemDetail({ source, type, externalId });
 
-      if (!detail) return;
+      if (!detail) {
+        if (reqSeq !== __drawerDetailReqSeq) return;
+        if (activeEid !== eid) return;
+
+        __drawerDetailLoading = false;
+        __drawerDetailError = true;
+        _syncExploreDrawerDetailFeedback();
+        return;
+      }
+
       if (reqSeq !== __drawerDetailReqSeq) return;
       if (activeEid !== eid) return;
-
-      __drawerDetailLoading = false;
-      __drawerDetailError = false;
-      _syncExploreDrawerDetailFeedback();
 
       __drawerDetailCache.set(cacheKey, detail);
 
@@ -996,11 +999,18 @@ const ExploreModule = (() => {
 
       const persistedItem = _replaceExploreItemByEid(mergedItem) || mergedItem;
 
+      __drawerDetailLoading = false;
+      __drawerDetailError = false;
+      _syncExploreDrawerDetailFeedback();
+
       _syncExploreDrawerFromItem(persistedItem);
       _renderExploreDrawerDetails(persistedItem);
     } catch (err) {
+      if (reqSeq !== __drawerDetailReqSeq) return;
+      if (activeEid !== eid) return;
+
       __drawerDetailLoading = false;
-      __drawerDetailError = activeEid === eid;
+      __drawerDetailError = true;
       _syncExploreDrawerDetailFeedback();
       console.error("[Explore] drawer detail hydration failed", err);
     }
