@@ -338,6 +338,28 @@
           "cover": "https://image.tmdb.org/t/p/w500/3w7koeOR2x71XYMJDGpygxYtScI.jpg",
           "createdAt": "2026-03-30T10:53:15.138Z",
           "updatedAt": "2026-03-30T10:53:15.138Z"
+        },
+        {
+          "id": "u_1774947862096_f4ce576e4e1d08",
+          "type": "serie",
+          "title": "Si es martes, es asesinato",
+          "status": "watching",
+          "progress": 0,
+          "meta": {
+            "totalSeasons": 1,
+            "totalEpisodes": 6,
+            "seasonBreakdown": [
+              {
+                "seasonNumber": 1,
+                "episodeCount": 6
+              }
+            ],
+            "season": 1,
+            "episode": 1
+          },
+          "cover": "https://image.tmdb.org/t/p/w500/FJW2bc3qiwaNx3wglfgKOYPav5.jpg",
+          "createdAt": "2026-03-31T09:04:22.096Z",
+          "updatedAt": "2026-03-31T09:04:22.096Z"
         }
       ],
       "lists": [
