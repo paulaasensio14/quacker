@@ -1061,16 +1061,27 @@ app.post("/api/lists/:id/items", _requireAuth, (req, res) => {
   const listId = String(req.params.id);
   const itemId = String(req.body?.itemId || "").trim();
 
-  if (!itemId) return res.status(400).json({ error: "missing_item_id" });
+  if (!itemId) {
+    return res.status(400).json({ error: "missing_item_id" });
+  }
 
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
 
-  const list = bucket.lists.find((x) => String(x.id) === listId);
-  if (!list) return res.status(404).json({ error: "list_not_found" });
+  bucket.lists = Array.isArray(bucket.lists) ? bucket.lists : [];
+  bucket.library = Array.isArray(bucket.library) ? bucket.library : [];
 
-  const libraryItem = bucket.library.find((x) => String(x.id) === itemId);
-  if (!libraryItem) return res.status(404).json({ error: "item_not_found" });
+  const list = bucket.lists.find((entry) => String(entry?.id) === listId);
+  if (!list) {
+    return res.status(404).json({ error: "list_not_found" });
+  }
+
+  const libraryItemExists = bucket.library.some(
+    (entry) => String(entry?.id) === itemId
+  );
+  if (!libraryItemExists) {
+    return res.status(404).json({ error: "item_not_found" });
+  }
 
   list.items = Array.isArray(list.items) ? list.items : [];
 
@@ -1080,18 +1091,24 @@ app.post("/api/lists/:id/items", _requireAuth, (req, res) => {
   });
 
   if (already) {
-    return res.json({ ok: true, already: true, listId, itemId });
+    return res.json({ ok: true, already: true, list });
   }
 
   list.items.push({
     id: itemId,
     addedAt: new Date().toISOString()
   });
+
   list.itemsCount = list.items.length;
   list.updatedAt = new Date().toISOString();
 
   _writeDb(db);
-  res.json({ ok: true, listId, itemId });
+
+  return res.status(201).json({
+    ok: true,
+    list,
+    itemId
+  });
 });
 
 app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
