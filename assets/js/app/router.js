@@ -86,12 +86,19 @@ const Router = (() => {
     currentView = id;
 
     try {
-      window.sessionStorage.setItem(LAST_VIEW_STORAGE_KEY, id);
+      window.sessionStorage.setItem("quacker:last-view", id);
     } catch (_) {}
 
     if (window.location.hash !== `#${id}`) {
       history.replaceState(null, "", `#${id}`);
     }
+
+    // REFRESCAR LA WEB SIN CAMBIAR LA VISTA
+    document.dispatchEvent(
+      new CustomEvent("quacker:view-changed", {
+        detail: { viewId: id }
+      })
+    );
 
     requestAnimationFrame(() => {
       if (!mainScrollEl) {
