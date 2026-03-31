@@ -12,39 +12,43 @@ const Router = (() => {
     return String(v || "").trim();
   }
 
-  function _persistSearchForView(viewId, value) {
-    if (typeof ApiClient === "undefined") return;
+  const VIEW_SEARCH_STORAGE_KEY = "quacker:view-search";
 
+  function _readViewSearchState() {
+    try {
+      const raw = window.sessionStorage.getItem(VIEW_SEARCH_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function _writeViewSearchState(nextState) {
+    try {
+      window.sessionStorage.setItem(
+        VIEW_SEARCH_STORAGE_KEY,
+        JSON.stringify(nextState || {})
+      );
+    } catch (_) {}
+  }
+
+  function _persistSearchForView(viewId, value) {
     const v = _trimSearchValue(value);
 
-    // Guardar solo para vistas que usan buscador global
-    if (viewId === "library" && typeof ApiClient.setLibraryUIState === "function") {
-      ApiClient.setLibraryUIState({ searchTerm: v }).catch(() => {});
-    }
+    if (viewId !== "library" && viewId !== "explore") return;
 
-    if (viewId === "explore" && typeof ApiClient.setExploreUIState === "function") {
-      ApiClient.setExploreUIState({ searchTerm: v }).catch(() => {});
-    }
+    const state = _readViewSearchState();
+    state[viewId] = { searchTerm: v };
+    _writeViewSearchState(state);
   }
 
   function _restoreSearchForView(viewId, inputEl) {
     if (!inputEl) return;
-    if (typeof ApiClient === "undefined") return;
+    if (viewId !== "library" && viewId !== "explore") return;
 
-    if (viewId === "library" && typeof ApiClient.getLibraryUIState === "function") {
-      try {
-        const ui = ApiClient.getLibraryUIState();
-        inputEl.value = _trimSearchValue(ui?.searchTerm);
-      } catch (_) {}
-    }
-
-    if (viewId === "explore" && typeof ApiClient.getExploreUIState === "function") {
-      ApiClient.getExploreUIState()
-        .then((ui) => {
-          inputEl.value = _trimSearchValue(ui?.searchTerm);
-        })
-        .catch(() => {});
-    }
+    const state = _readViewSearchState();
+    inputEl.value = _trimSearchValue(state?.[viewId]?.searchTerm);
   }
 
   function registerView(id, element) {
