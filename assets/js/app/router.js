@@ -83,8 +83,15 @@ const Router = (() => {
     }
 
     views[id].classList.add("is-active");
-
     currentView = id;
+
+    try {
+      window.sessionStorage.setItem(LAST_VIEW_STORAGE_KEY, id);
+    } catch (_) {}
+
+    if (window.location.hash !== `#${id}`) {
+      history.replaceState(null, "", `#${id}`);
+    }
 
     requestAnimationFrame(() => {
       if (!mainScrollEl) {
@@ -278,9 +285,28 @@ const Router = (() => {
       }
     });
 
-    // Vista inicial según HTML
-    const initial = document.querySelector(".view.is-active")?.dataset.viewId;
-    if (initial) showView(initial);
+    // Vista inicial: hash > sessionStorage > HTML
+    const hashView = String(window.location.hash || "").replace(/^#/, "").trim();
+    const storedView = (() => {
+      try {
+        return String(window.sessionStorage.getItem(LAST_VIEW_STORAGE_KEY) || "").trim();
+      } catch (_) {
+        return "";
+      }
+    })();
+    const htmlInitial = document.querySelector(".view.is-active")?.dataset.viewId;
+    const initial =
+      (hashView && views[hashView] && hashView) ||
+      (storedView && views[storedView] && storedView) ||
+      htmlInitial;
+
+    if (initial) {
+      showView(initial);
+
+      document.querySelectorAll(".nav-item-btn").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.view === initial);
+      });
+    }
   }
 
   return { init, showView };
