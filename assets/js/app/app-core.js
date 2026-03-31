@@ -7,6 +7,19 @@ const $all = (selector, root = document) => Array.from(root.querySelectorAll(sel
 document.addEventListener("DOMContentLoaded", async () => {
   await UITheme.init();
 
+  try {
+    const session = await ApiClient.getCurrentSession?.();
+
+    if (!session?.user) {
+      window.location.href = "index.html";
+      return;
+    }
+  } catch (e) {
+    console.error("Session bootstrap error", e);
+    window.location.href = "index.html";
+    return;
+  }
+
   // 1) Iniciar módulos sin bloquear el arranque del router
   try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }
   try { window.ListsModule?.init?.(); } catch (e) { console.error("ListsModule.init error", e); }
