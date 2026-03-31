@@ -134,6 +134,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  document.addEventListener("quacker:view-change", (e) => {
+    const viewId = e?.detail?.viewId;
+
+    try {
+      if (viewId === "home") {
+        window.HomeUI?.refresh?.();
+      } else if (viewId === "library") {
+        window.LibraryUI?.refresh?.();
+      } else if (viewId === "lists") {
+        window.ListsModule?.refresh?.();
+      } else if (viewId === "explore") {
+        window.ExploreModule?.refresh?.();
+      } else if (viewId === "profile") {
+        window.ProfileModule?.refresh?.();
+      }
+    } catch (err) {
+      console.error("View change refresh error:", err);
+    }
+  });
+
   // ===== SIDEBAR TOGGLE =====
   const sidebar = document.getElementById("sidebar");
   const sidebarToggle = document.getElementById("sidebarToggle");
