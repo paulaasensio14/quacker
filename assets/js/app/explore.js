@@ -490,42 +490,99 @@ const ExploreModule = (() => {
   }
 
   function _bindExploreToolbar() {
+
     if (__toolbarBound) return;
+
     __toolbarBound = true;
 
     const pillsRoot = document.querySelector("[data-explore-type]");
+
     const sortSelect = document.getElementById("exploreSort");
+    const addListsBtn = document.getElementById("exploreDrawerAddLists");
+    const confirmListBtn = document.getElementById("exploreDrawerConfirmList");
+    const cancelListBtn = document.getElementById("exploreDrawerCancelList");
 
     if (pillsRoot) {
+
       pillsRoot.addEventListener("click", (e) => {
         const btn = e.target.closest(".pill-btn[data-value]");
+
         if (!btn) return;
 
         const nextType = String(btn.dataset.value || "all");
+
         if (nextType === typeFilter) return;
 
         typeFilter = nextType;
+
         expandedSection = null;
 
         _syncExploreToolbarUI();
+
         _applyFilters();
       });
+
     }
 
     if (sortSelect) {
+
       sortSelect.addEventListener("change", () => {
+
         const nextSort = String(sortSelect.value || "recent");
+
         if (nextSort === sortMode) return;
 
         sortMode = nextSort;
-        expandedSection = null;
 
+        expandedSection = null;
         _syncExploreToolbarUI();
+
         _applyFilters();
+
+      });
+
+    }
+
+    if (addListsBtn && !addListsBtn.dataset.bound) {
+      addListsBtn.dataset.bound = "1";
+
+      addListsBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await _handleExploreDrawerAddToListClick();
+      });
+    }
+
+    if (confirmListBtn && !confirmListBtn.dataset.bound) {
+      confirmListBtn.dataset.bound = "1";
+
+      confirmListBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await _handleExploreDrawerConfirmListClick();
+      });
+    }
+
+    if (cancelListBtn && !cancelListBtn.dataset.bound) {
+      cancelListBtn.dataset.bound = "1";
+
+      cancelListBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        __drawerListsPickerOpen = false;
+        _syncExploreDrawerListPicker();
+
+        const select = document.getElementById("exploreDrawerListSelect");
+        if (select) select.value = "";
+
+        const confirmBtn = document.getElementById("exploreDrawerConfirmList");
+        if (confirmBtn) confirmBtn.disabled = false;
       });
     }
 
     _syncExploreToolbarUI();
+
   }
 
   function _openExploreDrawer(triggerEl) {
@@ -708,6 +765,103 @@ const ExploreModule = (() => {
       } else {
         addListsBtn.classList.remove("is-active");
       }
+    }
+  }
+
+  async function _populateExploreDrawerListPicker() {
+    const select = document.getElementById("exploreDrawerListSelect");
+    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
+
+    if (!select) return;
+
+    select.innerHTML = `<option value="">Selecciona una lista</option>`;
+    select.disabled = true;
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    try {
+      const lists = await ApiClient.getLists();
+      const safeLists = Array.isArray(lists) ? lists : [];
+
+      for (const list of safeLists) {
+        if (!list?.id) continue;
+
+        const option = document.createElement("option");
+        option.value = String(list.id);
+        option.textContent = String(list.name || "Sin nombre");
+        select.appendChild(option);
+      }
+
+      const hasLists = safeLists.length > 0;
+      select.disabled = !hasLists;
+      if (confirmBtn) confirmBtn.disabled = !hasLists;
+    } catch (err) {
+      console.error("[Explore] load lists picker failed", err);
+      select.disabled = true;
+      if (confirmBtn) confirmBtn.disabled = true;
+    }
+  }
+
+  async function _handleExploreDrawerAddToListClick() {
+    __drawerListsPickerOpen = !__drawerListsPickerOpen;
+    _syncExploreDrawerListPicker();
+
+    if (!__drawerListsPickerOpen) return;
+
+    await _populateExploreDrawerListPicker();
+  }
+
+  async function _handleExploreDrawerConfirmListClick() {
+    const activeItem = _getActiveExploreItem();
+    const select = document.getElementById("exploreDrawerListSelect");
+    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
+
+    if (!activeItem || !select) return;
+
+    const listId = String(select.value || "").trim();
+    if (!listId) return;
+
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    try {
+      let libraryItemId = String(activeItem.__libraryItemId || "").trim();
+
+      if (!libraryItemId) {
+        const saved = await ApiClient.addLibraryItem({
+          title: activeItem.title,
+          type: activeItem.type,
+          cover: activeItem.cover,
+          releaseDate: activeItem.releaseDate,
+          summary: activeItem.summary,
+          backdrop: activeItem.backdrop,
+          source: activeItem.source,
+          externalId: activeItem.externalId
+        });
+
+        libraryItemId = String(saved?.id || "").trim();
+      }
+
+      if (!libraryItemId) {
+        throw new Error("missing_library_item_id");
+      }
+
+      await ApiClient.addLibraryItemToList(listId, libraryItemId);
+
+      const nextItem = _replaceExploreItemByEid({
+        ...activeItem,
+        __inLibrary: true,
+        __libraryItemId: libraryItemId,
+        __listsCount: Number(activeItem.__listsCount || 0) + 1
+      });
+
+      if (nextItem) _syncExploreDrawerFromItem(nextItem);
+
+      __drawerListsPickerOpen = false;
+      _syncExploreDrawerListPicker();
+      select.value = "";
+    } catch (err) {
+      console.error("[Explore] add to list failed", err);
+    } finally {
+      if (confirmBtn) confirmBtn.disabled = false;
     }
   }
 
