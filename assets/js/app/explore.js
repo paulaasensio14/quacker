@@ -496,11 +496,7 @@ const ExploreModule = (() => {
     __toolbarBound = true;
 
     const pillsRoot = document.querySelector("[data-explore-type]");
-
     const sortSelect = document.getElementById("exploreSort");
-    const addListsBtn = document.getElementById("exploreDrawerAddLists");
-    const confirmListBtn = document.getElementById("exploreDrawerConfirmList");
-    const cancelListBtn = document.getElementById("exploreDrawerCancelList");
 
     if (pillsRoot) {
 
@@ -541,44 +537,6 @@ const ExploreModule = (() => {
 
       });
 
-    }
-
-    if (addListsBtn && !addListsBtn.dataset.bound) {
-      addListsBtn.dataset.bound = "1";
-
-      addListsBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        await _handleExploreDrawerAddToListClick();
-      });
-    }
-
-    if (confirmListBtn && !confirmListBtn.dataset.bound) {
-      confirmListBtn.dataset.bound = "1";
-
-      confirmListBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        await _handleExploreDrawerConfirmListClick();
-      });
-    }
-
-    if (cancelListBtn && !cancelListBtn.dataset.bound) {
-      cancelListBtn.dataset.bound = "1";
-
-      cancelListBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        __drawerListsPickerOpen = false;
-        _syncExploreDrawerListPicker();
-
-        const select = document.getElementById("exploreDrawerListSelect");
-        if (select) select.value = "";
-
-        const confirmBtn = document.getElementById("exploreDrawerConfirmList");
-        if (confirmBtn) confirmBtn.disabled = false;
-      });
     }
 
     _syncExploreToolbarUI();

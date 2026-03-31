@@ -360,6 +360,47 @@
           "cover": "https://image.tmdb.org/t/p/w500/FJW2bc3qiwaNx3wglfgKOYPav5.jpg",
           "createdAt": "2026-03-31T09:04:22.096Z",
           "updatedAt": "2026-03-31T09:04:22.096Z"
+        },
+        {
+          "id": "u_1774951431023_da36ad0bf9e068",
+          "type": "pelicula",
+          "title": "The Batman 2",
+          "status": "watching",
+          "progress": 0,
+          "meta": {},
+          "cover": "https://image.tmdb.org/t/p/w500/hUe1G6Ziwl8b6DaaGHjhG6LQQH8.jpg",
+          "createdAt": "2026-03-31T10:03:51.023Z",
+          "updatedAt": "2026-03-31T10:03:51.023Z"
+        },
+        {
+          "id": "u_1774951861383_1312a223cf871",
+          "type": "serie",
+          "title": "Batman",
+          "status": "watching",
+          "progress": 0,
+          "meta": {
+            "totalSeasons": 3,
+            "totalEpisodes": 120,
+            "seasonBreakdown": [
+              {
+                "seasonNumber": 1,
+                "episodeCount": 34
+              },
+              {
+                "seasonNumber": 2,
+                "episodeCount": 60
+              },
+              {
+                "seasonNumber": 3,
+                "episodeCount": 26
+              }
+            ],
+            "season": 1,
+            "episode": 1
+          },
+          "cover": "https://image.tmdb.org/t/p/w500/1ZEJuuDh0Zpi5ELM3Zev0GBhQ3R.jpg",
+          "createdAt": "2026-03-31T10:11:01.383Z",
+          "updatedAt": "2026-03-31T10:11:01.383Z"
         }
       ],
       "lists": [
@@ -368,10 +409,38 @@
           "name": "Series 2025",
           "description": "",
           "visibility": "private",
-          "items": [],
-          "itemsCount": 0,
+          "items": [
+            {
+              "id": "u_1774951431023_da36ad0bf9e068",
+              "addedAt": "2026-03-31T10:03:51.108Z"
+            },
+            {
+              "id": "u_1774867995138_5d1b9bf60f3e6",
+              "addedAt": "2026-03-31T10:08:37.567Z"
+            }
+          ],
+          "itemsCount": 2,
           "createdAt": "2026-03-30T16:37:08.840Z",
-          "updatedAt": "2026-03-30T16:37:08.840Z"
+          "updatedAt": "2026-03-31T10:08:37.567Z"
+        },
+        {
+          "id": "u_1774951770668_d8c3cdec76418",
+          "name": "Carmen Tamarit",
+          "description": "",
+          "visibility": "private",
+          "items": [
+            {
+              "id": "u_1774867995138_5d1b9bf60f3e6",
+              "addedAt": "2026-03-31T10:09:38.268Z"
+            },
+            {
+              "id": "u_1774951861383_1312a223cf871",
+              "addedAt": "2026-03-31T10:11:01.397Z"
+            }
+          ],
+          "itemsCount": 2,
+          "createdAt": "2026-03-31T10:09:30.668Z",
+          "updatedAt": "2026-03-31T10:11:01.397Z"
         }
       ]
     }
