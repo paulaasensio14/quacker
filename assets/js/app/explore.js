@@ -726,39 +726,6 @@ const ExploreModule = (() => {
     }
   }
 
-  async function _populateExploreDrawerListPicker() {
-    const select = document.getElementById("exploreDrawerListSelect");
-    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
-
-    if (!select) return;
-
-    select.innerHTML = `<option value="">Selecciona una lista</option>`;
-    select.disabled = true;
-    if (confirmBtn) confirmBtn.disabled = true;
-
-    try {
-      const lists = await ApiClient.getLists();
-      const safeLists = Array.isArray(lists) ? lists : [];
-
-      for (const list of safeLists) {
-        if (!list?.id) continue;
-
-        const option = document.createElement("option");
-        option.value = String(list.id);
-        option.textContent = String(list.name || "Sin nombre");
-        select.appendChild(option);
-      }
-
-      const hasLists = safeLists.length > 0;
-      select.disabled = !hasLists;
-      if (confirmBtn) confirmBtn.disabled = !hasLists;
-    } catch (err) {
-      console.error("[Explore] load lists picker failed", err);
-      select.disabled = true;
-      if (confirmBtn) confirmBtn.disabled = true;
-    }
-  }
-
   async function _handleExploreDrawerAddToListClick() {
     __drawerListsPickerOpen = !__drawerListsPickerOpen;
     _syncExploreDrawerListPicker();
