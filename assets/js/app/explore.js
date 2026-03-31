@@ -571,7 +571,7 @@ const ExploreModule = (() => {
       });
     }
 
-    __drawerDetailLoading = false;
+    __drawerDetailLoading = true;
     __drawerDetailError = false;
     _syncExploreDrawerDetailFeedback();
 
