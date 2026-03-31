@@ -631,62 +631,9 @@ const ExploreModule = (() => {
 
     const listPicker = document.getElementById("exploreDrawerListPicker");
     const listSelect = document.getElementById("exploreDrawerListSelect");
-    const confirmListBtn = document.getElementById("exploreDrawerConfirmList");
-    if (confirmListBtn && !confirmListBtn.dataset.bound) {
-      confirmListBtn.dataset.bound = "1";
 
-      confirmListBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-
-        const select = document.getElementById("exploreDrawerListSelect");
-        const listId = String(select?.value || "").trim();
-        if (!listId) {
-          _setExploreDrawerNote("Selecciona una lista antes de guardar.");
-          return;
-        }
-
-        const activeItem = _getActiveExploreItem();
-        if (!activeItem) {
-          _setExploreDrawerNote("No se ha encontrado el elemento activo.");
-          return;
-        }
-
-        confirmListBtn.disabled = true;
-
-        try {
-          const ensured = await _ensureInLibrary(activeItem);
-          const freshItem = _getExploreItemByEid(activeItem.eid);
-          const libraryItemId =
-            ensured?.createdId ||
-            freshItem?.__libraryItemId ||
-            activeItem?.__libraryItemId;
-
-          if (!libraryItemId) {
-            throw new Error("missing_library_item_id");
-          }
-
-          await ApiClient.addLibraryItemToList(listId, libraryItemId);
-
-          const updatedItem = {
-            ...freshItem,
-            __inLibrary: true,
-            __libraryItemId: libraryItemId,
-            __listsCount: Number(freshItem?.__listsCount || 0) + 1
-          };
-
-          _replaceExploreItemByEid(updatedItem);
-          _syncExploreDrawerFromItem(updatedItem);
-          _setExploreDrawerNote("Guardado en la lista.");
-          __drawerListsPickerOpen = false;
-          _syncExploreDrawerListPicker();
-        } catch (err) {
-          console.error("Explore add to list failed", err);
-          _setExploreDrawerNote("No se pudo guardar en la lista.");
-        } finally {
-          confirmListBtn.disabled = false;
-        }
-      });
-    }
+    if (listPicker) listPicker.hidden = true;
+    if (listSelect) listSelect.value = "";
 
     const back = __drawerLastFocusEl;
     __drawerLastFocusEl = null;
