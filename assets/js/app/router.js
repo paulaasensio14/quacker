@@ -8,11 +8,12 @@ const Router = (() => {
   let mainScrollEl = null;
   const viewScrollPositions = {};
 
+  const VIEW_SEARCH_STORAGE_KEY = "quacker:view-search";
+  const LAST_VIEW_STORAGE_KEY = "quacker:last-view";
+
   function _trimSearchValue(v) {
     return String(v || "").trim();
   }
-
-  const VIEW_SEARCH_STORAGE_KEY = "quacker:view-search";
 
   function _readViewSearchState() {
     try {
@@ -34,12 +35,10 @@ const Router = (() => {
   }
 
   function _persistSearchForView(viewId, value) {
-    const v = _trimSearchValue(value);
-
     if (viewId !== "library" && viewId !== "explore") return;
 
     const state = _readViewSearchState();
-    state[viewId] = { searchTerm: v };
+    state[viewId] = { searchTerm: _trimSearchValue(value) };
     _writeViewSearchState(state);
   }
 
