@@ -684,26 +684,48 @@
                   </article>
 
                   <article class="explore-detail-card">
-                    <span class="explore-detail-label">Puntuación</span>
+                    <span class="explore-detail-label" data-i18n="explore_detail_label_rating">Puntuación</span>
                     <strong class="explore-detail-value" id="exploreDetailRating">—</strong>
                   </article>
 
                   <article class="explore-detail-card">
-                    <span class="explore-detail-label" id="exploreDetailMetaPrimaryLabel">Detalle</span>
+                    <span class="explore-detail-label" id="exploreDetailMetaPrimaryLabel" data-i18n="explore_detail_label_meta">Detalle</span>
                     <strong class="explore-detail-value" id="exploreDetailMetaPrimaryValue">—</strong>
                   </article>
 
                   <article class="explore-detail-card explore-detail-card--full">
-                    <span class="explore-detail-label">Géneros</span>
+                    <span class="explore-detail-label" data-i18n="explore_detail_label_genres">Géneros</span>
                     <p class="explore-detail-text" id="exploreDetailGenres">—</p>
                   </article>
 
                   <article class="explore-detail-card explore-detail-card--full">
-                    <span class="explore-detail-label">Resumen</span>
+                    <span class="explore-detail-label" data-i18n="explore_detail_label_summary">Resumen</span>
                     <p class="explore-detail-text" id="exploreDetailSummary">—</p>
                   </article>
-                </div>
-              </section>
+
+                  <div class="explore-drawer-actions">
+                    <button class="btn-primary" type="button" id="exploreDrawerAddLibrary" data-i18n="explore_drawer_add_library">Añadir a biblioteca</button>
+
+                    <button class="btn-ghost" type="button" id="exploreDrawerAddLists" data-i18n="explore_drawer_add_lists">Añadir a una lista</button>
+                  </div>
+
+                  <section class="explore-drawer-list-picker" id="exploreDrawerListPicker" hidden>
+                    <label class="explore-drawer-list-label" for="exploreDrawerListSelect" data-i18n="explore_drawer_list_label">Elegir lista</label>
+
+                    <div class="explore-drawer-list-row">
+                      <select class="explore-drawer-list-select" id="exploreDrawerListSelect">
+                        <option value="" data-i18n="explore_drawer_list_placeholder">Selecciona una lista</option>
+                      </select>
+
+                      <button class="btn-primary" type="button" id="exploreDrawerConfirmList" data-i18n="explore_drawer_list_confirm">
+                        Guardar en lista
+                      </button>
+
+                      <button class="btn-ghost" type="button" id="exploreDrawerCancelList" data-i18n="common_cancel">
+                        Cancelar
+                      </button>
+                    </div>
+                  </section>
 
               <div class="explore-drawer-actions">
                 <button class="btn-primary" type="button" id="exploreDrawerAddLibrary">Añadir a biblioteca</button>
@@ -815,33 +837,41 @@
       <!-- MODAL CONFIRMAR VACIAR NOTIFICACIONES -->
       <div class="modal-overlay" id="confirmClearNotifsModal" aria-hidden="true">
         <div class="modal-card">
+
           <div class="modal-header">
-            <h3>Notificaciones</h3>
+
+            <h3 data-i18n="notif_title">Notificaciones</h3>
+
             <button class="modal-close" id="closeConfirmClearNotifs" aria-label="Cerrar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M18 6L6 18"></path>
-                <path d="M6 6l12 12"></path>
-              </svg>
+              ...
             </button>
+
           </div>
 
           <div class="modal-body">
-            <p id="confirmClearNotifsText">
+
+            <p id="confirmClearNotifsText" data-i18n="confirm_clear_notifs_text">
               ¿Quieres marcar todas las notificaciones como vistas?
             </p>
-            <p class="modal-warning">
+
+            <p class="modal-warning" data-i18n="confirm_clear_notifs_note">
               Podrás deshacer desde el toast.
             </p>
+
           </div>
 
           <div class="modal-actions">
-            <button class="btn-secondary" id="cancelClearNotifs">
+
+            <button class="btn-secondary" id="cancelClearNotifs" data-i18n="common_cancel">
               Cancelar
             </button>
-            <button class="btn-primary" id="confirmClearNotifs">
+
+            <button class="btn-primary" id="confirmClearNotifs" data-i18n="notif_mark_all">
               Marcar todas
             </button>
+
           </div>
+
         </div>
       </div>
 

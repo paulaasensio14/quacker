@@ -164,6 +164,18 @@
 
       common_cancel: "Cancelar",
       common_delete: "Eliminar",
+
+      confirm_clear_notifs_text: "¿Quieres marcar todas las notificaciones como vistas?",
+      confirm_clear_notifs_note: "Podrás deshacer desde el toast.",
+      explore_detail_label_rating: "Puntuación",
+      explore_detail_label_meta: "Detalle",
+      explore_detail_label_genres: "Géneros",
+      explore_detail_label_summary: "Resumen",
+      explore_drawer_add_library: "Añadir a biblioteca",
+      explore_drawer_add_lists: "Añadir a una lista",
+      explore_drawer_list_label: "Elegir lista",
+      explore_drawer_list_placeholder: "Selecciona una lista",
+      explore_drawer_list_confirm: "Guardar en lista",
       },
 
     en: {
@@ -327,6 +339,18 @@
 
       common_cancel: "Cancel",
       common_delete: "Delete",
+
+      confirm_clear_notifs_text: "Do you want to mark all notifications as seen?",
+      confirm_clear_notifs_note: "You will be able to undo it from the toast.",
+      explore_detail_label_rating: "Rating",
+      explore_detail_label_meta: "Detail",
+      explore_detail_label_genres: "Genres",
+      explore_detail_label_summary: "Summary",
+      explore_drawer_add_library: "Add to library",
+      explore_drawer_add_lists: "Add to a list",
+      explore_drawer_list_label: "Choose list",
+      explore_drawer_list_placeholder: "Select a list",
+      explore_drawer_list_confirm: "Save to list",
       },
   };
 
