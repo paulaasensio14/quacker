@@ -279,6 +279,8 @@ function closeAddToListModal() {
 }
 
 const LibraryUI = (() => {
+  const t = (key) => window.I18n?.t?.(key) ?? key;
+
   const savedFilters = loadLibraryFilters();
 
   if (savedFilters) {
@@ -298,10 +300,10 @@ const LibraryUI = (() => {
   }
 
   const TYPE_LABELS = {
-    serie: "Serie",
-    pelicula: "Película",
-    book: "Libro",
-    game: "Videojuego"
+    serie: t("library_type_series"),
+    pelicula: t("library_type_movie"),
+    book: t("library_type_book"),
+    game: t("library_type_game")
   };
 
   const IN_PROGRESS = new Set(["watching", "reading", "playing", "in_progress"]);
@@ -342,21 +344,20 @@ const LibraryUI = (() => {
 
   function statusToLabel(item) {
     const st = logicalStatus(item);
-
-    if (st === "completed") return "Completado";
-    if (st === "not_started") return "No empezado";
-    return "En progreso";
+    if (st === "completed") return t("library_status_completed");
+    if (st === "not_started") return t("library_status_not_started");
+    return t("library_status_in_progress");
   }
 
   function progressText(item) {
     const pct = Number(item.progress ?? 0);
 
     if (pct >= 100 || item.status === "completed") {
-      if (item.type === "book") return "Libro completado";
-      if (item.type === "serie") return "Serie completada";
-      if (item.type === "game") return "Juego completado";
-      if (item.type === "pelicula") return "Película completada";
-      return "Completado";
+      if (item.type === "book") return t("library_progress_book_completed");
+      if (item.type === "serie") return t("library_progress_series_completed");
+      if (item.type === "game") return t("library_progress_game_completed");
+      if (item.type === "pelicula") return t("library_progress_movie_completed");
+      return t("library_status_completed");
     }
 
     if (item.type === "serie" && item.meta) {
@@ -366,10 +367,10 @@ const LibraryUI = (() => {
     }
 
     if (item.type === "book" && item.meta?.pagesRead && item.meta?.totalPages) {
-      return `${item.meta.pagesRead}/${item.meta.totalPages} páginas`;
+      return `${item.meta.pagesRead}/${item.meta.totalPages} ${t("library_pages")}`;
     }
 
-    return `${pct}% completado`;
+    return `${pct}% ${t("library_progress_completed_suffix")}`;
   }
 
   function formatLibraryMeta(item) {
@@ -386,7 +387,7 @@ const LibraryUI = (() => {
     if (type === "book") {
       const read = Number(meta.pagesRead || 0);
       const total = Number(meta.totalPages || 0);
-      if (total > 0) return `${read} / ${total} páginas`;
+      if (total > 0) return `${read} / ${total} ${t("library_pages")}`;
       return "";
     }
 
@@ -445,8 +446,8 @@ const LibraryUI = (() => {
   function primaryButtonLabel(item) {
     const st = logicalStatus(item);
     if (st === "completed") return "";
-    if (st === "not_started") return "Empezar";
-    return "Continuar";
+    if (st === "not_started") return t("library_action_start");
+    return t("library_action_continue");
   }
 
   function normalizeSearchText(value) {
@@ -478,26 +479,26 @@ const LibraryUI = (() => {
 
     if (hasSearch && hasFilters) {
       return {
-        title: "No hay resultados",
-        description: "No hay contenidos que coincidan con tu búsqueda y los filtros actuales.",
-        actionLabel: "Limpiar búsqueda y filtros",
+        title: t("library_empty_results_title"),
+        description: t("library_empty_results_text"),
+        actionLabel: t("library_empty_results_cta"),
         action: "reset_all"
       };
     }
 
     if (hasSearch) {
       return {
-        title: "Sin resultados para tu búsqueda",
-        description: `No encontramos contenidos para “${searchTerm.trim()}” en tu biblioteca.`,
-        actionLabel: "Limpiar búsqueda",
+        title: t("library_empty_search_title"),
+        description: t("library_empty_search_text").replace("{query}", searchTerm.trim()),
+        actionLabel: t("library_empty_search_cta"),
         action: "clear_search"
       };
     }
 
     return {
-      title: "No hay contenidos con esos filtros",
-      description: "Prueba a cambiar o restablecer los filtros para ver más contenidos.",
-      actionLabel: "Restablecer filtros",
+      title: t("library_empty_filters_title"),
+      description: t("library_empty_filters_text"),
+      actionLabel: t("library_empty_filters_cta"),
       action: "reset_filters"
     };
   }
@@ -634,14 +635,14 @@ const LibraryUI = (() => {
       <div class="lib-empty-state" style="grid-column:1/-1;">
         <div class="lib-empty-state-card lib-empty-state-card--error" role="status" aria-live="polite">
           <div class="lib-empty-state-icon" aria-hidden="true">!</div>
-          <div class="lib-empty-state-kicker">Biblioteca</div>
-          <div class="lib-empty-state-title">No se pudo cargar tu biblioteca</div>
+          <div class="lib-empty-state-kicker">${t("nav_library")}</div>
+          <div class="lib-empty-state-title">${t("library_load_error_title")}</div>
           <div class="lib-empty-state-text">
-            Revisa la conexión o vuelve a intentarlo en unos segundos.
+            ${t("library_load_error_text")}
           </div>
           <div class="empty-state-actions">
             <button type="button" class="btn-primary" id="libRetryLoadBtn">
-              Reintentar
+              ${t("library_retry")}
             </button>
           </div>
         </div>
@@ -654,6 +655,10 @@ const LibraryUI = (() => {
       });
     });
   }
+
+  document.addEventListener("quacker:lang-change", () => {
+    render();
+  });
 
   function render() {
     const grid = $("#libraryGrid");

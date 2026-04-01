@@ -42,6 +42,41 @@
       profile_language_label: "Idioma preferido",
       profile_language_es: "Español",
       profile_language_en: "English",
+
+      library_type_series: "Serie",
+      library_type_movie: "Película",
+      library_type_book: "Libro",
+      library_type_game: "Videojuego",
+
+      library_status_completed: "Completado",
+      library_status_not_started: "No empezado",
+      library_status_in_progress: "En progreso",
+
+      library_action_start: "Empezar",
+      library_action_continue: "Continuar",
+
+      library_pages: "páginas",
+      library_progress_completed_suffix: "completado",
+      library_progress_book_completed: "Libro completado",
+      library_progress_series_completed: "Serie completada",
+      library_progress_game_completed: "Juego completado",
+      library_progress_movie_completed: "Película completada",
+
+      library_empty_results_title: "No hay resultados",
+      library_empty_results_text: "No hay contenidos que coincidan con tu búsqueda y los filtros actuales.",
+      library_empty_results_cta: "Limpiar búsqueda y filtros",
+
+      library_empty_search_title: "Sin resultados para tu búsqueda",
+      library_empty_search_text: "No encontramos contenidos para “{query}” en tu biblioteca.",
+      library_empty_search_cta: "Limpiar búsqueda",
+
+      library_empty_filters_title: "No hay contenidos con esos filtros",
+      library_empty_filters_text: "Prueba a cambiar o restablecer los filtros para ver más contenidos.",
+      library_empty_filters_cta: "Restablecer filtros",
+
+      library_load_error_title: "No se pudo cargar tu biblioteca",
+      library_load_error_text: "Revisa la conexión o vuelve a intentarlo en unos segundos.",
+      library_retry: "Reintentar",
     },
 
     en: {
@@ -82,6 +117,41 @@
       profile_language_label: "Preferred language",
       profile_language_es: "Spanish",
       profile_language_en: "English",
+
+      library_type_series: "Series",
+      library_type_movie: "Movie",
+      library_type_book: "Book",
+      library_type_game: "Video game",
+
+      library_status_completed: "Completed",
+      library_status_not_started: "Not started",
+      library_status_in_progress: "In progress",
+
+      library_action_start: "Start",
+      library_action_continue: "Continue",
+
+      library_pages: "pages",
+      library_progress_completed_suffix: "completed",
+      library_progress_book_completed: "Book completed",
+      library_progress_series_completed: "Series completed",
+      library_progress_game_completed: "Game completed",
+      library_progress_movie_completed: "Movie completed",
+
+      library_empty_results_title: "No results found",
+      library_empty_results_text: "No content matches your search and current filters.",
+      library_empty_results_cta: "Clear search and filters",
+
+      library_empty_search_title: "No results for your search",
+      library_empty_search_text: "We couldn't find content for “{query}” in your library.",
+      library_empty_search_cta: "Clear search",
+
+      library_empty_filters_title: "No content for these filters",
+      library_empty_filters_text: "Try changing or resetting the filters to see more content.",
+      library_empty_filters_cta: "Reset filters",
+
+      library_load_error_title: "We couldn't load your library",
+      library_load_error_text: "Check your connection or try again in a few seconds.",
+      library_retry: "Retry",
     },
   };
 
