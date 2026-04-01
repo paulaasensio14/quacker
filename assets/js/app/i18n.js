@@ -77,7 +77,41 @@
       library_load_error_title: "No se pudo cargar tu biblioteca",
       library_load_error_text: "Revisa la conexión o vuelve a intentarlo en unos segundos.",
       library_retry: "Reintentar",
-    },
+
+      lists_subtitle: "Organiza tu contenido como quieras",
+      lists_count_created_singular: "lista creada",
+      lists_count_created_plural: "listas creadas",
+
+      lists_visibility_public: "Pública",
+      lists_visibility_collab: "Colaborativa",
+      lists_visibility_private: "Privada",
+
+      lists_item_singular: "elemento",
+      lists_item_plural: "elementos",
+      lists_untitled: "Sin nombre",
+      lists_item_untitled: "Sin título",
+
+      lists_load_error: "No se pudieron cargar las listas. Revisa la consola.",
+      lists_empty_filtered: "No hay listas que coincidan con tu búsqueda o filtro.",
+      lists_empty_initial: "Todavía no tienes listas. ¡Crea tu primera lista!",
+
+      lists_type_content: "Contenido",
+      lists_detail_empty: "Esta lista está vacía.",
+      lists_detail_hint: "Puedes quitar contenido desde aquí",
+      lists_detail_showing: "Mostrando {shown} de {total}",
+      lists_detail_empty_filtered: "No hay resultados con los filtros actuales.",
+      lists_remove: "Quitar",
+
+      lists_remove_error_title: "No se pudo quitar",
+      lists_remove_error_text: "Inténtalo de nuevo.",
+      lists_remove_success_title: "Contenido quitado",
+      lists_remove_success_text: "Se ha eliminado de la lista.",
+      lists_undo: "Deshacer",
+      lists_undo_success_title: "Cambios revertidos",
+      lists_undo_success_text: "Se ha vuelto a añadir a la lista.",
+      lists_undo_error_title: "No se pudo deshacer",
+      lists_undo_error_text: "Inténtalo de nuevo.",
+      },
 
     en: {
       nav_home: "Home",
@@ -152,7 +186,41 @@
       library_load_error_title: "We couldn't load your library",
       library_load_error_text: "Check your connection or try again in a few seconds.",
       library_retry: "Retry",
-    },
+
+      lists_subtitle: "Organize your content your way",
+      lists_count_created_singular: "list created",
+      lists_count_created_plural: "lists created",
+
+      lists_visibility_public: "Public",
+      lists_visibility_collab: "Collaborative",
+      lists_visibility_private: "Private",
+
+      lists_item_singular: "item",
+      lists_item_plural: "items",
+      lists_untitled: "Untitled",
+      lists_item_untitled: "Untitled item",
+
+      lists_load_error: "We couldn't load your lists. Check the console.",
+      lists_empty_filtered: "No lists match your search or filter.",
+      lists_empty_initial: "You don't have any lists yet. Create your first one!",
+
+      lists_type_content: "Content",
+      lists_detail_empty: "This list is empty.",
+      lists_detail_hint: "You can remove content from here",
+      lists_detail_showing: "Showing {shown} of {total}",
+      lists_detail_empty_filtered: "No results for the current filters.",
+      lists_remove: "Remove",
+
+      lists_remove_error_title: "Couldn't remove item",
+      lists_remove_error_text: "Please try again.",
+      lists_remove_success_title: "Content removed",
+      lists_remove_success_text: "It has been removed from the list.",
+      lists_undo: "Undo",
+      lists_undo_success_title: "Changes reverted",
+      lists_undo_success_text: "It has been added back to the list.",
+      lists_undo_error_title: "Couldn't undo",
+      lists_undo_error_text: "Please try again.",
+      },
   };
 
   let currentLang = localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG;
