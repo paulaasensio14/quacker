@@ -140,14 +140,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       if (viewId === "home") {
         window.HomeUI?.refresh?.();
-      } else if (viewId === "library") {
-        window.LibraryUI?.refresh?.();
-      } else if (viewId === "lists") {
-        window.ListsModule?.refresh?.();
-      } else if (viewId === "explore") {
+        return;
+      }
+
+      if (viewId === "library") {
+        scheduleLibraryRefresh();
+        return;
+      }
+
+      if (viewId === "lists") {
+        scheduleListsRefresh();
+        return;
+      }
+
+      if (viewId === "explore") {
         window.ExploreModule?.refresh?.();
-      } else if (viewId === "profile") {
-        window.ProfileModule?.refresh?.();
+        return;
+      }
+
+      if (viewId === "profile") {
+        window.ProfileModule?.load?.() || window.ProfileModule?.init?.();
       }
     } catch (err) {
       console.error("View change refresh error:", err);
