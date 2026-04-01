@@ -6,6 +6,7 @@ const $all = (selector, root = document) => Array.from(root.querySelectorAll(sel
 
 document.addEventListener("DOMContentLoaded", async () => {
   await UITheme.init();
+  window.I18n?.init?.();
 
   try {
     const session = await ApiClient.getCurrentSession?.();
