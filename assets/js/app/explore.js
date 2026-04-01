@@ -49,12 +49,16 @@ const ExploreModule = (() => {
   function _setExploreLoading(on) {
     const view = document.getElementById("view-explore");
     const el = document.getElementById("exploreLoading");
+    const empty = document.getElementById("exploreEmpty");
+
     if (!view || !el) return;
 
     if (on) {
       __loadingStartedAt = performance.now();
       view.classList.add("is-loading");
       el.hidden = false;
+
+      if (empty) empty.hidden = true;
     } else {
       view.classList.remove("is-loading");
       el.hidden = true;
