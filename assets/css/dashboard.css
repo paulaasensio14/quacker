@@ -6406,9 +6406,10 @@ body.modal-open{
 #view-explore .empty-state {
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 55vh; /* centra verticalmente */
+  align-items: flex-start;
+  min-height: 0;
   width: 100%;
+  margin-top: 44px;
 }
 
 #view-explore .empty-state-card {
@@ -6420,10 +6421,7 @@ body.modal-open{
   border: 4px solid var(--border-strong);
   border-radius: 32px;
   background: var(--surface-muted, #f7f4ea);
-
-  /* MÁS PROFUNDIDAD */
-  box-shadow: 6px 6px 0 var(--border-strong);
-
+  box-shadow: 4px 4px 0 var(--border-strong);
   text-align: center;
 }
 
