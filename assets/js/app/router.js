@@ -95,7 +95,7 @@ const Router = (() => {
 
     // REFRESCAR LA WEB SIN CAMBIAR LA VISTA
     document.dispatchEvent(
-      new CustomEvent("quacker:view-changed", {
+      new CustomEvent("quacker:view-change", {
         detail: { viewId: id }
       })
     );
