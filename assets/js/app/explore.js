@@ -40,10 +40,8 @@ const ExploreModule = (() => {
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
     if (!btn) return;
-
     if (btn.dataset?.busy === "1") return;
-
-    btn.textContent = "Añadir a biblioteca";
+    btn.textContent = window.I18n?.t?.("explore_drawer_add_library") ?? "Añadir a biblioteca";
   }
 
   function _setExploreLoading(on) {
@@ -88,10 +86,10 @@ const ExploreModule = (() => {
   }
 
   const TYPE_LABELS = window.TYPE_LABELS || {
-    serie: "Serie",
-    pelicula: "Película",
-    book: "Libro",
-    game: "Videojuego"
+    serie: window.I18n?.t?.("type_series") ?? "Serie",
+    pelicula: window.I18n?.t?.("type_movie") ?? "Película",
+    book: window.I18n?.t?.("type_book") ?? "Libro",
+    game: window.I18n?.t?.("type_game") ?? "Videojuego"
   };
 
   function $(sel) {
@@ -109,7 +107,7 @@ const ExploreModule = (() => {
   function _normalizeExploreItem(rawItem, index = 0) {
     const raw = rawItem && typeof rawItem === "object" ? rawItem : {};
     const eid = raw.eid ?? `explore_${index + 1}`;
-    const title = _safeText(raw.title).trim() || "Sin título";
+    const title = _safeText(raw.title).trim() || (window.I18n?.t?.("common_untitled") ?? "Sin título");
 
     const rawType = _norm(raw.type);
     const type =
@@ -238,11 +236,11 @@ const ExploreModule = (() => {
     const normalizedType = _norm(item?.type);
     const typeLabel =
       TYPE_LABELS[normalizedType] ||
-      (normalizedType === "tv" ? "Serie" : "") ||
-      (normalizedType === "movie" ? "Película" : "") ||
-      (normalizedType === "libro" ? "Libro" : "") ||
-      (normalizedType === "videojuego" ? "Videojuego" : "") ||
-      "Contenido";
+      (normalizedType === "tv" ? (window.I18n?.t?.("type_series") ?? "Serie") : "") ||
+      (normalizedType === "movie" ? (window.I18n?.t?.("type_movie") ?? "Película") : "") ||
+      (normalizedType === "libro" ? (window.I18n?.t?.("type_book") ?? "Libro") : "") ||
+      (normalizedType === "videojuego" ? (window.I18n?.t?.("type_game") ?? "Videojuego") : "") ||
+      (window.I18n?.t?.("type_content") ?? "Contenido");
 
     const isNew = _isNewByDate(item?.releaseDate);
     const saved = !!item?.__inLibrary;
