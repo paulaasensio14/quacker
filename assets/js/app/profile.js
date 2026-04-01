@@ -2,7 +2,7 @@
 
 const ProfileModule = (() => {
   const $ = (sel) => document.querySelector(sel);
-
+  const t = (key) => window.I18n?.t?.(key) ?? key;
   let initialData = null;
   let isBound = false;
   let pendingAvatarDataUrl = null;
@@ -44,30 +44,27 @@ const ProfileModule = (() => {
     const errors = [];
 
     if (!data.name || data.name.length < 2) {
-      errors.push("El nombre debe tener al menos 2 caracteres.");
+      errors.push(t("profile_error_name_short"));
     }
 
-    // usuario: permitir letras/números/_ y empezar por @
     const handle = normalizeHandle(data.handle);
     if (!handle || handle.length < 2) {
-      errors.push("El usuario es obligatorio (por ejemplo: @tacorce).");
+      errors.push(t("profile_error_handle_required"));
     } else {
       const raw = handle.slice(1);
       if (!/^[a-zA-Z0-9_]{2,20}$/.test(raw)) {
-        errors.push("El usuario solo puede tener letras, números o _ (2–20 caracteres).");
+        errors.push(t("profile_error_handle_invalid"));
       }
     }
 
-    // email suave
     if (!data.email) {
-      errors.push("El email es obligatorio.");
+      errors.push(t("profile_error_email_required"));
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-      errors.push("El email no parece válido.");
+      errors.push(t("profile_error_email_invalid"));
     }
 
-    // bio: opcional, pero si existe limitamos un poco
     if (data.bio && data.bio.length > 180) {
-      errors.push("La bio es muy larga (máx. 180 caracteres).");
+      errors.push(t("profile_error_bio_long"));
     }
 
     return errors;
@@ -113,18 +110,15 @@ const ProfileModule = (() => {
   }
 
   function updateHeaderUI(user) {
-    // chip arriba derecha
     const chipName = $("#profileChipName");
-    if (chipName) chipName.textContent = user?.name || "Sin nombre";
+    if (chipName) chipName.textContent = user?.name || t("profile_fallback_name");
 
-    // saludo home
     const welcomeName = $("#welcomeName");
     if (welcomeName) welcomeName.textContent = user?.name || "Quacker";
 
-    // dropdown perfil
     const menuName = $("#profileMenuName");
     const menuHandle = $("#profileMenuHandle");
-    if (menuName) menuName.textContent = user?.name || "Sin nombre";
+    if (menuName) menuName.textContent = user?.name || t("profile_fallback_name");
     if (menuHandle) menuHandle.textContent = user?.handle || "@quacker";
 
     updateHeaderAvatars(user?.avatar);
@@ -244,7 +238,7 @@ const ProfileModule = (() => {
 
         // validación suave: tamaño máx 1.5MB
         if (file.size > 1.5 * 1024 * 1024) {
-          showErrors(["La imagen es demasiado grande (máx. 1.5MB)."]);
+          showErrors([t("profile_error_avatar_too_large")]);
           input.value = "";
           return;
         }
@@ -330,7 +324,7 @@ const ProfileModule = (() => {
 
       if (saveBtn) {
         saveBtn.disabled = true;
-        saveBtn.textContent = "Guardando...";
+        saveBtn.textContent = t("profile_saving");
       }
 
       try {
@@ -358,17 +352,17 @@ const ProfileModule = (() => {
 
         showErrors([]);
 
-        window.toast?.({
-          title: "Perfil guardado",
-          type: "success",
-          duration: 2200
+        window.toast?.({ 
+          title: t("profile_saved"), 
+          type: "success", 
+          duration: 2200 
         });
       } catch (err) {
         console.error(err);
-        showErrors(["No se pudo guardar el perfil. Inténtalo de nuevo."]);
+        showErrors([t("profile_save_error")]);
       } finally {
         if (saveBtn) {
-          saveBtn.textContent = "Guardar cambios";
+          saveBtn.textContent = t("profile_save");
           updateSaveButtonState();
         }
       }
@@ -391,14 +385,14 @@ const ProfileModule = (() => {
       try {
         await ApiClient.updateUser(demo);
         await loadProfileIntoForm();
-        window.toast?.({
-          title: "Perfil restaurado",
-          type: "success",
-          duration: 2200
+        window.toast?.({ 
+          title: t("profile_restored"), 
+          type: "success", 
+          duration: 2200 
         });
       } catch (err) {
         console.error(err);
-        showErrors(["No se pudo restaurar el perfil."]);
+        showErrors([t("profile_restore_error")]);
       }
     });
   }
