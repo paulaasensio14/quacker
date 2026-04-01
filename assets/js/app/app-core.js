@@ -20,7 +20,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // 1) Iniciar módulos sin bloquear el arranque del router
+  // 1) Restaurar primero la vista correcta
+  Router.init();
+
+  // 2) Iniciar módulos después
   try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }
   try { window.ListsModule?.init?.(); } catch (e) { console.error("ListsModule.init error", e); }
   try { window.ProfileModule?.init?.(); } catch (e) { console.error("ProfileModule.init error", e); }
@@ -316,7 +319,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 }
-
-  // 2) Router el último (dispara el primer view-change al init)
-  Router.init();
 });
