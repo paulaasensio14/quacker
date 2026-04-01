@@ -227,9 +227,9 @@ const ExploreModule = (() => {
     `;
 
     container.innerHTML = [
-      renderSkeletonSection("Novedades", 6),
-      renderSkeletonSection("Tendencias", 6),
-      renderSkeletonSection("Recomendados", 6)
+      renderSkeletonSection(window.I18n?.t?.("explore_section_new") || "Novedades", 6),
+      renderSkeletonSection(window.I18n?.t?.("explore_section_trending") || "Tendencias", 6),
+      renderSkeletonSection(window.I18n?.t?.("explore_section_recommended") || "Recomendados", 6)
     ].join("");
   }
 
@@ -282,31 +282,33 @@ const ExploreModule = (() => {
   const recomendadosAll = notNew.filter((it) => !tendenciaIdsAll.has(String(it.eid)));
 
   const SECTIONS = [
-
-  {
-  key: "novedades",
-  title: "Novedades",
-  subtitle: "Lanzamientos recientes para añadir a tu ocio",
-  limit: 6,
-  items: novedadesAll
-  },
-
-  {
-  key: "tendencias",
-  title: "Tendencias",
-  subtitle: "Lo más comentado y popular en tu feed",
-  limit: 6,
-  items: tendenciasAll
-  },
-
-  {
-  key: "recomendados",
-  title: "Recomendados",
-  subtitle: "Opciones que encajan con tu biblioteca",
-  limit: 6,
-  items: recomendadosAll
-  }
-
+    {
+      key: "novedades",
+      title: window.I18n?.t?.("explore_section_new") || "Novedades",
+      subtitle:
+        window.I18n?.t?.("explore_section_new_sub") ||
+        "Lanzamientos recientes para añadir a tu ocio",
+      limit: 6,
+      items: novedadesAll
+    },
+    {
+      key: "tendencias",
+      title: window.I18n?.t?.("explore_section_trending") || "Tendencias",
+      subtitle:
+        window.I18n?.t?.("explore_section_trending_sub") ||
+        "Lo más comentado y popular en tu feed",
+      limit: 6,
+      items: tendenciasAll
+    },
+    {
+      key: "recomendados",
+      title: window.I18n?.t?.("explore_section_recommended") || "Recomendados",
+      subtitle:
+        window.I18n?.t?.("explore_section_recommended_sub") ||
+        "Opciones que encajan con tu biblioteca",
+      limit: 6,
+      items: recomendadosAll
+    }
   ];
 
   // Inicializa shownCount si está a 0 (para modo expandido)
