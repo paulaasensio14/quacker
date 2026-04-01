@@ -2,11 +2,12 @@
 // Paso 1: Carga + render usando ApiClient (sin crear/editar aún)
 
 const ListsModule = (() => {
+  const t = (key) => window.I18n?.t?.(key) ?? key;
+
   let allLists = [];
-
   let visibleLists = [];
-
   let listsFilter = "all";     // "all" | "public" | "private" | "collab"
+  
   let pendingDeleteListId = null;
   let lastDeletedListSnapshot = null;
   let editingListId = null;
@@ -42,9 +43,21 @@ const ListsModule = (() => {
   }
 
   function _visibilityLabel(v) {
-    if (v === "public") return "Pública";
-    if (v === "collab") return "Colaborativa";
-    return "Privada";
+    if (v === "public") return t("lists_visibility_public");
+    if (v === "collab") return t("lists_visibility_collab");
+    return t("lists_visibility_private");
+  }
+
+  function _formatCreatedListsCount(total) {
+    return total === 1
+      ? ` · 1 ${t("lists_count_created_singular")}`
+      : ` · ${total} ${t("lists_count_created_plural")}`;
+  }
+
+  function _formatItemsCount(count) {
+    return count === 1
+      ? `1 ${t("lists_item_singular")}`
+      : `${count} ${t("lists_item_plural")}`;
   }
 
   function _sleep(ms) {
@@ -159,34 +172,34 @@ const ListsModule = (() => {
 
     if (subtitleText && listsInline) {
       const total = allLists.length;
-
-      subtitleText.textContent = "Organiza tu contenido como quieras";
-      listsInline.textContent = ` · ${total} lista${total === 1 ? "" : "s"} creada${total === 1 ? "" : "s"}`;
+      subtitleText.textContent = t("lists_subtitle");
+      listsInline.textContent = _formatCreatedListsCount(total);
       listsInline.style.display = "inline";
-
-      // Ocultar el contador de biblioteca mientras estamos en listas
       if (libraryInline) libraryInline.style.display = "none";
     }
 
     if (hasError) {
-      container.innerHTML =
-        "<p class='empty-state'>No se pudieron cargar las listas. Revisa la consola.</p>";
+      container.innerHTML = `
+        <div class="lists-empty-state">
+          ${t("lists_load_error")}
+        </div>
+      `;
       return;
     }
 
     if (!visibleLists.length) {
       const isFiltering = listsFilter !== "all" || (searchTerm || "").trim().length > 0;
-
-      container.innerHTML = isFiltering
-        ? "<p class='empty-state'>No hay listas que coincidan con tu búsqueda/filtro.</p>"
-        : "<p class='empty-state'>Todavía no tienes listas. ¡Crea tu primera lista!</p>";
-
+      container.innerHTML = `
+        <div class="lists-empty-state">
+          ${isFiltering ? t("lists_empty_filtered") : t("lists_empty_initial")}
+        </div>
+      `;
       return;
     }
 
     container.innerHTML = visibleLists
       .map((list) => {
-        const name = _safeText(list.name) || "Sin nombre";
+        const name = _safeText(list.name) || t("lists_untitled");
         const desc = _safeText(list.description);
         const count = _itemsCount(list);
         const vis = _visibilityLabel(list.visibility);
@@ -255,13 +268,13 @@ const ListsModule = (() => {
     const descriptionEl = _getEl("listDetailDescription");
     const countEl = _getEl("listDetailCount");
 
-    if (titleEl) titleEl.textContent = _safeText(list.name) || "Sin nombre";
+    if (titleEl) titleEl.textContent = _safeText(list.name) || t("lists_untitled");
     if (visibilityEl) visibilityEl.textContent = _visibilityLabel(list.visibility);
     if (descriptionEl) descriptionEl.textContent = _safeText(list.description) || "";
 
     const count = _itemsCount(list);
     if (countEl) {
-      countEl.textContent = `${count} elemento${count === 1 ? "" : "s"}`;
+      countEl.textContent = _formatItemsCount(count);
     }
   }
 
@@ -310,18 +323,18 @@ const ListsModule = (() => {
     _setHidden(grid, false);
   }
 
-  function _typeLabel(t){
-    if (t === "serie") return "Serie";
-    if (t === "pelicula") return "Película";
-    if (t === "book") return "Libro";
-    if (t === "game") return "Videojuego";
-    return "Contenido";
+  function _typeLabel(tpe){
+    if (tpe === "serie") return t("library_type_series");
+    if (tpe === "pelicula") return t("library_type_movie");
+    if (tpe === "book") return t("library_type_book");
+    if (tpe === "game") return t("library_type_game");
+    return t("lists_type_content");
   }
 
   function _progressLabel(pct){
     const n = Number(pct ?? 0);
-    if (n >= 100) return "Completado";
-    if (n <= 0) return "No empezado";
+    if (n >= 100) return t("library_status_completed");
+    if (n <= 0) return t("library_status_not_started");
     return `${n}%`;
   }
 
@@ -335,6 +348,7 @@ const ListsModule = (() => {
     if (!list){
       grid.innerHTML = "";
       empty.style.display = "block";
+      empty.textContent = t("lists_detail_empty");
       if (hint) hint.textContent = "";
       return;
     }
@@ -344,12 +358,13 @@ const ListsModule = (() => {
     if (!ids.length){
       grid.innerHTML = "";
       empty.style.display = "block";
+      empty.textContent = t("lists_detail_empty");
       if (hint) hint.textContent = "";
       return;
     }
 
     empty.style.display = "none";
-    if (hint) hint.textContent = "Puedes quitar contenido desde aquí";
+    if (hint) hint.textContent = t("lists_detail_hint");
 
     // Cargamos biblioteca para resolver ids -> datos reales
     let library = [];
@@ -395,20 +410,24 @@ const ListsModule = (() => {
 
     // “Mostrando X de Y”
     const showing = _getEl("listDetailShowing");
-    if (showing) showing.textContent = `Mostrando ${filtered.length} de ${items.length}`;
+    if (showing) {
+      showing.textContent = t("lists_detail_showing")
+        .replace("{shown}", filtered.length)
+        .replace("{total}", items.length);
+    }
 
     // Si hay items en la lista pero los filtros no devuelven resultados
     if (!filtered.length) {
       grid.innerHTML = "";
       empty.style.display = "block";
-      empty.textContent = "No hay resultados con los filtros actuales.";
+      empty.textContent = t("lists_detail_empty_filtered");
       if (hint) hint.textContent = "";
       return;
     }
 
     grid.innerHTML = filtered.map((it) => {
       const coverStyle = it.cover ? `style="background-image:url('${it.cover}');"` : "";
-      const title = _safeText(it.title) || "Sin título";
+      const title = _safeText(it.title) || t("lists_item_untitled");
       const type = _typeLabel(it.type);
       const prog = _progressLabel(it.progress);
 
@@ -468,8 +487,8 @@ const ListsModule = (() => {
           card.dataset.busy = "0";
         }
         window.toast?.({
-          title: "No se pudo quitar",
-          message: "Inténtalo de nuevo.",
+          title: t("lists_remove_error_title"),
+          message: t("lists_remove_error_text"),
           type: "error",
           duration: 3200
         });
@@ -492,19 +511,19 @@ const ListsModule = (() => {
       await renderActiveListItems();
 
       window.toast?.({
-        title: "Contenido quitado",
-        message: "Se ha eliminado de la lista.",
+        title: t("lists_remove_success_title"),
+        message: t("lists_remove_success_text"),
         type: "success",
         duration: 5200,
-        actionLabel: "Deshacer",
+        actionLabel: t("lists_undo"),
         onAction: async () => {
           try{
             const addRes = await ApiClient.addLibraryItemToList(listId, id);
             if (!addRes?.ok) throw new Error("add_failed");
 
             window.toast?.({
-              title: "Cambios revertidos",
-              message: "Se ha vuelto a añadir a la lista.",
+              title: t("lists_undo_success_title"),
+              message: t("lists_undo_success_text"),
               type: "success",
               duration: 2400
             });
@@ -534,8 +553,8 @@ const ListsModule = (() => {
           }catch(e){
             console.error(e);
             window.toast?.({
-              title: "No se pudo deshacer",
-              message: "Inténtalo de nuevo.",
+              title: t("lists_undo_error_title"),
+              message: t("lists_undo_error_text"),
               type: "error",
               duration: 3200
             });
@@ -550,8 +569,8 @@ const ListsModule = (() => {
       console.error(e);
 
       window.toast?.({
-        title: "No se pudo quitar",
-        message: "Inténtalo de nuevo.",
+        title: t("lists_remove_error_title"),
+        message: t("lists_remove_error_text"),
         type: "error",
         duration: 3200
       });
@@ -770,6 +789,22 @@ const ListsModule = (() => {
 
       if (listsInline) listsInline.style.display = "none";
       if (subtitleText) subtitleText.textContent = "Resumen de tu actividad en Quacker";
+    });
+
+    document.addEventListener("quacker:lang-change", async () => {
+      const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
+      if (!isListsActive) return;
+
+      render(false);
+
+      const detailOpen = !_getEl("listDetail")?.hidden && !!activeListId;
+      if (detailOpen) {
+        const activeList = allLists.find((l) => String(l.id) === String(activeListId));
+        if (activeList) {
+          _renderActiveListDetailHeader(activeList);
+          await renderActiveListItems();
+        }
+      }
     });
 
     // Volver desde Explore a un detalle de lista concreto
