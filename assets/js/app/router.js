@@ -301,7 +301,13 @@ const Router = (() => {
         return "";
       }
     })();
+    
     const htmlInitial = document.querySelector(".view.is-active")?.dataset.viewId;
+
+    if (htmlInitial && views[htmlInitial]) {
+      currentView = htmlInitial;
+    }
+
     const initial =
       (hashView && views[hashView] && hashView) ||
       (storedView && views[storedView] && storedView) ||
@@ -309,7 +315,6 @@ const Router = (() => {
 
     if (initial) {
       showView(initial);
-
       document.querySelectorAll(".nav-item-btn").forEach((btn) => {
         btn.classList.toggle("is-active", btn.dataset.view === initial);
       });
