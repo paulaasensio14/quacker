@@ -165,12 +165,13 @@
     <!-- TOPBAR -->
     <header class="topbar">
       <div class="topbar-left">
-        <div class="topbar-title" id="sectionTitle">Inicio</div>
-        <div class="topbar-subtitle" id="sectionSubtitle">
-          <span id="sectionSubtitleText">Resumen de tu actividad en Quacker</span>
-          <span id="libraryCountInline" style="display:none;"></span>
-          <span id="listsCountInline" style="display:none;"></span>
-        </div>
+      <div class="topbar-title" id="sectionTitle" data-i18n="nav_home">Inicio</div>
+
+      <div class="topbar-subtitle" id="sectionSubtitle">
+        <span id="sectionSubtitleText" data-i18n="home_summary">Resumen de tu actividad en Quacker</span>
+        <span id="libraryCountInline" style="display:none;"></span>
+        <span id="listsCountInline" style="display:none;"></span>
+      </div>
       </div> 
 
 
@@ -180,6 +181,7 @@
             class="search-input"
             id="globalSearch"
             placeholder="Buscar contenido..."
+            data-i18n-placeholder="global_search_placeholder"
             aria-label="Buscar"
             disabled
           />
@@ -238,9 +240,9 @@
       <!-- Panel de notificaciones -->
       <div class="notif-panel" id="notifPanel" data-notifications-panel aria-hidden="true">
         <div class="notif-header-row">
-          <div class="notif-title">Notificaciones (<span id="notifCount">0</span>)</div>
+          <div class="notif-title"><span data-i18n="notif_title">Notificaciones</span> (<span id="notifCount">0</span>)</div>
           <div class="notif-actions">
-            <button class="chip-small" id="markAllBtn">Marcar todas</button>
+            <button class="chip-small" id="markAllBtn" data-i18n="notif_mark_all">Marcar todas</button>
             <button class="close-chip" id="notifClose" data-close-notifications>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -258,8 +260,8 @@
                     fill="currentColor"></path>
             </svg>
           </div>
-          <div class="notif-empty-title">Sin notificaciones</div>
-          <div class="notif-empty-desc">No tienes notificaciones nuevas.</div>
+          <div class="notif-empty-title" data-i18n="notif_empty_title">Sin notificaciones</div>
+          <div class="notif-empty-desc" data-i18n="notif_empty_text">No tienes notificaciones nuevas.</div>
         </div>
       </div>
 
@@ -278,16 +280,18 @@
         <div class="profile-menu-divider"></div>
 
         <button class="profile-menu-item" data-profile-action="profile">
-          <span>Mi perfil</span>
+          <span data-i18n="nav_profile">Mi perfil</span>
         </button>
         <button class="profile-menu-item" data-profile-action="settings">
-          <span>Ajustes</span>
+          <span data-i18n="profile_menu_settings">Ajustes</span>
         </button>
+
         <button class="profile-menu-item" data-profile-action="theme">
-          <span>Cambiar tema</span>
+          <span data-i18n="profile_menu_theme">Cambiar tema</span>
         </button>
+
         <button class="profile-menu-item profile-menu-item-danger" data-profile-action="logout">
-          <span>Cerrar sesión</span>
+          <span data-i18n="logout">Cerrar sesión</span>
         </button>
       </div>
 
@@ -924,7 +928,7 @@
                   aria-hidden="true" focusable="false">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
-              Añadir contenido
+              <span data-i18n="list_detail_add_content">Añadir contenido</span>
             </button>
 
             <div class="list-detail-titlewrap">
@@ -941,7 +945,7 @@
           <div class="list-detail-items">
             <div class="list-items-header">
               <div class="list-items-head-left">
-                <h3 class="list-items-title">Contenido</h3>
+                <h3 class="list-items-title" data-i18n="lists_type_content">Contenido</h3>
                 <span class="list-items-sub" id="listDetailHint"></span>
               </div>
 
@@ -953,25 +957,31 @@
                     <path d="M21 21l-4.3-4.3"/>
                     <circle cx="11" cy="11" r="7"/>
                   </svg>
-                  <input id="listDetailSearch" type="search" placeholder="Buscar en la lista" autocomplete="off">
+                  <input
+                    id="listDetailSearch"
+                    type="search"
+                    placeholder="Buscar en la lista"
+                    data-i18n-placeholder="lists_detail_search_placeholder"
+                    autocomplete="off"
+                  >
                 </label>
 
                 <label class="select-wrap">
                   <select id="listDetailTypeFilter" aria-label="Filtrar por tipo">
-                    <option value="all">Todos</option>
-                    <option value="serie">Series</option>
-                    <option value="pelicula">Películas</option>
-                    <option value="book">Libros</option>
-                    <option value="game">Videojuegos</option>
+                    <option value="all" data-i18n="pills_all">Todos</option>
+                    <option value="serie" data-i18n="pills_series">Series</option>
+                    <option value="pelicula" data-i18n="pills_movies">Películas</option>
+                    <option value="book" data-i18n="pills_books">Libros</option>
+                    <option value="game" data-i18n="pills_games">Videojuegos</option>
                   </select>
                 </label>
 
                 <label class="select-wrap">
                   <select id="listDetailStatusFilter" aria-label="Filtrar por estado">
-                    <option value="all">Todos</option>
-                    <option value="pending">Pendiente</option>
-                    <option value="inprogress">En progreso</option>
-                    <option value="completed">Completado</option>
+                    <option value="all" data-i18n="lists_filter_all_status">Todos</option>
+                    <option value="pending" data-i18n="lists_filter_pending">Pendiente</option>
+                    <option value="inprogress" data-i18n="library_status_in_progress">En progreso</option>
+                    <option value="completed" data-i18n="library_status_completed">Completado</option>
                   </select>
                 </label>
 
@@ -981,7 +991,7 @@
 
             <div id="listDetailItemsGrid" class="list-items-grid"></div>
 
-            <p id="listDetailEmpty" class="empty-state" style="display:none;">
+            <p id="listDetailEmpty" class="empty-state" style="display:none;" data-i18n="lists_detail_empty">
               Esta lista todavía no tiene contenido.
             </p>
           </div>
@@ -992,7 +1002,7 @@
       <div class="modal-overlay" id="confirmDeleteListModal" aria-hidden="true">
         <div class="modal-card">
           <div class="modal-header">
-            <h3>Eliminar lista</h3>
+            <h3 data-i18n="modal_delete_list_title">Eliminar lista</h3>
             <button class="modal-close" id="closeConfirmDeleteList" aria-label="Cerrar">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M18 6L6 18"></path>
@@ -1002,11 +1012,9 @@
           </div>
 
           <div class="modal-body">
-            <p id="confirmDeleteListText">¿Seguro que quieres eliminar esta lista?</p>
+            <p data-i18n="modal_delete_list_text">¿Seguro que quieres eliminar esta lista?</p>
 
-            <p class="modal-warning">
-              Podrás deshacerlo desde el toast.
-            </p>
+            <p data-i18n="modal_delete_list_note">Podrás deshacerlo desde el toast.</p>
 
             <div
               id="confirmDeleteListErrors"
@@ -1018,11 +1026,11 @@
           </div>
 
           <div class="modal-actions">
-            <button class="btn-secondary" id="cancelDeleteList" type="button">
+            <button class="btn-secondary" id="cancelDeleteList" type="button" data-i18n="common_cancel">
               Cancelar
             </button>
 
-            <button class="btn-primary" id="confirmDeleteList" type="button">
+            <button class="btn-primary" id="confirmDeleteList" type="button" data-i18n="common_delete">
               Eliminar
             </button>
           </div>

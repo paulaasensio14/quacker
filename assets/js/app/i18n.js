@@ -111,6 +111,28 @@
       lists_undo_success_text: "Se ha vuelto a añadir a la lista.",
       lists_undo_error_title: "No se pudo deshacer",
       lists_undo_error_text: "Inténtalo de nuevo.",
+      global_search_placeholder: "Buscar contenido...",
+
+      notif_title: "Notificaciones",
+      notif_mark_all: "Marcar todas",
+      notif_empty_title: "Sin notificaciones",
+      notif_empty_text: "No tienes notificaciones nuevas.",
+
+      profile_menu_settings: "Ajustes",
+      profile_menu_theme: "Cambiar tema",
+
+      list_detail_add_content: "Añadir contenido",
+      lists_detail_title: "Lista",
+      lists_detail_search_placeholder: "Buscar en la lista",
+      lists_filter_all_status: "Todos",
+      lists_filter_pending: "Pendiente",
+
+      modal_delete_list_title: "Eliminar lista",
+      modal_delete_list_text: "¿Seguro que quieres eliminar esta lista?",
+      modal_delete_list_note: "Podrás deshacerlo desde el toast.",
+
+      common_cancel: "Cancelar",
+      common_delete: "Eliminar",
       },
 
     en: {
@@ -220,6 +242,29 @@
       lists_undo_success_text: "It has been added back to the list.",
       lists_undo_error_title: "Couldn't undo",
       lists_undo_error_text: "Please try again.",
+
+      global_search_placeholder: "Search content...",
+
+      notif_title: "Notifications",
+      notif_mark_all: "Mark all",
+      notif_empty_title: "No notifications",
+      notif_empty_text: "You have no new notifications.",
+
+      profile_menu_settings: "Settings",
+      profile_menu_theme: "Change theme",
+
+      list_detail_add_content: "Add content",
+      lists_detail_title: "List",
+      lists_detail_search_placeholder: "Search in list",
+      lists_filter_all_status: "All",
+      lists_filter_pending: "Pending",
+
+      modal_delete_list_title: "Delete list",
+      modal_delete_list_text: "Are you sure you want to delete this list?",
+      modal_delete_list_note: "You’ll be able to undo it from the toast.",
+
+      common_cancel: "Cancel",
+      common_delete: "Delete",
       },
   };
 
