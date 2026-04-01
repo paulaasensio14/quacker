@@ -2086,6 +2086,10 @@ const ExploreModule = (() => {
     })();
   }
 
+  document.addEventListener("quacker:lang-change", () => {
+    _render();
+  });
+
   return { init, load };
 })();
 
