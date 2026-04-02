@@ -232,7 +232,7 @@ const ExploreModule = (() => {
   }
 
   function _buildExploreCardViewModel(item) {
-    const title = _safeText(item?.title) || "Sin título";
+    const title = _safeText(item?.title) || (window.I18n?.t?.("common_untitled") ?? "Sin título");
     const normalizedType = _norm(item?.type);
     const typeLabel =
       TYPE_LABELS[normalizedType] ||
