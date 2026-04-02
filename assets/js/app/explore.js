@@ -350,14 +350,18 @@ const ExploreModule = (() => {
       : "";
 
     const hasAny = visible.length > 0;
+    const resultsTitle = window.I18n?.t?.("explore_results_title") ?? "Resultados para";
+    const resultsShowing = (window.I18n?.t?.("explore_results_showing") ?? "Mostrando {count} resultado(s){suffix}")
+      .replace("{count}", String(visible.length))
+      .replace("{suffix}", titleSuffix);
 
     container.innerHTML = hasAny
       ? `
         <section class="explore-section explore-section--search-results" data-section="search-results">
           <header class="explore-section-header">
             <div>
-              <h2 class="explore-section-title">Resultados para “${searchTerm}”</h2>
-              <p class="explore-section-sub">Mostrando ${visible.length} resultado(s)${titleSuffix}</p>
+              <h2 class="explore-section-title">${resultsTitle} “${searchTerm}”</h2>
+              <p class="explore-section-sub">${resultsShowing}</p>
             </div>
             <div class="explore-section-actions">
               <span class="explore-section-count">${visible.length}</span>
