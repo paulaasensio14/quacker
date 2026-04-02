@@ -34,8 +34,6 @@
       explore_search_placeholder: "Buscar en Explorar...",
       explore_results_title: "Resultados para",
       explore_results_showing: "Mostrando {count} resultado(s){suffix}",
-      explore_results_title: "Resultados para",
-      explore_results_showing: "Mostrando {count} resultado(s){suffix}",
       explore_action_view_more: "Ver más",
       explore_action_load_more: "Cargar más",
       explore_action_back: "Volver",
@@ -170,6 +168,7 @@
       modal_delete_list_note: "Podrás deshacerlo desde el toast.",
 
       common_cancel: "Cancelar",
+      common_untitled: "Sin título",
       common_delete: "Eliminar",
 
       confirm_clear_notifs_text: "¿Quieres marcar todas las notificaciones como vistas?",
@@ -213,8 +212,6 @@
       explore_section_trending_sub: "The most talked-about and popular in your feed",
       explore_section_recommended_sub: "Options that fit your library",
       explore_search_placeholder: "Search in Explore...",
-      explore_results_title: "Results for",
-      explore_results_showing: "Showing {count} result(s){suffix}",
       explore_results_title: "Results for",
       explore_results_showing: "Showing {count} result(s){suffix}",
       explore_action_view_more: "View more",
@@ -352,6 +349,7 @@
       modal_delete_list_note: "You’ll be able to undo it from the toast.",
 
       common_cancel: "Cancel",
+      common_untitled: "Untitled",
       common_delete: "Delete",
 
       confirm_clear_notifs_text: "Do you want to mark all notifications as seen?",
