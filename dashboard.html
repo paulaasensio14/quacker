@@ -416,17 +416,13 @@
         <!-- Continúa donde lo dejaste -->
         <section class="home-panel home-continue-panel">
           <div class="home-panel-header home-continue-header">
-            <h3>Continúa donde lo dejaste</h3>
+
+            <h3 data-i18n="home_continue_title">Continúa donde lo dejaste</h3>
 
             <div style="display:flex;align-items:center;gap:10px;">
               <span class="home-continue-count" id="continueCountLabel">0 contenidos</span>
 
-              <button
-                class="btn-secondary btn-sm"
-                id="btnGoLibraryFromContinue"
-                type="button"
-                style="display:none;"
-              >
+              <button class="btn-secondary btn-sm" id="btnGoLibraryFromContinue" type="button" style="display:none;" data-i18n="home_continue_view_all">
                 Ver todo
               </button>
             </div>
@@ -435,23 +431,23 @@
           <!-- Filtros por tipo -->
           <div class="home-continue-filters">
             <div class="home-continue-filter-row">
-              <span class="home-continue-filter-label">Tipo</span>
+              <span class="home-continue-filter-label" data-i18n="home_filter_type">Tipo</span>
               <div class="home-continue-pills">
-                <button class="pill-filter-sm cw-type-pill active" data-type="all">Todo</button>
-                <button class="pill-filter-sm cw-type-pill" data-type="serie">Series</button>
-                <button class="pill-filter-sm cw-type-pill" data-type="pelicula">Películas</button>
-                <button class="pill-filter-sm cw-type-pill" data-type="book">Libros</button>
-                <button class="pill-filter-sm cw-type-pill" data-type="game">Videojuegos</button>
+                <button class="pill-filter-sm cw-type-pill active" data-type="all" data-i18n="pills_all">Todo</button>
+                <button class="pill-filter-sm cw-type-pill" data-type="serie" data-i18n="pills_series">Series</button>
+                <button class="pill-filter-sm cw-type-pill" data-type="pelicula" data-i18n="pills_movies">Películas</button>
+                <button class="pill-filter-sm cw-type-pill" data-type="book" data-i18n="pills_books">Libros</button>
+                <button class="pill-filter-sm cw-type-pill" data-type="game" data-i18n="pills_games">Videojuegos</button>
               </div>
             </div>
 
             <!-- Filtros por estado -->
             <div class="home-continue-filter-row">
-              <span class="home-continue-filter-label">Estado</span>
+              <span class="home-continue-filter-label" data-i18n="home_filter_status">Estado</span>
               <div class="home-continue-pills">
-                <button class="pill-filter-sm cw-status-pill active" data-status="in_progress">En progreso</button>
-                <button class="pill-filter-sm cw-status-pill" data-status="not_started">No comenzados</button>
-                <button class="pill-filter-sm cw-status-pill" data-status="completed">Al día</button>
+                <button class="pill-filter-sm cw-status-pill active" data-status="in_progress" data-i18n="library_status_in_progress">En progreso</button>
+                <button class="pill-filter-sm cw-status-pill" data-status="not_started" data-i18n="home_status_not_started_plural">No comenzados</button>
+                <button class="pill-filter-sm cw-status-pill" data-status="completed" data-i18n="home_status_up_to_date">Al día</button>
               </div>
             </div>
           </div>
