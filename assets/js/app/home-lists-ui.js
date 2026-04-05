@@ -9,12 +9,22 @@ window.TYPE_LABELS = window.TYPE_LABELS || {
   book: "Libro",
   game: "Videojuego"
 };
-window.typeLabel = window.typeLabel || ((t) => window.TYPE_LABELS[t] || "Contenido");
+window.typeLabel = window.typeLabel || ((t) => {
+  const i18n = window.I18n;
+  const map = {
+    serie: "home_type_series",
+    pelicula: "home_type_movie",
+    book: "home_type_book",
+    game: "home_type_game"
+  };
+  return i18n?.t?.(map[t]) || window.TYPE_LABELS[t] || "Contenido";
+});
 
 // Meta visible (serie/libro/otros) para cards del Home
 function formatMetaLine(item) {
   const type = item?.type || "";
   const meta = item?.meta || {};
+  const t = window.I18n?.t?.bind(window.I18n) || ((key) => key);
 
   if (type === "serie") {
     const s = Number(meta.season || 0);
@@ -26,7 +36,7 @@ function formatMetaLine(item) {
   if (type === "book") {
     const read = Number(meta.pagesRead || 0);
     const total = Number(meta.totalPages || 0);
-    if (total > 0) return `${read} / ${total} páginas`;
+    if (total > 0) return `${read} / ${total} ${t("home_pages")}`;
     return "";
   }
 
@@ -43,17 +53,28 @@ function formatMinutesLabel(totalMinutes) {
   const m = totalMinutes || 0;
   const h = Math.floor(m / 60);
   const rest = m % 60;
-  if (!h) return `${rest} min`;
-  if (!rest) return `${h} h`;
-  return `${h}h ${rest}m`;
+  const t = window.I18n?.t?.bind(window.I18n) || ((key) => key);
+  if (!h) return `${rest} ${t("home_minutes_short")}`;
+  if (!rest) return `${h} ${t("home_hours_short")}`;
+  return `${h}${t("home_hours_short")} ${rest}${t("home_minutes_compact_short")}`;
 }
 
 function getWeekdayLabelEs(date = new Date()) {
-  const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const t = window.I18n?.t?.bind(window.I18n) || ((key) => key);
+  const dias = [
+    t("home_weekday_sunday"),
+    t("home_weekday_monday"),
+    t("home_weekday_tuesday"),
+    t("home_weekday_wednesday"),
+    t("home_weekday_thursday"),
+    t("home_weekday_friday"),
+    t("home_weekday_saturday")
+  ];
   return dias[date.getDay()];
 }
 
 function setHomeDashboardLoading(isLoading) {
+  const t = window.I18n?.t?.bind(window.I18n) || ((key) => key);
   const homeView = document.getElementById("view-home");
   if (homeView) {
     homeView.classList.toggle("is-loading", isLoading);
@@ -63,7 +84,7 @@ function setHomeDashboardLoading(isLoading) {
   const markBtn = document.querySelector("#btnMarkLastActivity");
   if (markBtn && isLoading) {
     markBtn.dataset.itemId = "";
-    markBtn.innerHTML = "Cargando…";
+    markBtn.innerHTML = t("home_loading");
     markBtn.disabled = true;
     markBtn.classList.remove("completed");
   }
@@ -72,8 +93,8 @@ function setHomeDashboardLoading(isLoading) {
   if (backlogContainer && isLoading) {
     backlogContainer.innerHTML = `
       <article class="home-empty-card home-empty-card--compact" aria-live="polite">
-        <h3>Cargando backlog…</h3>
-        <p>Estamos revisando qué contenidos llevan tiempo sin movimiento.</p>
+        <h3>${t("home_backlog_loading_title")}</h3>
+        <p>${t("home_backlog_loading_text")}</p>
       </article>
     `;
   }
@@ -81,16 +102,16 @@ function setHomeDashboardLoading(isLoading) {
   if (!isLoading) return;
 
   const textTargets = [
-    ["#metricWeeklyTime", "Cargando…"],
+    ["#metricWeeklyTime", t("home_loading")],
     ["#metricInProgress", "…"],
     ["#metricCompletedYear", "…"],
     ["#metricStreak", "…"],
-    ["#lastActivityTitle", "Cargando actividad…"],
-    ["#lastActivityMeta", "Estamos preparando tu resumen."],
+    ["#lastActivityTitle", t("home_last_activity_loading_title")],
+    ["#lastActivityMeta", t("home_last_activity_loading_text")],
     ["#lastActivityTime", ""],
     ["#lastActivityProgressLabel", ""],
-    ["#challengeTitle", "Cargando reto…"],
-    ["#challengeDescription", "Estamos preparando tu progreso mensual."]
+    ["#challengeTitle", t("home_challenge_loading_title")],
+    ["#challengeDescription", t("home_challenge_loading_text")]
   ];
 
   textTargets.forEach(([selector, value]) => {
