@@ -163,9 +163,9 @@ async function renderHomeDashboard() {
       // Tiempo hoy (pill)
       if (weeklyTodayPill) {
         if (stats.todayMinutes && stats.todayMinutes > 0) {
-          weeklyTodayPill.textContent = `Hoy: ${formatMinutesLabel(stats.todayMinutes)}`;
+          weeklyTodayPill.textContent = `${window.I18n.t("home_today")}: ${formatMinutesLabel(stats.todayMinutes)}`;
         } else {
-          weeklyTodayPill.textContent = "Hoy: 0 min";
+          weeklyTodayPill.textContent = `${window.I18n.t("home_today")}: 0 ${window.I18n.t("home_minutes_short")}`;
         }
       }
 
@@ -178,7 +178,7 @@ async function renderHomeDashboard() {
       // Completados hoy (pill)
       if (completedTodayPill) {
         const n = stats.completedToday ?? 0;
-        completedTodayPill.textContent = `Hoy: ${n}`;
+        completedTodayPill.textContent = `${window.I18n.t("home_today")}: ${n}`;
       }
 
       // Racha (UX: si es 0, estado neutro; si >0, animación)
