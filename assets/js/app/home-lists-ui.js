@@ -189,7 +189,13 @@ async function renderHomeDashboard() {
           if (s <= 0) {
             streakEl.textContent = "—";
           } else {
-            animateNumber(streakEl, s, s === 1 ? " día" : " días");
+            animateNumber(
+              streakEl,
+              s,
+              s === 1
+                ? ` ${window.I18n.t("home_day_singular")}`
+                : ` ${window.I18n.t("home_day_plural")}`
+            );
           }
         }
       }
@@ -201,7 +207,7 @@ async function renderHomeDashboard() {
 
       if (welcomeTodayTimeChip) {
         const mins = Number(stats?.todayMinutes ?? 0);
-        welcomeTodayTimeChip.textContent = `Hoy: ${formatMinutesLabel(mins)}`;
+        welcomeTodayTimeChip.textContent = `${window.I18n.t("home_today")}: ${formatMinutesLabel(mins)}`;
       }
 
       // Saludo (usar la misma fuente de verdad que "Continúa donde lo dejaste")
