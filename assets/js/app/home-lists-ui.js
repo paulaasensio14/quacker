@@ -218,14 +218,13 @@ async function renderHomeDashboard() {
       // Texto coherente (0 / 1 / plural)
       if (subtitleEl) {
         if (inProgressRealCount <= 0) {
-          subtitleEl.textContent = "No tienes contenidos en progreso todavía. Empieza algo en tu biblioteca.";
+          subtitleEl.textContent = window.I18n.t("home_welcome_subtitle_empty");
         } else if (inProgressRealCount === 1) {
-          subtitleEl.innerHTML = `Tienes <strong>1 contenido</strong> en progreso. Sigue con tus rachas`;
+          subtitleEl.innerHTML = window.I18n.t("home_welcome_subtitle_single");
         } else {
-          subtitleEl.innerHTML = `Tienes <strong>${inProgressRealCount} contenidos</strong> en progreso. Sigue con tus rachas`;
+          subtitleEl.innerHTML = window.I18n.t("home_welcome_subtitle_plural").replace("{count}", String(inProgressRealCount));
         }
       }
-
     }
 
       // Chips del saludo
