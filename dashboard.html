@@ -458,121 +458,121 @@
           </div>
         </section>
 
-
         <!-- Última actividad + Reto mensual -->
         <div class="home-main-row">
+
           <!-- Última actividad -->
-        <section class="home-panel">
-          <div class="home-panel-header">
-            <h3>Última actividad</h3>
-            <button class="icon-btn" type="button" id="btnViewAllActivity" aria-label="Ver toda la actividad">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+          <section class="home-panel">
+            <div class="home-panel-header">
+              <h3 data-i18n="home_last_activity_title">Última actividad</h3>
+              <button class="icon-btn" type="button" id="btnViewAllActivity" aria-label="Ver toda la actividad">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path>
-                <circle cx="12" cy="12" r="2.5"></circle>
-              </svg>
-            </button>
-          </div>
-
-          <div class="last-activity-card">
-            <div class="last-activity-cover">
-              <!-- La portada se rellena por JS -->
-            </div>
-
-            <div class="last-activity-body">
-              <div class="last-activity-header-row">
-              <div class="last-activity-title-group">
-                <span class="last-activity-type-icon" id="lastActivityTypeIcon"></span>
-                <h4 class="last-activity-title" id="lastActivityTitle">–</h4>
-              </div>
-              <span class="last-activity-time-chip" id="lastActivityTime">–</span>
-            </div>
-
-
-              <p class="last-activity-meta" id="lastActivityMeta">–</p>
-
-              <div class="last-activity-progress">
-                <div class="last-activity-progress-bar">
-                  <div class="last-activity-progress-bar-fill" id="lastActivityProgressFill"></div>
-                </div>
-                <div class="last-activity-progress-footer">
-                  <span class="last-activity-progress-label" id="lastActivityProgressLabel">–</span>
-                </div>
-              </div>
-
-              <div class="last-activity-actions">
-                <button class="btn-primary btn-sm btn-progress-last" type="button" id="btnMarkLastActivity">
-                  <span class="btn-progress-icon" aria-hidden="true">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M5 12l4 4 10-10"></path>
-                    </svg>
-                  </span>
-                  Progreso hecho
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
-        <!-- Reto mensual -->
-        <section class="home-panel">
-          <div class="home-panel-header">
-            <h3>Reto mensual</h3>
-            <button class="icon-btn" type="button" id="btnChallengeSettings" aria-label="Configurar retos">
-            </button>
-          </div>
-
-          <div class="challenge-card">
-            <div class="challenge-header">
-              <div class="challenge-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M8 4h8v3a4 4 0 0 1-4 4 4 4 0 0 1-4-4V4z"></path>
-                  <path d="M6 4h12"></path>
-                  <path d="M7 21h10"></path>
-                  <path d="M10 17h4"></path>
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path>
+                  <circle cx="12" cy="12" r="2.5"></circle>
                 </svg>
-              </div>
-              <div class="challenge-header-text">
-                <h4 id="challengeTitle">–</h4>
-                <p class="challenge-description" id="challengeDescription">–</p>
-              </div>
+              </button>
             </div>
 
-            <div class="challenge-progress">
-              <div class="challenge-progress-bar">
-                <div class="challenge-progress-fill" id="challengeProgressFill"></div>
+            <div class="last-activity-card">
+              <div class="last-activity-cover">
+                <!-- La portada se rellena por JS -->
               </div>
-              <div class="challenge-meta-row">
-                <span class="challenge-chip" id="challengeCount">–</span>
-                <span class="challenge-chip" id="challengeDays">–</span>
+
+              <div class="last-activity-body">
+                <div class="last-activity-header-row">
+                  <div class="last-activity-title-group">
+                    <span class="last-activity-type-icon" id="lastActivityTypeIcon"></span>
+                    <h4 class="last-activity-title" id="lastActivityTitle">–</h4>
+                  </div>
+                  <span class="last-activity-time-chip" id="lastActivityTime">–</span>
+                </div>
+
+                <p class="last-activity-meta" id="lastActivityMeta">–</p>
+
+                <div class="last-activity-progress">
+                  <div class="last-activity-progress-bar">
+                    <div class="last-activity-progress-bar-fill" id="lastActivityProgressFill"></div>
+                  </div>
+
+                  <div class="last-activity-progress-footer">
+                    <span class="last-activity-progress-label" id="lastActivityProgressLabel">–</span>
+                  </div>
+                </div>
+
+                <div class="last-activity-actions">
+                  <button class="btn-primary btn-sm btn-progress-last" type="button" id="btnMarkLastActivity" data-i18n="home_last_activity_mark_progress">
+                    <span class="btn-progress-icon" aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12l4 4 10-10"></path>
+                      </svg>
+                    </span>
+                    Progreso hecho
+                  </button>
+                </div>
               </div>
             </div>
+          </section>
 
-            <div class="challenge-reward-row">
-              <span class="challenge-reward-label">Recompensa:</span>
-              <span class="challenge-reward-badge" id="challengeReward">–</span>
+          <!-- Reto mensual -->
+          <section class="home-panel">
+            <div class="home-panel-header">
+              <h3 data-i18n="home_challenge_title">Reto mensual</h3>
+              <button class="icon-btn" type="button" id="btnChallengeSettings" aria-label="Configurar retos">
+              </button>
             </div>
-          </div>
-        </section>
 
+            <div class="challenge-card">
+              <div class="challenge-header">
+                <div class="challenge-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 4h8v3a4 4 0 0 1-4 4 4 4 0 0 1-4-4V4z"></path>
+                    <path d="M6 4h12"></path>
+                    <path d="M7 21h10"></path>
+                    <path d="M10 17h4"></path>
+                  </svg>
+                </div>
+
+                <div class="challenge-header-text">
+                  <h4 id="challengeTitle">–</h4>
+                  <p class="challenge-description" id="challengeDescription">–</p>
+                </div>
+              </div>
+
+              <div class="challenge-progress">
+                <div class="challenge-progress-bar">
+                  <div class="challenge-progress-fill" id="challengeProgressFill"></div>
+                </div>
+
+                <div class="challenge-meta-row">
+                  <span class="challenge-chip" id="challengeCount">–</span>
+                  <span class="challenge-chip" id="challengeDays">–</span>
+                </div>
+              </div>
+
+              <div class="challenge-reward-row">
+                <span class="challenge-reward-label" data-i18n="home_challenge_reward">Recompensa:</span>
+                <span class="challenge-reward-badge" id="challengeReward">–</span>
+              </div>
+            </div>
+          </section>
         </div>
 
         <!-- Backlog olvidado -->
         <section class="home-backlog">
           <div class="home-panel-header">
-            <h3>Backlog olvidado</h3>
-            <p class="home-panel-subtitle">
+            <h3 data-i18n="home_backlog_title">Backlog olvidado</h3>
+            <p class="home-panel-subtitle" data-i18n="home_backlog_subtitle">
               Contenidos en progreso que llevan días sin avanzar.
             </p>
           </div>
-            <div class="backlog-grid" id="backlogList">
-              <!-- Se rellena por JS -->
-            </div>
+
+          <div class="backlog-grid" id="backlogList">
+            <!-- Se rellena por JS -->
+          </div>
         </section>
-      </section>
 
       <section class="view" id="view-explore" data-view-id="explore">
         <div class="explore-toolbar">
