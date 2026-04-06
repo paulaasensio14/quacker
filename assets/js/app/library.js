@@ -693,17 +693,18 @@ const LibraryUI = (() => {
                   <path d="M8.75 6.5h6.5v1.5h-6.5V6.5Zm0 3h6.5V11h-6.5V9.5Zm0 3h4.5V14h-4.5v-1.5Z"/>
                 </svg>
               </div>
-              <div class="lib-empty-state-kicker">Mi biblioteca</div>
-              <h3 class="lib-empty-state-title">Tu biblioteca está vacía</h3>
+              <div class="lib-empty-state-kicker">${t("nav_library")}</div>
+              <h3 class="lib-empty-state-title">${t("library_empty_initial_title")}</h3>
               <p class="lib-empty-state-text">
-                Empieza añadiendo una serie, película, libro o videojuego.
+                ${t("library_empty_initial_text")}
               </p>
               <div class="lib-empty-state-actions">
-                <button id="libEmptyAddBtn" class="btn btn-primary">+ Añadir contenido</button>
+                <button id="libEmptyAddBtn" class="btn btn-primary">+ ${t("library_empty_initial_cta")}</button>
               </div>
             </div>
           </div>
         `;
+        
         requestAnimationFrame(() => {
           document.getElementById("libEmptyAddBtn")?.addEventListener("click", openAddLibraryModal);
         });
