@@ -222,7 +222,7 @@ async function openAddToListModal(itemId) {
   } else {
     lists.forEach((l) => {
       const id = String(l.id);
-      const name = l.name || "Sin nombre";
+      const name = l.name || t("lists_untitled");
       const isAlready = alreadyIds.has(id);
 
       const row = document.createElement("label");
@@ -241,7 +241,7 @@ async function openAddToListModal(itemId) {
 
       const text = document.createElement("span");
       text.className = "atl-option-text";
-      text.textContent = isAlready ? `${name} (ya está)` : name;
+      text.textContent = isAlready ? `${name} (${t("library_add_to_list_already_in_list")})` : name;
 
       row.appendChild(cb);
       row.appendChild(text);
