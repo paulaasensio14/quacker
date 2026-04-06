@@ -181,14 +181,15 @@
       library_empty_results_title: "No hay resultados",
       library_empty_results_text: "No hay contenidos que coincidan con tu búsqueda y los filtros actuales.",
       library_empty_results_cta: "Limpiar búsqueda y filtros",
-
       library_empty_search_title: "Sin resultados para tu búsqueda",
       library_empty_search_text: "No encontramos contenidos para “{query}” en tu biblioteca.",
       library_empty_search_cta: "Limpiar búsqueda",
-
       library_empty_filters_title: "No hay contenidos con esos filtros",
       library_empty_filters_text: "Prueba a cambiar o restablecer los filtros para ver más contenidos.",
       library_empty_filters_cta: "Restablecer filtros",
+      library_empty_initial_title: "Tu biblioteca está vacía",
+      library_empty_initial_text: "Empieza añadiendo una serie, película, libro o videojuego.",
+      library_empty_initial_cta: "Añadir contenido",
 
       library_load_error_title: "No se pudo cargar tu biblioteca",
       library_load_error_text: "Revisa la conexión o vuelve a intentarlo en unos segundos.",
@@ -470,14 +471,15 @@
       library_empty_results_title: "No results found",
       library_empty_results_text: "No content matches your search and current filters.",
       library_empty_results_cta: "Clear search and filters",
-
       library_empty_search_title: "No results for your search",
       library_empty_search_text: "We couldn't find content for “{query}” in your library.",
       library_empty_search_cta: "Clear search",
-
       library_empty_filters_title: "No content for these filters",
       library_empty_filters_text: "Try changing or resetting the filters to see more content.",
       library_empty_filters_cta: "Reset filters",
+      library_empty_initial_title: "Your library is empty",
+      library_empty_initial_text: "Start by adding a series, movie, book, or video game.",
+      library_empty_initial_cta: "Add content",
 
       library_load_error_title: "We couldn't load your library",
       library_load_error_text: "Check your connection or try again in a few seconds.",
