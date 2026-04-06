@@ -887,8 +887,8 @@ async function renderHomeDashboard() {
 
       const title = res?.justCompleted ? window.I18n.t("home_quick_progress_completed_title") : window.I18n.t("home_quick_progress_updated_title");
       const message = res?.justCompleted
-        ? "Se ha marcado como finalizado."
-        : (res?.deltaLabel ? `Actualizado: ${res.deltaLabel}` : "Progreso actualizado");
+        ? window.I18n.t("home_quick_progress_completed_message")
+        : (res?.deltaLabel ? `${window.I18n.t("home_quick_progress_updated_prefix")}: ${res.deltaLabel}` : window.I18n.t("home_quick_progress_updated_message"));
 
       if (res?.justCompleted) {
         playCompleteFx(itemId);
