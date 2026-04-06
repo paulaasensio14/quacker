@@ -236,6 +236,11 @@
       lists_empty_initial: "Todavía no tienes listas. ¡Crea tu primera lista!",
 
       lists_type_content: "Contenido",
+      lists_detail_title: "Lista",
+      common_untitled: "Sin título",
+      library_card_in_lists: "En listas",
+      library_card_remove_from_lists: "Quitar de listas",
+      library_card_add_to_lists: "Añadir a listas",
       lists_detail_empty: "Esta lista está vacía.",
       lists_detail_hint: "Puedes quitar contenido desde aquí",
       lists_detail_showing: "Mostrando {shown} de {total}",
@@ -527,6 +532,11 @@
       lists_empty_initial: "You don't have any lists yet. Create your first one!",
 
       lists_type_content: "Content",
+      lists_detail_title: "List",
+      common_untitled: "Untitled",
+      library_card_in_lists: "In lists",
+      library_card_remove_from_lists: "Remove from lists",
+      library_card_add_to_lists: "Add to lists",
       lists_detail_empty: "This list is empty.",
       lists_detail_hint: "You can remove content from here",
       lists_detail_showing: "Showing {shown} of {total}",
