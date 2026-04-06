@@ -1313,23 +1313,19 @@ const LibraryUI = (() => {
       if (!itemId) return;
 
       if (!selected.length) {
-        _showAddToListError("Selecciona al menos una lista.");
+        _showAddToListError(t("library_add_to_list_select_one"));
         return;
       }
 
       const btn = document.getElementById("confirmAddToListModal");
       const cancelBtn = document.getElementById("cancelAddToListModal");
       const closeBtn = document.getElementById("closeAddToListModal");
-
-      const prevHtml = btn?.innerHTML || "Añadir";
+      const prevHtml = btn?.innerHTML || t("library_add_to_list_confirm");
 
       if (btn) {
         btn.disabled = true;
         btn.dataset.busy = "1";
-        btn.innerHTML = `
-          <span class="btn-spinner" aria-hidden="true"></span>
-          <span>Añadiendo…</span>
-        `;
+        btn.innerHTML = `  ${t("library_add_to_list_loading")} `;
       }
 
       if (cancelBtn) cancelBtn.disabled = true;
