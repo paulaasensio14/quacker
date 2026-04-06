@@ -169,7 +169,12 @@
       library_status_in_progress: "En progreso",
 
       library_action_start: "Empezar",
+
       library_action_continue: "Continuar",
+
+      library_edit_progress: "Editar progreso",
+      library_edit: "Editar",
+      library_mark_completed: "Marcar como completado",
 
       library_pages: "páginas",
       library_progress_completed_suffix: "completado",
@@ -464,7 +469,12 @@
       library_status_in_progress: "In progress",
 
       library_action_start: "Start",
+
       library_action_continue: "Continue",
+
+      library_edit_progress: "Edit progress",
+      library_edit: "Edit",
+      library_mark_completed: "Mark as completed",
 
       library_pages: "pages",
       library_progress_completed_suffix: "completed",
