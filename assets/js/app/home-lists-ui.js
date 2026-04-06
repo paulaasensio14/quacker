@@ -442,7 +442,8 @@ async function renderHomeDashboard() {
           daysEl.textContent = window.I18n.t("home_challenge_goal_achieved");
         } else {
           const d = challenge.daysRemaining ?? 0;
-          daysEl.textContent = d + (d === 1 ? " día restante" : " días restantes");
+          const dayKey = d === 1 ? "home_challenge_day_remaining_singular" : "home_challenge_day_remaining_plural";
+          daysEl.textContent = `${d} ${window.I18n.t(dayKey)}`;
         }
       }
 
