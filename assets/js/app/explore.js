@@ -2114,3 +2114,5 @@ function closeAddFromExploreModal() {
   modal.classList.remove("open");
   delete modal.dataset.eid;
 }
+
+window.ExploreModule = ExploreModule;
