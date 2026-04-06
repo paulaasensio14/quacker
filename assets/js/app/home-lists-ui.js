@@ -430,7 +430,7 @@ async function renderHomeDashboard() {
       // Chip de progreso
       if (countEl) {
         if (isCompleted) {
-          countEl.textContent = "Reto completado";
+          countEl.textContent = window.I18n.t("home_challenge_completed");
         } else {
           countEl.textContent = `${challenge.current}/${challenge.target} completados`;
         }
