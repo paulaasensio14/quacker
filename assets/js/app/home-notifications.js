@@ -163,7 +163,9 @@ const NotificationsUI = (() => {
       markAllBtn.disabled = !hasAny;
       markAllBtn.style.opacity = hasAny ? "1" : "0.55";
       markAllBtn.style.cursor = hasAny ? "pointer" : "not-allowed";
-      markAllBtn.textContent = hasAny ? "Marcar todas" : "Nada nuevo";
+      markAllBtn.textContent = hasAny
+        ? window.I18n.t("notif_mark_all")
+        : window.I18n.t("home_notif_none_new");
     }
 
     // Badge en la campana + aria-label accesible
@@ -281,25 +283,25 @@ const NotificationsUI = (() => {
             await ApiClient.dismissNotification(n.id);
 
             window.toast?.({
-              title: "Notificación actualizada",
-              message: "Se ha marcado como vista.",
+              title: window.I18n.t("home_notif_update_success_title"),
+              message: window.I18n.t("home_notif_update_success_message"),
               type: "success",
               duration: 4500,
-              actionLabel: "Deshacer",
+              actionLabel: window.I18n.t("lists_undo"),
               onAction: async () => {
                 try {
                   await ApiClient.setNotifications(snapshot || []);
                   window.toast?.({
-                    title: "Notificaciones restauradas",
-                    message: "Se ha recuperado el estado anterior.",
+                    title: window.I18n.t("home_notif_restore_one_title"),
+                    message: window.I18n.t("home_notif_restore_one_message"),
                     type: "info",
                     duration: 2200
                   });
                 } catch (err) {
                   console.error(err);
                   window.toast?.({
-                    title: "No se pudo deshacer",
-                    message: "Inténtalo de nuevo.",
+                    title: window.I18n.t("home_notif_undo_error_title"),
+                    message: window.I18n.t("home_notif_try_again"),
                     type: "error",
                     duration: 3000
                   });
@@ -316,10 +318,10 @@ const NotificationsUI = (() => {
             markBtn.dataset.busy = "0";
 
             window.toast?.({
-              title: "No se pudo actualizar",
-              message: "Inténtalo de nuevo.",
+              title: window.I18n.t("home_notif_update_error_title"),
+              message: window.I18n.t("home_notif_try_again"),
               type: "error",
-              duration: 2800
+              duration: 3000
             });
           }
         }, 180);
@@ -400,8 +402,8 @@ const NotificationsUI = (() => {
       if (markAllBtn) {
         markAllBtn.disabled = true;
         const originalText = markAllBtn.textContent;
-        markAllBtn.dataset.originalText = originalText || "Marcar todas";
-        markAllBtn.textContent = "Marcando…";
+        markAllBtn.dataset.originalText = originalText || window.I18n.t("notif_mark_all");
+        markAllBtn.textContent = window.I18n.t("home_notif_marking_all");
         markAllBtn.style.cursor = "not-allowed";
         markAllBtn.style.opacity = "0.7";
       }
@@ -416,25 +418,25 @@ const NotificationsUI = (() => {
           await ApiClient.clearNotifications();
 
           window.toast?.({
-            title: "Notificaciones actualizadas",
-            message: "Se han marcado como vistas.",
+            title: window.I18n.t("home_notif_mark_all_success_title"),
+            message: window.I18n.t("home_notif_mark_all_success_message"),
             type: "success",
             duration: 4500,
-            actionLabel: "Deshacer",
+            actionLabel: window.I18n.t("lists_undo"),
             onAction: async () => {
               try {
                 await ApiClient.setNotifications(snapshot || []);
                 window.toast?.({
-                  title: "Notificaciones restauradas",
-                  message: "Se han recuperado las notificaciones anteriores.",
+                  title: window.I18n.t("home_notif_restore_all_title"),
+                  message: window.I18n.t("home_notif_restore_all_message"),
                   type: "info",
                   duration: 2200
                 });
               } catch (err) {
                 console.error(err);
                 window.toast?.({
-                  title: "No se pudo deshacer",
-                  message: "Inténtalo de nuevo.",
+                  title: window.I18n.t("home_notif_undo_error_title"),
+                  message: window.I18n.t("home_notif_try_again"),
                   type: "error",
                   duration: 3000
                 });
@@ -447,8 +449,8 @@ const NotificationsUI = (() => {
           console.error(err);
 
           window.toast?.({
-            title: "No se pudieron marcar",
-            message: "Inténtalo de nuevo.",
+            title: window.I18n.t("home_notif_mark_all_error_title"),
+            message: window.I18n.t("home_notif_try_again"),
             type: "error",
             duration: 3000
           });
