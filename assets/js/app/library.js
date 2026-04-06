@@ -181,20 +181,23 @@ async function openAddToListModal(itemId) {
   }
 
   if (!lists.length) {
-    // Empty state dentro del modal (en vez de solo error)
     _showAddToListError("");
 
     optionsEl.innerHTML = `
-      <div class="atl-empty" role="status" aria-live="polite">
+      <div class="atl-empty-state">
         <div class="atl-empty-icon" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M8 6h13M8 12h13M8 18h13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 8v5"></path>
+            <path d="M12 16h.01"></path>
           </svg>
         </div>
-        <div class="atl-empty-title">Aún no tienes listas</div>
-        <div class="atl-empty-sub">Crea una lista para poder guardar este contenido y organizar tu ocio.</div>
-        <button type="button" class="btn-primary" id="atlCreateListBtn">Crear lista</button>
+
+        <div class="atl-empty-title">${t("library_add_to_list_empty_title")}</div>
+        <div class="atl-empty-sub">${t("library_add_to_list_empty_text")}</div>
+
+        <button type="button" class="btn-primary" id="atlCreateListBtn">${t("library_add_to_list_empty_cta")}</button>
       </div>
     `;
 
@@ -202,23 +205,20 @@ async function openAddToListModal(itemId) {
     if (confirmBtn) confirmBtn.disabled = true;
 
     const createBtn = document.getElementById("atlCreateListBtn");
+
     createBtn?.addEventListener("click", () => {
-      // 1) Cerrar este modal
       closeAddToListModal();
 
-      // 2) Navegar a "Listas" usando el botón del sidebar para mantener el estado activo
       const listsNavBtn = document.querySelector('.nav-item-btn[data-view="lists"]');
       if (listsNavBtn) listsNavBtn.click();
       else window.Router?.showView?.("lists");
 
-      // 3) Pedir a ListsModule que abra el modal de crear (cuando esté visible)
       requestAnimationFrame(() => {
         document.dispatchEvent(new CustomEvent("quacker:lists-create-request", {
           detail: { returnToAddToListItemId: itemId }
         }));
       });
     });
-
   } else {
     lists.forEach((l) => {
       const id = String(l.id);
