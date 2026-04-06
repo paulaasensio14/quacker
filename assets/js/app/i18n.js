@@ -227,6 +227,7 @@
       lists_item_plural: "elementos",
 
       lists_untitled: "Sin nombre",
+      library_add_to_list_already_in_list: "ya está",
       lists_item_untitled: "Sin título",
 
       lists_load_error: "No se pudieron cargar las listas. Revisa la consola.",
@@ -515,6 +516,7 @@
       lists_item_plural: "items",
 
       lists_untitled: "Untitled",
+      library_add_to_list_already_in_list: "already there",
 
       lists_item_untitled: "Untitled item",
 
