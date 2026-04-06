@@ -885,11 +885,16 @@ async function renderHomeDashboard() {
         : ApiClient.progressLibraryItem(itemId, 5)
       );
 
-      const title = res?.justCompleted ? window.I18n.t("home_quick_progress_completed_title") : window.I18n.t("home_quick_progress_updated_title");
+      const title = res?.justCompleted
+        ? window.I18n.t("home_quick_progress_completed_title")
+        : window.I18n.t("home_quick_progress_updated_title");
+
       const message = res?.justCompleted
         ? window.I18n.t("home_quick_progress_completed_message")
-        : (res?.deltaLabel ? `${window.I18n.t("home_quick_progress_updated_prefix")}: ${res.deltaLabel}` : window.I18n.t("home_quick_progress_updated_message"));
-
+        : (res?.deltaLabel
+            ? window.I18n.t("home_quick_progress_updated_with_label", { label: res.deltaLabel })
+            : window.I18n.t("home_quick_progress_updated_message"));
+            
       if (res?.justCompleted) {
         playCompleteFx(itemId);
       }
