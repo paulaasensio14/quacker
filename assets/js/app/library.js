@@ -787,8 +787,8 @@ const LibraryUI = (() => {
               type="button"
               data-action="edit-progress"
               data-id="${item.id}"
-              aria-label="Editar progreso"
-              title="Editar"
+              aria-label="${t("library_edit_progress")}"
+              title="${t("library_edit")}"
             >
               <span aria-hidden="true">⋮</span>
             </button>
@@ -825,12 +825,13 @@ const LibraryUI = (() => {
 
                 ${
                   logicalStatus(item) !== "completed"
-                    ? `<button
+                    ? `
+                      <button
                         class="lib-complete-btn"
                         type="button"
                         data-id="${item.id}"
-                        aria-label="Marcar como completado"
-                        title="Marcar como completado"
+                        aria-label="${t("library_mark_completed")}"
+                        title="${t("library_mark_completed")}"
                       >
                         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                           <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
