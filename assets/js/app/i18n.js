@@ -193,6 +193,8 @@
       library_load_error_title: "No se pudo cargar tu biblioteca",
       library_load_error_text: "Revisa la conexión o vuelve a intentarlo en unos segundos.",
       library_retry: "Reintentar",
+      library_add_to_list_load_error_title: "No se pudieron cargar tus listas",
+      library_add_to_list_load_error_text: "Revisa la conexión e inténtalo otra vez.",
 
       lists_subtitle: "Organiza tu contenido como quieras",
       lists_new: "Nueva lista",
@@ -476,6 +478,8 @@
       library_load_error_title: "We couldn't load your library",
       library_load_error_text: "Check your connection or try again in a few seconds.",
       library_retry: "Retry",
+      library_add_to_list_load_error_title: "We couldn't load your lists",
+      library_add_to_list_load_error_text: "Check your connection and try again.",
 
       lists_subtitle: "Organize your content your way",
       lists_new: "New list",
