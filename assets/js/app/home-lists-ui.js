@@ -885,7 +885,7 @@ async function renderHomeDashboard() {
         : ApiClient.progressLibraryItem(itemId, 5)
       );
 
-      const title = res?.justCompleted ? window.I18n.t("home_quick_progress_completed_title") : "Progreso actualizado";
+      const title = res?.justCompleted ? window.I18n.t("home_quick_progress_completed_title") : window.I18n.t("home_quick_progress_updated_title");
       const message = res?.justCompleted
         ? "Se ha marcado como finalizado."
         : (res?.deltaLabel ? `Actualizado: ${res.deltaLabel}` : "Progreso actualizado");
