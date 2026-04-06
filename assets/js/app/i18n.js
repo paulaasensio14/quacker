@@ -195,6 +195,9 @@
       library_retry: "Reintentar",
       library_add_to_list_load_error_title: "No se pudieron cargar tus listas",
       library_add_to_list_load_error_text: "Revisa la conexión e inténtalo otra vez.",
+      library_add_to_list_empty_title: "Aún no tienes listas",
+      library_add_to_list_empty_text: "Crea una lista para poder guardar este contenido y organizar tu ocio.",
+      library_add_to_list_empty_cta: "Crear lista",
 
       lists_subtitle: "Organiza tu contenido como quieras",
       lists_new: "Nueva lista",
@@ -480,6 +483,9 @@
       library_retry: "Retry",
       library_add_to_list_load_error_title: "We couldn't load your lists",
       library_add_to_list_load_error_text: "Check your connection and try again.",
+      library_add_to_list_empty_title: "You don't have any lists yet",
+      library_add_to_list_empty_text: "Create a list to save this content and organize your free time.",
+      library_add_to_list_empty_cta: "Create list",
 
       lists_subtitle: "Organize your content your way",
       lists_new: "New list",
