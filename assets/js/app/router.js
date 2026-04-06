@@ -195,11 +195,6 @@ const Router = (() => {
       countInline.style.display = "none";
       countInline.textContent = "";
     }
-
-    // 5) evento global
-    document.dispatchEvent(
-      new CustomEvent("quacker:view-change", { detail: { viewId: id } })
-    );
   }
 
   function init() {
