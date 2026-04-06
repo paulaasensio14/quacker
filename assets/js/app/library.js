@@ -704,7 +704,7 @@ const LibraryUI = (() => {
             </div>
           </div>
         `;
-        
+
         requestAnimationFrame(() => {
           document.getElementById("libEmptyAddBtn")?.addEventListener("click", openAddLibraryModal);
         });
@@ -752,20 +752,18 @@ const LibraryUI = (() => {
     // 4) Render de cards
     grid.innerHTML = filtered.map((item) => {
       const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
-      const typeName = TYPE_LABELS[item.type] || "Contenido";
+      const typeName = TYPE_LABELS[item.type] || t("lists_type_content");
       const typeIcon = renderLibraryTypeIcon(item.type);
       const statusKey = logicalStatus(item);
       const statusLabel = statusToLabel(item);
       const pText = progressText(item);
       const btnLabel = primaryButtonLabel(item);
       const coverFit = item.type === "game" ? "cover" : "contain";
-      const coverStyle = item.cover
-        ? `style="background-image:url('${item.cover}'); background-size:${coverFit}; background-position:center; background-repeat:no-repeat; background-color:#f8fafc;"`
-        : "";
+      const coverStyle = item.cover ? `style="background-image:url('${item.cover}'); background-size:${coverFit}; background-position:center; background-repeat:no-repeat; background-color:#f8fafc;"` : "";
       const isInAnyList = itemsInAnyList.has(String(item.id));
-      const listLabel = isInAnyList ? "En listas" : "Lista";
-      const listAriaLabel = isInAnyList ? "Quitar de listas" : "Añadir a listas";
-
+      const listLabel = isInAnyList ? t("library_card_in_lists") : t("lists_detail_title");
+      const listAriaLabel = isInAnyList ? t("library_card_remove_from_lists") : t("library_card_add_to_lists");
+      
       return `
         <article class="lib-card ${window.__lastCreatedLibraryItemId == item.id ? "is-highlight" : ""}" data-id="${item.id}">
           <div class="lib-cover" ${coverStyle}>
@@ -801,7 +799,7 @@ const LibraryUI = (() => {
           </div>
 
           <div class="lib-body">
-            <div class="lib-title">${item.title || "Sin título"}</div>
+            <div class="lib-title">${item.title || t("common_untitled")}</div>
 
             <div class="lib-meta-row">
               <span class="lib-status-badge is-${statusKey}">${statusLabel}</span>
