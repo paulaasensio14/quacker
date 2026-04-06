@@ -871,7 +871,7 @@ async function renderHomeDashboard() {
       sourceBtn.disabled = true;
       sourceBtn.innerHTML = `
         <span class="btn-spinner" aria-hidden="true"></span>
-        <span>Actualizando…</span>
+        <span>${window.I18n.t("home_quick_progress_updating")}</span>
       `;
     }
 
