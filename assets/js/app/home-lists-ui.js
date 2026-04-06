@@ -489,7 +489,7 @@ async function renderHomeDashboard() {
         markBtn.classList.remove("completed");
       } else if ((lastActivity?.progressPercent || 0) >= 100) {
         // Ya está completado
-        markBtn.innerHTML = "Completado";
+        markBtn.innerHTML = window.I18n.t("home_last_activity_button_completed");
         markBtn.disabled = true;
         markBtn.classList.add("completed");
       } else {
