@@ -207,7 +207,7 @@ async function renderHomeDashboard() {
 
       if (welcomeTodayTimeChip) {
         const mins = Number(stats?.todayMinutes ?? 0);
-        welcomeTodayTimeChip.textContent = `${window.I18n.t("home_today")}: ${formatMinutesLabel(mins)}`;
+        welcomeTodayTimeChip.textContent = `${window.I18n.t("home_today_label")}: ${formatMinutesLabel(mins)}`;
       }
 
       // Saludo (usar la misma fuente de verdad que "Continúa donde lo dejaste")
