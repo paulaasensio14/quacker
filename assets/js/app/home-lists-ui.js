@@ -494,15 +494,7 @@ async function renderHomeDashboard() {
         markBtn.classList.add("completed");
       } else {
         // Aún no completado
-        markBtn.innerHTML = `
-          <span class="btn-progress-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 12l4 4 10-10"></path>
-            </svg>
-          </span>
-          Progreso hecho
-        `;
+        markBtn.innerHTML = window.I18n.t("home_last_activity_button_progress_done");
         markBtn.disabled = false;
         markBtn.classList.remove("completed");
       }
