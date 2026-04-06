@@ -1353,19 +1353,18 @@ const LibraryUI = (() => {
 
         // Si alguna falló, mostramos error y NO cerramos el modal (para que el usuario pueda reintentar)
         if (failedCount > 0) {
-          _showAddToListError("No se pudieron añadir todas. Inténtalo de nuevo.");
+          _showAddToListError(t("library_add_to_list_partial_error"));
           return;
         }
 
         // Mensaje de feedback (sin emojis)
         if (addedCount === 0 && alreadyCount > 0) {
           window.toast?.({
-            title: "Sin cambios",
-            message: "Ya estaba en las listas seleccionadas.",
+            title: t("library_add_to_list_no_changes_title"),
+            message: t("library_add_to_list_no_changes_message"),
             type: "info",
             duration: 2400
           });
-
           closeAddToListModal();
           return;
         }
@@ -1378,43 +1377,41 @@ const LibraryUI = (() => {
           setListButtonState(itemId, true, { pulse: addedCount > 0 });
         }
 
-        const msg = addedCount === 1 ? "Añadido a 1 lista." : `Añadido a ${addedCount} listas.`;
+        const msg = addedCount === 1
+          ? t("library_add_to_list_success_one")
+          : t("library_add_to_list_success_many").replace("{count}", addedCount);
 
         window.toast?.({
-          title: "Lista actualizada",
+          title: t("library_add_to_list_updated_title"),
           message: msg,
           type: "success",
           duration: 5200,
-          actionLabel: listsSnapshot ? "Deshacer" : null,
-          onAction: listsSnapshot
-            ? async () => {
-                try {
-                  // Restaurar snapshot completo de listas
-                  await ApiClient.setLists(listsSnapshot);
+          actionLabel: listsSnapshot ? t("common_undo") : null,
+          onAction: listsSnapshot ? async () => {
+            try {
+              await ApiClient.setLists(listsSnapshot);
 
-                  // Revertir estado optimista del botón si antes NO estaba en ninguna lista
-                  if (!wasInAnyList) {
-                    itemsInAnyList.delete(String(itemId));
-                    setListButtonState(itemId, false, { pulse: true });
-                  }
-
-                  window.toast?.({
-                    title: "Cambios revertidos",
-                    message: "Se han restaurado las listas.",
-                    type: "success",
-                    duration: 2400
-                  });
-                } catch (e) {
-                  console.error(e);
-                  window.toast?.({
-                    title: "No se pudo deshacer",
-                    message: "Inténtalo de nuevo.",
-                    type: "error",
-                    duration: 3200
-                  });
-                }
+              if (!wasInAnyList) {
+                itemsInAnyList.delete(String(itemId));
+                setListButtonState(itemId, false, { pulse: true });
               }
-            : null
+
+              window.toast?.({
+                title: t("library_add_to_list_undo_success_title"),
+                message: t("library_add_to_list_undo_success_message"),
+                type: "success",
+                duration: 2400
+              });
+            } catch (e) {
+              console.error(e);
+              window.toast?.({
+                title: t("library_add_to_list_undo_error_title"),
+                message: t("home_notif_try_again"),
+                type: "error",
+                duration: 3200
+              });
+            }
+          } : null
         });
 
         closeAddToListModal();
