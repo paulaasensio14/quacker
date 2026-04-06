@@ -205,59 +205,60 @@ const ListsModule = (() => {
         const vis = _visibilityLabel(list.visibility);
 
         return `
+
           <article class="list-card" data-id="${_safeText(list.id)}">
             <div class="list-card-header">
-              <h3>${name}</h3>
 
-              <div class="list-card-header-actions">
-                <span class="list-visibility">${vis}</span>
-                <button
-                  type="button"
-                  class="list-edit-btn"
-                  data-action="edit-list"
-                  data-id="${_safeText(list.id)}"
-                  aria-label="Editar lista"
-                  title="Editar lista"
-                >
-                  <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 20h9"/>
-                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                  </svg>
-                </button>
+            <h3>${name}</h3>
 
-                <button
-                  type="button"
-                  class="list-delete-btn"
-                  data-action="delete-list"
-                  data-id="${_safeText(list.id)}"
-                  data-name="${name.replace(/"/g, "&quot;")}"
-                  aria-label="Eliminar lista"
-                  title="Eliminar lista"
-                >
-                  <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M3 6h18"/>
-                    <path d="M8 6V4h8v2"/>
-                    <path d="M6 6l1 14h10l1-14"/>
-                    <path d="M10 11v6"/>
-                    <path d="M14 11v6"/>
-                  </svg>
-                </button>
-              </div>
+            <div class="list-card-header-actions">
+              <span class="list-visibility">${vis}</span>
+
+              <button
+                type="button"
+                class="list-edit-btn"
+                data-action="edit-list"
+                data-id="${_safeText(list.id)}"
+                aria-label="${t("lists_edit")}"
+                title="${t("lists_edit")}"
+              >
+                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 20h9"/>
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                class="list-delete-btn"
+                data-action="delete-list"
+                data-id="${_safeText(list.id)}"
+                data-name="${name.replace(/"/g, "&quot;")}"
+                aria-label="${t("lists_delete")}"
+                title="${t("lists_delete")}"
+              >
+
+                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 6h18"/>
+                  <path d="M8 6V4h8v2"/>
+                  <path d="M6 6l1 14h10l1-14"/>
+                  <path d="M10 11v6"/>
+                  <path d="M14 11v6"/>
+                </svg>
+              </button>
             </div>
+          </div>
 
-            ${desc ? `<p class="list-meta">${desc}</p>` : ""}
-
-            <p class="list-count">
-              <strong>${count}</strong> elemento${count === 1 ? "" : "s"}
-            </p>
-          </article>
-        `;
-
+          ${desc ? `<p class="list-meta">${desc}</p>` : ""}
+          <p class="list-count">
+            <strong>${count}</strong> ${count === 1 ? t("lists_item_singular") : t("lists_item_plural")}
+          </p>
+        </article>
+      `;
       })
-      .join("");
-
+    .join("");
   }
 
   function _renderActiveListDetailHeader(list) {
@@ -610,24 +611,26 @@ const ListsModule = (() => {
     hideListErrors();
 
     if (listId) {
+
       // MODO EDITAR
       editingListId = String(listId);
-
       const list = allLists.find(l => String(l.id) === editingListId);
-      if (!list) return;
 
-      if (titleEl) titleEl.textContent = "Editar lista";
-      if (saveBtn) saveBtn.textContent = "Guardar";
+      if (!list) return;
+      if (titleEl) titleEl.textContent = t("lists_modal_edit_title");
+      if (saveBtn) saveBtn.textContent = t("common_save");
 
       document.getElementById("lm_name").value = list.name || "";
       document.getElementById("lm_desc").value = list.description || "";
       document.getElementById("lm_visibility").value = list.visibility || "private";
+
     } else {
+
       // MODO CREAR
       editingListId = null;
 
-      if (titleEl) titleEl.textContent = "Nueva lista";
-      if (saveBtn) saveBtn.textContent = "Crear";
+      if (titleEl) titleEl.textContent = t("lists_modal_create_title");
+      if (saveBtn) saveBtn.textContent = t("common_create");
 
       document.getElementById("lm_name").value = "";
       document.getElementById("lm_desc").value = "";
@@ -788,7 +791,7 @@ const ListsModule = (() => {
       const listsInline = document.getElementById("listsCountInline");
 
       if (listsInline) listsInline.style.display = "none";
-      if (subtitleText) subtitleText.textContent = "Resumen de tu actividad en Quacker";
+      if (subtitleText) subtitleText.textContent = t("home_summary");
     });
 
     document.addEventListener("quacker:lang-change", async () => {
