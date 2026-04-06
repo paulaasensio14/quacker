@@ -150,10 +150,10 @@ async function openAddToListModal(itemId) {
           </svg>
         </div>
 
-        <div class="atl-empty-title">No se pudieron cargar tus listas</div>
-        <div class="atl-empty-sub">Revisa la conexión e inténtalo otra vez.</div>
+        <div class="atl-empty-title">${t("library_add_to_list_load_error_title")}</div>
+        <div class="atl-empty-sub">${t("library_add_to_list_load_error_text")}</div>
 
-        <button type="button" class="btn-primary" id="atlRetryLoadListsBtn">Reintentar</button>
+        <button type="button" class="btn-primary" id="atlRetryLoadListsBtn">${t("library_retry")}</button>
       </div>
     `;
 
