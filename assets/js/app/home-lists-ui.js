@@ -308,8 +308,8 @@ async function renderHomeDashboard() {
       const hasLast = !!(lastActivity && typeof lastActivity === "object" && lastActivity.id);
 
       if (!hasLast) {
-        if (titleEl) titleEl.textContent = "Tu actividad aparecerá aquí";
-        if (metaEl) metaEl.textContent = "Haz progreso o completa algo para ver tu último movimiento.";
+        if (titleEl) titleEl.textContent = window.I18n.t("home_last_activity_empty_title");
+        if (metaEl) metaEl.textContent = window.I18n.t("home_last_activity_empty_text");
         if (timeEl) timeEl.textContent = "";
         if (barFill) barFill.style.width = "0%";
         if (labelEl) labelEl.textContent = "";
