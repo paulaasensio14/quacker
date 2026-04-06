@@ -432,7 +432,7 @@ async function renderHomeDashboard() {
         if (isCompleted) {
           countEl.textContent = window.I18n.t("home_challenge_completed");
         } else {
-          countEl.textContent = `${challenge.current}/${challenge.target} completados`;
+          countEl.textContent = `${challenge.current}/${challenge.target} ${window.I18n.t("home_challenge_completed_count_suffix")}`;
         }
       }
 
