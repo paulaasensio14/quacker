@@ -195,15 +195,32 @@
       library_retry: "Reintentar",
 
       lists_subtitle: "Organiza tu contenido como quieras",
+      lists_new: "Nueva lista",
+      lists_filter_all: "Todas las listas",
+      lists_filter_public: "Públicas",
+      lists_filter_private: "Privadas",
+      lists_filter_collab: "Colaborativas",
+      lists_edit: "Editar lista",
+      lists_delete: "Eliminar lista",
+      lists_modal_edit_title: "Editar lista",
+      lists_modal_create_title: "Nueva lista",
+      common_save: "Guardar",
+      common_create: "Crear",
+
       lists_count_created_singular: "lista creada",
+
       lists_count_created_plural: "listas creadas",
 
       lists_visibility_public: "Pública",
+
       lists_visibility_collab: "Colaborativa",
+
       lists_visibility_private: "Privada",
 
       lists_item_singular: "elemento",
+
       lists_item_plural: "elementos",
+
       lists_untitled: "Sin nombre",
       lists_item_untitled: "Sin título",
 
@@ -461,16 +478,34 @@
       library_retry: "Retry",
 
       lists_subtitle: "Organize your content your way",
+      lists_new: "New list",
+      lists_filter_all: "All lists",
+      lists_filter_public: "Public",
+      lists_filter_private: "Private",
+      lists_filter_collab: "Collaborative",
+      lists_edit: "Edit list",
+      lists_delete: "Delete list",
+      lists_modal_edit_title: "Edit list",
+      lists_modal_create_title: "New list",
+      common_save: "Save",
+      common_create: "Create",
+
       lists_count_created_singular: "list created",
+
       lists_count_created_plural: "lists created",
 
       lists_visibility_public: "Public",
+
       lists_visibility_collab: "Collaborative",
+
       lists_visibility_private: "Private",
 
       lists_item_singular: "item",
+
       lists_item_plural: "items",
+
       lists_untitled: "Untitled",
+
       lists_item_untitled: "Untitled item",
 
       lists_load_error: "We couldn't load your lists. Check the console.",
