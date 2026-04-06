@@ -904,7 +904,7 @@ async function renderHomeDashboard() {
         message,
         type: res?.justCompleted ? "success" : "info",
         duration: 5200,
-        actionLabel: snapshotBefore ? "Deshacer" : null,
+        actionLabel: snapshotBefore ? window.I18n.t("common_undo") : null,
         onAction: snapshotBefore
           ? async () => {
               try {
@@ -923,16 +923,16 @@ async function renderHomeDashboard() {
                 if (lastResumedItemId === itemId) lastResumedItemId = null;
 
                 window.toast?.({
-                  title: "Cambios revertidos",
-                  message: "Se ha restaurado el estado anterior.",
+                  title: window.I18n.t("home_quick_progress_undo_success_title"),
+                  message: window.I18n.t("home_quick_progress_undo_success_message"),
                   type: "success",
                   duration: 2400
                 });
               } catch (e) {
                 console.error(e);
                 window.toast?.({
-                  title: "No se pudo deshacer",
-                  message: "Inténtalo de nuevo.",
+                  title: window.I18n.t("home_quick_progress_undo_error_title"),
+                  message: window.I18n.t("common_try_again"),
                   type: "error",
                   duration: 3200
                 });
@@ -947,8 +947,8 @@ async function renderHomeDashboard() {
     } catch (e) {
       console.error(e);
       window.toast?.({
-        title: "No se pudo guardar",
-        message: "Inténtalo de nuevo.",
+        title: window.I18n.t("home_quick_progress_save_error_title"),
+        message: window.I18n.t("common_try_again"),
         type: "error",
         duration: 3600
       });
