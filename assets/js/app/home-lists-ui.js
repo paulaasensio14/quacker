@@ -456,7 +456,7 @@ async function renderHomeDashboard() {
       // Recompensa
       if (rewardEl) {
         if (isCompleted) {
-          rewardEl.textContent = `Completado · ${challenge.rewardLabel}`;
+          rewardEl.textContent = `${window.I18n.t("home_challenge_reward_completed_prefix")} · ${challenge.rewardLabel}`;
         } else {
           rewardEl.textContent = challenge.rewardLabel || "–";
         }
