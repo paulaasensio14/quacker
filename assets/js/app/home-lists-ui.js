@@ -236,7 +236,8 @@ async function renderHomeDashboard() {
       // Chips del saludo
       if (welcomeStreakChip) {
         const s = Number(stats?.streakDays ?? 0);
-        const label = `Racha: ${s} día${s === 1 ? "" : "s"}`;
+        const dayKey = s === 1 ? "home_day_singular" : "home_day_plural";
+        const label = `${window.I18n.t("home_streak_label")}: ${s} ${window.I18n.t(dayKey)}`;
 
         // SVGs (sin emojis)
         const svgSpark = `
