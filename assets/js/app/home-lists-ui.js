@@ -439,7 +439,7 @@ async function renderHomeDashboard() {
       // Chip de días
       if (daysEl) {
         if (isCompleted) {
-          daysEl.textContent = "¡Objetivo conseguido!";
+          daysEl.textContent = window.I18n.t("home_challenge_goal_achieved");
         } else {
           const d = challenge.daysRemaining ?? 0;
           daysEl.textContent = d + (d === 1 ? " día restante" : " días restantes");
