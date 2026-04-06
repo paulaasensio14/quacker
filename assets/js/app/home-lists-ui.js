@@ -288,7 +288,7 @@ async function renderHomeDashboard() {
 
       if (welcomeTodayTimeChip) {
         const mins = stats.todayMinutes || 0;
-        welcomeTodayTimeChip.textContent = `Hoy: ${formatMinutesLabel(mins)}`;
+        welcomeTodayTimeChip.textContent = `${window.I18n.t("home_today_label")}: ${formatMinutesLabel(mins)}`;
       }
 
       if (welcomeDayLabel) {
