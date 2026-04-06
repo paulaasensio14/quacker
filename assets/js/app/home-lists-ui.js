@@ -348,7 +348,7 @@ async function renderHomeDashboard() {
           card.classList.add("is-clickable");
           card.setAttribute("role", "button");
           card.setAttribute("tabindex", "0");
-          card.setAttribute("aria-label", "Abrir en Mi biblioteca");
+          card.setAttribute("aria-label", window.I18n.t("home_last_activity_open_library"));
           card.dataset.itemId = String(lastActivity.id);
 
           const goToLibrary = () => {
@@ -553,8 +553,8 @@ async function renderHomeDashboard() {
         });
 
         const title = hasInProgress
-          ? "No tienes backlog olvidado"
-          : "Todavía no hay backlog";
+          ? window.I18n.t("home_backlog_empty_in_progress_title")
+          : window.I18n.t("home_backlog_empty_idle_title");
 
         const text = hasInProgress
           ? "Vas al día. Si dejas un contenido sin avanzar durante una semana, aparecerá aquí."
@@ -1323,16 +1323,8 @@ async function renderHomeDashboard() {
       const isCompleted = pct >= 100;
       const typeIconSvg = getTypeIconSvg(item.type);
       const buttonInnerHtml = isCompleted
-        ? "Completado"
-        : `
-            <span class="cw-tick-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12l4 4 10-10"></path>
-              </svg>
-            </span>
-            Progreso hecho
-          `;
+        ? window.I18n.t("home_continue_completed")
+        : `  ${window.I18n.t("home_continue_progress_done")} `;;
 
       return `
       <article class="cw-card${completedClass}" data-id="${item.id}">
