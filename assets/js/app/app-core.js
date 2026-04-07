@@ -9,11 +9,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.I18n?.init?.();
 
   try {
-    const session = await ApiClient.getCurrentSession?.();
+    const session = await ApiClient.getCurrentSession();
 
-    if (!session?.user) {
-      window.location.href = "index.html";
-      return;
+    const savedLang = localStorage.getItem("quacker:lang");
+
+    if (!savedLang && session?.user?.preferredLanguage) {
+      window.I18n.setLang(session.user.preferredLanguage);
     }
   } catch (e) {
     console.error("Session bootstrap error", e);
