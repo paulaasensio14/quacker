@@ -2094,20 +2094,23 @@ function showProgressErrors(errors) {
 
 function validateProgress(item, values) {
   const errors = [];
-  if (!item) return ["No se ha encontrado el contenido."];
+
+  if (!item) return [t("library_progress_item_not_found")];
 
   if (item.type === "book") {
     const pagesRead = Number(values.pagesRead);
     const totalPages = Number(values.totalPages);
 
     if (!Number.isFinite(totalPages) || totalPages <= 0) {
-      errors.push("El total de páginas debe ser mayor que 0.");
+      errors.push(t("library_progress_total_pages_invalid"));
     }
+
     if (!Number.isFinite(pagesRead) || pagesRead < 0) {
-      errors.push("Las páginas leídas deben ser 0 o más.");
+      errors.push(t("library_progress_pages_read_invalid"));
     }
+
     if (Number.isFinite(pagesRead) && Number.isFinite(totalPages) && pagesRead > totalPages) {
-      errors.push("Las páginas leídas no pueden superar el total de páginas.");
+      errors.push(t("library_progress_pages_read_exceeds_total"));
     }
   }
 
@@ -2116,19 +2119,20 @@ function validateProgress(item, values) {
     const episode = Number(values.episode);
 
     if (!Number.isFinite(season) || season < 1) {
-      errors.push("La temporada debe ser 1 o más.");
+      errors.push(t("library_progress_season_invalid"));
     }
+
     if (!Number.isFinite(episode) || episode < 1) {
-      errors.push("El episodio debe ser 1 o más.");
+      errors.push(t("library_progress_episode_invalid"));
     }
 
     const rawPct = String(values.progress ?? "").trim();
     if (rawPct !== "") {
       const pct = Number(rawPct);
       if (!Number.isFinite(pct)) {
-        errors.push("Introduce un progreso válido.");
+        errors.push(t("library_progress_invalid"));
       } else if (pct < 0) {
-        errors.push("El progreso no puede ser negativo.");
+        errors.push(t("library_progress_negative"));
       }
     }
   }
@@ -2136,10 +2140,11 @@ function validateProgress(item, values) {
   // Game: % obligatorio, pero >100 se permite porque se completará automáticamente
   if (item.type === "game") {
     const pct = Number(values.progress);
+
     if (!Number.isFinite(pct)) {
-      errors.push("Introduce un progreso válido.");
+      errors.push(t("library_progress_invalid"));
     } else if (pct < 0) {
-      errors.push("El progreso no puede ser negativo.");
+      errors.push(t("library_progress_negative"));
     }
   }
 
@@ -2147,7 +2152,7 @@ function validateProgress(item, values) {
   if (item.type === "pelicula") {
     const st = String(values.movieStatus || "");
     if (!["not_started", "completed"].includes(st)) {
-      errors.push("Selecciona un estado válido para la película.");
+      errors.push(t("library_progress_movie_status_invalid"));
     }
   }
 
@@ -2189,7 +2194,7 @@ async function openProgressModal(itemId) {
   if (!item || !modal || !body || !title) return;
 
   modal.dataset.itemId = itemId;
-  title.textContent = `Editar progreso · ${item.title || ""}`;
+  title.textContent = `${t("library_edit_progress")} · ${item.title || ""}`;
 
   item.meta = item.meta || {};
 
@@ -2346,15 +2351,12 @@ async function saveProgressModal() {
   // Anti doble click / estado busy
   if (saveBtn && saveBtn.dataset.busy === "1") return;
 
-  const prevSaveHtml = saveBtn?.innerHTML || "Guardar";
+  const prevSaveHtml = saveBtn?.innerHTML || t("common_save");
 
   if (saveBtn) {
     saveBtn.dataset.busy = "1";
     saveBtn.disabled = true;
-    saveBtn.innerHTML = `
-      <span class="btn-spinner" aria-hidden="true"></span>
-      <span>Guardando…</span>
-    `;
+    saveBtn.innerHTML = `  ${t("library_add_saving")} `;
   }
 
   if (cancelBtn) cancelBtn.disabled = true;
