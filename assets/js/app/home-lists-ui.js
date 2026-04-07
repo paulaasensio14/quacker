@@ -242,16 +242,16 @@ async function renderHomeDashboard() {
 
         // SVGs (sin emojis)
         const svgSpark = `
-          <svg class="streak-ico" width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"></path>
+          <svg class="streak-badge-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3l1.9 4.6L18.8 9l-3.7 3.2 1.1 4.8L12 14.8 7.8 17l1.1-4.8L5.2 9l4.9-1.4L12 3z"></path>
           </svg>
         `;
-
         const svgFlame = `
-          <svg class="streak-ico" width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 22c4.4 0 8-3.1 8-7.5 0-3.2-2-5.6-3.9-7.3-1.2-1.1-2.1-2.6-2.3-4.2C12.5 4.2 11 6 10.5 7.6c-.5 1.6-.3 3.4.6 4.8-2.3-1.1-3.9-3.4-3.9-6 0 0-3.2 2.6-3.2 8.1C4 18.9 7.6 22 12 22z"></path>
+          <svg class="streak-badge-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3s1.8 2.1 1.8 4.6c0 1.4-.6 2.4-1.5 3.4-.8.9-1.6 1.9-1.6 3.3a3.3 3.3 0 0 0 6.6 0c0-4.6-5.3-7.1-5.3-11.3z"></path>
+            <path d="M9.7 14.5c-.8.7-1.4 1.7-1.4 3a3.7 3.7 0 0 0 7.4 0c0-1.9-1-3.1-2.2-4.2"></path>
           </svg>
         `;
 
