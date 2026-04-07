@@ -86,10 +86,10 @@ const ExploreModule = (() => {
   }
 
   const TYPE_LABELS = window.TYPE_LABELS || {
-    serie: window.I18n?.t?.("type_series") ?? "Serie",
-    pelicula: window.I18n?.t?.("type_movie") ?? "Película",
-    book: window.I18n?.t?.("type_book") ?? "Libro",
-    game: window.I18n?.t?.("type_game") ?? "Videojuego"
+    serie: window.I18n?.t?.("home_type_series") ?? "Serie",
+    pelicula: window.I18n?.t?.("home_type_movie") ?? "Película",
+    book: window.I18n?.t?.("home_type_book") ?? "Libro",
+    game: window.I18n?.t?.("home_type_game") ?? "Videojuego"
   };
 
   function $(sel) {
