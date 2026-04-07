@@ -9,6 +9,7 @@ window.TYPE_LABELS = window.TYPE_LABELS || {
   book: "Libro",
   game: "Videojuego"
 };
+
 window.typeLabel = window.typeLabel || ((t) => {
   const i18n = window.I18n;
   const map = {
@@ -17,7 +18,7 @@ window.typeLabel = window.typeLabel || ((t) => {
     book: "home_type_book",
     game: "home_type_game"
   };
-  return i18n?.t?.(map[t]) || window.TYPE_LABELS[t] || "Contenido";
+  return i18n?.t?.(map[t]) || window.TYPE_LABELS[t] || i18n?.t?.("lists_type_content") || "Contenido";
 });
 
 // Meta visible (serie/libro/otros) para cards del Home
@@ -592,9 +593,11 @@ async function renderHomeDashboard() {
       } else {
         backlogContainer.innerHTML = backlogUnique
           .map((item) => {
-            const typeName = item.type ? (window.typeLabel(item.type) || "Contenido") : "Contenido";
+            const typeName = item.type
+              ? (window.typeLabel(item.type) || window.I18n.t("lists_type_content"))
+              : window.I18n.t("lists_type_content");
             const typeIcon = getTypeIconSvg(item.type);
-            
+
             // Chip de días olvidado (limpio: sin SVG dentro del texto)
             const days = Number(item.daysSinceLast || 0);
             const isHot = days >= 14; // 2 semanas
