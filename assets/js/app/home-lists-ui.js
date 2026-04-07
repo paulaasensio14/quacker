@@ -1323,7 +1323,7 @@ async function renderHomeDashboard() {
       const platformHtml = item.platform
         ? `<span class="cw-platform-pill">${item.platform}</span>`
         : "";
-      const footerLabel = pct >= 100 ? "Completado" : `${pct}%`;
+      const footerLabel = pct >= 100 ? window.I18n.t("home_continue_completed") : `${pct}%`;
       const isCompleted = pct >= 100;
       const typeIconSvg = getTypeIconSvg(item.type);
       const buttonInnerHtml = isCompleted
@@ -1648,7 +1648,7 @@ async function __renderActivityModal({ preserveScroll = false, soft = false } = 
           <div class="activity-row" role="button" tabindex="0" data-item-id="${escapeHtml(a.targetId || "")}">
             <div class="activity-ico">${__activityIconSvg(a.type)}</div>
             <div class="activity-main">
-              <p class="activity-title">${escapeHtml(a.itemTitle || "Contenido")}</p>
+              <p class="activity-title">${escapeHtml(a.itemTitle || window.I18n.t("lists_type_content"))}</p>
               <p class="activity-meta">${escapeHtml(meta)}</p>
             </div>
             <div class="activity-time">${escapeHtml(a.timeAgo || "")}</div>
