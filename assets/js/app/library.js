@@ -1449,25 +1449,25 @@ const LibraryUI = (() => {
       _showAddLibError("");
 
       if (!normalizedTitle) {
-        _showAddLibError("Escribe un título.");
+        _showAddLibError(t("library_add_missing_title"));
         titleInput?.focus?.();
         return;
       }
 
       if (normalizedTitle.length < 2) {
-        _showAddLibError("Escribe un título (mínimo 2 caracteres).");
+        _showAddLibError(t("library_add_title_too_short"));
         titleInput?.focus?.();
         return;
       }
 
       if (normalizedTitle.length > 120) {
-        _showAddLibError("El título no puede superar los 120 caracteres.");
+        _showAddLibError(t("library_add_title_too_long"));
         titleInput?.focus?.();
         return;
       }
 
       if (!allowedTypes.has(type)) {
-        _showAddLibError("Selecciona un tipo válido.");
+        _showAddLibError(t("library_add_invalid_type"));
         typeSelect?.focus?.();
         return;
       }
@@ -1478,59 +1478,52 @@ const LibraryUI = (() => {
 
       if (btn?.dataset.busy === "1") return;
 
-      const prevHtml = btn?.innerHTML || "Añadir";
+      const prevHtml = btn?.innerHTML || t("library_add_confirm");
 
       if (btn) {
         btn.disabled = true;
         btn.dataset.busy = "1";
-        btn.innerHTML = `
-          <span class="btn-spinner" aria-hidden="true"></span>
-          <span>Guardando…</span>
-        `;
+        btn.innerHTML = `  ${t("library_add_saving")} `;
       }
 
       if (cancelBtn) cancelBtn.disabled = true;
       if (closeBtn) closeBtn.disabled = true;
 
       try {
-        const created = await ApiClient.createLibraryItem({
-          title: normalizedTitle,
-          type
-        });
+        const created = await ApiClient.createLibraryItem({ title: normalizedTitle, type });
 
         window.__lastCreatedLibraryItemId = created?.id || null;
 
         closeAddLibraryModal();
 
         window.toast?.({
-          title: "Guardado",
-          message: `"${(created?.title || normalizedTitle).trim()}" añadido a tu biblioteca.`,
+          title: t("library_add_success_title"),
+          message: t("library_add_success_message").replace("{title}", (created?.title || normalizedTitle).trim()),
           type: "success",
           duration: 2400
         });
-
       } catch (err) {
         console.error(err);
 
         const errorCode = err?.body?.error || err?.error || "";
 
         if (errorCode === "missing_title") {
-          _showAddLibError("Escribe un título.");
+          _showAddLibError(t("library_add_missing_title"));
           titleInput?.focus?.();
         } else if (errorCode === "title_too_short") {
-          _showAddLibError("Escribe un título (mínimo 2 caracteres).");
+          _showAddLibError(t("library_add_title_too_short"));
           titleInput?.focus?.();
         } else if (errorCode === "title_too_long") {
-          _showAddLibError("El título no puede superar los 120 caracteres.");
+          _showAddLibError(t("library_add_title_too_long"));
           titleInput?.focus?.();
-        } else if (errorCode === "invalid_type") { 
-          _showAddLibError("Selecciona un tipo válido."); 
-          typeSelect?.focus?.(); 
-        } else if (errorCode === "duplicate_item") { 
-          _showAddLibError("Este contenido ya está en tu biblioteca."); 
-          titleInput?.focus?.(); 
-        } else { 
-          _showAddLibError("No se pudo añadir. Inténtalo de nuevo.");
+        } else if (errorCode === "invalid_type") {
+          _showAddLibError(t("library_add_invalid_type"));
+          typeSelect?.focus?.();
+        } else if (errorCode === "duplicate_item") {
+          _showAddLibError(t("library_add_duplicate"));
+          titleInput?.focus?.();
+        } else {
+          _showAddLibError(t("library_add_generic_error"));
         }
       } finally {
         if (btn) {
