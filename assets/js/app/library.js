@@ -1933,56 +1933,53 @@ async function saveLibraryItem(updatedItem) {
 
     closeProgressModal();
 
-    const justCompleted =
-      Number(updatedItem.progress ?? 0) >= 100 || updatedItem.status === "completed";
+    const justCompleted = Number(updatedItem.progress ?? 0) >= 100 || updatedItem.status === "completed";
 
     // Micro-feedback visual inmediato
     window.LibraryUI?._playQuickFx?.(updatedItem.id, justCompleted ? "complete" : "progress");
 
     window.toast?.({
-      title: justCompleted ? "Contenido completado" : "Progreso actualizado",
-      message: justCompleted ? "Se ha marcado como finalizado." : "Se han actualizado los cambios.",
+      title: justCompleted ? t("library_progress_completed_title") : t("library_progress_updated_title"),
+      message: justCompleted ? t("library_progress_completed_message") : t("library_progress_updated_message"),
       type: justCompleted ? "success" : "info",
       duration: 5200,
-      actionLabel: snapshotBefore ? "Deshacer" : null,
-      onAction: snapshotBefore
-        ? async () => {
-            try {
-              // 1) Restaurar item SIN volver a registrar activity
-              await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+      actionLabel: snapshotBefore ? t("common_undo") : null,
+      onAction: snapshotBefore ? async () => {
+        try {
+          // 1) Restaurar item SIN volver a registrar activity
+          await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
 
-              // 2) Borrar activities creadas por el guardado
-              // (esto además reconcilia la racha de forma defensiva)
-              await ApiClient.undoActivitiesForItemSince(updatedItem.id, sinceIso);
+          // 2) Borrar activities creadas por el guardado
+          // (esto además reconcilia la racha de forma defensiva)
+          await ApiClient.undoActivitiesForItemSince(updatedItem.id, sinceIso);
 
-              // Feedback inmediato
-              flashLibraryCard(updatedItem.id);
+          // Feedback inmediato
+          flashLibraryCard(updatedItem.id);
 
-              window.toast?.({
-                title: "Cambios revertidos",
-                message: "Se ha restaurado el estado anterior.",
-                type: "success",
-                duration: 2400
-              });
-            } catch (e) {
-              console.error(e);
-              window.toast?.({
-                title: "No se pudo deshacer",
-                message: "Inténtalo de nuevo.",
-                type: "error",
-                duration: 3200
-              });
-            }
-          }
-        : null
+          window.toast?.({
+            title: t("library_progress_undo_success_title"),
+            message: t("library_progress_undo_success_message"),
+            type: "success",
+            duration: 2400
+          });
+        } catch (e) {
+          console.error(e);
+          window.toast?.({
+            title: t("library_progress_undo_error_title"),
+            message: t("home_notif_try_again"),
+            type: "error",
+            duration: 3200
+          });
+        }
+      } : null
     });
 
     return res;
   } catch (e) {
     console.error(e);
     window.toast?.({
-      title: "No se pudo guardar",
-      message: "Inténtalo de nuevo.",
+      title: t("library_progress_save_error_title"),
+      message: t("home_notif_try_again"),
       type: "error",
       duration: 3000
     });
@@ -2003,29 +2000,25 @@ function deleteLibraryItemAnimated(itemId, opts = {}) {
   const doDelete = async () => {
     try {
       await ApiClient.deleteLibraryItem(itemId);
-
       closeProgressModal();
 
       // Toast SOLO si no es silencioso
       if (!opts.silentToast) {
         window.toast?.({
-          title: "Contenido eliminado",
-          message: "Se ha eliminado de tu biblioteca.",
+          title: t("library_delete_success_title"),
+          message: t("library_delete_success_message"),
           type: "success",
           duration: 2400
         });
       }
-
     } catch (e) {
       console.error(e);
-
       window.toast?.({
-        title: "No se pudo eliminar",
-        message: "Inténtalo de nuevo.",
+        title: t("library_delete_error_title"),
+        message: t("home_notif_try_again"),
         type: "error",
         duration: 3000
       });
-
       if (card) card.classList.remove("is-removing");
     }
   };
