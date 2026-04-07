@@ -192,8 +192,7 @@ const NotificationsUI = (() => {
     }
 
     if (notifButtonEl) {
-      const n = list.length;
-      notifButtonEl.setAttribute("aria-label", n > 0 ? `Notificaciones, ${n} nuevas` : "Notificaciones");
+      notifButtonEl.setAttribute("aria-label", window.I18n.t("notif_title"));
     }
 
     const emptyStateEl = document.getElementById("notifEmptyState");
@@ -235,8 +234,10 @@ const NotificationsUI = (() => {
       const body = document.createElement("div");
       body.className = "notif-body";
 
+      const chipLabel = window.I18n.t("home_streak_label");
+
       const chipHtml = isStreakNotif
-        ? `<span class="notif-chip" aria-label="Notificación de racha">Racha</span>`
+        ? `<span class="notif-chip" aria-label="${chipLabel}">${chipLabel}</span>`
         : "";
 
       body.innerHTML = `
