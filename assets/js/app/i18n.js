@@ -14,6 +14,10 @@
       theme_light: "Modo claro",
       logout: "Cerrar sesión",
 
+      settings_language_updated: "Idioma actualizado",
+      settings_language_saved: "Preferencia guardada.",
+      settings_language_save_error: "No se pudo guardar el idioma",
+
       home_summary: "Resumen de tu actividad en Quacker",
       home_today: "Hoy",
       home_metric_weekly_time: "Tiempo esta semana",
@@ -361,6 +365,10 @@
       nav_label: "Navigation",
       theme_light: "Light mode",
       logout: "Log out",
+
+      settings_language_updated: "Language updated",
+      settings_language_saved: "Preference saved.",
+      settings_language_save_error: "Couldn't save language",
 
       home_summary: "Summary of your activity in Quacker",
       home_today: "Today",
