@@ -557,36 +557,37 @@ async function renderHomeDashboard() {
           : window.I18n.t("home_backlog_empty_idle_title");
 
         const text = hasInProgress
-          ? "Vas al día. Si dejas un contenido sin avanzar durante una semana, aparecerá aquí."
-          : "Empieza un contenido y, si lo dejas aparcado unos días, lo verás aquí para retomarlo.";
+          ? window.I18n.t("home_backlog_empty_in_progress_text")
+          : window.I18n.t("home_backlog_empty_idle_text");
 
         backlogContainer.innerHTML = `
-          <div class="empty-state home-backlog-empty">
-            <div class="empty-state-card" role="status" aria-live="polite">
-              <div class="empty-state-icon" aria-hidden="true">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
-                  <path d="M8 9h8"></path>
-                  <path d="M8 13h6"></path>
-                </svg>
-              </div>
+        <div class="empty-state home-backlog-empty">
+          <div class="empty-state-card" role="status" aria-live="polite">
+            <div class="empty-state-icon" aria-hidden="true">
 
-              <div class="empty-state-main">
-                <h3 class="empty-state-title">${title}</h3>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+                <path d="M8 9h8"></path>
+                <path d="M8 13h6"></path>
+              </svg>
+            </div>
+            <div class="empty-state-main">
+              <h3 class="empty-state-title">${title}</h3>
                 <p class="empty-state-text">${text}</p>
-
                 <div class="empty-state-actions">
                   <button type="button" class="btn-secondary btn-sm" id="btnBacklogGoLibrary">
-                    Ver mi biblioteca
+                    ${window.I18n.t("home_backlog_go_library")}
                   </button>
+          
                   <button type="button" class="btn-ghost btn-sm" id="btnBacklogGoExplore">
-                    Explorar contenido
+                    ${window.I18n.t("home_backlog_go_explore")}
                   </button>
                 </div>
               </div>
             </div>
           </div>
+        </div>
         `;
       } else {
         backlogContainer.innerHTML = backlogUnique

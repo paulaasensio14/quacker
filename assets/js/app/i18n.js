@@ -31,10 +31,18 @@
       home_continue_title: "Continúa donde lo dejaste",
       home_continue_view_all: "Ver todo",
       home_continue_completed: "Completado",
+
       home_continue_progress_done: "Progreso hecho",
+
       home_backlog_empty_in_progress_title: "No tienes backlog olvidado",
       home_backlog_empty_idle_title: "Todavía no hay backlog",
+      home_backlog_empty_in_progress_text: "Vas al día. Si dejas un contenido sin avanzar durante una semana, aparecerá aquí.",
+      home_backlog_empty_idle_text: "Empieza un contenido y, si lo dejas aparcado unos días, lo verás aquí para retomarlo.",
+      home_backlog_go_library: "Ver mi biblioteca",
+      home_backlog_go_explore: "Explorar contenido",
+
       home_filter_type: "Tipo",
+
       home_filter_status: "Estado",
       home_status_not_started_plural: "No comenzados",
       home_status_up_to_date: "Al día",
@@ -384,10 +392,19 @@
       home_continue_title: "Continue where you left off",
       home_continue_view_all: "View all",
       home_continue_completed: "Completed",
+
       home_continue_progress_done: "Progress done",
+
       home_backlog_empty_in_progress_title: "You have no forgotten backlog",
+
       home_backlog_empty_idle_title: "There is no backlog yet",
+      home_backlog_empty_in_progress_text: "You're up to date. If you leave content without progress for a week, it will appear here.",
+      home_backlog_empty_idle_text: "Start some content and, if you leave it parked for a few days, you'll see it here to pick it back up.",
+      home_backlog_go_library: "View my library",
+      home_backlog_go_explore: "Explore content",
+
       home_filter_type: "Type",
+
       home_filter_status: "Status",
       home_status_not_started_plural: "Not started",
       home_status_up_to_date: "Up to date",
