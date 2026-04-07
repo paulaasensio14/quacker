@@ -1899,6 +1899,8 @@ if (!document.documentElement.dataset.homeListsLangBound) {
 
   document.addEventListener("quacker:lang-change", () => {
 
+    if (window.Router?.currentView !== "home") return;
+
     try {
       renderHomeDashboard?.();
     } catch (e) {
@@ -1910,7 +1912,5 @@ if (!document.documentElement.dataset.homeListsLangBound) {
     } catch (e) {
       console.error(e);
     }
-
   });
-
 }
