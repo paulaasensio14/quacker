@@ -457,7 +457,7 @@ const NotificationsUI = (() => {
         } finally {
           if (markAllBtn) {
             markAllBtn.disabled = false;
-            markAllBtn.textContent = markAllBtn.dataset.originalText || "Marcar todas";
+            markAllBtn.textContent = markAllBtn.dataset.originalText || window.I18n.t("notif_mark_all");
             markAllBtn.style.cursor = "pointer";
             markAllBtn.style.opacity = "1";
           }
@@ -477,12 +477,22 @@ const NotificationsUI = (() => {
 
     document.addEventListener("quacker:data-changed", (e) => {
       const kind = e?.detail?.kind;
+
       if (kind !== "notifications") return;
 
       if (__notifRefreshTimer) clearTimeout(__notifRefreshTimer);
+
       __notifRefreshTimer = setTimeout(() => {
         renderNotifications().catch(console.error);
       }, 60);
+    });
+  }
+
+  if (!document.documentElement.dataset.notifsLangChangedBound) {
+    document.documentElement.dataset.notifsLangChangedBound = "1";
+
+    document.addEventListener("quacker:lang-change", () => {
+      renderNotifications().catch(console.error);
     });
   }
 
