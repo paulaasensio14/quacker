@@ -227,6 +227,16 @@
       library_add_to_list_empty_text: "Crea una lista para poder guardar este contenido y organizar tu ocio.",
       library_add_to_list_empty_cta: "Crear lista",
 
+      library_progress_item_not_found: "No se ha encontrado el contenido.",
+      library_progress_total_pages_invalid: "El total de páginas debe ser mayor que 0.",
+      library_progress_pages_read_invalid: "Las páginas leídas deben ser 0 o más.",
+      library_progress_pages_read_exceeds_total: "Las páginas leídas no pueden superar el total de páginas.",
+      library_progress_season_invalid: "La temporada debe ser 1 o más.",
+      library_progress_episode_invalid: "El episodio debe ser 1 o más.",
+      library_progress_invalid: "Introduce un progreso válido.",
+      library_progress_negative: "El progreso no puede ser negativo.",
+      library_progress_movie_status_invalid: "Selecciona un estado válido para la película.",
+
       lists_subtitle: "Organiza tu contenido como quieras",
       lists_new: "Nueva lista",
       lists_filter_all: "Todas las listas",
@@ -548,6 +558,16 @@
       library_add_to_list_empty_title: "You don't have any lists yet",
       library_add_to_list_empty_text: "Create a list to save this content and organize your free time.",
       library_add_to_list_empty_cta: "Create list",
+
+      library_progress_item_not_found: "The content couldn't be found.",
+      library_progress_total_pages_invalid: "Total pages must be greater than 0.",
+      library_progress_pages_read_invalid: "Pages read must be 0 or more.",
+      library_progress_pages_read_exceeds_total: "Pages read cannot exceed total pages.",
+      library_progress_season_invalid: "Season must be 1 or more.",
+      library_progress_episode_invalid: "Episode must be 1 or more.",
+      library_progress_invalid: "Enter a valid progress value.",
+      library_progress_negative: "Progress cannot be negative.",
+      library_progress_movie_status_invalid: "Select a valid movie status.",
 
       lists_subtitle: "Organize your content your way",
       lists_new: "New list",
