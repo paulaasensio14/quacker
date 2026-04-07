@@ -703,7 +703,8 @@
       },
   };
 
-  let currentLang = localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG;
+  const savedLang = localStorage.getItem(STORAGE_KEY);
+  let currentLang = messages[savedLang] ? savedLang : DEFAULT_LANG;
 
   function t(key) {
     return messages[currentLang]?.[key] ?? messages[DEFAULT_LANG]?.[key] ?? key;
