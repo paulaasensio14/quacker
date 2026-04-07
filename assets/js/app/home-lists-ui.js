@@ -1055,18 +1055,20 @@ async function renderHomeDashboard() {
 
       // No quitamos la card manualmente.
       // ApiClient emite "quacker:data-changed" y app-core refresca Home (quacker:home-refresh).
-
       const days = Math.max(0, Number(resumeRes?.daysSinceLast ?? 0));
+      const dayKey = days === 1 ? "home_day_singular" : "home_day_plural";
       const delta = progRes?.deltaLabel
-        ? `Actualizado: ${progRes.deltaLabel}`
-        : "Progreso actualizado";
-
+        ? `${window.I18n.t("home_quick_progress_updated_prefix")} ${progRes.deltaLabel}`
+        : window.I18n.t("home_quick_progress_updated_fallback");
       const toastTitle = progRes?.justCompleted
-        ? "Contenido completado"
-        : (days >= 7 ? `Retomado tras ${days} días` : "Contenido retomado");
-
+        ? window.I18n.t("home_quick_progress_completed_title")
+        : (days >= 7
+            ? window.I18n.t("home_quick_progress_resumed_after")
+                .replace("{days}", String(days))
+                .replace("{unit}", window.I18n.t(dayKey))
+            : window.I18n.t("home_quick_progress_resumed_title"));
       const toastMessage = progRes?.justCompleted
-        ? "Se ha marcado como finalizado."
+        ? window.I18n.t("home_quick_progress_completed_message")
         : delta;
 
       window.toast?.({
@@ -1074,46 +1076,45 @@ async function renderHomeDashboard() {
         message: toastMessage,
         type: "success",
         duration: 5200,
-        actionLabel: snapshotBefore ? "Deshacer" : null,
-        onAction: snapshotBefore
-          ? async () => {
-              try {
-                // 1) Restaurar el item sin crear nueva activity
-                await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+        actionLabel: snapshotBefore ? window.I18n.t("common_undo") : null,
+        onAction: snapshotBefore ? async () => {
+          try {
+            // 1) Restaurar el item sin crear nueva activity
+            await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
 
-                // Feedback defensivo: si quedara alguna card "pending" por estados anteriores, la retiramos.
-                try {
-                  const safeId = (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
-                  const pending = document.querySelector(`#continueGrid .cw-card.is-pending[data-id="${safeId}"]`);
-                  if (pending && pending.parentElement) pending.remove();
-                } catch (_) {
-                  // defensivo
-                }
-                // 2) Eliminar las activities creadas por el flujo "Retomar"
-                if (ApiClient.transport !== "http" && ApiClient.undoActivitiesForItemSince) {
-                  const undoActsRes = await ApiClient.undoActivitiesForItemSince(itemId, undoSinceIso);
-                  if (undoActsRes && undoActsRes.ok === false) {
-                    throw new Error(undoActsRes.reason || "undo_activities_failed");
-                  }
-                }
+            // Feedback defensivo: si quedara alguna card "pending" por estados anteriores, la retiramos.
+            try {
+              const safeId = (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+              const pending = document.querySelector(`#continueGrid .cw-card.is-pending[data-id="${safeId}"]`);
+              if (pending && pending.parentElement) pending.remove();
+            } catch (_) {
+              // defensivo
+            }
 
-                window.toast?.({
-                  title: "Cambios revertidos",
-                  message: "Se ha restaurado el estado anterior.",
-                  type: "success",
-                  duration: 2400
-                });
-              } catch (e) {
-                console.error(e);
-                window.toast?.({
-                  title: "No se pudo deshacer",
-                  message: "Inténtalo de nuevo.",
-                  type: "error",
-                  duration: 3200
-                });
+            // 2) Eliminar las activities creadas por el flujo "Retomar"
+            if (ApiClient.transport !== "http" && ApiClient.undoActivitiesForItemSince) {
+              const undoActsRes = await ApiClient.undoActivitiesForItemSince(itemId, undoSinceIso);
+              if (undoActsRes && undoActsRes.ok === false) {
+                throw new Error(undoActsRes.reason || "undo_activities_failed");
               }
             }
-          : null
+
+            window.toast?.({
+              title: window.I18n.t("home_quick_progress_undo_success_title"),
+              message: window.I18n.t("home_quick_progress_undo_success_message"),
+              type: "success",
+              duration: 2400
+            });
+          } catch (e) {
+            console.error(e);
+            window.toast?.({
+              title: window.I18n.t("home_quick_progress_undo_error_title"),
+              message: window.I18n.t("common_try_again"),
+              type: "error",
+              duration: 3200
+            });
+          }
+        } : null
       });
 
       lastResumedItemId = itemId;
@@ -1124,7 +1125,7 @@ async function renderHomeDashboard() {
 
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = prevBtnHtml || "Retomar";
+        btn.innerHTML = prevBtnHtml || window.I18n.t("home_backlog_resume");
       }
 
       if (btn) btn.dataset.busy = "0";
