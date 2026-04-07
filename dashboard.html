@@ -587,24 +587,36 @@
             </div>
           </div>
 
-          <div class="explore-toolbar-right">
-            <div class="library-sort">
-              <label for="exploreSort" class="sr-only">Orden</label>
-              <select id="exploreSort">
-                <option value="recent" selected>Más reciente</option>
-                <option value="title">Título</option>
-              </select>
+          <div class="explore-toolbar">
+            <div class="explore-toolbar-left">
+              <div class="explore-pills library-pills" data-explore-type>
+                <button class="pill-btn pill-filter-sm active" type="button" data-value="all" data-i18n="pills_all">Todo</button>
+                <button class="pill-btn pill-filter-sm" type="button" data-value="serie" data-i18n="home_type_series">Series</button>
+                <button class="pill-btn pill-filter-sm" type="button" data-value="pelicula" data-i18n="home_type_movie">Películas</button>
+                <button class="pill-btn pill-filter-sm" type="button" data-value="book" data-i18n="home_type_book">Libros</button>
+                <button class="pill-btn pill-filter-sm" type="button" data-value="game" data-i18n="home_type_game">Videojuegos</button>
+              </div>
             </div>
 
-            <button
-              type="button"
-              class="pill-btn pill-filter-sm explore-reset-btn"
-              id="exploreClearDismissed"
-            >
-              Restablecer
-            </button>
+            <div class="explore-toolbar-right">
+              <div class="library-sort">
+                <label for="exploreSort" class="sr-only" data-i18n="explore_sort_label">Orden</label>
+                <select id="exploreSort">
+                  <option value="recent" selected data-i18n="explore_sort_recent">Más reciente</option>
+                  <option value="title" data-i18n="explore_sort_title">Título</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                class="pill-btn pill-filter-sm explore-reset-btn"
+                id="exploreClearDismissed"
+                data-i18n="explore_reset"
+              >
+                Restablecer
+              </button>
+            </div>
           </div>
-        </div>
 
         <div class="explore-grid" data-explore-container></div>
 

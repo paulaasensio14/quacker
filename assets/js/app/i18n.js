@@ -153,6 +153,8 @@
       home_notif_mark_all_error_title: "No se pudieron marcar",
 
       explore_sort_recent: "Más reciente",
+      explore_sort_label: "Orden",
+      explore_sort_title: "Título",
       explore_reset: "Restablecer",
       explore_loading: "Actualizando resultados...",
       explore_empty_title: "No hay resultados",
@@ -530,6 +532,8 @@
       home_notif_mark_all_error_title: "Couldn't mark notifications",
 
       explore_sort_recent: "Most recent",
+      explore_sort_label: "Sort",
+      explore_sort_title: "Title",
       explore_reset: "Reset",
       explore_loading: "Updating results...",
       explore_empty_title: "No results found",
