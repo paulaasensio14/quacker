@@ -252,12 +252,7 @@ const NotificationsUI = (() => {
       const markBtn = document.createElement("button");
       markBtn.type = "button";
       markBtn.className = "notif-mark-btn";
-      markBtn.innerHTML = `
-        <span class="sr-only">Marcar como vista</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>
-      `;
+      markBtn.textContent = window.I18n.t("home_notif_mark_seen");
 
       markBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
