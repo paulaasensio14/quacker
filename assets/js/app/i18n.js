@@ -31,8 +31,8 @@
       home_continue_title: "Continúa donde lo dejaste",
       home_continue_view_all: "Ver todo",
       home_continue_completed: "Completado",
-
       home_continue_progress_done: "Progreso hecho",
+      home_backlog_resume: "Retomar",
 
       home_backlog_empty_in_progress_title: "No tienes backlog olvidado",
       home_backlog_empty_idle_title: "Todavía no hay backlog",
@@ -392,8 +392,8 @@
       home_continue_title: "Continue where you left off",
       home_continue_view_all: "View all",
       home_continue_completed: "Completed",
-
       home_continue_progress_done: "Progress done",
+      home_backlog_resume: "Resume",
 
       home_backlog_empty_in_progress_title: "You have no forgotten backlog",
 

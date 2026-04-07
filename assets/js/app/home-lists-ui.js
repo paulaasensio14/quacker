@@ -594,61 +594,40 @@ async function renderHomeDashboard() {
           .map((item) => {
             const typeName = item.type ? (window.typeLabel(item.type) || "Contenido") : "Contenido";
             const typeIcon = getTypeIconSvg(item.type);
+            
             // Chip de días olvidado (limpio: sin SVG dentro del texto)
             const days = Number(item.daysSinceLast || 0);
-            const isHot = days >= 14;  // 2 semanas
-            const isWarm = days >= 7;  // 1 semana
+            const isHot = days >= 14; // 2 semanas
+            const isWarm = days >= 7; // 1 semana
+            const dayKey = days === 1 ? "home_day_singular" : "home_day_plural";
 
             let backlogChip = "";
+
             if (isHot) {
-              backlogChip = `<span class="backlog-chip chip-hot">${days} días</span>`;
+              backlogChip = `${days} ${window.I18n.t(dayKey)}`;
             } else if (isWarm) {
-              backlogChip = `<span class="backlog-chip chip-warm">${days} días</span>`;
+              backlogChip = `${days} ${window.I18n.t(dayKey)}`;
             }
 
-
             const pct = Math.max(0, Math.min(100, item.progressPercent || 0));
-
-            const progressText =
-              pct >= 100
-                ? "Completado"
-                : `${pct}% · ${item.progressLabel || ""}`;
-
-            const coverStyle = item.cover
-              ? `style="background-image:url('${item.cover}');"`
-              : "";
+            const progressText = pct >= 100
+              ? window.I18n.t("home_continue_completed")
+              : `${pct}% · ${item.progressLabel || ""}`;
+            const coverStyle = item.cover ? `style="background-image:url('${item.cover}');"` : "";
 
             return `
-              <article class="backlog-card" data-id="${item.id}" data-type="${item.type || ""}">
-                <div class="backlog-card-cover" ${coverStyle}></div>
-                <div class="backlog-card-body">
-                  
-                  <div class="backlog-card-type-row">
-                    <span class="backlog-type-chip">
-                      ${typeIcon}
-                      <span>${typeName}</span>
-                    </span>
-                    ${backlogChip}
+              <article class="backlog-card" data-id="${item.id}">
+                <div class="backlog-cover" ${coverStyle} aria-hidden="true"></div>
+                <div class="backlog-body">
+                  <div class="backlog-topline">
+                    <span class="backlog-type">${typeIcon}<span>${typeName}</span></span>
+                    ${backlogChip ? `<span class="backlog-chip">${backlogChip}</span>` : ""}
                   </div>
-
-                  <h4 class="backlog-card-title">${item.title}</h4>
-                  <div class="backlog-meta">${formatMetaLine(item)}</div>
-
-                  <div class="backlog-card-progress-text">${progressText}</div>
-
-                  <div class="backlog-card-progress-bar">
-                    <div class="backlog-card-progress-fill" style="width:${pct}%;"></div>
-                  </div>
-
-                  <button class="btn-retomar" data-id="${item.id}">
-                    <span class="btn-retomar-icon">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="1 4 1 10 7 10"></polyline>
-                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 4"></path>
-                      </svg>
-                    </span>
-                    Retomar
+                  <h4 class="backlog-title">${item.title}</h4>
+                  <p class="backlog-meta">${formatMetaLine(item)}</p>
+                  <p class="backlog-progress">${progressText}</p>
+                  <button type="button" class="btn-secondary btn-sm btn-retomar" data-id="${item.id}">
+                    ${window.I18n.t("home_backlog_resume")}
                   </button>
                 </div>
               </article>
