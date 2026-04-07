@@ -270,54 +270,61 @@ document.addEventListener("DOMContentLoaded", async () => {
       profileMenu.setAttribute("aria-hidden", "true");
     });
 
-  // ===== LANG TOGGLE (persistente en user via ApiClient) =====
-  const langBtns = $all(".lang-btn");
+    // ===== LANG TOGGLE (persistente en user via ApiClient) =====
+    const langBtns = $all(".lang-btn");
 
-  function applyActiveLang(lang) {
-    langBtns.forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
-  }
-
-  // Cargar preferencia inicial
-  (async () => {
-    try {
-      const prefs = await ApiClient.getUserPreferences?.();
-      const lang = (prefs?.language === "en" || prefs?.language === "es") ? prefs.language : "es";
-      applyActiveLang(lang);
-    } catch (e) {
-      console.error(e);
-      applyActiveLang("es");
+    function applyActiveLang(lang) {
+      langBtns.forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
     }
-  })();
 
-  // Click: guardar preferencia
-  langBtns.forEach(btn => {
-    if (btn.__quackerBound) return;
-    btn.__quackerBound = true;
-
-    btn.addEventListener("click", async () => {
-      const lang = btn.dataset.lang;
-      if (!lang) return;
-
-      applyActiveLang(lang);
-
+    // Cargar preferencia inicial
+    (async () => {
       try {
-        await ApiClient.setUserLanguage(lang);
-        window.toast?.({
-          title: "Idioma actualizado",
-          message: "Preferencia guardada.",
-          type: "success",
-          duration: 2000
-        });
+        const prefs = await ApiClient.getUserPreferences?.();
+        const lang = (prefs?.language === "en" || prefs?.language === "es")
+          ? prefs.language
+          : (window.I18n?.getLang?.() || "es");
+
+        window.I18n?.setLang?.(lang);
+        applyActiveLang(lang);
       } catch (e) {
         console.error(e);
-        window.toast?.({
-          title: "No se pudo guardar el idioma",
-          message: "Inténtalo de nuevo.",
-          type: "error",
-          duration: 3000
-        });
+        const fallbackLang = window.I18n?.getLang?.() || "es";
+        window.I18n?.setLang?.(fallbackLang);
+        applyActiveLang(fallbackLang);
       }
+    })();
+
+    // Click: guardar preferencia
+    langBtns.forEach(btn => {
+      if (btn.__quackerBound) return;
+      btn.__quackerBound = true;
+
+      btn.addEventListener("click", async () => {
+        const lang = btn.dataset.lang;
+        if (!lang) return;
+
+        window.I18n?.setLang?.(lang);
+        applyActiveLang(lang);
+
+        try {
+          await ApiClient.setUserLanguage(lang);
+          window.toast?.({
+            title: window.I18n?.t?.("settings_language_updated") || "Idioma actualizado",
+            message: window.I18n?.t?.("settings_language_saved") || "Preferencia guardada.",
+            type: "success",
+            duration: 2000
+          });
+        } catch (e) {
+          console.error(e);
+          window.toast?.({
+            title: window.I18n?.t?.("settings_language_save_error") || "No se pudo guardar el idioma",
+            message: window.I18n?.t?.("home_notif_try_again") || "Inténtalo de nuevo.",
+            type: "error",
+            duration: 3000
+          });
+        }
+      });
     });
-  });
-}
+  }
 });
