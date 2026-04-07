@@ -1745,6 +1745,11 @@ window.HomeUI = {
       __refreshActivityModalIfOpen();
     });
 
+    document.addEventListener("quacker:lang-change", () => {
+      refreshHomeIfActive({ silent: true });
+      __refreshActivityModalIfOpen();
+    });
+
     // Render inicial defensivo (por si el router aún no disparó el primer view-change)
     refreshHomeIfActive();
 
