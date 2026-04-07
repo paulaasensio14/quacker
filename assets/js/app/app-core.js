@@ -281,6 +281,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Cargar preferencia inicial
     (async () => {
       try {
+        const savedLang = localStorage.getItem("quacker:lang");
+
+        if (savedLang === "en" || savedLang === "es") {
+          applyActiveLang(savedLang);
+          return;
+        }
+
         const prefs = await ApiClient.getUserPreferences?.();
         const lang = (prefs?.language === "en" || prefs?.language === "es")
           ? prefs.language
