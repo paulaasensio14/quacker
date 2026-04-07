@@ -1892,3 +1892,25 @@ window.HomeUI = {
   },
   refresh: refreshHomeIfActive
 };
+
+if (!document.documentElement.dataset.homeListsLangBound) {
+
+  document.documentElement.dataset.homeListsLangBound = "1";
+
+  document.addEventListener("quacker:lang-change", () => {
+
+    try {
+      renderHomeDashboard?.();
+    } catch (e) {
+      console.error(e);
+    }
+
+    try {
+      initContinueWatching?.();
+    } catch (e) {
+      console.error(e);
+    }
+
+  });
+
+}
