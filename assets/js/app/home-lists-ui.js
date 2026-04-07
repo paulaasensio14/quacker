@@ -1428,18 +1428,9 @@ async function renderHomeDashboard() {
       if (continueGrid) {
         continueGrid.innerHTML = `
           <div class="empty-card">
-            <div class="empty-card-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"></path>
-                <path d="M12 8v5"></path>
-                <path d="M12 16h.01"></path>
-              </svg>
-            </div>
-            <div class="empty-card-main">
-              <div class="empty-card-title">No se pudo cargar</div>
-              <div class="empty-card-text">Vuelve a intentarlo recargando la vista.</div>
-            </div>
+            <div class="empty-card-title">${window.I18n.t("home_continue_error_title")}</div>
+
+            <div class="empty-card-text">${window.I18n.t("home_continue_error_text")}</div>
           </div>
         `;
       }
