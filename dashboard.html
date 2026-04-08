@@ -775,47 +775,47 @@
 
           <!-- FILTRO TIPO + ORDEN (misma fila) -->
           <div class="library-filter-row library-filter-row--type">
-            <span class="library-filter-label">Tipo</span>
+            <span class="library-filter-label" data-i18n="library_filter_type">Tipo</span>
 
             <div class="library-pills">
-              <button class="pill-filter-sm lib-type-pill active" data-type="all">Todo</button>
-              <button class="pill-filter-sm lib-type-pill" data-type="serie">Series</button>
-              <button class="pill-filter-sm lib-type-pill" data-type="pelicula">Películas</button>
-              <button class="pill-filter-sm lib-type-pill" data-type="book">Libros</button>
-              <button class="pill-filter-sm lib-type-pill" data-type="game">Videojuegos</button>
+              <button class="pill-filter-sm lib-type-pill active" data-type="all" data-i18n="library_type_all">Todo</button>
+              <button class="pill-filter-sm lib-type-pill" data-type="serie" data-i18n="library_type_series">Series</button>
+              <button class="pill-filter-sm lib-type-pill" data-type="pelicula" data-i18n="library_type_movie">Películas</button>
+              <button class="pill-filter-sm lib-type-pill" data-type="book" data-i18n="library_type_book">Libros</button>
+              <button class="pill-filter-sm lib-type-pill" data-type="game" data-i18n="library_type_game">Videojuegos</button>
             </div>
 
-            <button type="button" class="btn-primary" id="btnAddLibraryItem">
+            <button type="button" class="btn-primary" id="btnAddLibraryItem" data-i18n="library_add_cta">
               + Añadir
             </button>
 
             <div class="library-sort">
-              <label for="librarySort" class="sr-only">Orden</label>
+              <label for="librarySort" class="sr-only" data-i18n="library_sort_label">Orden</label>
               <select id="librarySort">
-                <option value="recent">Última actividad</option>
-                <option value="progress">Progreso</option>
-                <option value="az">A–Z</option>
-                <option value="added_desc">Añadido recientemente</option>
-                <option value="added_asc">Añadido primero</option>
+                <option value="recent" data-i18n="library_sort_recent">Última actividad</option>
+                <option value="progress" data-i18n="library_sort_progress">Progreso</option>
+                <option value="az" data-i18n="library_sort_az">A–Z</option>
+                <option value="added_desc" data-i18n="library_sort_added_desc">Añadido recientemente</option>
+                <option value="added_asc" data-i18n="library_sort_added_asc">Añadido primero</option>
               </select>
             </div>
 
             <div class="lib-refresh-veil" id="libRefreshVeil" hidden aria-live="polite" role="status">
               <div class="lib-refresh-veil-inner">
                 <span class="btn-spinner" aria-hidden="true"></span>
-                <span>Actualizando…</span>
+                <span data-i18n="library_loading">Actualizando…</span>
               </div>
             </div>
           </div>
 
           <!-- FILTRO ESTADO -->
           <div class="library-filter-row">
-            <span class="library-filter-label">Estado</span>
+            <span class="library-filter-label" data-i18n="library_filter_status">Estado</span>
             <div class="library-pills">
-              <button class="pill-filter-sm lib-status-pill active" data-status="all">Todos</button>
-              <button class="pill-filter-sm lib-status-pill" data-status="in_progress">En progreso</button>
-              <button class="pill-filter-sm lib-status-pill" data-status="not_started">No empezados</button>
-              <button class="pill-filter-sm lib-status-pill" data-status="completed">Completados</button>
+              <button class="pill-filter-sm lib-status-pill active" data-status="all" data-i18n="library_status_all">Todos</button>
+              <button class="pill-filter-sm lib-status-pill" data-status="in_progress" data-i18n="library_status_in_progress">En progreso</button>
+              <button class="pill-filter-sm lib-status-pill" data-status="not_started" data-i18n="library_status_not_started">No empezados</button>
+              <button class="pill-filter-sm lib-status-pill" data-status="completed" data-i18n="library_status_completed">Completados</button>
             </div>
           </div>
 
