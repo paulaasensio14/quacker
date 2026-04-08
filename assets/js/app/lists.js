@@ -669,26 +669,21 @@ const ListsModule = (() => {
     const visibility = document.getElementById("lm_visibility")?.value || "private";
 
     if (!name) {
-      showListErrors("Ponle un nombre a la lista.");
+      showListErrors(t("lists_modal_name_required"));
       return;
     }
 
     const saveBtn = document.getElementById("saveListModal");
     const cancelBtn = document.getElementById("cancelListModal");
     const closeBtn = document.getElementById("closeListModal");
-
-    const prevHtml = saveBtn?.innerHTML || (editingListId ? "Guardar" : "Crear");
+    const prevHtml = saveBtn?.innerHTML || (editingListId ? t("common_save") : t("common_create"));
 
     if (saveBtn) {
       // Evitar doble click si ya está guardando
       if (saveBtn.dataset.busy === "1") return;
-
       saveBtn.disabled = true;
       saveBtn.dataset.busy = "1";
-      saveBtn.innerHTML = `
-        <span class="btn-spinner" aria-hidden="true"></span>
-        <span>Guardando…</span>
-      `;
+      saveBtn.innerHTML = `  ${t("lists_modal_saving")} `;
     }
 
     if (cancelBtn) cancelBtn.disabled = true;
@@ -705,10 +700,7 @@ const ListsModule = (() => {
         // Si venimos desde "Añadir a listas" (Biblioteca), avisamos para volver al flujo
         if (__returnToAddToListItemId) {
           document.dispatchEvent(new CustomEvent("quacker:lists-created", {
-            detail: {
-              listId: created?.id ?? null,
-              returnToAddToListItemId: __returnToAddToListItemId
-            }
+            detail: { listId: created?.id ?? null, returnToAddToListItemId: __returnToAddToListItemId }
           }));
           __returnToAddToListItemId = null;
         }
@@ -718,7 +710,7 @@ const ListsModule = (() => {
       await load();
     } catch (e) {
       console.error(e);
-      showListErrors("No se pudo guardar la lista. Mira la consola.");
+      showListErrors(t("lists_modal_save_error"));
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
