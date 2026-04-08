@@ -374,22 +374,19 @@ const ProfileModule = (() => {
     if (!btn) return;
 
     btn.addEventListener("click", async () => {
+      const currentLanguage = window.I18n?.getLang?.() || "es";
       const demo = {
         name: "Arnau",
         handle: "@arnauduck",
         email: "arnau@example.com",
-        language: "es",
-        bio: "Amante de las series largas, pelis de ciencia ficción y JRPGs eternos.",
+        language: currentLanguage,
+        bio: t("profile_demo_bio"),
       };
 
       try {
         await ApiClient.updateUser(demo);
         await loadProfileIntoForm();
-        window.toast?.({ 
-          title: t("profile_restored"), 
-          type: "success", 
-          duration: 2200 
-        });
+        window.toast?.({ title: t("profile_restored"), type: "success", duration: 2200 });
       } catch (err) {
         console.error(err);
         showErrors([t("profile_restore_error")]);
