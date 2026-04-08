@@ -20,6 +20,7 @@
 
       home_summary: "Resumen de tu actividad en Quacker",
       home_today: "Hoy",
+      home_welcome_back: "¡Hola de nuevo,",
       home_metric_weekly_time: "Tiempo esta semana",
       home_metric_weekly_time_sub: "Entre series, pelis y juegos",
       home_metric_in_progress: "Contenidos en progreso",
@@ -438,6 +439,7 @@
 
       home_summary: "Summary of your activity in Quacker",
       home_today: "Today",
+      home_welcome_back: "Welcome back,",
       home_metric_weekly_time: "This week",
       home_metric_weekly_time_sub: "Across shows, movies, and games",
       home_metric_in_progress: "In progress",
