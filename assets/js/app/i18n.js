@@ -426,6 +426,9 @@
       explore_drawer_add_lists: "Añadir a una lista",
       explore_drawer_list_label: "Elegir lista",
       explore_drawer_list_placeholder: "Selecciona una lista",
+      explore_drawer_list_untitled: "Lista sin nombre",
+      explore_drawer_list_empty: "No hay listas disponibles",
+      explore_drawer_list_loading: "Cargando listas...",
       explore_drawer_list_confirm: "Guardar en lista",
       },
 
@@ -854,6 +857,9 @@
       explore_drawer_add_lists: "Add to a list",
       explore_drawer_list_label: "Choose list",
       explore_drawer_list_placeholder: "Select a list",
+      explore_drawer_list_untitled: "Untitled list",
+      explore_drawer_list_empty: "No lists available",
+      explore_drawer_list_loading: "Loading lists...",
       explore_drawer_list_confirm: "Save to list",
       },
   };
