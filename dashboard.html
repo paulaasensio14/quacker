@@ -871,7 +871,8 @@
         <div class="lists-toolbar">
           <div class="lists-toolbar-top">
             <div class="lists-search">
-              <input type="text" id="listsSearch" placeholder="Buscar en tus listas..." />
+              <input type="text" id="listsSearch" placeholder="Buscar en tus listas..." data-i18n-placeholder="lists_search_placeholder" />
+
               <div class="search-icon" style="left:9px;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -911,18 +912,19 @@
             </div>
 
             <div class="view-toggle">
-              <button class="active" aria-label="Vista de tarjetas">
+              <button class="active" aria-label="Vista de tarjetas" data-i18n-aria-label="lists_view_cards">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="3" width="7" height="7"/>
                   <rect x="14" y="3" width="7" height="7"/>
                   <rect x="3" y="14" width="7" height="7"/>
                   <rect x="14" y="14" width="7" height="7"/>
                 </svg>
               </button>
-              <button aria-label="Vista de lista">
+
+              <button aria-label="Vista de lista" data-i18n-aria-label="lists_view_list">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
               </button>
@@ -973,11 +975,11 @@
                 <span class="list-items-sub" id="listDetailHint"></span>
               </div>
 
-              <div class="list-items-controls" aria-label="Filtros de la lista">
+              <div class="list-items-controls" aria-label="Filtros de la lista" data-i18n-aria-label="lists_detail_filters_label">
                 <label class="input-wrap list-items-search">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-                      aria-hidden="true" focusable="false">
+                    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+                    aria-hidden="true" focusable="false">
                     <path d="M21 21l-4.3-4.3"/>
                     <circle cx="11" cy="11" r="7"/>
                   </svg>
@@ -991,7 +993,7 @@
                 </label>
 
                 <label class="select-wrap">
-                  <select id="listDetailTypeFilter" aria-label="Filtrar por tipo">
+                  <select id="listDetailTypeFilter" aria-label="Filtrar por tipo" data-i18n-aria-label="lists_detail_type_filter_label">
                     <option value="all" data-i18n="pills_all">Todos</option>
                     <option value="serie" data-i18n="pills_series">Series</option>
                     <option value="pelicula" data-i18n="pills_movies">Películas</option>
