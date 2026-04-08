@@ -80,6 +80,7 @@
       home_activity_filter_progress: "Progreso",
       home_activity_filter_completed: "Completados",
       common_close: "Cerrar",
+      theme_toggle_label: "Cambiar tema",
       home_last_activity_loading_text: "Estamos preparando tu resumen.",
       home_challenge_loading_title: "Cargando reto…",
       home_challenge_loading_text: "Estamos preparando tu progreso mensual.",
@@ -371,6 +372,10 @@
       lists_undo_error_title: "No se pudo deshacer",
       lists_undo_error_text: "Inténtalo de nuevo.",
       global_search_placeholder: "Buscar contenido...",
+      global_search_label: "Buscar",
+      global_search_clear: "Borrar búsqueda",
+      language_switcher_label: "Selector de idioma",
+      notif_button_label: "Notificaciones",
 
       notif_title: "Notificaciones",
       notif_mark_all: "Marcar todas",
@@ -492,6 +497,7 @@
       home_activity_filter_progress: "Progress",
       home_activity_filter_completed: "Completed",
       common_close: "Close",
+      theme_toggle_label: "Toggle theme",
       home_last_activity_loading_text: "We are preparing your summary.",
       home_challenge_loading_title: "Loading challenge…",
       home_challenge_loading_text: "We are preparing your monthly progress.",
@@ -785,6 +791,10 @@
       lists_undo_error_text: "Please try again.",
 
       global_search_placeholder: "Search content...",
+      global_search_label: "Search",
+      global_search_clear: "Clear search",
+      language_switcher_label: "Language switcher",
+      notif_button_label: "Notifications",
 
       notif_title: "Notifications",
       notif_mark_all: "Mark all",
