@@ -1224,30 +1224,32 @@ async function renderHomeDashboard() {
       const isFilteredView = cwTypeFilter !== "all" || cwStatusFilter !== "in_progress";
 
       const emptyTitle = hasLibraryItems
-        ? (isFilteredView ? "No hay resultados para este filtro" : "No tienes nada para continuar")
-        : "Tu zona de Continue está vacía";
+        ? (isFilteredView
+            ? window.I18n.t("home_continue_empty_filtered_title")
+            : window.I18n.t("home_continue_empty_title"))
+        : window.I18n.t("home_continue_empty_idle_title");
 
       const emptyText = hasLibraryItems
         ? (isFilteredView
-            ? "Prueba a cambiar el tipo o el estado para ver otros contenidos."
-            : "Cuando avances en una serie, película, libro o videojuego, aparecerá aquí para que puedas retomarlo rápido.")
-        : "Añade contenido a tu biblioteca y haz progreso en algo para verlo aquí.";
+            ? window.I18n.t("home_continue_empty_filtered_text")
+            : window.I18n.t("home_continue_empty_text"))
+        : window.I18n.t("home_continue_empty_idle_text");
 
       const primaryActionHtml = isFilteredView
         ? `
             <button type="button" class="btn-primary btn-sm" id="btnContinueResetFilters">
-              Restablecer filtros
+              ${window.I18n.t("home_continue_reset_filters")}
             </button>
           `
         : `
             <button type="button" class="btn-primary btn-sm" id="btnContinueGoLibrary">
-              Ver mi biblioteca
+              ${window.I18n.t("home_continue_go_library")}
             </button>
           `;
 
       const secondaryActionHtml = `
         <button type="button" class="btn-secondary btn-sm" id="btnContinueGoExplore">
-          Explorar contenido
+          ${window.I18n.t("home_continue_go_explore")}
         </button>
       `;
 
