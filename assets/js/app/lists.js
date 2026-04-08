@@ -929,7 +929,6 @@ const ListsModule = (() => {
     // Desde el detalle: ir a Explorar en modo "añadir a esta lista"
     document.getElementById("btnAddContentToList")?.addEventListener("click", () => {
       if (!activeListId) return;
-
       const current = (allLists || []).find(l => String(l.id) === String(activeListId));
       const listName = current?.name ? String(current.name) : null;
 
@@ -940,10 +939,9 @@ const ListsModule = (() => {
 
       // Navegamos a Explorar
       window.Router?.showView("explore");
-
       window.toast?.({
-        title: "Añadir a lista",
-        message: "Selecciona contenido en Explorar para añadirlo a esta lista.",
+        title: t("lists_add_content_to_list_title"),
+        message: t("lists_add_content_to_list_message"),
         type: "info",
         duration: 2600
       });
