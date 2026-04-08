@@ -1106,7 +1106,8 @@ const ExploreModule = (() => {
 
     const placeholderOption = document.createElement("option");
     placeholderOption.value = "";
-    placeholderOption.textContent = "Selecciona una lista";
+    placeholderOption.textContent =
+      window.I18n?.t?.("explore_drawer_list_placeholder") ?? "Selecciona una lista";
     select.appendChild(placeholderOption);
 
     for (const list of safeLists) {
@@ -1114,7 +1115,9 @@ const ExploreModule = (() => {
 
       const option = document.createElement("option");
       option.value = String(list.id);
-      option.textContent = _safeText(list.name) || "Lista sin nombre";
+      option.textContent =
+        _safeText(list.name) ||
+        (window.I18n?.t?.("explore_drawer_list_untitled") ?? "Lista sin nombre");
       select.appendChild(option);
     }
 
@@ -1125,7 +1128,8 @@ const ExploreModule = (() => {
 
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
-      emptyOption.textContent = "No hay listas disponibles";
+      emptyOption.textContent =
+        window.I18n?.t?.("explore_drawer_list_empty") ?? "No hay listas disponibles";
       select.appendChild(emptyOption);
     }
 
@@ -1154,7 +1158,8 @@ const ExploreModule = (() => {
       select.innerHTML = "";
       const loadingOption = document.createElement("option");
       loadingOption.value = "";
-      loadingOption.textContent = "Cargando listas...";
+      loadingOption.textContent =
+        window.I18n?.t?.("explore_drawer_list_loading") ?? "Cargando listas...";
       select.appendChild(loadingOption);
       select.disabled = true;
     }
