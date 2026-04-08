@@ -317,6 +317,8 @@ const ExploreModule = (() => {
   // Helper para renderizar cards (reutiliza tu HTML actual)
   const renderCard = (item) => {
     const vm = _buildExploreCardViewModel(item);
+    const openDetailLabel = (window.I18n?.t?.("explore_card_open_detail") ?? "Abrir detalle de {title}")
+      .replace("{title}", vm.title);
     return `
     <article
       class="explore-card explore-card--poster"
@@ -324,7 +326,7 @@ const ExploreModule = (() => {
       data-action="open-item-detail"
       tabindex="0"
       role="button"
-      aria-label="Abrir detalle de ${vm.title}">
+      aria-label="${openDetailLabel}">
       ${_cardCover(item)}
       <div class="explore-card-overlay">
         <span class="explore-card-type">
@@ -908,12 +910,13 @@ const ExploreModule = (() => {
 
     details.hidden = !__drawerExpanded;
 
+    const expandLabel = __drawerExpanded
+      ? (window.I18n?.t?.("explore_drawer_toggle_hide") ?? "Ocultar detalles")
+      : (window.I18n?.t?.("explore_drawer_toggle_show") ?? "Ver más detalles");
+
     expandBtn.setAttribute("aria-pressed", __drawerExpanded ? "true" : "false");
-    expandBtn.setAttribute(
-      "aria-label",
-      __drawerExpanded ? "Ocultar detalles" : "Ver más detalles"
-    );
-    expandBtn.textContent = __drawerExpanded ? "Ocultar detalles" : "Ver más detalles";
+    expandBtn.setAttribute("aria-label", expandLabel);
+    expandBtn.textContent = expandLabel;
 
     if (__drawerExpanded) {
       _syncExploreDrawerViewport();
