@@ -313,6 +313,9 @@
 
       lists_subtitle: "Organiza tu contenido como quieras",
       lists_new: "Nueva lista",
+      lists_search_placeholder: "Buscar en tus listas...",
+      lists_view_cards: "Vista de tarjetas",
+      lists_view_list: "Vista de lista",
       lists_filter_all: "Todas las listas",
       lists_filter_public: "Públicas",
       lists_filter_private: "Privadas",
@@ -380,6 +383,8 @@
       list_detail_add_content: "Añadir contenido",
       lists_detail_title: "Lista",
       lists_detail_search_placeholder: "Buscar en la lista",
+      lists_detail_filters_label: "Filtros de la lista",
+      lists_detail_type_filter_label: "Filtrar por tipo",
       lists_filter_all_status: "Todos",
       lists_filter_pending: "Pendiente",
 
@@ -720,6 +725,9 @@
 
       lists_subtitle: "Organize your content your way",
       lists_new: "New list",
+      lists_search_placeholder: "Search in your lists...",
+      lists_view_cards: "Card view",
+      lists_view_list: "List view",
       lists_filter_all: "All lists",
       lists_filter_public: "Public",
       lists_filter_private: "Private",
@@ -789,6 +797,8 @@
       list_detail_add_content: "Add content",
       lists_detail_title: "List",
       lists_detail_search_placeholder: "Search in list",
+      lists_detail_filters_label: "List filters",
+      lists_detail_type_filter_label: "Filter by type",
       lists_filter_all_status: "All",
       lists_filter_pending: "Pending",
 
