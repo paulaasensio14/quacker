@@ -786,7 +786,6 @@ const ExploreModule = (() => {
 
   function _buildExploreDrawerTextModel(item) {
     const count = Number(item?.__listsCount || 0);
-
     const normalizedType = _norm(item?.type);
     const resolvedTypeLabel =
       TYPE_LABELS[normalizedType] ||
@@ -802,10 +801,8 @@ const ExploreModule = (() => {
     ].filter(Boolean);
 
     const badgeParts = [];
-
-    if (item?.__inLibrary) badgeParts.push("En biblioteca");
-    if (count > 0) {
-      badgeParts.push(`En ${count} lista${count === 1 ? "" : "s"}`);
+    if (item?.__inLibrary) {
+      badgeParts.push(window.I18n?.t?.("explore_drawer_in_library") ?? "En biblioteca");
     }
 
     return {
@@ -814,11 +811,23 @@ const ExploreModule = (() => {
       summary:
         _safeText(item?.description) ||
         _safeText(item?.summary) ||
-        "Sin descripción disponible.",
+        (window.I18n?.t?.("explore_drawer_no_description") ?? "Sin descripción disponible."),
       detailType: resolvedTypeLabel,
-      detailReleaseDate: item?.releaseDate ? _safeText(item.releaseDate) : "Sin fecha",
-      detailLibraryState: item?.__inLibrary ? "En biblioteca" : "No guardado",
-      detailListsCount: count === 0 ? "No está en listas" : `${count} lista${count === 1 ? "" : "s"}`,
+      detailReleaseDate:
+        item?.releaseDate
+          ? _safeText(item.releaseDate)
+          : (window.I18n?.t?.("explore_drawer_no_date") ?? "Sin fecha"),
+      detailLibraryState:
+        item?.__inLibrary
+          ? (window.I18n?.t?.("explore_drawer_in_library") ?? "En biblioteca")
+          : (window.I18n?.t?.("explore_drawer_not_saved") ?? "No guardado"),
+      detailListsCount:
+        count === 0
+          ? (window.I18n?.t?.("explore_drawer_not_in_lists") ?? "No está en listas")
+          : (window.I18n?.t?.(count === 1
+              ? "explore_drawer_lists_count_single"
+              : "explore_drawer_lists_count_plural"
+            ) ?? `${count} lista${count === 1 ? "" : "s"}`).replace("{count}", String(count)),
       badge: badgeParts.join(" · "),
       hasBadge: badgeParts.length > 0
     };
