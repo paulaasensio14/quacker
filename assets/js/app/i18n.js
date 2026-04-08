@@ -222,14 +222,32 @@
       profile_save_error: "No se pudo guardar el perfil. Inténtalo de nuevo.",
       profile_restored: "Perfil restaurado",
       profile_restore_error: "No se pudo restaurar el perfil.",
+
       profile_fallback_name: "Sin nombre",
 
+      library_filter_type: "Tipo",
+      library_type_all: "Todo",
+      library_add_cta: "+ Añadir",
+      library_sort_label: "Orden",
+      library_sort_recent: "Última actividad",
+      library_sort_progress: "Progreso",
+      library_sort_az: "A–Z",
+      library_sort_added_desc: "Añadido recientemente",
+      library_sort_added_asc: "Añadido primero",
+      library_loading: "Actualizando…",
+      library_filter_status: "Estado",
+      library_status_all: "Todos",
+
       library_type_series: "Serie",
+
       library_type_movie: "Película",
+
       library_type_book: "Libro",
+
       library_type_game: "Videojuego",
 
       library_status_completed: "Completado",
+
       library_status_not_started: "No empezado",
       library_status_in_progress: "En progreso",
 
@@ -611,15 +629,33 @@
       profile_save_error: "Could not save profile. Please try again.",
       profile_restored: "Profile restored",
       profile_restore_error: "Could not restore profile.",
+
       profile_fallback_name: "No name",
 
+      library_filter_type: "Type",
+      library_type_all: "All",
+      library_add_cta: "+ Add",
+      library_sort_label: "Sort",
+      library_sort_recent: "Latest activity",
+      library_sort_progress: "Progress",
+      library_sort_az: "A–Z",
+      library_sort_added_desc: "Recently added",
+      library_sort_added_asc: "Added first",
+      library_loading: "Updating…",
+      library_filter_status: "Status",
+      library_status_all: "All",
+
       library_type_series: "Series",
+
       library_type_movie: "Movie",
+
       library_type_book: "Book",
+
       library_type_game: "Video game",
 
       library_status_completed: "Completed",
       library_status_not_started: "Not started",
+
       library_status_in_progress: "In progress",
 
       library_action_start: "Start",
