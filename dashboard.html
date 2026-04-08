@@ -149,7 +149,7 @@
     <div class="sidebar-footer">
       <div class="theme-row">
         <span class="nav-label" data-i18n="theme_light">Modo claro</span>
-        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" data-theme-toggle>
+        <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema" data-i18n-aria-label="theme_toggle_label" data-theme-toggle>
           <div class="theme-knob"></div>
         </button>
       </div>
@@ -182,6 +182,7 @@
             id="globalSearch"
             placeholder="Buscar contenido..."
             data-i18n-placeholder="global_search_placeholder"
+            data-i18n-aria-label="global_search_label"
             aria-label="Buscar"
             disabled
           />
@@ -190,6 +191,7 @@
             class="search-clear"
             id="globalSearchClear"
             type="button"
+            data-i18n-aria-label="global_search_clear"
             aria-label="Borrar búsqueda"
             tabindex="-1"
           >
@@ -210,12 +212,12 @@
       </div>
 
       <div class="topbar-right">
-        <div class="lang-pill" id="langPill" aria-label="Language switcher">
+        <div class="lang-pill" id="langPill" aria-label="Language switcher" data-i18n-aria-label="language_switcher_label">
           <button type="button" class="lang-btn" data-lang="en" aria-pressed="false">EN</button>
           <button type="button" class="lang-btn is-active" data-lang="es" aria-pressed="true">ES</button>
         </div>
 
-        <button class="icon-button" id="notifButton" aria-label="Notificaciones" data-open-notifications aria-controls="notifPanel" aria-expanded="false">
+        <button class="icon-button" id="notifButton" aria-label="Notificaciones" data-i18n-aria-label="notif_button_label" data-open-notifications aria-controls="notifPanel" aria-expanded="false">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 16V11a6 6 0 0 0-12 0v5"/>
