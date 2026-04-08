@@ -842,7 +842,7 @@ const ExploreModule = (() => {
     const rating =
       Number.isFinite(ratingNumber) && ratingNumber > 0
         ? `${ratingNumber.toFixed(1)} / 10`
-        : "Sin puntuación";
+        : (window.I18n?.t?.("explore_detail_no_rating") ?? "Sin puntuación");
 
     const author = _safeText(item?.meta?.author).trim();
     const platforms = _safeText(item?.meta?.platforms).trim();
@@ -850,28 +850,30 @@ const ExploreModule = (() => {
     const runtimeNumber = Number(item?.runtime || 0);
     const totalPagesNumber = Number(item?.meta?.totalPages || 0);
 
-    let primaryLabel = "Detalle";
-    let primaryValue = "Sin información adicional";
+    let primaryLabel = window.I18n?.t?.("explore_detail_label_meta") ?? "Detalle";
+    let primaryValue = window.I18n?.t?.("explore_detail_no_meta") ?? "Sin información adicional";
 
     if (author) {
-      primaryLabel = "Autor";
+      primaryLabel = window.I18n?.t?.("explore_detail_label_author") ?? "Autor";
       primaryValue = author;
     } else if (runtimeNumber > 0) {
-      primaryLabel = "Duración";
+      primaryLabel = window.I18n?.t?.("explore_detail_label_duration") ?? "Duración";
       primaryValue = `${runtimeNumber} min`;
     } else if (platforms) {
-      primaryLabel = "Plataformas";
+      primaryLabel = window.I18n?.t?.("explore_detail_label_platforms") ?? "Plataformas";
       primaryValue = platforms;
     } else if (totalPagesNumber > 0) {
-      primaryLabel = "Páginas";
-      primaryValue = `${totalPagesNumber} páginas`;
+      primaryLabel = window.I18n?.t?.("explore_detail_label_pages") ?? "Páginas";
+      primaryValue = `${totalPagesNumber} ${window.I18n?.t?.("library_pages") ?? "páginas"}`;
     } else if (statusLabel) {
-      primaryLabel = "Estado";
+      primaryLabel = window.I18n?.t?.("explore_detail_label_status") ?? "Estado";
       primaryValue = statusLabel;
     }
 
     return {
-      genres: genres.length ? genres.join(", ") : "Sin géneros",
+      genres: genres.length
+        ? genres.join(", ")
+        : (window.I18n?.t?.("explore_detail_no_genres") ?? "Sin géneros"),
       rating,
       primaryLabel,
       primaryValue
