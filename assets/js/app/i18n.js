@@ -782,6 +782,11 @@
       node.setAttribute("placeholder", t(key));
     });
 
+    root.querySelectorAll("[data-i18n-aria-label]").forEach((node) => {
+      const key = node.dataset.i18nAriaLabel;
+      node.setAttribute("aria-label", t(key));
+    });
+
     root.querySelectorAll("[data-lang]").forEach((btn) => {
       const isActive = btn.dataset.lang === currentLang;
       btn.classList.toggle("is-active", isActive);
