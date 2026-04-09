@@ -893,7 +893,7 @@ const LibraryUI = (() => {
           });
         });
       } catch (err) {
-        console.error("No se pudieron cargar listas para LibraryUI", err);
+        console.error("LibraryUI: failed to load lists for relationship state", err);
       }
 
       render();
