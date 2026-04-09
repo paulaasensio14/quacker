@@ -113,25 +113,29 @@ const Router = (() => {
 
     // 2) topbar title
     const titles = {
-      home: "Inicio",
-      explore: "Explorar",
-      library: "Mi biblioteca",
-      lists: "Listas personalizadas",
-      profile: "Mi perfil"
+      home: "nav_home",
+      explore: "nav_explore",
+      library: "nav_library",
+      lists: "nav_lists",
+      profile: "nav_profile"
     };
     const titleEl = document.querySelector("#sectionTitle");
-    if (titleEl) titleEl.textContent = titles[id] || "Quacker";
+    if (titleEl) {
+      titleEl.textContent = window.I18n?.t(titles[id]) || "Quacker";
+    }
 
     // 3) topbar subtitle (solo texto)
     const subtitles = {
-      home: "Resumen de tu actividad en Quacker",
-      explore: "Novedades y recomendaciones para añadir a tu ocio",
-      library: "Todos tus contenidos en un solo lugar",
-      lists: "Organiza tu contenido como quieras",
-      profile: "Ajusta tu cuenta de Quacker"
+      home: "home_summary",
+      explore: "explore_summary",
+      library: "library_summary",
+      lists: "lists_subtitle",
+      profile: "profile_summary"
     };
     const subtitleTextEl = document.querySelector("#sectionSubtitleText");
-    if (subtitleTextEl) subtitleTextEl.textContent = subtitles[id] || "";
+    if (subtitleTextEl) {
+      subtitleTextEl.textContent = window.I18n?.t(subtitles[id]) || "";
+    }
 
     // 3.5) Search global contextual (Biblioteca / Explorar)
     const globalSearch = document.querySelector("#globalSearch");
@@ -171,12 +175,14 @@ const Router = (() => {
     if (globalSearch) {
       if (id === "library") {
         setSearchEnabled(true);
-        globalSearch.placeholder = "Buscar en Mi biblioteca...";
+        globalSearch.placeholder =
+          window.I18n?.t("library_search_placeholder") || "";
         _restoreSearchForView("library", globalSearch);
         syncClearVisibility();
       } else if (id === "explore") {
         setSearchEnabled(true);
-        globalSearch.placeholder = "Buscar en Explorar...";
+        globalSearch.placeholder =
+          window.I18n?.t("explore_search_placeholder") || "";
         _restoreSearchForView("explore", globalSearch);
         syncClearVisibility();
       } else {
@@ -184,7 +190,8 @@ const Router = (() => {
         // pero el término queda persistido por vista (library/explore).
         globalSearch.value = "";
         setSearchEnabled(false);
-        globalSearch.placeholder = "Buscar contenido...";
+        globalSearch.placeholder =
+          window.I18n?.t("global_search_placeholder") || "";
         syncClearVisibility();
       }
     }

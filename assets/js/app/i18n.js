@@ -124,7 +124,8 @@
       home_continue_go_explore: "Explorar contenido",
       home_streak_label: "Racha",
       explore_summary: "Novedades y recomendaciones para añadir a tu ocio",
-      library_summary: "Resumen de tu actividad en Quacker",
+      library_summary: "Todos tus contenidos en un solo lugar",
+      library_search_placeholder: "Buscar en Mi biblioteca...",
       profile_summary: "Configura cómo apareces en Quacker.",
 
       home_notif_none_new: "Nada nuevo",
@@ -577,7 +578,8 @@
       home_continue_go_explore: "Explore content",
       home_streak_label: "Streak",
       explore_summary: "News and recommendations to add to your leisure",
-      library_summary: "Summary of your activity in Quacker",
+      library_summary: "All your content in one place",
+      library_search_placeholder: "Search in My Library...",
       profile_summary: "Set up how you appear in Quacker.",
 
       home_notif_none_new: "Nothing new",
