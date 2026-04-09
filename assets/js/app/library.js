@@ -2199,15 +2199,15 @@ async function openProgressModal(itemId) {
     const total = Number(item.meta.totalPages ?? 1);
     body.innerHTML = `
       <div class="modal-field">
-        <label>Páginas leídas</label>
+        <label>${t("library_progress_pages_read")}</label>
         <input id="pm_pagesRead" name="pagesRead" type="number" min="0" value="${read}">
       </div>
       <div class="modal-field">
-        <label>Total páginas</label>
+        <label>${t("library_progress_total_pages")}</label>
         <input id="pm_totalPages" name="totalPages" type="number" min="1" value="${total}">
       </div>
       <p style="color:var(--text-muted);font-size:.9rem;margin-top:6px;">
-        El porcentaje se calcula automáticamente.
+        ${t("library_progress_auto_percent")}
       </p>
     `;
   } else if (item.type === "serie") {
@@ -2216,15 +2216,15 @@ async function openProgressModal(itemId) {
     const pct = Number(item.progress ?? 0);
     body.innerHTML = `
       <div class="modal-field">
-        <label>Temporada</label>
+        <label>${t("library_progress_season")}</label>
         <input id="pm_season" name="season" type="number" min="1" value="${s}">
       </div>
       <div class="modal-field">
-        <label>Episodio</label>
+        <label>${t("library_progress_episode")}</label>
         <input id="pm_episode" name="episode" type="number" min="1" value="${e}">
       </div>
       <div class="modal-field">
-        <label>% (opcional)</label>
+        <label>${t("library_progress_percent_optional")}</label>
         <input id="pm_percent" name="progress" type="number" min="0" max="100" value="${pct}">
       </div>
     `;
@@ -2233,11 +2233,11 @@ async function openProgressModal(itemId) {
     const hours = Number(item.meta.hoursPlayed ?? 0);
     body.innerHTML = `
       <div class="modal-field">
-        <label>% completado</label>
+        <label>${t("library_progress_percent_completed")}</label>
         <input id="pm_percent" name="progress" type="number" min="0" max="100" value="${pct}">
       </div>
       <div class="modal-field">
-        <label>Horas jugadas (opcional)</label>
+        <label>${t("library_progress_hours_played_optional")}</label>
         <input id="pm_hours" name="hoursPlayed" type="number" min="0" value="${hours}">
       </div>
     `;
@@ -2245,10 +2245,10 @@ async function openProgressModal(itemId) {
     const isCompleted = item.status === "completed" || Number(item.progress ?? 0) >= 100;
     body.innerHTML = `
       <div class="modal-field">
-        <label>Estado</label>
+        <label>${t("library_progress_status")}</label>
         <select id="pm_movieStatus" name="movieStatus">
-          <option value="not_started" ${!isCompleted ? "selected" : ""}>No empezada</option>
-          <option value="completed" ${isCompleted ? "selected" : ""}>Vista</option>
+          <option value="not_started" ${!isCompleted ? "selected" : ""}>${t("library_progress_not_started")}</option>
+          <option value="completed" ${isCompleted ? "selected" : ""}>${t("library_progress_watched")}</option>
         </select>
       </div>
     `;
@@ -2256,7 +2256,7 @@ async function openProgressModal(itemId) {
     const pct = Number(item.progress ?? 0);
     body.innerHTML = `
       <div class="modal-field">
-        <label>% completado</label>
+        <label>${t("library_progress_percent_completed")}</label>
         <input id="pm_percent" type="number" min="0" max="100" value="${pct}">
       </div>
     `;
