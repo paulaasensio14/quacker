@@ -2257,7 +2257,7 @@ async function openProgressModal(itemId) {
     body.innerHTML = `
       <div class="modal-field">
         <label>${t("library_progress_percent_completed")}</label>
-        <input id="pm_percent" type="number" min="0" max="100" value="${pct}">
+        <input id="pm_percent" name="progress" type="number" min="0" max="100" value="${pct}">
       </div>
     `;
   }
