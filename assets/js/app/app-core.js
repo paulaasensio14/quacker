@@ -179,7 +179,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   function applySidebarCollapsed(collapsed) {
     if (!sidebar || !sidebarToggle) return;
     sidebar.classList.toggle("collapsed", collapsed);
-    sidebarToggle.setAttribute("aria-label", collapsed ? "Desplegar menú" : "Plegar menú");
+    sidebarToggle.setAttribute(
+      "aria-label",
+      window.I18n?.t?.(collapsed ? "sidebar_expand" : "sidebar_collapse") || ""
+    );
     sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
   }
 

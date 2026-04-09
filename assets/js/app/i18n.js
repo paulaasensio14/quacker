@@ -13,6 +13,8 @@
       nav_label: "Navegación",
       theme_light: "Modo claro",
       logout: "Cerrar sesión",
+      sidebar_expand: "Desplegar menú",
+      sidebar_collapse: "Plegar menú",
 
       settings_language_updated: "Idioma actualizado",
       settings_language_saved: "Preferencia guardada.",
@@ -466,6 +468,8 @@
       nav_label: "Navigation",
       theme_light: "Light mode",
       logout: "Log out",
+      sidebar_expand: "Expand menu",
+      sidebar_collapse: "Collapse menu",
 
       settings_language_updated: "Language updated",
       settings_language_saved: "Preference saved.",
