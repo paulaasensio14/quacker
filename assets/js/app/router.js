@@ -54,62 +54,8 @@ const Router = (() => {
     views[id] = element;
   }
 
-  function showView(id) {
-    if (!views[id]) return;
-
-    const prevView = currentView;
-
-    if (!mainScrollEl) {
-      mainScrollEl = document.querySelector("main.app-main");
-    }
-
-    if (prevView && mainScrollEl) {
-      viewScrollPositions[prevView] = mainScrollEl.scrollTop;
-    }
-
-    // Si salimos de Biblioteca o Explorar, persistimos el término actual del buscador global
-
-    const globalSearchPrev = document.querySelector("#globalSearch");
-
-    if (prevView && globalSearchPrev && (prevView === "library" || prevView === "explore")) {
-
-    _persistSearchForView(prevView, globalSearchPrev.value);
-
-    }
-
-    // 1) activar vista
-    if (currentView) {
-      views[currentView].classList.remove("is-active");
-    }
-
-    views[id].classList.add("is-active");
-    currentView = id;
-
-    try {
-      window.sessionStorage.setItem("quacker:last-view", id);
-    } catch (_) {}
-
-    if (window.location.hash !== `#${id}`) {
-      history.replaceState(null, "", `#${id}`);
-    }
-
-    // REFRESCAR LA WEB SIN CAMBIAR LA VISTA
-    document.dispatchEvent(
-      new CustomEvent("quacker:view-change", {
-        detail: { viewId: id }
-      })
-    );
-
-    requestAnimationFrame(() => {
-      if (!mainScrollEl) {
-        mainScrollEl = document.querySelector("main.app-main");
-      }
-
-      if (!mainScrollEl) return;
-
-      const savedScrollTop = viewScrollPositions[id] ?? 0;
-      mainScrollEl.scrollTop = savedScrollTop;
-    });
+  function updateViewChrome(id) {
+    if (!id || !views[id]) return;
 
     // 2) topbar title
     const titles = {
@@ -144,7 +90,6 @@ const Router = (() => {
 
     const setSearchEnabled = (enabled) => {
       if (!globalSearch) return;
-
       globalSearch.disabled = !enabled;
 
       if (globalSearchBox) {
@@ -204,6 +149,57 @@ const Router = (() => {
     }
   }
 
+  function showView(id) {
+    if (!views[id]) return;
+
+    const prevView = currentView;
+
+    if (!mainScrollEl) {
+      mainScrollEl = document.querySelector("main.app-main");
+    }
+
+    if (prevView && mainScrollEl) {
+      viewScrollPositions[prevView] = mainScrollEl.scrollTop;
+    }
+
+    // Si salimos de Biblioteca o Explorar, persistimos el término actual del buscador global
+    const globalSearchPrev = document.querySelector("#globalSearch");
+    if (prevView && globalSearchPrev && (prevView === "library" || prevView === "explore")) {
+      _persistSearchForView(prevView, globalSearchPrev.value);
+    }
+
+    // 1) activar vista
+    if (currentView) {
+      views[currentView].classList.remove("is-active");
+    }
+    views[id].classList.add("is-active");
+    currentView = id;
+
+    try {
+      window.sessionStorage.setItem("quacker:last-view", id);
+    } catch (_) {}
+
+    if (window.location.hash !== `#${id}`) {
+      history.replaceState(null, "", `#${id}`);
+    }
+
+    // REFRESCAR LA WEB SIN CAMBIAR LA VISTA
+    document.dispatchEvent(
+      new CustomEvent("quacker:view-change", { detail: { viewId: id } })
+    );
+
+    requestAnimationFrame(() => {
+      if (!mainScrollEl) {
+        mainScrollEl = document.querySelector("main.app-main");
+      }
+      if (!mainScrollEl) return;
+      const savedScrollTop = viewScrollPositions[id] ?? 0;
+      mainScrollEl.scrollTop = savedScrollTop;
+    });
+
+    updateViewChrome(id);
+  }
+
   function init() {
     document.querySelectorAll(".view").forEach((view) => {
       const id = view.getAttribute("data-view-id");
@@ -219,6 +215,11 @@ const Router = (() => {
           b.classList.toggle("is-active", b === btn)
         );
       });
+    });
+
+    document.addEventListener("quacker:lang-change", () => {
+      if (!currentView) return;
+      updateViewChrome(currentView);
     });
 
      // Buscar: botón X (bind una sola vez)
