@@ -310,27 +310,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     langBtns.forEach(btn => {
       if (btn.__quackerBound) return;
       btn.__quackerBound = true;
-
       btn.addEventListener("click", async () => {
         const lang = btn.dataset.lang;
         if (!lang) return;
-
         window.I18n?.setLang?.(lang);
         applyActiveLang(lang);
-
         try {
           await ApiClient.setUserLanguage(lang);
           window.toast?.({
-            title: window.I18n?.t?.("settings_language_updated") || "Idioma actualizado",
-            message: window.I18n?.t?.("settings_language_saved") || "Preferencia guardada.",
+            title: window.I18n?.t?.("settings_language_updated"),
+            message: window.I18n?.t?.("settings_language_saved"),
             type: "success",
             duration: 2000
           });
         } catch (e) {
           console.error(e);
           window.toast?.({
-            title: window.I18n?.t?.("settings_language_save_error") || "No se pudo guardar el idioma",
-            message: window.I18n?.t?.("home_notif_try_again") || "Inténtalo de nuevo.",
+            title: window.I18n?.t?.("settings_language_save_error"),
+            message: window.I18n?.t?.("home_notif_try_again"),
             type: "error",
             duration: 3000
           });
