@@ -1257,7 +1257,7 @@
 <div class="modal-overlay" id="addLibraryModal" aria-hidden="true">
   <div class="modal-card">
     <div class="modal-header">
-      <h3>Añadir a mi biblioteca</h3>
+      <h3 data-i18n="library_add_modal_title">Añadir a mi biblioteca</h3>
 
       <button class="modal-close" id="closeAddLibraryModal" aria-label="Cerrar" data-i18n-aria-label="common_close">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -1270,17 +1270,17 @@
 
     <div class="modal-content">
       <div class="modal-field">
-        <label>Título</label>
-        <input id="addLib_title" type="text" placeholder="Ej: Interstellar" />
+        <label data-i18n="library_add_modal_title_label">Título</label>
+        <input id="addLib_title" type="text" placeholder="Ej: Interstellar" data-i18n-placeholder="library_add_modal_title_placeholder" />
       </div>
 
       <div class="modal-field">
-        <label>Tipo</label>
+        <label data-i18n="library_add_modal_type_label">Tipo</label>
         <select id="addLib_type">
-          <option value="serie">Serie</option>
-          <option value="pelicula">Película</option>
-          <option value="book">Libro</option>
-          <option value="game">Videojuego</option>
+          <option value="serie" data-i18n="pills_series">Serie</option>
+          <option value="pelicula" data-i18n="pills_movies">Película</option>
+          <option value="book" data-i18n="pills_books">Libro</option>
+          <option value="game" data-i18n="pills_games">Videojuego</option>
         </select>
       </div>
 
@@ -1288,8 +1288,8 @@
     </div>
 
     <div class="modal-actions">
-      <button type="button" class="btn-secondary" id="cancelAddLibraryModal">Cancelar</button>
-      <button type="button" class="btn-primary" id="saveAddLibraryModal">Añadir</button>
+      <button type="button" class="btn-secondary" id="cancelAddLibraryModal" data-i18n="common_cancel">Cancelar</button>
+      <button type="button" class="btn-primary" id="saveAddLibraryModal" data-i18n="library_add_cta">Añadir</button>
     </div>
   </div>
 </div>
