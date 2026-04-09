@@ -186,6 +186,7 @@
       explore_action_view_more: "Ver más",
       explore_action_load_more: "Cargar más",
       explore_action_back: "Volver",
+      explore_modal_action_text: "¿Qué quieres hacer con este contenido?",
       
       pills_all: "Todo",
       pills_series: "Series",
@@ -676,6 +677,7 @@
       explore_action_view_more: "View more",
       explore_action_load_more: "Load more",
       explore_action_back: "Back",
+      explore_modal_action_text: "What do you want to do with this content?",
 
       pills_all: "All",
       pills_series: "Series",
