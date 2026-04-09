@@ -354,6 +354,11 @@
       lists_modal_create_title: "Nueva lista",
       common_save: "Guardar",
       common_create: "Crear",
+      common_name: "Nombre",
+      common_description_optional: "Descripción (opcional)",
+      lists_name_placeholder: "Ej: Series 2025",
+      lists_description_placeholder: "Una breve descripción...",
+      lists_visibility_label: "Visibilidad",
 
       lists_count_created_singular: "lista creada",
 
@@ -837,6 +842,11 @@
       lists_modal_create_title: "New list",
       common_save: "Save",
       common_create: "Create",
+      common_name: "Name",
+      common_description_optional: "Description (optional)",
+      lists_name_placeholder: "E.g. Series 2025",
+      lists_description_placeholder: "A short description...",
+      lists_visibility_label: "Visibility",
 
       lists_count_created_singular: "list created",
 
