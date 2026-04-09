@@ -1897,6 +1897,8 @@ const LibraryUI = (() => {
 // Exponer al scope global (Router lo necesita)
 window.LibraryUI = LibraryUI;
 
+const t = (key) => window.I18n?.t?.(key) ?? key;
+
 // ===============================
 // PROGRESS MODAL (Library)
 // ===============================
