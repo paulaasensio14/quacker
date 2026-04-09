@@ -2348,11 +2348,10 @@ async function saveProgressModal() {
   if (saveBtn && saveBtn.dataset.busy === "1") return;
 
   const prevSaveHtml = saveBtn?.innerHTML || t("common_save");
-
   if (saveBtn) {
     saveBtn.dataset.busy = "1";
     saveBtn.disabled = true;
-    saveBtn.innerHTML = `  ${t("library_add_saving")} `;
+    saveBtn.innerHTML = ` ${t("library_progress_saving")} `;
   }
 
   if (cancelBtn) cancelBtn.disabled = true;
