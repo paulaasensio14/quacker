@@ -305,6 +305,10 @@
       library_add_to_list_empty_title: "Aún no tienes listas",
       library_add_to_list_empty_text: "Crea una lista para poder guardar este contenido y organizar tu ocio.",
       library_add_to_list_empty_cta: "Crear lista",
+      library_add_modal_title: "Añadir a mi biblioteca",
+      library_add_modal_title_label: "Título",
+      library_add_modal_title_placeholder: "Ej: Interstellar",
+      library_add_modal_type_label: "Tipo",
 
       library_progress_item_not_found: "No se ha encontrado el contenido.",
       library_progress_total_pages_invalid: "El total de páginas debe ser mayor que 0.",
@@ -784,6 +788,10 @@
       library_add_to_list_empty_title: "You don't have any lists yet",
       library_add_to_list_empty_text: "Create a list to save this content and organize your free time.",
       library_add_to_list_empty_cta: "Create list",
+      library_add_modal_title: "Add to my library",
+      library_add_modal_title_label: "Title",
+      library_add_modal_title_placeholder: "E.g. Interstellar",
+      library_add_modal_type_label: "Type",
 
       library_progress_item_not_found: "The content couldn't be found.",
       library_progress_total_pages_invalid: "Total pages must be greater than 0.",
