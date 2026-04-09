@@ -331,14 +331,9 @@ const LibraryUI = (() => {
 
   async function _saveUIState() {
     try {
-      await ApiClient.setLibraryUIState?.({
-        sortMode,
-        typeFilter,
-        statusFilter,
-        searchTerm
-      });
+      await ApiClient.setLibraryUIState?.({ sortMode, typeFilter, statusFilter, searchTerm });
     } catch (e) {
-      console.error("LibraryUI: no se pudo guardar UI state", e);
+      console.error("LibraryUI: failed to persist UI state", e);
     }
   }
 
