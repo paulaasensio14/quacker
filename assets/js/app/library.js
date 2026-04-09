@@ -1591,7 +1591,7 @@ const LibraryUI = (() => {
       btn.disabled = true;
       btn.innerHTML = `
         <span class="btn-spinner" aria-hidden="true"></span>
-        <span>Actualizando…</span>
+        <span>${t("library_progress_updating")}</span>
       `;
 
       try {
