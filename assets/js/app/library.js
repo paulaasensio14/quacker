@@ -1676,11 +1676,11 @@ const LibraryUI = (() => {
 
         // Toast con botón deshacer
         window.toast?.({
-          title: "Contenido eliminado",
-          message: itemToRestore.title || "Contenido",
+          title: t("library_delete_success_title"),
+          message: itemToRestore.title || t("library_item_fallback_title"),
           type: "info",
           duration: 5000,
-          actionLabel: "Deshacer",
+          actionLabel: t("common_undo"),
           onAction: async () => {
             try {
               await ApiClient.createLibraryItem({
@@ -1701,16 +1701,16 @@ const LibraryUI = (() => {
               }
 
               window.toast?.({
-                title: "Contenido restaurado",
-                message: "Se ha vuelto a añadir a tu biblioteca.",
+                title: t("library_restore_success_title"),
+                message: t("library_restore_success_message"),
                 type: "success",
                 duration: 2400
               });
             } catch (e) {
               console.error(e);
               window.toast?.({
-                title: "No se pudo restaurar",
-                message: "Inténtalo de nuevo.",
+                title: t("library_restore_error_title"),
+                message: t("common_try_again"),
                 type: "error",
                 duration: 3000
               });
@@ -1720,8 +1720,8 @@ const LibraryUI = (() => {
       } catch (e) {
         console.error(e);
         window.toast?.({
-          title: "No se pudo eliminar",
-          message: "Inténtalo de nuevo.",
+          title: t("library_delete_error_title"),
+          message: t("common_try_again"),
           type: "error",
           duration: 3000
         });
@@ -1754,7 +1754,7 @@ const LibraryUI = (() => {
       btn.disabled = true;
       btn.innerHTML = `
         <span class="btn-spinner" aria-hidden="true"></span>
-        <span>Completando…</span>
+        <span>${t("library_progress_completing")}</span>
       `;
 
       try {

@@ -315,6 +315,11 @@
       library_progress_invalid: "Introduce un progreso válido.",
       library_progress_negative: "El progreso no puede ser negativo.",
       library_progress_movie_status_invalid: "Selecciona un estado válido para la película.",
+      library_restore_success_title: "Contenido restaurado",
+      library_restore_success_message: "Se ha vuelto a añadir a tu biblioteca.",
+      library_restore_error_title: "No se pudo restaurar",
+      library_item_fallback_title: "Contenido",
+      library_progress_completing: "Completando…",
 
       lists_subtitle: "Organiza tu contenido como quieras",
       lists_new: "Nueva lista",
@@ -771,6 +776,11 @@
       library_progress_invalid: "Enter a valid progress value.",
       library_progress_negative: "Progress cannot be negative.",
       library_progress_movie_status_invalid: "Select a valid movie status.",
+      library_restore_success_title: "Content restored",
+      library_restore_success_message: "It has been added back to your library.",
+      library_restore_error_title: "Could not restore",
+      library_item_fallback_title: "Content",
+      library_progress_completing: "Completing…",
 
       lists_subtitle: "Organize your content your way",
       lists_new: "New list",
