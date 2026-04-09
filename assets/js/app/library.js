@@ -2302,6 +2302,7 @@ async function saveProgressModal() {
     season: body?.querySelector('[name="season"]')?.value,
     episode: body?.querySelector('[name="episode"]')?.value,
     progress: body?.querySelector('[name="progress"]')?.value,
+    movieStatus: body?.querySelector('[name="movieStatus"]')?.value,
   };
 
   const errors = validateProgress(item, values);
