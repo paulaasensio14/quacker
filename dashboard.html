@@ -1189,7 +1189,7 @@
 <div class="modal-overlay" id="listModal" aria-hidden="true">
   <div class="modal-card">
     <div class="modal-header">
-      <h3 id="listModalTitle">Nueva lista</h3>
+      <h3 id="listModalTitle" data-i18n="lists_modal_create_title">Nueva lista</h3>
       <button class="modal-close" id="closeListModal" aria-label="Cerrar" data-i18n-aria-label="common_close">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -1212,9 +1212,9 @@
       <div class="modal-field">
         <label>Visibilidad</label>
         <select id="lm_visibility">
-          <option value="private">Privada</option>
-          <option value="public">Pública</option>
-          <option value="collab">Colaborativa</option>
+          <option value="private" data-i18n="lists_visibility_private">Privada</option>
+          <option value="public" data-i18n="lists_visibility_public">Pública</option>
+          <option value="collab" data-i18n="lists_visibility_collab">Colaborativa</option>
         </select>
       </div>
 
@@ -1222,8 +1222,8 @@
     </div>
 
     <div class="modal-actions">
-      <button type="button" class="btn-secondary" id="cancelListModal">Cancelar</button>
-      <button type="button" class="btn-primary" id="saveListModal">Crear</button>
+      <button type="button" class="btn-secondary" id="cancelListModal" data-i18n="common_cancel">Cancelar</button>
+      <button type="button" class="btn-primary" id="saveListModal" data-i18n="common_create">Crear</button>
     </div>
   </div>
 </div>
