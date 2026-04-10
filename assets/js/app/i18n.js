@@ -476,6 +476,19 @@
       explore_library_add_error: "No se pudo añadir",
       explore_try_again: "Inténtalo de nuevo.",
       explore_card_open_detail: "Abrir detalle de {title}",
+
+      type_series: "Serie",
+      type_movie: "Película",
+      type_book: "Libro",
+      type_game: "Videojuego",
+
+      explore_content_fallback: "contenido",
+      time_minutes: "min",
+
+      explore_drawer_list_resolve_error: "Se añadió a biblioteca, pero no se pudo guardarlo en la lista.",
+      explore_drawer_list_added: "Añadido a la lista.",
+      explore_drawer_list_already_added: "Ese contenido ya estaba en la lista.",
+      explore_drawer_list_add_error: "No se pudo añadir a la lista.",
       explore_drawer_toggle_show: "Ver más detalles",
       explore_drawer_toggle_hide: "Ocultar detalles",
       explore_drawer_label_type: "Tipo",
@@ -981,6 +994,19 @@
       explore_library_add_error: "Could not add",
       explore_try_again: "Please try again.",
       explore_card_open_detail: "Open details for {title}",
+
+      type_series: "Series",
+      type_movie: "Movie",
+      type_book: "Book",
+      type_game: "Game",
+
+      explore_content_fallback: "content",
+      time_minutes: "min",
+
+      explore_drawer_list_resolve_error: "Added to library, but could not be saved to the list.",
+      explore_drawer_list_added: "Added to the list.",
+      explore_drawer_list_already_added: "That content was already in the list.",
+      explore_drawer_list_add_error: "Could not add to the list.",
       explore_drawer_toggle_show: "View more details",
       explore_drawer_toggle_hide: "Hide details",
       explore_drawer_label_type: "Type",
