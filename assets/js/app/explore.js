@@ -810,23 +810,26 @@ const ExploreModule = (() => {
       summary:
         _safeText(item?.description) ||
         _safeText(item?.summary) ||
-        (window.I18n?.t?.("explore_drawer_no_description") ?? "Sin descripción disponible."),
+        window.I18n.t("explore_drawer_no_description"),
       detailType: resolvedTypeLabel,
       detailReleaseDate:
         item?.releaseDate
           ? _safeText(item.releaseDate)
-          : (window.I18n?.t?.("explore_drawer_no_date") ?? "Sin fecha"),
+          : window.I18n.t("explore_drawer_no_date"),
       detailLibraryState:
         item?.__inLibrary
-          ? (window.I18n?.t?.("explore_drawer_in_library") ?? "En biblioteca")
-          : (window.I18n?.t?.("explore_drawer_not_saved") ?? "No guardado"),
+          ? window.I18n.t("explore_drawer_in_library")
+          : window.I18n.t("explore_drawer_not_saved"),
       detailListsCount:
         count === 0
-          ? (window.I18n?.t?.("explore_drawer_not_in_lists") ?? "No está en listas")
-          : (window.I18n?.t?.(count === 1
-              ? "explore_drawer_lists_count_single"
-              : "explore_drawer_lists_count_plural"
-            ) ?? `${count} lista${count === 1 ? "" : "s"}`).replace("{count}", String(count)),
+          ? window.I18n.t("explore_drawer_not_in_lists")
+          : window.I18n
+              .t(
+                count === 1
+                  ? "explore_drawer_lists_count_single"
+                  : "explore_drawer_lists_count_plural"
+              )
+              .replace("{count}", String(count)),
       badge: badgeParts.join(" · "),
       hasBadge: badgeParts.length > 0
     };
