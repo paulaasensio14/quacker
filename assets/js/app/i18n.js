@@ -499,6 +499,9 @@
       explore_drawer_list_empty: "No hay listas disponibles",
       explore_drawer_list_loading: "Cargando listas...",
       explore_drawer_list_confirm: "Guardar en lista",
+      explore_cover_alt: "Portada de {title}",
+      explore_drawer_image_alt: "Imagen de {title}",
+      explore_content_fallback: "contenido",
 
       time_minutes: "min",
       },
@@ -1001,6 +1004,9 @@
       explore_drawer_list_empty: "No lists available",
       explore_drawer_list_loading: "Loading lists...",
       explore_drawer_list_confirm: "Save to list",
+      explore_cover_alt: "Cover of {title}",
+      explore_drawer_image_alt: "Image of {title}",
+      explore_content_fallback: "content",
 
       time_minutes: "min",
       },
