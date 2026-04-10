@@ -787,12 +787,12 @@ const ExploreModule = (() => {
     const count = Number(item?.__listsCount || 0);
     const normalizedType = _norm(item?.type);
     const resolvedTypeLabel =
-      TYPE_LABELS[normalizedType] ||
-      (normalizedType === "tv" ? "Serie" : "") ||
-      (normalizedType === "movie" ? "Película" : "") ||
-      (normalizedType === "libro" ? "Libro" : "") ||
-      (normalizedType === "videojuego" ? "Videojuego" : "") ||
-      "Contenido";
+      TYPE_LABELS[normalizedType]?.() ||
+      (normalizedType === "tv" ? window.I18n.t("home_type_series") : "") ||
+      (normalizedType === "movie" ? window.I18n.t("home_type_movie") : "") ||
+      (normalizedType === "libro" ? window.I18n.t("home_type_book") : "") ||
+      (normalizedType === "videojuego" ? window.I18n.t("home_type_game") : "") ||
+      window.I18n.t("lists_type_content");
 
     const metaParts = [
       resolvedTypeLabel,
