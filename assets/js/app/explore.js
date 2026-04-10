@@ -1117,7 +1117,7 @@ const ExploreModule = (() => {
     const placeholderOption = document.createElement("option");
     placeholderOption.value = "";
     placeholderOption.textContent =
-      window.I18n?.t?.("explore_drawer_list_placeholder") ?? "Selecciona una lista";
+      window.I18n.t("explore_drawer_list_placeholder");
     select.appendChild(placeholderOption);
 
     for (const list of safeLists) {
@@ -1127,7 +1127,7 @@ const ExploreModule = (() => {
       option.value = String(list.id);
       option.textContent =
         _safeText(list.name) ||
-        (window.I18n?.t?.("explore_drawer_list_untitled") ?? "Lista sin nombre");
+        window.I18n.t("explore_drawer_list_untitled");
       select.appendChild(option);
     }
 
@@ -1139,7 +1139,7 @@ const ExploreModule = (() => {
       const emptyOption = document.createElement("option");
       emptyOption.value = "";
       emptyOption.textContent =
-        window.I18n?.t?.("explore_drawer_list_empty") ?? "No hay listas disponibles";
+        window.I18n.t("explore_drawer_list_empty");
       select.appendChild(emptyOption);
     }
 
@@ -1169,7 +1169,7 @@ const ExploreModule = (() => {
       const loadingOption = document.createElement("option");
       loadingOption.value = "";
       loadingOption.textContent =
-        window.I18n?.t?.("explore_drawer_list_loading") ?? "Cargando listas...";
+        window.I18n.t("explore_drawer_list_loading");
       select.appendChild(loadingOption);
       select.disabled = true;
     }
