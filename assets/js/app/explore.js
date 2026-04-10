@@ -857,7 +857,7 @@ const ExploreModule = (() => {
       primaryValue = author;
     } else if (runtimeNumber > 0) {
       primaryLabel = window.I18n.t("explore_detail_label_duration");
-      primaryValue = `${runtimeNumber} min`;
+      primaryValue = `${runtimeNumber} ${window.I18n.t("time_minutes")}`;
     } else if (platforms) {
       primaryLabel = window.I18n.t("explore_detail_label_platforms");
       primaryValue = platforms;
