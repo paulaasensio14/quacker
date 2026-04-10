@@ -801,7 +801,7 @@ const ExploreModule = (() => {
 
     const badgeParts = [];
     if (item?.__inLibrary) {
-      badgeParts.push(window.I18n?.t?.("explore_drawer_in_library") ?? "En biblioteca");
+      badgeParts.push(window.I18n.t("explore_drawer_in_library"));
     }
 
     return {
