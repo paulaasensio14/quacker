@@ -2003,7 +2003,7 @@ const ExploreModule = (() => {
 
           _render();
 
-          _showDrawerInlineNote("Añadido a biblioteca.");
+          _showDrawerInlineNote(window.I18n.t("explore_library_added_title"));
         } finally {
           _setDrawerButtonLoading(addLibraryBtn, false);
           _renderDrawerAddCtaLabel();
