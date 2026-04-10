@@ -234,7 +234,7 @@ const ExploreModule = (() => {
   function _buildExploreCardViewModel(item) {
     const title = _safeText(item?.title) || (window.I18n?.t?.("common_untitled") ?? "Sin título");
     const normalizedType = _norm(item?.type);
-    const typeLabel = TYPE_LABELS[normalizedType] || (normalizedType === "tv" ? (window.I18n?.t?.("home_type_series") ?? "Serie") : "") || (normalizedType === "movie" ? (window.I18n?.t?.("home_type_movie") ?? "Película") : "") || (normalizedType === "libro" ? (window.I18n?.t?.("home_type_book") ?? "Libro") : "") || (normalizedType === "videojuego" ? (window.I18n?.t?.("home_type_game") ?? "Videojuego") : "") || (window.I18n?.t?.("lists_type_content") ?? "Contenido");
+    const typeLabel = TYPE_LABELS[normalizedType] || (normalizedType === "tv" ? window.I18n.t("home_type_series") : "") || (normalizedType === "movie" ? window.I18n.t("home_type_movie") : "") || (normalizedType === "libro" ? window.I18n.t("home_type_book") : "") || (normalizedType === "videojuego" ? window.I18n.t("home_type_game") : "") || window.I18n.t("lists_type_content");
     const isNew = _isNewByDate(item?.releaseDate);
     const saved = !!item?.__inLibrary;
     const saving = !!item?.__saving;
