@@ -3398,13 +3398,22 @@ main.app-main {
   border-radius: 14px;
   border: 2px solid var(--border-strong);
   background: #fff;
-  padding: 8px 9px;
-  padding-right: 34px;
+  padding: 8px 10px;
+  padding-right: 10px;
   margin-bottom: 8px;
   display: flex;
   gap: 8px;
   font-size: 0.8rem;
   position: relative;
+  align-items: center;
+}
+
+.notif-mark-btn {
+  opacity: 0;
+}
+
+.notif-card:hover .notif-mark-btn {
+  opacity: 1;
 }
 
 /* ===== Notificaciones: racha (hito) ===== */
@@ -3436,22 +3445,24 @@ main.app-main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: auto;
-  width: 26px;
-  height: 26px;
+  margin-left: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
-  border: 2px solid var(--border-soft);
-  background: #ffffff;
-  color: #111827;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
-              transform 0.1s ease;
+  opacity: 0.72;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 
 .notif-mark-btn svg {
   width: 14px;
   height: 14px;
+  display: block;
 }
 
 .notif-card:hover .notif-mark-btn {
@@ -3461,12 +3472,13 @@ main.app-main {
 }
 
 .notif-mark-btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--border-strong);
   outline-offset: 1px;
 }
 
 .notif-mark-btn:hover {
-  background: #f3f4f6;
+  background: transparent;
+  color: var(--text-main);
   transform: translateY(-1px);
 }
 
