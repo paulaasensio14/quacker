@@ -1549,8 +1549,8 @@ const ExploreModule = (() => {
         await _syncInLibraryFlags();
 
         window.toast?.({
-          title: window.I18n.t("explore_toast_library_added_title"),
-          message: window.I18n.t("explore_toast_library_added_message"),
+          title: window.I18n.t("explore_library_added_title"),
+          message: window.I18n.t("explore_library_added_desc"),
           type: "success",
           duration: 2400
         });
@@ -1611,8 +1611,8 @@ const ExploreModule = (() => {
         _applyFilters();
 
         window.toast?.({
-          title: window.I18n.t("explore_toast_library_add_error_title"),
-          message: window.I18n.t("explore_toast_library_add_error_message"),
+          title: window.I18n.t("explore_library_add_error"),
+          message: window.I18n.t("explore_try_again"),
           type: "error",
           duration: 3000
         });
