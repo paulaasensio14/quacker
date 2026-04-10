@@ -924,8 +924,8 @@ const ExploreModule = (() => {
     details.hidden = !__drawerExpanded;
 
     const expandLabel = __drawerExpanded
-      ? (window.I18n?.t?.("explore_drawer_toggle_hide") ?? "Ocultar detalles")
-      : (window.I18n?.t?.("explore_drawer_toggle_show") ?? "Ver más detalles");
+      ? window.I18n.t("explore_drawer_toggle_hide")
+      : window.I18n.t("explore_drawer_toggle_show");
 
     expandBtn.setAttribute("aria-pressed", __drawerExpanded ? "true" : "false");
     expandBtn.setAttribute("aria-label", expandLabel);
