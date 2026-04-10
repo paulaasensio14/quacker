@@ -107,7 +107,7 @@ const ExploreModule = (() => {
   function _normalizeExploreItem(rawItem, index = 0) {
     const raw = rawItem && typeof rawItem === "object" ? rawItem : {};
     const eid = raw.eid ?? `explore_${index + 1}`;
-    const title = _safeText(raw.title).trim() || (window.I18n?.t?.("common_untitled") ?? "Sin título");
+    const title = _safeText(raw.title).trim() || window.I18n.t("common_untitled");
 
     const rawType = _norm(raw.type);
     const type =
