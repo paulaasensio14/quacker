@@ -275,28 +275,22 @@ const ExploreModule = (() => {
   const SECTIONS = [
     {
       key: "novedades",
-      title: window.I18n?.t?.("explore_section_new") || "Novedades",
-      subtitle:
-        window.I18n?.t?.("explore_section_new_sub") ||
-        "Lanzamientos recientes para añadir a tu ocio",
+      title: window.I18n.t("explore_section_new"),
+      subtitle: window.I18n.t("explore_section_new_sub"),
       limit: 6,
       items: novedadesAll
     },
     {
       key: "tendencias",
-      title: window.I18n?.t?.("explore_section_trending") || "Tendencias",
-      subtitle:
-        window.I18n?.t?.("explore_section_trending_sub") ||
-        "Lo más comentado y popular en tu feed",
+      title: window.I18n.t("explore_section_trending"),
+      subtitle: window.I18n.t("explore_section_trending_sub"),
       limit: 6,
       items: tendenciasAll
     },
     {
       key: "recomendados",
-      title: window.I18n?.t?.("explore_section_recommended") || "Recomendados",
-      subtitle:
-        window.I18n?.t?.("explore_section_recommended_sub") ||
-        "Opciones que encajan con tu biblioteca",
+      title: window.I18n.t("explore_section_recommended"),
+      subtitle: window.I18n.t("explore_section_recommended_sub"),
       limit: 6,
       items: recomendadosAll
     }
@@ -317,7 +311,7 @@ const ExploreModule = (() => {
   // Helper para renderizar cards (reutiliza tu HTML actual)
   const renderCard = (item) => {
     const vm = _buildExploreCardViewModel(item);
-    const openDetailLabel = (window.I18n?.t?.("explore_card_open_detail") ?? "Abrir detalle de {title}")
+    const openDetailLabel = window.I18n.t("explore_card_open_detail")
       .replace("{title}", vm.title);
     return `
     <article
