@@ -252,7 +252,15 @@ const NotificationsUI = (() => {
       const markBtn = document.createElement("button");
       markBtn.type = "button";
       markBtn.className = "notif-mark-btn";
-      markBtn.textContent = window.I18n.t("home_notif_mark_seen");
+      markBtn.setAttribute("aria-label", window.I18n.t("home_notif_mark_seen"));
+
+      markBtn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+          aria-hidden="true">
+          <path d="M5 12l4 4 10-10"></path>
+        </svg>
+      `;
 
       markBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
