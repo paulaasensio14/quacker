@@ -1052,13 +1052,16 @@ const ExploreModule = (() => {
       const heroImage = backdrop || cover;
       const title = _safeText(item?.title).trim();
       const initials = title ? title.slice(0, 1).toUpperCase() : "Q";
+      const imageAlt = window.I18n
+        .t("explore_drawer_image_alt")
+        .replace("{title}", title || window.I18n.t("explore_content_fallback"));
 
       if (heroImage) {
         coverEl.innerHTML = `
           <img
             class="explore-drawer-cover-img"
             src="${heroImage}"
-            alt="Imagen de ${title || "contenido"}"
+            alt="${imageAlt}"
             loading="lazy"
             referrerpolicy="no-referrer"
             onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback');"
