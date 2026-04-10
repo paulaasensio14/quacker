@@ -1543,8 +1543,8 @@ const ExploreModule = (() => {
         await _syncInLibraryFlags();
 
         window.toast?.({
-          title: "Añadido a biblioteca",
-          message: "Se ha guardado en tu biblioteca.",
+          title: window.I18n.t("explore_toast_library_added_title"),
+          message: window.I18n.t("explore_toast_library_added_message"),
           type: "success",
           duration: 2400
         });
@@ -1605,8 +1605,8 @@ const ExploreModule = (() => {
         _applyFilters();
 
         window.toast?.({
-          title: "No se pudo añadir",
-          message: "Inténtalo de nuevo.",
+          title: window.I18n.t("explore_toast_library_add_error_title"),
+          message: window.I18n.t("explore_toast_library_add_error_message"),
           type: "error",
           duration: 3000
         });
