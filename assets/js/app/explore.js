@@ -805,7 +805,7 @@ const ExploreModule = (() => {
     }
 
     return {
-      title: _safeText(item?.title) || "Sin título",
+      title: _safeText(item?.title) || window.I18n.t("common_untitled"),
       meta: metaParts.join(" · "),
       summary:
         _safeText(item?.description) ||
