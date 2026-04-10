@@ -394,17 +394,17 @@ const ExploreModule = (() => {
           <div class="explore-section-actions">
             <span class="explore-section-count">${items.length}</span>
             ${canExpand
-              ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="expand" data-section="${key}">${window.I18n?.t?.("explore_action_view_more") ?? "Ver más"}</button>`
+              ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="expand" data-section="${key}">${window.I18n.t("explore_action_view_more")}</button>`
               : ""}
             ${canLoadMore
               ? `<button type="button" class="btn-ghost explore-section-btn"
                 data-explore-section-action="load-more"
                 data-section="${key}">
-                ${window.I18n?.t?.("explore_action_load_more") ?? "Cargar más"}
+                ${window.I18n.t("explore_action_load_more")}
               </button>`
               : ""}
             ${isExpanded
-              ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="collapse">${window.I18n?.t?.("explore_action_back") ?? "Volver"}</button>`
+              ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="collapse">${window.I18n.t("explore_action_back")}</button>`
               : ""}
           </div>
         </header>
