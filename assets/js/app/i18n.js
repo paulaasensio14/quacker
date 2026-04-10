@@ -499,6 +499,8 @@
       explore_drawer_list_empty: "No hay listas disponibles",
       explore_drawer_list_loading: "Cargando listas...",
       explore_drawer_list_confirm: "Guardar en lista",
+
+      time_minutes: "min",
       },
 
     en: {
@@ -999,6 +1001,8 @@
       explore_drawer_list_empty: "No lists available",
       explore_drawer_list_loading: "Loading lists...",
       explore_drawer_list_confirm: "Save to list",
+
+      time_minutes: "min",
       },
   };
 

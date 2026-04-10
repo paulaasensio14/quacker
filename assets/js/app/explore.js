@@ -162,6 +162,9 @@ const ExploreModule = (() => {
     const backdrop = _safeText(item?.backdrop).trim();
     const isGame = _norm(item?.type) === "game";
     const imageUrl = isGame ? (cover || backdrop) : cover;
+    const imageAlt = window.I18n
+      .t("explore_cover_alt")
+      .replace("{title}", title || window.I18n.t("explore_content_fallback"));
 
     if (imageUrl) {
       return `
@@ -169,7 +172,7 @@ const ExploreModule = (() => {
           <img
             class="explore-cover-img${isGame ? " explore-cover-img--game" : ""}"
             src="${imageUrl}"
-            alt="Portada de ${title || "contenido"}"
+            alt="${imageAlt}"
             loading="lazy"
             referrerpolicy="no-referrer"
             onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback');"
