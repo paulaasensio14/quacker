@@ -841,7 +841,7 @@ const ExploreModule = (() => {
     const rating =
       Number.isFinite(ratingNumber) && ratingNumber > 0
         ? `${ratingNumber.toFixed(1)} / 10`
-        : (window.I18n?.t?.("explore_detail_no_rating") ?? "Sin puntuación");
+        : window.I18n.t("explore_detail_no_rating");
 
     const author = _safeText(item?.meta?.author).trim();
     const platforms = _safeText(item?.meta?.platforms).trim();
@@ -849,30 +849,30 @@ const ExploreModule = (() => {
     const runtimeNumber = Number(item?.runtime || 0);
     const totalPagesNumber = Number(item?.meta?.totalPages || 0);
 
-    let primaryLabel = window.I18n?.t?.("explore_detail_label_meta") ?? "Detalle";
-    let primaryValue = window.I18n?.t?.("explore_detail_no_meta") ?? "Sin información adicional";
+    let primaryLabel = window.I18n.t("explore_detail_label_meta");
+    let primaryValue = window.I18n.t("explore_detail_no_meta");
 
     if (author) {
-      primaryLabel = window.I18n?.t?.("explore_detail_label_author") ?? "Autor";
+      primaryLabel = window.I18n.t("explore_detail_label_author");
       primaryValue = author;
     } else if (runtimeNumber > 0) {
-      primaryLabel = window.I18n?.t?.("explore_detail_label_duration") ?? "Duración";
+      primaryLabel = window.I18n.t("explore_detail_label_duration");
       primaryValue = `${runtimeNumber} min`;
     } else if (platforms) {
-      primaryLabel = window.I18n?.t?.("explore_detail_label_platforms") ?? "Plataformas";
+      primaryLabel = window.I18n.t("explore_detail_label_platforms");
       primaryValue = platforms;
     } else if (totalPagesNumber > 0) {
-      primaryLabel = window.I18n?.t?.("explore_detail_label_pages") ?? "Páginas";
-      primaryValue = `${totalPagesNumber} ${window.I18n?.t?.("library_pages") ?? "páginas"}`;
+      primaryLabel = window.I18n.t("explore_detail_label_pages");
+      primaryValue = `${totalPagesNumber} ${window.I18n.t("library_pages")}`;
     } else if (statusLabel) {
-      primaryLabel = window.I18n?.t?.("explore_detail_label_status") ?? "Estado";
+      primaryLabel = window.I18n.t("explore_detail_label_status");
       primaryValue = statusLabel;
     }
 
     return {
       genres: genres.length
         ? genres.join(", ")
-        : (window.I18n?.t?.("explore_detail_no_genres") ?? "Sin géneros"),
+        : window.I18n.t("explore_detail_no_genres"),
       rating,
       primaryLabel,
       primaryValue
