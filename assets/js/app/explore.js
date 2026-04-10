@@ -345,8 +345,8 @@ const ExploreModule = (() => {
       : "";
 
     const hasAny = visible.length > 0;
-    const resultsTitle = window.I18n?.t?.("explore_results_title") ?? "Resultados para";
-    const resultsShowing = (window.I18n?.t?.("explore_results_showing") ?? "Mostrando {count} resultado(s){suffix}")
+    const resultsTitle = window.I18n.t("explore_results_title");
+    const resultsShowing = window.I18n.t("explore_results_showing")
       .replace("{count}", String(visible.length))
       .replace("{suffix}", titleSuffix);
 
