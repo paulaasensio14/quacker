@@ -1223,7 +1223,7 @@ const ExploreModule = (() => {
 
       if (!libraryItemId) {
         _showDrawerInlineNotePersistent(
-          "Se añadió a biblioteca, pero no se pudo resolver el item para guardarlo en la lista."
+          window.I18n.t("explore_drawer_list_resolve_error")
         );
         return;
       }
@@ -1237,13 +1237,15 @@ const ExploreModule = (() => {
       let drawerNotePersistent = false;
 
       if (result?.ok && !result?.already) {
-        drawerNoteMessage = "Añadido a la lista.";
+        drawerNoteMessage = window.I18n.t("explore_drawer_list_added");
         drawerNotePersistent = false;
       } else if (result?.already) {
-        drawerNoteMessage = "Ese contenido ya estaba en la lista.";
+        drawerNoteMessage = window.I18n.t("explore_drawer_list_already_added");
         drawerNotePersistent = true;
       } else {
-        _showDrawerInlineNotePersistent("No se pudo añadir a la lista.");
+        _showDrawerInlineNotePersistent(
+          window.I18n.t("explore_drawer_list_add_error")
+        );
         return;
       }
 
