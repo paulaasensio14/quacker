@@ -338,16 +338,13 @@ const ExploreModule = (() => {
 
   const normalizedSearch = _norm(searchTerm);
 
-  if (normalizedSearch) {
-    const titleSuffix = typeFilter !== "all"
-      ? ` · ${TYPE_LABELS[typeFilter] || typeFilter}`
-      : "";
-
-    const hasAny = visible.length > 0;
-    const resultsTitle = window.I18n.t("explore_results_title");
-    const resultsShowing = window.I18n.t("explore_results_showing")
-      .replace("{count}", String(visible.length))
-      .replace("{suffix}", titleSuffix);
+    if (normalizedSearch) {
+      const titleSuffix = typeFilter !== "all" ? ` · ${TYPE_LABELS[typeFilter]?.() || typeFilter}` : "";
+      const hasAny = visible.length > 0;
+      const resultsTitle = window.I18n.t("explore_results_title");
+      const resultsShowing = window.I18n.t("explore_results_showing")
+        .replace("{count}", String(visible.length))
+        .replace("{suffix}", titleSuffix);
 
     container.innerHTML = hasAny
       ? `
