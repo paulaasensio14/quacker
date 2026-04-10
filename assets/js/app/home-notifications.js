@@ -46,7 +46,7 @@ const NotificationsUI = (() => {
   function getNotifIconSvg(kind = "check") {
     if (kind === "flame") {
       return `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 22c4.4 0 8-3.1 8-7.5 0-3.2-2-5.6-3.9-7.3-1.2-1.1-2.1-2.6-2.3-4.2C12.5 4.2 11 6 10.5 7.6c-.5 1.6-.3 3.4.6 4.8-2.3-1.1-3.9-3.4-3.9-6 0 0-3.2 2.6-3.2 8.1C4 18.9 7.6 22 12 22z"></path>
         </svg>
@@ -55,7 +55,7 @@ const NotificationsUI = (() => {
 
     if (kind === "spark" || kind === "streak") {
       return `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"></path>
         </svg>
@@ -64,7 +64,7 @@ const NotificationsUI = (() => {
 
     if (kind === "resume") {
       return `
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 12a9 9 0 1 0 3-6.7"></path>
           <path d="M3 3v6h6"></path>
@@ -74,7 +74,7 @@ const NotificationsUI = (() => {
 
     // default: check
     return `
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
         stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M5 12l4 4 10-10"></path>
       </svg>
