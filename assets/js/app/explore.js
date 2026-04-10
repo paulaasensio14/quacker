@@ -41,7 +41,7 @@ const ExploreModule = (() => {
     const btn = document.getElementById("exploreDrawerAddLibrary");
     if (!btn) return;
     if (btn.dataset?.busy === "1") return;
-    btn.textContent = window.I18n?.t?.("explore_drawer_add_library") ?? "Añadir a biblioteca";
+    btn.textContent = window.I18n.t("explore_drawer_add_library");
   }
 
   function _setExploreLoading(on) {
