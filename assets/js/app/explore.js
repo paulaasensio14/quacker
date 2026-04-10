@@ -2026,7 +2026,7 @@ const ExploreModule = (() => {
         const listId = select?.value;
 
         if (!listId) {
-          _showDrawerInlineNotePersistent("Selecciona una lista.");
+          _showDrawerInlineNotePersistent(window.I18n.t("explore_list_required"));
           return;
         }
 
