@@ -4,10 +4,10 @@ window.$all = window.$all || ((sel) => document.querySelectorAll(sel));
 
 // Labels globales (no sobrescribir si ya existen)
 window.TYPE_LABELS = window.TYPE_LABELS || {
-  serie: "Serie",
-  pelicula: "Película",
-  book: "Libro",
-  game: "Videojuego"
+  serie: () => window.I18n.t("home_type_series"),
+  pelicula: () => window.I18n.t("home_type_movie"),
+  book: () => window.I18n.t("home_type_book"),
+  game: () => window.I18n.t("home_type_game")
 };
 
 window.typeLabel = window.typeLabel || ((t) => {
@@ -18,7 +18,7 @@ window.typeLabel = window.typeLabel || ((t) => {
     book: "home_type_book",
     game: "home_type_game"
   };
-  return i18n?.t?.(map[t]) || window.TYPE_LABELS[t] || i18n?.t?.("lists_type_content") || "Contenido";
+  return i18n.t(map[t]) || window.TYPE_LABELS[t]?.() || i18n.t("lists_type_content");
 });
 
 // Meta visible (serie/libro/otros) para cards del Home
