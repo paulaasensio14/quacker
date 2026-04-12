@@ -256,21 +256,21 @@ const ExploreModule = (() => {
       key: "novedades",
       title: window.I18n.t("explore_section_new"),
       subtitle: window.I18n.t("explore_section_new_sub"),
-      limit: 6,
+      limit: 12,
       items: novedadesAll
     },
     {
       key: "tendencias",
       title: window.I18n.t("explore_section_trending"),
       subtitle: window.I18n.t("explore_section_trending_sub"),
-      limit: 6,
+      limit: 12,
       items: tendenciasAll
     },
     {
       key: "recomendados",
       title: window.I18n.t("explore_section_recommended"),
       subtitle: window.I18n.t("explore_section_recommended_sub"),
-      limit: 6,
+      limit: 12,
       items: recomendadosAll
     }
   ];
