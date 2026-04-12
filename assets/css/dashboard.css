@@ -1036,6 +1036,8 @@ main.app-main {
   cursor: pointer;
   padding: 0;
   display: block;
+
+  background: var(--card-bg);
 }
 
 .explore-card:hover {
