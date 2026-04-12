@@ -1162,7 +1162,7 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
                 console.error(e);
                 window.toast?.({
                   title: t("library_quick_progress_undo_error_title"),
-                  message: getLibraryUndoErrorMessage(e, t("common_try_again")),
+                  message: getLibraryUndoErrorMessage(e),
                   type: "error",
                   duration: 3200
                 });
