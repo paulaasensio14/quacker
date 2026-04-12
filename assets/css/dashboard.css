@@ -1003,9 +1003,25 @@ main.app-main {
 }
 
 .explore-section-count {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+
+  border-radius: 999px;
+
+  background: var(--bg-card);
+  border: 2px solid var(--border-strong);
+  box-shadow: 2px 2px 0 var(--border-strong);
+
+  color: var(--text-main);
 }
 
 .explore-card {
