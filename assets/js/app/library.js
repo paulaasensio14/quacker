@@ -1249,8 +1249,8 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
       console.error(e);
 
       window.toast?.({
-        title: "No se pudo completar",
-        message: getLibraryActionErrorMessage(e, "Inténtalo de nuevo."),
+        title: t("library_complete_error_title"),
+        message: t("common_try_again"),
         type: "error",
         duration: 3600
       });
