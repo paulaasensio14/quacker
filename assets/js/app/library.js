@@ -1429,7 +1429,7 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
 
       } catch (e) {
         console.error(e);
-        _showAddToListError("No se pudo añadir. Inténtalo de nuevo.");
+        _showAddToListError(t("library_add_to_list_generic_error"));
       } finally {
         if (btn) {
           btn.disabled = false;
