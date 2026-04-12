@@ -149,7 +149,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       if (viewId === "library") {
-        scheduleLibraryRefresh();
         return;
       }
 
@@ -159,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       if (viewId === "explore") {
-        window.ExploreModule?.refresh?.();
+        window.ExploreModule?.load?.();
         return;
       }
 
