@@ -555,6 +555,8 @@
       home_metric_streak_sub: "Daily activity on Quacker",
       home_continue_title: "Continue where you left off",
       home_continue_view_all: "View all",
+      home_continue_count_singular: "item",
+      home_continue_count_plural: "items",
       home_continue_completed: "Completed",
       home_continue_error_title: "Could not load",
       home_continue_error_text: "Please try again by reloading the view.",
