@@ -114,7 +114,7 @@ const ProfileModule = (() => {
     if (chipName) chipName.textContent = user?.name || t("profile_fallback_name");
 
     const welcomeName = $("#welcomeName");
-    if (welcomeName) welcomeName.textContent = user?.name || "Quacker";
+    if (welcomeName) welcomeName.textContent = user?.name || t("profile_fallback_name");
 
     const menuName = $("#profileMenuName");
     const menuHandle = $("#profileMenuHandle");
