@@ -4969,10 +4969,9 @@ body.dark-theme .notif-mark-btn:hover {
 /* ===== Explore visual cleanup ===== */
 
 .explore-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
 }
 
 /* ===== Explore compact catalog ===== */
