@@ -20,12 +20,10 @@ const ExploreModule = (() => {
   let sortMode = "recent";
   let searchTerm = "";
 
-  // Soft loading / debounce (Explorar)
+  // Debounce (Explorar)
 
   let __applyTimer = null;
   let __toolbarBound = false;
-  let __loadingMinTimer = null;
-  let __loadingStartedAt = 0;
 
   let __drawerOpen = false;
   let __drawerExpanded = false;
@@ -44,43 +42,14 @@ const ExploreModule = (() => {
     btn.textContent = window.I18n.t("explore_drawer_add_library");
   }
 
-  function _setExploreLoading(on) {
-    const view = document.getElementById("view-explore");
-    const el = document.getElementById("exploreLoading");
-    const empty = document.getElementById("exploreEmpty");
-
-    if (!view || !el) return;
-
-    if (on) {
-      __loadingStartedAt = performance.now();
-      view.classList.add("is-loading");
-      el.hidden = false;
-
-      if (empty) empty.hidden = true;
-    } else {
-      view.classList.remove("is-loading");
-      el.hidden = true;
-    }
-  }
-
   function _scheduleApplyFilters() {
     if (__applyTimer) clearTimeout(__applyTimer);
-    _setExploreLoading(true);
 
     __applyTimer = setTimeout(async () => {
       try {
         await load();
       } catch (e) {
         console.error("Explore remote search failed", e);
-      } finally {
-        const elapsed = performance.now() - __loadingStartedAt;
-        const minMs = 180;
-        const remaining = Math.max(0, minMs - elapsed);
-
-        if (__loadingMinTimer) clearTimeout(__loadingMinTimer);
-        __loadingMinTimer = setTimeout(() => {
-          _setExploreLoading(false);
-        }, remaining);
       }
     }, 250);
   }
@@ -1381,8 +1350,6 @@ const ExploreModule = (() => {
 
     }
 
-    _setExploreLoading(true);
-
     _renderExploreSkeleton();
 
     try {
@@ -1420,8 +1387,6 @@ const ExploreModule = (() => {
 
     _syncExploreToolbarUI();
     _applyFilters();
-
-    _setExploreLoading(false);
 
   }
 
