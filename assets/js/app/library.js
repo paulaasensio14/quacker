@@ -1120,10 +1120,17 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
       const res = await ApiClient.resumeLibraryItem(itemId);
 
       const justCompleted = !!res?.justCompleted;
-      const title = justCompleted ? "Contenido completado" : "Progreso actualizado";
+      const title = justCompleted
+        ? t("library_quick_progress_completed_title")
+        : t("library_quick_progress_updated_title");
+
       const message = justCompleted
-        ? "Se ha marcado como finalizado."
-        : (res?.deltaLabel ? ("Actualizado: " + String(res.deltaLabel)) : "Progreso actualizado");
+        ? t("library_quick_progress_completed_message")
+        : (
+            res?.deltaLabel
+              ? t("library_quick_progress_updated_with_label").replace("{label}", String(res.deltaLabel))
+              : t("library_quick_progress_updated_message")
+          );
 
       // Micro-feedback visual en la card
       playLibraryQuickFx(itemId, justCompleted ? "complete" : "progress");
@@ -1146,16 +1153,16 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
                 flashLibraryCard(itemId);
 
                 window.toast?.({
-                  title: "Cambios revertidos",
-                  message: "Se ha restaurado el estado anterior.",
+                  title: t("library_quick_progress_undo_success_title"),
+                  message: t("library_quick_progress_undo_success_message"),
                   type: "success",
                   duration: 2400
                 });
               } catch (e) {
                 console.error(e);
                 window.toast?.({
-                  title: "No se pudo deshacer",
-                  message: getLibraryUndoErrorMessage(e, "Inténtalo de nuevo."),
+                  title: t("library_quick_progress_undo_error_title"),
+                  message: getLibraryUndoErrorMessage(e, t("common_try_again")),
                   type: "error",
                   duration: 3200
                 });
@@ -1169,8 +1176,8 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
       console.error(e);
 
       window.toast?.({
-        title: "No se pudo actualizar",
-        message: getLibraryActionErrorMessage(e, "Inténtalo de nuevo."),
+        title: t("library_quick_progress_error_title"),
+        message: getLibraryActionErrorMessage(e, t("common_try_again")),
         type: "error",
         duration: 3600
       });
