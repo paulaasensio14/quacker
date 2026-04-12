@@ -975,6 +975,7 @@
       common_delete: "Delete",
       common_undo: "Undo",
       common_try_again: "Please try again.",
+      common_empty_value: "—",
       lists_modal_name_required: "Give the list a name.",
       lists_modal_saving: "Saving…",
       lists_modal_save_error: "The list could not be saved.",
