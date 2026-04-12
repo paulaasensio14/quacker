@@ -1215,8 +1215,7 @@ async function renderHomeDashboard() {
           ? "home_continue_count_singular"
           : "home_continue_count_plural";
 
-      continueCountLabel.textContent =
-        `${total} ${window.I18n.t(countKey)}`;
+      continueCountLabel.textContent = `${total} ${window.I18n.t(countKey)}`;
     }
 
     // Botón "Ver todo"
