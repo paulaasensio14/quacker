@@ -5734,11 +5734,16 @@ body.dark-theme .notif-mark-btn:hover {
   min-height: 132px;
 }
 
+.home-continue-empty .empty-state-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .home-continue-empty .empty-state-actions > .btn-primary,
 .home-continue-empty .empty-state-actions > .btn-secondary,
 .home-continue-empty .empty-state-actions > button {
-  width: 220px;
-  min-width: 220px;
+  flex: 1;                 /* 🔥 clave */
+  min-width: 0;            /* evita overflow raro */
   min-height: 42px;
   padding: 8px 16px;
   justify-content: center;
@@ -6387,10 +6392,14 @@ body.modal-open{
   margin-top: 4px;
 }
 
-.empty-state-actions .btn-primary,
-.empty-state-actions .btn-secondary {
+.home-continue-empty .empty-state-actions > .btn-primary,
+.home-continue-empty .empty-state-actions > .btn-secondary {
   width: 220px;
+  min-width: 220px;
+  min-height: 42px;
+  padding: 8px 16px;
   justify-content: center;
+  font-weight: 700;
 }
 
 @media (max-width: 768px) {
