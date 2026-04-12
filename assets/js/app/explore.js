@@ -14,7 +14,7 @@ const ExploreModule = (() => {
     recomendados: 0
   };
 
-  const LOAD_MORE_STEP = 6; // cuántos más se cargan cada vez
+  const LOAD_MORE_STEP = 12; // cuántos más se cargan cada vez
 
   let typeFilter = "all";
   let sortMode = "recent";
