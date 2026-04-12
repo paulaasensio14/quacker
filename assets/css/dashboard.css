@@ -912,10 +912,10 @@ main.app-main {
 }
 
 .explore-toolbar-right .library-sort {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 4px 10px;
   border: 2px solid var(--border-strong);
   border-radius: 999px;
@@ -933,21 +933,18 @@ main.app-main {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-main);
-  padding: 0 14px 0 0;
+  padding: 0;
   cursor: pointer;
   outline: none;
 }
 
 .explore-toolbar-right .library-sort .library-sort-icon {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
   color: var(--text-main);
+  flex: 0 0 auto;
 }
 
 .explore-reset-btn {
