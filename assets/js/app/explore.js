@@ -253,14 +253,20 @@ const ExploreModule = (() => {
   const weeklyPoolByType = Object.fromEntries(
     WEEKLY_PICK_TYPES.map((type) => [
       type,
-      notNew.filter((item) => item.type === type)
+      notNew.filter((item) => item.type === type).slice(0, WEEKLY_PICK_PER_TYPE)
     ])
   );
 
   const tendenciasAll = [];
 
-  for (const type of WEEKLY_PICK_TYPES) {
-    tendenciasAll.push(...weeklyPoolByType[type].slice(0, WEEKLY_PICK_PER_TYPE));
+  for (let round = 0; round < WEEKLY_PICK_PER_TYPE; round += 1) {
+    for (const type of WEEKLY_PICK_TYPES) {
+      const item = weeklyPoolByType[type][round];
+
+      if (item) {
+        tendenciasAll.push(item);
+      }
+    }
   }
 
   if (tendenciasAll.length < WEEKLY_PICK_LIMIT) {
