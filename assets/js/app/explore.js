@@ -242,10 +242,38 @@ const ExploreModule = (() => {
   // Novedades: todo lo “nuevo” (<= 30 días)
   const novedadesAll = visible.filter(isNewItem);
 
-  // Recomendados por Quacker / Quack Picks:
-  // selección temporal para v1 mientras no exista una fuente real de popularidad
+  // Destacados esta semana:
+  // mezcla equilibrada por tipo para v1 mientras no exista una fuente real de popularidad
   const notNew = visible.filter((it) => !isNewItem(it));
-  const tendenciasAll = notNew.slice(0, 12);
+
+  const WEEKLY_PICK_LIMIT = 12;
+  const WEEKLY_PICK_TYPES = ["serie", "pelicula", "book", "game"];
+  const WEEKLY_PICK_PER_TYPE = 3;
+
+  const weeklyPoolByType = Object.fromEntries(
+    WEEKLY_PICK_TYPES.map((type) => [
+      type,
+      notNew.filter((item) => item.type === type)
+    ])
+  );
+
+  const tendenciasAll = [];
+
+  for (const type of WEEKLY_PICK_TYPES) {
+    tendenciasAll.push(...weeklyPoolByType[type].slice(0, WEEKLY_PICK_PER_TYPE));
+  }
+
+  if (tendenciasAll.length < WEEKLY_PICK_LIMIT) {
+    const selectedIds = new Set(tendenciasAll.map((item) => String(item.eid)));
+
+    const remainingWeeklyItems = notNew.filter(
+      (item) => !selectedIds.has(String(item.eid))
+    );
+
+    tendenciasAll.push(
+      ...remainingWeeklyItems.slice(0, WEEKLY_PICK_LIMIT - tendenciasAll.length)
+    );
+  }
 
   // Recomendados: el resto (sin duplicar con tendencias)
   const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
