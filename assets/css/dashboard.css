@@ -973,6 +973,9 @@ main.app-main {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 28px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .explore-section-header {
