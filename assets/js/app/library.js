@@ -1632,9 +1632,7 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
       searchTerm = (global?.value || "").trim().toLowerCase();
 
       const sort = $("#librarySort");
-      if (sort) sort.value = sortMode; 
-
-      render();
+      if (sort) sort.value = sortMode;
     });
 
     // Abrir modal "Editar progreso"
