@@ -5734,6 +5734,14 @@ body.dark-theme .notif-mark-btn:hover {
   min-height: 132px;
 }
 
+.home-continue-empty .empty-state-actions > .btn-primary,
+.home-continue-empty .empty-state-actions > .btn-secondary,
+.home-continue-empty .empty-state-actions > button {
+  width: 220px;
+  min-width: 220px;
+  justify-content: center;
+}
+
 .home-backlog-empty {
   width: 100%;
 }
