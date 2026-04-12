@@ -1075,8 +1075,17 @@
   const savedLang = localStorage.getItem(STORAGE_KEY);
   let currentLang = messages[savedLang] ? savedLang : DEFAULT_LANG;
 
-  function t(key) {
-    return messages[currentLang]?.[key] ?? messages[DEFAULT_LANG]?.[key] ?? key;
+  function t(key, params) {
+    let value = messages[currentLang]?.[key] ?? messages[DEFAULT_LANG]?.[key] ?? key;
+
+    if (!params || typeof value !== "string") return value;
+
+    return value.replace(/\{\{\s*(\w+)\s*\}\}|\{\s*(\w+)\s*\}/g, (_, k1, k2) => {
+      const paramKey = k1 || k2;
+      return Object.prototype.hasOwnProperty.call(params, paramKey)
+        ? String(params[paramKey])
+        : _;
+    });
   }
 
   function applyTranslations(root = document) {
