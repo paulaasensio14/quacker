@@ -238,6 +238,7 @@ const ExploreModule = (() => {
     const title = _safeText(item?.title) || window.I18n.t("common_untitled");
     const normalizedType = _norm(item?.type);
     const typeLabel =
+      TYPE_LABELS[normalizedType]?.() ||
       (normalizedType === "tv" ? window.I18n.t("home_type_series") : "") ||
       (normalizedType === "movie" ? window.I18n.t("home_type_movie") : "") ||
       (normalizedType === "libro" ? window.I18n.t("home_type_book") : "") ||
