@@ -5742,12 +5742,13 @@ body.dark-theme .notif-mark-btn:hover {
 .home-continue-empty .empty-state-actions > .btn-primary,
 .home-continue-empty .empty-state-actions > .btn-secondary,
 .home-continue-empty .empty-state-actions > button {
-  flex: 1;                 /* 🔥 clave */
-  min-width: 0;            /* evita overflow raro */
+  flex: 1;
+  min-width: 0;
   min-height: 42px;
   padding: 8px 16px;
   justify-content: center;
   font-weight: 700;
+  margin-top: 0;
 }
 
 .home-backlog-empty {
