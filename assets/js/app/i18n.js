@@ -33,6 +33,8 @@
       home_metric_streak_sub: "Actividad diaria en Quacker",
       home_continue_title: "Continúa donde lo dejaste",
       home_continue_view_all: "Ver todo",
+      home_continue_count_singular: "contenido",
+      home_continue_count_plural: "contenidos",
       home_continue_completed: "Completado",
       home_continue_error_title: "No se pudo cargar",
       home_continue_error_text: "Vuelve a intentarlo recargando la vista.",
