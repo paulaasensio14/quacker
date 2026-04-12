@@ -931,25 +931,13 @@ main.app-main {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-main);
-  padding-right: 14px;
+  padding: 0;
   cursor: pointer;
   outline: none;
 }
 
 .explore-toolbar-right .library-sort {
   position: relative;
-}
-
-.explore-toolbar-right .library-sort::after {
-  content: "⌄";
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-52%);
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-main);
-  pointer-events: none;
 }
 
 .explore-reset-btn {
