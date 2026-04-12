@@ -40,6 +40,7 @@
       home_quick_progress_updated_fallback: "Progreso actualizado",
       home_quick_progress_completed_title: "Contenido completado",
       home_quick_progress_completed_message: "Se ha marcado como finalizado.",
+      home_quick_progress_updated_message: "Se ha actualizado el progreso.",
       home_quick_progress_resumed_after: "Retomado tras {days} {unit}",
       home_quick_progress_resumed_title: "Contenido retomado",
       home_continue_progress_done: "Progreso hecho",
