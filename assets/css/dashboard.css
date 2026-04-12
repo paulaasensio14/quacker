@@ -970,12 +970,9 @@ main.app-main {
 }
 
 .explore-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 28px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color);
+ display: flex;
+ flex-direction: column;
+ gap: 14px;
 }
 
 .explore-section-header {
@@ -988,14 +985,15 @@ main.app-main {
 }
 
 .explore-section-title {
-  margin: 0;
-  font-size: 1.1rem;
+ margin: 0;
+ font-size: 1.1rem;
 }
 
 .explore-section-sub {
-  margin: 4px 0 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
+ margin: 4px 0 0;
+ color: var(--text-muted);
+ font-size: 0.9rem;
+ max-width: 60ch;
 }
 
 .explore-section-actions {
