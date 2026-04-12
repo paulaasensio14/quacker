@@ -667,9 +667,14 @@ const LibraryUI = (() => {
     const isLibraryActive = document.querySelector("#view-library")?.classList.contains("is-active");
 
     if (countInline && isLibraryActive) {
+      const countKey =
+        filtered.length === 1
+          ? "library_count_singular"
+          : "library_count_plural";
+
       countInline.style.display = "inline";
       countInline.textContent =
-        ` · ${filtered.length} contenido${filtered.length === 1 ? "" : "s"}`;
+        ` · ${filtered.length} ${t(countKey)}`;
     }
 
     if (!isLibraryActive) return;
