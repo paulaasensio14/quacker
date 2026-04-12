@@ -188,7 +188,7 @@ async function renderHomeDashboard() {
 
         if (streakEl) {
           if (s <= 0) {
-            streakEl.textContent = "—";
+            streakEl.textContent = window.I18n.t("common_empty_value");
           } else {
             animateNumber(
               streakEl,
