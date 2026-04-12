@@ -354,27 +354,6 @@ const ExploreModule = (() => {
       .replace("{count}", String(visible.length))
       .replace("{suffix}", titleSuffix);
 
-    const searchSections = [
-      {
-        key: "tendencias",
-        title: window.I18n.t("explore_section_trending"),
-        subtitle: window.I18n.t("explore_section_trending_sub"),
-        items: visible.filter((item) => !item.__isNew).slice(0, 12)
-      },
-      {
-        key: "novedades",
-        title: window.I18n.t("explore_section_new"),
-        subtitle: window.I18n.t("explore_section_new_sub"),
-        items: visible.filter((item) => item.__isNew).slice(0, 12)
-      },
-      {
-        key: "recomendados",
-        title: window.I18n.t("explore_section_recommended"),
-        subtitle: window.I18n.t("explore_section_recommended_sub"),
-        items: visible.filter((item) => !item.__isNew).slice(12, 24)
-      }
-    ].filter((section) => section.items.length > 0);
-
     container.innerHTML = hasAny ? `
       <section class="explore-results">
         <div class="explore-results-head">
@@ -382,20 +361,9 @@ const ExploreModule = (() => {
           <p class="explore-section-sub">${resultsShowing}</p>
         </div>
 
-        ${searchSections.map((section) => `
-          <section class="explore-section" data-section="${section.key}">
-            <header class="explore-section-header">
-              <div>
-                <h3 class="explore-section-title">${section.title}</h3>
-                <p class="explore-section-sub">${section.subtitle}</p>
-              </div>
-            </header>
-
-            <div class="explore-grid">
-              ${section.items.map(renderCard).join("")}
-            </div>
-          </section>
-        `).join("")}
+        <div class="explore-grid">
+          ${visible.map(renderCard).join("")}
+        </div>
       </section>
     ` : "";
 
