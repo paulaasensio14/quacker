@@ -1048,7 +1048,7 @@ async function renderHomeDashboard() {
       btn.disabled = true;
       btn.innerHTML = `
         <span class="btn-spinner" aria-hidden="true"></span>
-        <span>Retomando…</span>
+        <span>${window.I18n.t("home_backlog_resuming")}</span>
       `;
     }
 
@@ -1156,8 +1156,8 @@ async function renderHomeDashboard() {
       // Si algo falla, restauramos estado visual y el render oficial (home-refresh) se encargará del DOM.
 
       window.toast?.({
-        title: "No se pudo retomar",
-        message: "Inténtalo de nuevo.",
+        title: window.I18n.t("home_backlog_resume_error_title"),
+        message: window.I18n.t("common_try_again"),
         type: "error",
         duration: 3600
       });
