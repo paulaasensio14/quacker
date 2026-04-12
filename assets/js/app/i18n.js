@@ -81,6 +81,7 @@
       home_backlog_loading_text: "Estamos revisando qué contenidos llevan tiempo sin movimiento.",
       home_last_activity_loading_title: "Cargando actividad…",
       home_last_activity_view_all: "Ver toda la actividad",
+      home_last_activity_open_library: "Abrir en Mi Biblioteca",
       home_activity_empty_title: "Sin actividad aún",
       home_activity_empty_text: "Haz progreso o completa algo para ver tu historial aquí.",
       home_activity_filters_label: "Filtros de actividad",
