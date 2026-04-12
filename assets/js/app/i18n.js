@@ -562,6 +562,7 @@
       home_quick_progress_updated_fallback: "Progress updated",
       home_quick_progress_completed_title: "Content completed",
       home_quick_progress_completed_message: "It has been marked as completed.",
+      home_quick_progress_updated_message: "Progress has been updated.",
       home_quick_progress_resumed_after: "Resumed after {days} {unit}",
       home_quick_progress_resumed_title: "Content resumed",
       home_continue_progress_done: "Progress done",
