@@ -914,11 +914,10 @@ main.app-main {
 .explore-toolbar-right .library-sort {
   display: inline-flex;
   align-items: center;
-  min-height: 42px;
-  padding: 0 14px;
+  padding: 4px 10px;
   border: 2px solid var(--border-strong);
   border-radius: 999px;
-  background: #fff;
+  background: var(--bg-card);
   box-shadow: 2px 2px 0 var(--border-strong);
 }
 
@@ -929,10 +928,10 @@ main.app-main {
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-main);
-  padding-right: 18px;
+  padding-right: 14px;
   cursor: pointer;
   outline: none;
 }
