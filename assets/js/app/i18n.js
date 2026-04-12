@@ -450,6 +450,7 @@
       common_delete: "Eliminar",
       common_undo: "Deshacer",
       common_try_again: "Inténtalo de nuevo.",
+      common_empty_value: "—",
       lists_modal_name_required: "Ponle un nombre a la lista.",
       lists_modal_saving: "Guardando…",
       lists_modal_save_error: "No se pudo guardar la lista.",
