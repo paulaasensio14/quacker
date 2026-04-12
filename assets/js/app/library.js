@@ -279,7 +279,7 @@ function closeAddToListModal() {
 }
 
 const LibraryUI = (() => {
-  const t = (key) => window.I18n?.t?.(key) ?? key;
+  const t = (key, params) => window.I18n?.t?.(key, params) ?? key;
 
   const savedFilters = loadLibraryFilters();
 
@@ -1906,7 +1906,7 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
 // Exponer al scope global (Router lo necesita)
 window.LibraryUI = LibraryUI;
 
-const t = (key) => window.I18n?.t?.(key) ?? key;
+const t = (key, params) => window.I18n?.t?.(key, params) ?? key;
 
 // ===============================
 // PROGRESS MODAL (Library)
