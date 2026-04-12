@@ -956,14 +956,13 @@ main.app-main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 0 16px;
+  padding: 4px 10px;
   border: 2px solid var(--border-strong);
   border-radius: 999px;
-  background: #fff;
+  background: var(--bg-card);
   color: var(--text-main);
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   font-weight: 600;
   box-shadow: 2px 2px 0 var(--border-strong);
   cursor: pointer;
