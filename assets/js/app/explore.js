@@ -371,16 +371,18 @@ const ExploreModule = (() => {
             ${canExpand
             ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="expand" data-section="${key}">${window.I18n.t("explore_action_view_more")}</button>`
             : ""}
+
             ${canLoadMore
-              ? `<button type="button" class="btn-ghost explore-section-btn"
-                data-explore-section-action="load-more"
-                data-section="${key}">
-                ${window.I18n.t("explore_action_load_more")}
-              </button>`
-              : ""}
+            ? `<button type="button" class="btn-ghost explore-section-btn"
+            data-explore-section-action="load-more"
+            data-section="${key}">
+            ${window.I18n.t("explore_action_load_more")}
+            </button>`
+            : ""}
+
             ${isExpanded
-              ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="collapse">${window.I18n.t("explore_action_back")}</button>`
-              : ""}
+            ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="collapse">${window.I18n.t("explore_action_back")}</button>`
+            : ""}
           </div>
         </header>
 
