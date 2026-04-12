@@ -912,6 +912,7 @@ main.app-main {
 }
 
 .explore-toolbar-right .library-sort {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -932,13 +933,21 @@ main.app-main {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-main);
-  padding: 0;
+  padding: 0 14px 0 0;
   cursor: pointer;
   outline: none;
 }
 
-.explore-toolbar-right .library-sort {
-  position: relative;
+.explore-toolbar-right .library-sort .library-sort-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--text-main);
 }
 
 .explore-reset-btn {
