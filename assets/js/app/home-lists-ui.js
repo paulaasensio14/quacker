@@ -1210,8 +1210,13 @@ async function renderHomeDashboard() {
 
     // Contador
     if (continueCountLabel) {
+      const countKey =
+        total === 1
+          ? "home_continue_count_singular"
+          : "home_continue_count_plural";
+
       continueCountLabel.textContent =
-        total + (total === 1 ? " contenido" : " contenidos");
+        `${total} ${window.I18n.t(countKey)}`;
     }
 
     // Botón "Ver todo"
