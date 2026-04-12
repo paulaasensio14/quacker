@@ -1080,35 +1080,6 @@ main.app-main {
   display: none;
 }
 
-.explore-loading {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -4px;
-  margin-bottom: 12px;
-}
-
-.explore-loading-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #fff;
-  border: 2px solid var(--border-strong);
-  box-shadow: 2px 2px 0 var(--border-strong);
-}
-
-.explore-loading-spinner {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.explore-loading-text {
-  font-size: 0.82rem;
-  font-weight: 600;
-} 
-
 @media (max-width: 768px) {
   .explore-section-grid {
     grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
