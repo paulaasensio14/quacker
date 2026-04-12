@@ -1127,9 +1127,9 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
       const message = justCompleted
         ? t("library_quick_progress_completed_message")
         : (
-            res?.deltaLabel
-              ? t("library_quick_progress_updated_with_label").replace("{label}", String(res.deltaLabel))
-              : t("library_quick_progress_updated_message")
+      res?.deltaLabel
+        ? t("library_quick_progress_updated_with_label", { label: String(res.deltaLabel) })
+        : t("library_quick_progress_updated_message")
           );
 
       // Micro-feedback visual en la card
