@@ -319,8 +319,8 @@ async function renderHomeDashboard() {
         if (typeIconEl) typeIconEl.innerHTML = getTypeIconSvg("book"); // icono neutro
 
       } else {
-        if (titleEl) titleEl.textContent = lastActivity.title || "—";
-        if (metaEl) metaEl.textContent = lastActivity.meta || "—";
+        if (titleEl) titleEl.textContent = lastActivity.title || window.I18n.t("common_empty_value");
+        if (metaEl) metaEl.textContent = lastActivity.meta || window.I18n.t("common_empty_value");
         if (timeEl) timeEl.textContent = lastActivity.timeAgo || "";
         if (barFill) barFill.style.width = (lastActivity.progressPercent || 0) + "%";
         if (labelEl) labelEl.textContent = lastActivity.progressLabel || "";
