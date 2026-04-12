@@ -604,6 +604,7 @@
       home_backlog_loading_text: "We are reviewing which content has not moved for a while.",
       home_last_activity_loading_title: "Loading activity…",
       home_last_activity_view_all: "View all activity",
+      home_last_activity_open_library: "Open in My Library",
       home_activity_empty_title: "No activity yet",
       home_activity_empty_text: "Make progress or complete something to see your history here.",
       home_activity_filters_label: "Activity filters",
