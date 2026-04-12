@@ -242,9 +242,10 @@ const ExploreModule = (() => {
   // Novedades: todo lo “nuevo” (<= 30 días)
   const novedadesAll = visible.filter(isNewItem);
 
-  // Tendencias: lo más “reciente” que NO sea nuevo (base para expandir)
+  // Recomendados por Quacker / Quack Picks:
+  // selección temporal para v1 mientras no exista una fuente real de popularidad
   const notNew = visible.filter((it) => !isNewItem(it));
-  const tendenciasAll = notNew.slice(0, 8); // base “ver más” sin API aún
+  const tendenciasAll = notNew.slice(0, 8);
 
   // Recomendados: el resto (sin duplicar con tendencias)
   const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
