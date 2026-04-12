@@ -183,6 +183,8 @@ const Router = (() => {
       history.replaceState(null, "", `#${id}`);
     }
 
+    updateViewChrome(id);
+
     // REFRESCAR LA WEB SIN CAMBIAR LA VISTA
     document.dispatchEvent(
       new CustomEvent("quacker:view-change", { detail: { viewId: id } })
@@ -196,8 +198,6 @@ const Router = (() => {
       const savedScrollTop = viewScrollPositions[id] ?? 0;
       mainScrollEl.scrollTop = savedScrollTop;
     });
-
-    updateViewChrome(id);
   }
 
   function init() {
