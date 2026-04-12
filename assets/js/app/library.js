@@ -1177,7 +1177,7 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
 
       window.toast?.({
         title: t("library_quick_progress_error_title"),
-        message: getLibraryActionErrorMessage(e, t("common_try_again")),
+        message: getLibraryActionErrorMessage(e),
         type: "error",
         duration: 3600
       });
