@@ -158,7 +158,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       if (viewId === "explore") {
-        window.ExploreModule?.load?.();
         return;
       }
 
