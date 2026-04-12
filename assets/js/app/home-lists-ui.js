@@ -580,8 +580,8 @@ async function renderHomeDashboard() {
                   <button type="button" class="btn-secondary btn-sm" id="btnBacklogGoLibrary">
                     ${window.I18n.t("home_backlog_go_library")}
                   </button>
-          
-                  <button type="button" class="btn-ghost btn-sm" id="btnBacklogGoExplore">
+
+                  <button type="button" class="btn-secondary btn-sm" id="btnBacklogGoExplore">
                     ${window.I18n.t("home_backlog_go_explore")}
                   </button>
                 </div>
