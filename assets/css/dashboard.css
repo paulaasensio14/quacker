@@ -914,6 +914,7 @@ main.app-main {
 .explore-toolbar-right .library-sort {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   padding: 4px 10px;
   border: 2px solid var(--border-strong);
   border-radius: 999px;
