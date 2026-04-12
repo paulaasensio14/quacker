@@ -1048,27 +1048,27 @@ const LibraryUI = (() => {
     }, 520);
   }
 
-  function getLibraryActionErrorMessage(err, fallback = "Inténtalo de nuevo.") {
-    const errorCode = err?.body?.error || err?.error || "";
+function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
+  const errorCode = err?.body?.error || err?.error || "";
 
-    if (errorCode === "not_found") {
-      return "Este contenido ya no existe o ha sido eliminado.";
-    }
-
-    if (errorCode === "invalid_status") {
-      return "El estado del contenido ya no es válido. Recarga la biblioteca e inténtalo otra vez.";
-    }
-
-    if (errorCode === "invalid_type") {
-      return "El tipo de contenido no es válido. Recarga la biblioteca e inténtalo otra vez.";
-    }
-
-    if (errorCode === "missing_title" || errorCode === "title_too_short" || errorCode === "title_too_long") {
-      return "El contenido tiene datos no válidos. Revísalo desde Editar.";
-    }
-
-    return fallback;
+  if (errorCode === "not_found") {
+    return t("library_error_not_found");
   }
+
+  if (errorCode === "invalid_status") {
+    return t("library_error_invalid_status");
+  }
+
+  if (errorCode === "invalid_type") {
+    return t("library_error_invalid_type");
+  }
+
+  if (errorCode === "missing_title" || errorCode === "title_too_short" || errorCode === "title_too_long") {
+    return t("library_error_invalid_title_data");
+  }
+
+  return fallback;
+}
 
   function getLibraryUndoErrorMessage(err, fallback = "Inténtalo de nuevo.") {
     const errorCode = err?.body?.error || err?.error || "";
