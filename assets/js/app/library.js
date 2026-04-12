@@ -1070,19 +1070,19 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
   return fallback;
 }
 
-  function getLibraryUndoErrorMessage(err, fallback = "Inténtalo de nuevo.") {
+  function getLibraryUndoErrorMessage(err, fallback = t("common_try_again")) {
     const errorCode = err?.body?.error || err?.error || "";
 
     if (errorCode === "not_found") {
-      return "Este contenido ya no existe o ya fue eliminado.";
+      return t("library_undo_error_not_found");
     }
 
     if (errorCode === "invalid_status") {
-      return "El estado ya no es válido. Recarga la biblioteca e inténtalo otra vez.";
+      return t("library_undo_error_invalid_status");
     }
 
     if (errorCode === "invalid_type") {
-      return "El tipo de contenido ya no es válido. Recarga la biblioteca e inténtalo otra vez.";
+      return t("library_undo_error_invalid_type");
     }
 
     if (
@@ -1090,7 +1090,7 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
       errorCode === "title_too_short" ||
       errorCode === "title_too_long"
     ) {
-      return "Los datos del contenido ya no son válidos. Revísalo desde Editar.";
+      return t("library_undo_error_invalid_title_data");
     }
 
     return fallback;
