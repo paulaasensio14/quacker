@@ -567,6 +567,8 @@
       home_quick_progress_resumed_title: "Content resumed",
       home_continue_progress_done: "Progress done",
       home_backlog_resume: "Resume",
+      home_backlog_resuming: "Resuming…",
+      home_backlog_resume_error_title: "Could not resume",
 
       home_backlog_empty_in_progress_title: "You have no forgotten backlog",
 
