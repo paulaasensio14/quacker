@@ -459,7 +459,7 @@ async function renderHomeDashboard() {
         if (isCompleted) {
           rewardEl.textContent = `${window.I18n.t("home_challenge_reward_completed_prefix")} · ${challenge.rewardLabel}`;
         } else {
-          rewardEl.textContent = challenge.rewardLabel || "–";
+          rewardEl.textContent = challenge.rewardLabel || window.I18n.t("common_empty_value");
         }
       }
 
