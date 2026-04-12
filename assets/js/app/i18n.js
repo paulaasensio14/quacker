@@ -45,6 +45,8 @@
       home_quick_progress_resumed_title: "Contenido retomado",
       home_continue_progress_done: "Progreso hecho",
       home_backlog_resume: "Retomar",
+      home_backlog_resuming: "Retomando…",
+      home_backlog_resume_error_title: "No se pudo retomar",
 
       home_backlog_empty_in_progress_title: "No tienes backlog olvidado",
       home_backlog_empty_idle_title: "Todavía no hay backlog",
