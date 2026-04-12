@@ -5725,13 +5725,6 @@ body.dark-theme .notif-mark-btn:hover {
   line-height: 1.35;
 }
 
-.empty-state-actions {
-  margin-top: 10px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .home-continue-empty {
   grid-column: 1 / -1;
 }
@@ -6385,7 +6378,7 @@ body.modal-open{
 
 .empty-state-actions .btn-primary,
 .empty-state-actions .btn-secondary {
-  min-width: 220px;
+  width: 220px;
 }
 
 @media (max-width: 768px) {
