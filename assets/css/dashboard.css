@@ -998,8 +998,7 @@ main.app-main {
 .explore-section-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .explore-section-count {
@@ -1007,21 +1006,22 @@ main.app-main {
   align-items: center;
   justify-content: center;
 
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
 
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1;
+  font-size: 0.8rem;
+  font-weight: 800;
 
   border-radius: 999px;
 
-  background: var(--bg-card);
+  background: var(--bg-yellow);
   border: 2px solid var(--border-strong);
   box-shadow: 2px 2px 0 var(--border-strong);
 
-  color: var(--text-main);
+  color: #111;
+
+  transform: translateY(-1px); /* 👈 lo alinea visualmente con botones */
 }
 
 .explore-card {

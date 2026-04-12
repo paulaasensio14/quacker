@@ -367,10 +367,9 @@ const ExploreModule = (() => {
           </div>
 
           <div class="explore-section-actions">
-            <span class="explore-section-count">${items.length}</span>
             ${canExpand
-              ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="expand" data-section="${key}">${window.I18n.t("explore_action_view_more")}</button>`
-              : ""}
+            ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="expand" data-section="${key}">${window.I18n.t("explore_action_view_more")}</button>`
+            : ""}
             ${canLoadMore
               ? `<button type="button" class="btn-ghost explore-section-btn"
                 data-explore-section-action="load-more"
