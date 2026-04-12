@@ -346,33 +346,58 @@ const ExploreModule = (() => {
 
   const normalizedSearch = _norm(searchTerm);
 
-    if (normalizedSearch) {
-      const titleSuffix = typeFilter !== "all" ? ` · ${TYPE_LABELS[typeFilter]?.() || typeFilter}` : "";
-      const hasAny = visible.length > 0;
-      const resultsTitle = window.I18n.t("explore_results_title");
-      const resultsShowing = window.I18n.t("explore_results_showing")
-        .replace("{count}", String(visible.length))
-        .replace("{suffix}", titleSuffix);
+  if (normalizedSearch) {
+    const titleSuffix = typeFilter !== "all" ? ` · ${TYPE_LABELS[typeFilter]?.() || typeFilter}` : "";
+    const hasAny = visible.length > 0;
+    const resultsTitle = window.I18n.t("explore_results_title");
+    const resultsShowing = window.I18n.t("explore_results_showing")
+      .replace("{count}", String(visible.length))
+      .replace("{suffix}", titleSuffix);
 
-    container.innerHTML = hasAny
-      ? `
-        <section class="explore-section explore-section--search-results" data-section="search-results">
-          <header class="explore-section-header">
-            <div>
-              <h2 class="explore-section-title">${resultsTitle} “${searchTerm}”</h2>
-              <p class="explore-section-sub">${resultsShowing}</p>
-            </div>
-            <div class="explore-section-actions">
-              <span class="explore-section-count">${visible.length}</span>
-            </div>
-          </header>
+    const searchSections = [
+      {
+        key: "tendencias",
+        title: window.I18n.t("explore_section_trending"),
+        subtitle: window.I18n.t("explore_section_trending_sub"),
+        items: visible.filter((item) => !item.__isNew).slice(0, 12)
+      },
+      {
+        key: "novedades",
+        title: window.I18n.t("explore_section_new"),
+        subtitle: window.I18n.t("explore_section_new_sub"),
+        items: visible.filter((item) => item.__isNew).slice(0, 12)
+      },
+      {
+        key: "recomendados",
+        title: window.I18n.t("explore_section_recommended"),
+        subtitle: window.I18n.t("explore_section_recommended_sub"),
+        items: visible.filter((item) => !item.__isNew).slice(12, 24)
+      }
+    ].filter((section) => section.items.length > 0);
 
-          <div class="explore-section-grid">
-            ${visible.map(renderCard).join("")}
-          </div>
-        </section>
-      `
-      : "";
+    container.innerHTML = hasAny ? `
+      <section class="explore-results">
+        <div class="explore-results-head">
+          <h2 class="explore-section-title">${resultsTitle} “${searchTerm}”</h2>
+          <p class="explore-section-sub">${resultsShowing}</p>
+        </div>
+
+        ${searchSections.map((section) => `
+          <section class="explore-section" data-section="${section.key}">
+            <header class="explore-section-header">
+              <div>
+                <h3 class="explore-section-title">${section.title}</h3>
+                <p class="explore-section-sub">${section.subtitle}</p>
+              </div>
+            </header>
+
+            <div class="explore-grid">
+              ${section.items.map(renderCard).join("")}
+            </div>
+          </section>
+        `).join("")}
+      </section>
+    ` : "";
 
     container.hidden = !hasAny;
     if (empty) empty.hidden = hasAny;
