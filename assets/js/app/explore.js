@@ -197,9 +197,9 @@ const ExploreModule = (() => {
     `;
 
     container.innerHTML = [
-      renderSkeletonSection(window.I18n.t("explore_section_new"), 6),
-      renderSkeletonSection(window.I18n.t("explore_section_trending"), 6),
-      renderSkeletonSection(window.I18n.t("explore_section_recommended"), 6)
+      renderSkeletonSection(window.I18n.t("explore_section_new"), 12),
+      renderSkeletonSection(window.I18n.t("explore_section_trending"), 12),
+      renderSkeletonSection(window.I18n.t("explore_section_recommended"), 12)
     ].join("");
   }
 
