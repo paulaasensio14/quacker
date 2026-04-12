@@ -2075,11 +2075,11 @@ main.app-main {
   box-shadow: 1px 1px 0 var(--border-strong);
 }
 
-.btn-primary.btn-sm {
+.btn-primary.btn-sm,
+.btn-secondary.btn-sm {
   padding: 6px 12px;
   font-size: 0.8rem;
   box-shadow: 2px 2px 0 var(--border-strong);
-  margin-top: 10px;
 }
 
 /* ===== ÚLTIMA ACTIVIDAD ===== */
