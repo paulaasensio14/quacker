@@ -1014,7 +1014,11 @@ const LibraryUI = (() => {
     btn.classList.toggle("is-added", !!isAdded);
 
     const label = btn.querySelector(".lib-list-label");
-    if (label) label.textContent = isAdded ? "En listas" : "Lista";
+    if (label) {
+      label.textContent = isAdded
+        ? t("library_card_in_lists")
+        : t("lists_detail_title");
+    }
 
     if (pulse) {
       btn.classList.remove("is-pulse");
