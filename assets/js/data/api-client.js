@@ -299,13 +299,20 @@ const ApiClient = (() => {
       { type: "game", limit: 3 }
     ];
 
-    const results = await Promise.all(
-      FEATURED_REQUESTS.map(({ type, limit }) =>
-        getExploreFeed({ type, sort: "weekly", limit })
-          .then((res) => res?.items || [])
-          .catch(() => [])
-      )
-    );
+    const results = [];
+
+    for (const { type, limit } of FEATURED_REQUESTS) {
+      try {
+        const res = await getExploreFeed({ type, sort: "weekly", limit });
+        results.push(res?.items || []);
+      } catch (e) {
+        console.warn(`[ApiClient] weekly featured failed for ${type}`, e);
+        results.push([]);
+      }
+
+      // pequeña pausa para evitar rate limit
+      await new Promise((r) => setTimeout(r, 200));
+    }
 
     return results.flat();
   }
