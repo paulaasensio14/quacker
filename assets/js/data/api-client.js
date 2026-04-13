@@ -292,6 +292,17 @@ const ApiClient = (() => {
   async function getWeeklyFeaturedExploreFeed() {
     if (!_isHttp()) return [];
 
+    const now = Date.now();
+    const cacheAge = now - _weeklyFeaturedCache.timestamp;
+
+    if (
+      Array.isArray(_weeklyFeaturedCache.items) &&
+      _weeklyFeaturedCache.items.length > 0 &&
+      cacheAge < WEEKLY_FEATURED_CACHE_TTL_MS
+    ) {
+      return _weeklyFeaturedCache.items.slice();
+    }
+
     const FEATURED_REQUESTS = [
       { type: "serie", limit: 5 },
       { type: "pelicula", limit: 5 },
@@ -312,8 +323,23 @@ const ApiClient = (() => {
       await new Promise((r) => setTimeout(r, 200));
     }
 
-    return results.flat();
+    const mergedItems = results.flat();
+
+    if (mergedItems.length > 0) {
+      _weeklyFeaturedCache = {
+        timestamp: Date.now(),
+        items: mergedItems.slice()
+      };
+    }
+
+    return mergedItems;
   }
+
+  const WEEKLY_FEATURED_CACHE_TTL_MS = 3 * 60 * 1000;
+  let _weeklyFeaturedCache = {
+    timestamp: 0,
+    items: []
+  };
 
   async function getExploreItemDetail({ source, type, externalId }) {
     if (!_isHttp()) return null;
