@@ -5,9 +5,21 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
-import { searchTmdb, getTmdbDetail } from "./adapters/tmdb.js";
-import { searchGoogleBooks, getGoogleBookDetail } from "./adapters/google-books.js";
-import { searchRawg, getRawgDetail } from "./adapters/rawg.js";
+import {
+ searchTmdb,
+ getTmdbDetail,
+ getWeeklyTrendingTmdbByType
+} from "./adapters/tmdb.js";
+import {
+ searchGoogleBooks,
+ getGoogleBookDetail,
+ getWeeklyFeaturedGoogleBooks
+} from "./adapters/google-books.js";
+import {
+ searchRawg,
+ getRawgDetail,
+ getWeeklyFeaturedRawg
+} from "./adapters/rawg.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -706,75 +718,138 @@ const EXPLORE_FEED = [
 ];
 
 app.get("/api/explore", _requireAuth, async (req, res) => {
-  res.set("Cache-Control", "no-store");
-  const q = String(req.query.q || "").trim();
+ res.set("Cache-Control", "no-store");
 
-  try {
-    if (q) {
-      const [tmdbResult, googleBooksResult, rawgResult] = await Promise.allSettled([
-        searchTmdb(q),
-        searchGoogleBooks(q),
-        searchRawg(q)
-      ]);
+ const q = String(req.query.q || "").trim();
+ const type = String(req.query.type || "").trim().toLowerCase();
+ const sort = String(req.query.sort || "").trim().toLowerCase();
+ const limit =
+ Number.isFinite(Number(req.query.limit)) && Number(req.query.limit) > 0
+ ? Number(req.query.limit)
+ : 0;
 
-      if (tmdbResult.status === "rejected") {
-        console.error("[/api/explore] TMDB search failed:", tmdbResult.reason);
-      }
+ try {
+  if (q) {
+  const [tmdbResult, googleBooksResult, rawgResult] = await Promise.allSettled([
+  searchTmdb(q),
+  searchGoogleBooks(q),
+  searchRawg(q)
+  ]);
 
-      if (googleBooksResult.status === "rejected") {
-        console.error("[/api/explore] Google Books search failed:", googleBooksResult.reason);
-      }
-
-      if (rawgResult.status === "rejected") {
-        console.error("[/api/explore] RAWG search failed:", rawgResult.reason);
-      }
-
-      const tmdbItems =
-        tmdbResult.status === "fulfilled" && Array.isArray(tmdbResult.value)
-          ? tmdbResult.value
-          : [];
-
-      const googleBooksItems =
-        googleBooksResult.status === "fulfilled" && Array.isArray(googleBooksResult.value)
-          ? googleBooksResult.value
-          : [];
-
-      const rawgItems =
-      rawgResult.status === "fulfilled" && Array.isArray(rawgResult.value)
-        ? rawgResult.value
-        : [];
-        
-      const rankedItems = _rankAndMixExploreItems(q, tmdbItems, googleBooksItems, rawgItems);
-
-      return res.json({
-        items: rankedItems
-      });
-    }
-    const db = _readDb();
-
-    const bucket = _getUserBucket(db, req.session.userId);
-
-    const libraryItems = (bucket.library || []).map((item) => ({
-      eid: item?.id ? `library:${String(item.id)}` : _uid(),
-      source: "library",
-      externalId: item?.id ? String(item.id) : "",
-      type: String(item?.type || "").trim(),
-      title: String(item?.title || "").trim(),
-      year: item?.meta?.year || null,
-      cover: String(item?.cover || "").trim(),
-      description: "",
-      meta: item?.meta || {}
-    }));
-
-    const fallbackItems = libraryItems.length ? libraryItems : EXPLORE_FEED;
-
-    return res.json({ items: fallbackItems });
-  } catch (err) {
-    console.error("GET /api/explore error", err);
-    return res.status(err?.status || 500).json({
-      error: err?.message || "explore_fetch_failed"
-    });
+  if (tmdbResult.status === "rejected") {
+    console.error("[/api/explore] TMDB search failed:", tmdbResult.reason);
   }
+
+  if (googleBooksResult.status === "rejected") {
+    console.error("[/api/explore] Google Books search failed:", googleBooksResult.reason);
+  }
+
+  if (rawgResult.status === "rejected") {
+    console.error("[/api/explore] RAWG search failed:", rawgResult.reason);
+  }
+
+  const tmdbItems =
+  tmdbResult.status === "fulfilled" && Array.isArray(tmdbResult.value)
+  ? tmdbResult.value
+  : [];
+
+  const googleBooksItems =
+  googleBooksResult.status === "fulfilled" && Array.isArray(googleBooksResult.value)
+  ? googleBooksResult.value
+  : [];
+
+  const rawgItems =
+  rawgResult.status === "fulfilled" && Array.isArray(rawgResult.value)
+  ? rawgResult.value
+  : [];
+
+  let rankedItems = _rankAndMixExploreItems(q, tmdbItems, googleBooksItems, rawgItems);
+
+  if (type) {
+    rankedItems = rankedItems.filter((item) => String(item?.type || "").trim() === type);
+  }
+
+  if (limit > 0) {
+    rankedItems = rankedItems.slice(0, limit);
+  }
+  return res.json({ items: rankedItems });
+ }
+
+ if (sort === "weekly") {
+  const weeklyLimit = limit > 0 ? limit : 3;
+
+  if (type === "serie" || type === "pelicula") {
+  const items = await getWeeklyTrendingTmdbByType(type, weeklyLimit);
+  return res.json({ items });
+  }
+
+  if (type === "game") {
+  const items = await getWeeklyFeaturedRawg(weeklyLimit);
+  return res.json({ items });
+  }
+
+  if (type === "book") {
+  const items = await getWeeklyFeaturedGoogleBooks(weeklyLimit);
+  return res.json({ items });
+  }
+
+  const [seriesResult, moviesResult, booksResult, gamesResult] = await Promise.allSettled([
+  getWeeklyTrendingTmdbByType("serie", weeklyLimit),
+  getWeeklyTrendingTmdbByType("pelicula", weeklyLimit),
+  getWeeklyFeaturedGoogleBooks(weeklyLimit),
+  getWeeklyFeaturedRawg(weeklyLimit)
+  ]);
+
+  const items = [
+  ...(seriesResult.status === "fulfilled" ? seriesResult.value : []),
+  ...(moviesResult.status === "fulfilled" ? moviesResult.value : []),
+  ...(booksResult.status === "fulfilled" ? booksResult.value : []),
+  ...(gamesResult.status === "fulfilled" ? gamesResult.value : [])
+  ];
+
+  return res.json({ items });
+ }
+
+ const db = _readDb();
+ const bucket = _getUserBucket(db, req.session.userId);
+ const libraryItems = (bucket.library || []).map((item) => ({
+  eid: item?.id ? `library:${String(item.id)}` : _uid(),
+  source: "library",
+  externalId: item?.id ? String(item.id) : "",
+  type: String(item?.type || "").trim(),
+  title: String(item?.title || "").trim(),
+  year: item?.meta?.year || null,
+  cover: String(item?.cover || "").trim(),
+  description: "",
+  meta: item?.meta || {}
+ }));
+
+ let fallbackItems = libraryItems.length ? libraryItems : EXPLORE_FEED;
+
+ if (type) {
+  fallbackItems = fallbackItems.filter(
+  (item) => String(item?.type || "").trim() === type
+  );
+ }
+
+ if (limit > 0) {
+  fallbackItems = fallbackItems.slice(0, limit);
+ }
+
+ return res.json({ items: fallbackItems });
+
+ } catch (err) {
+
+ console.error("GET /api/explore error", err);
+
+ return res.status(err?.status || 500).json({
+
+ error: err?.message || "explore_fetch_failed"
+
+ });
+
+ }
+
 });
 
 app.get("/api/explore/item/:source/:type/:externalId", _requireAuth, async (req, res) => {
