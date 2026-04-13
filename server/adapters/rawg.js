@@ -77,42 +77,74 @@ function _baseSearchItemFromRawgGame(item) {
 }
 
 export async function searchRawg(query) {
-  const q = _safeText(query);
-  if (!q) return [];
 
-  const data = await _rawgGet("/games", {
-    search: q,
-    page: 1,
-    page_size: 20
-  });
+ const q = _safeText(query);
 
-  const results = Array.isArray(data?.results) ? data.results : [];
+ if (!q) return [];
 
-  const normalizedQuery = String(q).trim().toLowerCase();
-  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+ const data = await _rawgGet("/games", {
+  search: q,
+  page: 1,
+  page_size: 20
+ });
 
-  return results
-    .map(_baseSearchItemFromRawgGame)
-    .filter((item) => {
-      if (!item?.externalId || !item?.title) return false;
+ const results = Array.isArray(data?.results) ? data.results : [];
+ const normalizedQuery = String(q).trim().toLowerCase();
+ const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
 
-      const title = String(item.title || "").toLowerCase();
+ return results
+  .map(_baseSearchItemFromRawgGame)
+  .filter((item) => {
+    if (!item?.externalId || !item?.title) return false;
+    const title = String(item.title || "").toLowerCase();
+    const strongMatch =
+      title === normalizedQuery ||
+      title.startsWith(normalizedQuery) ||
+      queryTokens.every((token) => title.includes(token));
+    if (!strongMatch) return false;
+    const rating = Number(item?.meta?.rating || 0);
+    if (rating < 2) return false;
+    if (!item.cover && !item.backdrop) return false;
+    return true;
+  })
 
-      const strongMatch =
-        title === normalizedQuery ||
-        title.startsWith(normalizedQuery) ||
-        queryTokens.every((token) => title.includes(token));
+ .slice(0, 20);
+}
 
-      if (!strongMatch) return false;
+function _dateToIso(date) {
+ return new Date(date).toISOString().slice(0, 10);
+}
 
-      const rating = Number(item?.meta?.rating || 0);
-      if (rating < 2) return false;
+export async function getWeeklyFeaturedRawg(limit = 3) {
+ const maxItems =
+ Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
 
-      if (!item.cover && !item.backdrop) return false;
+ const today = new Date();
+ const sixtyDaysAgo = new Date(today);
+ sixtyDaysAgo.setDate(today.getDate() - 60);
 
-      return true;
-    })
-    .slice(0, 20);
+ const data = await _rawgGet("/games", {
+ dates: `${_dateToIso(sixtyDaysAgo)},${_dateToIso(today)}`,
+ ordering: "-added",
+ page: 1,
+ page_size: Math.max(maxItems * 4, 12)
+ });
+
+ const results = Array.isArray(data?.results) ? data.results : [];
+
+ return results
+ .map(_baseSearchItemFromRawgGame)
+ .map((item) => ({
+ ...item,
+ cover: item.cover || item.backdrop || ""
+ }))
+ .filter((item) => {
+ if (!item?.externalId || !item?.title) return false;
+ const rating = Number(item?.meta?.rating || 0);
+ if (rating < 2) return false;
+ return Boolean(item.cover || item.backdrop);
+ })
+ .slice(0, maxItems);
 }
 
 export async function getRawgDetail(externalId) {
