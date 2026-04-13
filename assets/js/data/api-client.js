@@ -235,17 +235,56 @@ const ApiClient = (() => {
     FakeBackend.saveState(state);
   }
 
-  async function getExploreFeed(query = "") {
+  async function getExploreFeed(options = "") {
     if (_isHttp()) {
-      const q = String(query || "").trim();
-      const suffix = q ? `?q=${encodeURIComponent(q)}` : "";
+      const opts =
+        typeof options === "string"
+          ? { query: options }
+          : (options && typeof options === "object" ? options : {});
+
+      const query = String(opts.query || "").trim();
+      const type = String(opts.type || "").trim();
+      const sort = String(opts.sort || "").trim();
+      const limit =
+        Number.isFinite(Number(opts.limit)) && Number(opts.limit) > 0
+          ? String(Number(opts.limit))
+          : "";
+
+      const params = new URLSearchParams();
+
+      if (query) params.set("q", query);
+      if (type) params.set("type", type);
+      if (sort) params.set("sort", sort);
+      if (limit) params.set("limit", limit);
+
+      const suffix = params.toString() ? `?${params.toString()}` : "";
       const res = await _httpJson("GET", `/explore${suffix}`);
+
       if (Array.isArray(res)) return res;
       if (Array.isArray(res?.items)) return res.items;
       return [];
     }
 
     return [];
+  }
+
+  async function getWeeklyFeaturedExploreFeed() {
+    if (!_isHttp()) return [];
+
+    const FEATURED_TYPES = ["serie", "pelicula", "book", "game"];
+    const FEATURED_LIMIT_PER_TYPE = 3;
+
+    const results = await Promise.all(
+      FEATURED_TYPES.map((type) =>
+        getExploreFeed({
+          type,
+          sort: "weekly",
+          limit: FEATURED_LIMIT_PER_TYPE
+        }).catch(() => [])
+      )
+    );
+
+    return results.flat();
   }
 
   async function getExploreItemDetail({ source, type, externalId }) {
