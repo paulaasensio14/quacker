@@ -360,8 +360,7 @@ const ExploreModule = (() => {
           <h2 class="explore-section-title">${resultsTitle} “${searchTerm}”</h2>
           <p class="explore-section-sub">${resultsShowing}</p>
         </div>
-
-        <div class="explore-grid">
+        <div class="explore-section-grid">
           ${visible.map(renderCard).join("")}
         </div>
       </section>
