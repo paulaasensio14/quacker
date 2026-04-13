@@ -505,7 +505,12 @@ const ExploreModule = (() => {
     backdrop.hidden = false;
     drawer.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
-    _setExploreDrawerExpanded(true);
+
+    const details = document.getElementById("exploreDrawerDetails");
+    if (details) {
+      details.hidden = false;
+    }
+
     _syncExploreDrawerViewport();
 
     // Bloquear scroll (reutilizamos tu patrón existente)
