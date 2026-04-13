@@ -269,20 +269,23 @@ const ApiClient = (() => {
   async function getWeeklyFeaturedExploreFeed() {
     if (!_isHttp()) return [];
 
+    // usamos el feed real de la API
+    const raw = await getExploreFeed("");
+
+    const items = Array.isArray(raw) ? raw : [];
+
     const FEATURED_TYPES = ["serie", "pelicula", "book", "game"];
     const FEATURED_LIMIT_PER_TYPE = 3;
 
-    const results = await Promise.all(
-      FEATURED_TYPES.map((type) =>
-        getExploreFeed({
-          type,
-          sort: "weekly",
-          limit: FEATURED_LIMIT_PER_TYPE
-        }).catch(() => [])
-      )
-    );
+    const result = [];
 
-    return results.flat();
+    for (const type of FEATURED_TYPES) {
+      const itemsByType = items.filter((item) => item.type === type);
+
+      result.push(...itemsByType.slice(0, FEATURED_LIMIT_PER_TYPE));
+    }
+
+    return result;
   }
 
   async function getExploreItemDetail({ source, type, externalId }) {
