@@ -505,6 +505,7 @@ const ExploreModule = (() => {
     backdrop.hidden = false;
     drawer.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
+    _setExploreDrawerExpanded(true);
     _syncExploreDrawerViewport();
 
     // Bloquear scroll (reutilizamos tu patrón existente)
