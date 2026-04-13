@@ -292,19 +292,21 @@ const ApiClient = (() => {
   async function getWeeklyFeaturedExploreFeed() {
     if (!_isHttp()) return [];
 
-    const FEATURED_TYPES = ["serie", "pelicula", "book", "game"];
-    const FEATURED_LIMIT_PER_TYPE = 3;
+    const FEATURED_REQUESTS = [
+      { type: "serie", limit: 5 },
+      { type: "pelicula", limit: 5 },
+      { type: "book", limit: 4 },
+      { type: "game", limit: 3 }
+    ];
 
     const results = await Promise.all(
-
-      FEATURED_TYPES.map((type) =>
-        getExploreFeed({
-        type,
-        sort: "weekly",
-        limit: FEATURED_LIMIT_PER_TYPE
-        }).catch(() => [])
+      FEATURED_REQUESTS.map(({ type, limit }) =>
+        getExploreFeed({ type, sort: "weekly", limit })
+          .then((res) => res?.items || [])
+          .catch(() => [])
       )
     );
+
     return results.flat();
   }
 
