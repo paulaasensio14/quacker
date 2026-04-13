@@ -1389,8 +1389,6 @@ const ExploreModule = (() => {
       featuredFeed = [];
     }
 
-    // cargar ocultados persistentes
-
     try {
       const arr = await ApiClient.getExploreDismissed();
       dismissed = new Set((arr || []).map(String));
