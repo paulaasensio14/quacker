@@ -2051,20 +2051,22 @@ const ExploreModule = (() => {
         init._viewChangeBound = true;
 
         document.addEventListener("quacker:view-change", (e) => {
-          if (e.detail?.viewId !== "explore") {
-            _closeExploreListPicker();
-            _clearDrawerInlineNote();
-            return;
+          const viewId = e.detail?.viewId;
+
+          // Limpieza defensiva: si salimos de Biblioteca, no dejamos highlight pendiente
+          if (viewId !== "library" && window.__lastCreatedLibraryItemId) {
+            window.__lastCreatedLibraryItemId = null;
           }
 
-          _renderDrawerAddCtaLabel();
+          if (viewId !== "library") return;
 
-          const global = document.getElementById("globalSearch");
-          if (global) {
-            searchTerm = String(global.value || "").trim();
-          }
+          const global = $("#globalSearch");
+          searchTerm = (global?.value || "").trim().toLowerCase();
 
-          load();
+          const sort = $("#librarySort");
+          if (sort) sort.value = sortMode;
+
+          void load();
         });
       }
 
