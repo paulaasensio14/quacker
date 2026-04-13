@@ -3,16 +3,12 @@
 
 const ExploreModule = (() => {
   let feed = [];
+  let featuredFeed = [];
   let visible = [];
   let activeEid = null;
   let dismissed = new Set();
   let expandedSection = null;
-
-  let sectionShownCount = {
-    novedades: 0,
-    tendencias: 0,
-    recomendados: 0
-  };
+  let sectionShownCount = { novedades: 0, tendencias: 0, recomendados: 0 };
 
   const LOAD_MORE_STEP = 12; // cuántos más se cargan cada vez
 
@@ -247,20 +243,18 @@ const ExploreModule = (() => {
   // usar el orden original del feed que llega de la API,
   // sin recomponer artificialmente por tipo en frontend.
 
-  const WEEKLY_PICK_LIMIT = 12;
-
-  const apiOrderedVisibleFeed = feed.filter((item) => {
+  const featuredVisible = featuredFeed.filter((item) => {
     if (dismissed.has(String(item.eid))) return false;
     if (typeFilter !== "all" && item.type !== typeFilter) return false;
     return true;
   });
 
-  const tendenciasAll = apiOrderedVisibleFeed.slice(0, WEEKLY_PICK_LIMIT);
+  const tendenciasAll = featuredVisible;
 
   // Recomendados: el resto del feed visible, sin duplicar con destacados
 
   const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
-  const recomendadosAll = apiOrderedVisibleFeed.filter(
+  const recomendadosAll = visible.filter(
     (it) => !tendenciaIdsAll.has(String(it.eid))
   );
 
