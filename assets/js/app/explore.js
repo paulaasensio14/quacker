@@ -235,27 +235,25 @@ const ExploreModule = (() => {
   // --- Secciones Explore v1.4 (con “Ver más”) ---
   const isNewItem = (it) => !!it.__isNew;
 
-  // Novedades: todo lo “nuevo” (<= 30 días)
-
-  const novedadesAll = visible.filter(isNewItem);
-
   // Destacados esta semana:
   // usar el orden original del feed que llega de la API,
   // sin recomponer artificialmente por tipo en frontend.
-
   const featuredVisible = featuredFeed.filter((item) => {
-    if (dismissed.has(String(item.eid))) return false;
-    if (typeFilter !== "all" && item.type !== typeFilter) return false;
-    return true;
+  if (dismissed.has(String(item.eid))) return false;
+  if (typeFilter !== "all" && item.type !== typeFilter) return false;
+  return true;
   });
-
   const tendenciasAll = featuredVisible;
+  const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
+
+  // Novedades: todo lo “nuevo” (<= 30 días), sin duplicar destacados
+  const novedadesAll = visible.filter(
+  (it) => isNewItem(it) && !tendenciaIdsAll.has(String(it.eid))
+  );
 
   // Recomendados: el resto del feed visible, sin duplicar con destacados
-
-  const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
   const recomendadosAll = visible.filter(
-    (it) => !tendenciaIdsAll.has(String(it.eid))
+  (it) => !isNewItem(it) && !tendenciaIdsAll.has(String(it.eid))
   );
 
   const SECTIONS = [
