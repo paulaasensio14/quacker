@@ -2430,6 +2430,7 @@ const ApiClient = (() => {
     // explorar
     getExploreFeed,
     getExploreDismissed,
+    getWeeklyFeaturedExploreFeed,
     dismissExploreItem,
     clearExploreDismissed,
     getListsCountByLibraryMatch,
