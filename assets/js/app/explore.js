@@ -2060,7 +2060,9 @@ const ExploreModule = (() => {
           _renderDrawerAddCtaLabel();
 
           const global = document.getElementById("globalSearch");
-          if (global) global.value = searchTerm;
+          if (global) {
+            searchTerm = String(global.value || "").trim();
+          }
 
           load();
         });
@@ -2081,7 +2083,9 @@ const ExploreModule = (() => {
       // aplicar búsqueda al input global si estamos en Explore
       const isExplore = document.querySelector("#view-explore")?.classList.contains("is-active");
       const global = document.getElementById("globalSearch");
-      if (isExplore && global) global.value = searchTerm;
+      if (isExplore && global) {
+        searchTerm = String(global.value || "").trim();
+      }
 
       if (isExplore) load();
     })();
