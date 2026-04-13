@@ -235,57 +235,71 @@ const ApiClient = (() => {
 
   async function getExploreFeed(options = "") {
     if (_isHttp()) {
-      const opts =
-        typeof options === "string"
-          ? { query: options }
-          : (options && typeof options === "object" ? options : {});
-
+      const opts = typeof options === "string" ? { query: options } : (options && typeof options === "object" ? options : {});
       const query = String(opts.query || "").trim();
       const type = String(opts.type || "").trim();
       const sort = String(opts.sort || "").trim();
-      const limit =
-        Number.isFinite(Number(opts.limit)) && Number(opts.limit) > 0
-          ? String(Number(opts.limit))
-          : "";
-
+      const limit = Number.isFinite(Number(opts.limit)) && Number(opts.limit) > 0 ? String(Number(opts.limit)) : "";
       const params = new URLSearchParams();
-
       if (query) params.set("q", query);
       if (type) params.set("type", type);
       if (sort) params.set("sort", sort);
       if (limit) params.set("limit", limit);
-
       const suffix = params.toString() ? `?${params.toString()}` : "";
       const res = await _httpJson("GET", `/explore${suffix}`);
-
       if (Array.isArray(res)) return res;
       if (Array.isArray(res?.items)) return res.items;
       return [];
     }
 
-    return [];
+    const opts = typeof options === "string" ? { query: options } : (options && typeof options === "object" ? options : {});
+    const query = String(opts.query || "").trim().toLowerCase();
+    const type = String(opts.type || "").trim();
+    const limit = Number.isFinite(Number(opts.limit)) && Number(opts.limit) > 0 ? Number(opts.limit) : 0;
+
+    const state = _safeState();
+    const library = Array.isArray(state.library) ? state.library : [];
+
+    let items = library.map((item) => ({
+      eid: item?.id ? `library:${String(item.id)}` : String(Date.now()),
+      source: "library",
+      externalId: item?.id ? String(item.id) : "",
+      type: String(item?.type || "").trim(),
+      title: String(item?.title || "").trim(),
+      year: item?.meta?.year || null,
+      cover: String(item?.cover || "").trim(),
+      description: "",
+      meta: item?.meta || {}
+    }));
+
+    if (type) {
+      items = items.filter((item) => item.type === type);
+    }
+
+    if (query) {
+      items = items.filter((item) =>
+        String(item.title || "").toLowerCase().includes(query)
+      );
+    }
+
+    if (limit > 0) {
+      items = items.slice(0, limit);
+    }
+
+    return items;
   }
 
   async function getWeeklyFeaturedExploreFeed() {
-    if (!_isHttp()) return [];
-
-    // usamos el feed real de la API
-    const raw = await getExploreFeed("");
-
-    const items = Array.isArray(raw) ? raw : [];
-
     const FEATURED_TYPES = ["serie", "pelicula", "book", "game"];
     const FEATURED_LIMIT_PER_TYPE = 3;
 
-    const result = [];
+    const results = await Promise.all(
+      FEATURED_TYPES.map((type) =>
+        getExploreFeed({ type, limit: FEATURED_LIMIT_PER_TYPE }).catch(() => [])
+      )
+    );
 
-    for (const type of FEATURED_TYPES) {
-      const itemsByType = items.filter((item) => item.type === type);
-
-      result.push(...itemsByType.slice(0, FEATURED_LIMIT_PER_TYPE));
-    }
-
-    return result;
+    return results.flat();
   }
 
   async function getExploreItemDetail({ source, type, externalId }) {
