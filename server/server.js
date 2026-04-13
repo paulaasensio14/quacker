@@ -810,33 +810,7 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
   return res.json({ items });
  }
 
- const db = _readDb();
- const bucket = _getUserBucket(db, req.session.userId);
- const libraryItems = (bucket.library || []).map((item) => ({
-  eid: item?.id ? `library:${String(item.id)}` : _uid(),
-  source: "library",
-  externalId: item?.id ? String(item.id) : "",
-  type: String(item?.type || "").trim(),
-  title: String(item?.title || "").trim(),
-  year: item?.meta?.year || null,
-  cover: String(item?.cover || "").trim(),
-  description: "",
-  meta: item?.meta || {}
- }));
-
- let fallbackItems = libraryItems.length ? libraryItems : EXPLORE_FEED;
-
- if (type) {
-  fallbackItems = fallbackItems.filter(
-  (item) => String(item?.type || "").trim() === type
-  );
- }
-
- if (limit > 0) {
-  fallbackItems = fallbackItems.slice(0, limit);
- }
-
- return res.json({ items: fallbackItems });
+  return res.json({ items: [] });
 
  } catch (err) {
 
