@@ -149,6 +149,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       if (viewId === "library") {
+        scheduleLibraryRefresh();
         return;
       }
 
