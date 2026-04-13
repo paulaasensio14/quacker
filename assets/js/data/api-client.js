@@ -295,8 +295,6 @@ const ApiClient = (() => {
     const FEATURED_REQUESTS = [
       { type: "serie", limit: 5 },
       { type: "pelicula", limit: 5 },
-      // ⚠️ temporalmente desactivado por cuota API
-      // { type: "book", limit: 4 },
       { type: "game", limit: 3 }
     ];
 
@@ -304,14 +302,13 @@ const ApiClient = (() => {
 
     for (const { type, limit } of FEATURED_REQUESTS) {
       try {
-        const res = await getExploreFeed({ type, sort: "weekly", limit });
-        results.push(res?.items || []);
+        const items = await getExploreFeed({ type, sort: "weekly", limit });
+        results.push(Array.isArray(items) ? items : []);
       } catch (e) {
         console.warn(`[ApiClient] weekly featured failed for ${type}`, e);
         results.push([]);
       }
 
-      // pequeña pausa para evitar rate limit
       await new Promise((r) => setTimeout(r, 200));
     }
 
