@@ -1832,12 +1832,6 @@ const ExploreModule = (() => {
         _syncExploreDrawerFromItem(item);
         _renderExploreDrawerDetails(item);
         _openExploreDrawer(detailTrigger);
-
-        const detailed = await _hydrateExploreItemDetail(item);
-        if (detailed?.eid === item.eid) {
-          _syncExploreDrawerFromItem(detailed);
-          _renderExploreDrawerDetails(detailed);
-        }
         return;
       }
 
@@ -1875,12 +1869,6 @@ const ExploreModule = (() => {
       _syncExploreDrawerFromItem(item);
       _renderExploreDrawerDetails(item);
       _openExploreDrawer(card);
-
-      const detailed = await _hydrateExploreItemDetail(item);
-      if (detailed?.eid === item.eid) {
-        _syncExploreDrawerFromItem(detailed);
-        _renderExploreDrawerDetails(detailed);
-      }
     });
 
     // BOTÓN CERRAR DRAWER
