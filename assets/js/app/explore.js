@@ -879,18 +879,20 @@ const ExploreModule = (() => {
     const details = document.getElementById("exploreDrawerDetails");
     const expandBtn = document.getElementById("exploreDrawerExpand");
 
-    if (!drawer || !details || !expandBtn) return;
-    drawer.classList.toggle("is-expanded", __drawerExpanded);
+    if (!drawer || !details) return;
 
+    drawer.classList.toggle("is-expanded", __drawerExpanded);
     details.hidden = !__drawerExpanded;
 
     const expandLabel = __drawerExpanded
       ? window.I18n.t("explore_drawer_toggle_hide")
       : window.I18n.t("explore_drawer_toggle_show");
 
-    expandBtn.setAttribute("aria-pressed", __drawerExpanded ? "true" : "false");
-    expandBtn.setAttribute("aria-label", expandLabel);
-    expandBtn.textContent = expandLabel;
+    if (expandBtn) {
+      expandBtn.setAttribute("aria-pressed", __drawerExpanded ? "true" : "false");
+      expandBtn.setAttribute("aria-label", expandLabel);
+      expandBtn.textContent = expandLabel;
+    }
 
     if (__drawerExpanded) {
       _syncExploreDrawerViewport();
