@@ -295,7 +295,8 @@ const ApiClient = (() => {
     const FEATURED_REQUESTS = [
       { type: "serie", limit: 5 },
       { type: "pelicula", limit: 5 },
-      { type: "book", limit: 4 },
+      // ⚠️ temporalmente desactivado por cuota API
+      // { type: "book", limit: 4 },
       { type: "game", limit: 3 }
     ];
 
