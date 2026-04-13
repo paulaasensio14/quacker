@@ -1380,12 +1380,7 @@ const ExploreModule = (() => {
       const normalizedFeatured = safeFeaturedFeed
         .map((item, index) => _normalizeExploreItem(item, index));
 
-      // fallback si la API no devuelve nada
-      if (!normalizedFeatured.length) {
-        featuredFeed = feed.slice(0, 12);
-      } else {
-        featuredFeed = normalizedFeatured;
-      }
+      featuredFeed = normalizedFeatured;
 
     } catch (e) {
       console.error("ExploreModule.load error", e);
