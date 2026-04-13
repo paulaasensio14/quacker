@@ -1353,55 +1353,51 @@ const ExploreModule = (() => {
     const globalSearch = document.getElementById("globalSearch");
 
     if (globalSearch) {
-
       searchTerm = String(globalSearch.value || "").trim();
-
     }
 
     if (searchTerm) {
-
       expandedSection = null;
-
     }
 
     _renderExploreSkeleton();
 
     try {
-
-      const rawFeed = await ApiClient.getExploreFeed(searchTerm);
+      const [rawFeed, rawFeaturedFeed] = await Promise.all([
+        ApiClient.getExploreFeed(searchTerm),
+        searchTerm ? Promise.resolve([]) : ApiClient.getWeeklyFeaturedExploreFeed()
+      ]);
 
       const safeFeed = Array.isArray(rawFeed) ? rawFeed : [];
+      const safeFeaturedFeed = Array.isArray(rawFeaturedFeed) ? rawFeaturedFeed : [];
 
       feed = safeFeed
+        .map((item, index) => _normalizeExploreItem(item, index));
+
+      featuredFeed = safeFeaturedFeed
         .map((item, index) => _normalizeExploreItem(item, index));
 
     } catch (e) {
       console.error("ExploreModule.load error", e);
 
       feed = [];
+      featuredFeed = [];
     }
 
     // cargar ocultados persistentes
 
     try {
-
       const arr = await ApiClient.getExploreDismissed();
-
       dismissed = new Set((arr || []).map(String));
-
     } catch (e) {
-
       console.error(e);
-
       dismissed = new Set();
-
     }
 
     await _syncInLibraryFlags();
 
     _syncExploreToolbarUI();
     _applyFilters();
-
   }
 
   async function _ensureInLibrary(item) {
