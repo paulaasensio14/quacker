@@ -128,7 +128,12 @@ const Router = (() => {
         setSearchEnabled(true);
         globalSearch.placeholder =
           window.I18n?.t("explore_search_placeholder") || "";
-        _restoreSearchForView("explore", globalSearch);
+
+        // Explore debe entrar en estado editorial por defecto.
+        // No restauramos una búsqueda persistida porque oculta
+        // "Destacados esta semana" y hace que la vista parezca vacía.
+        globalSearch.value = "";
+        _persistSearchForView("explore", "");
         syncClearVisibility();
       } else {
         // En otras vistas, lo desactivamos y lo vaciamos visualmente,
