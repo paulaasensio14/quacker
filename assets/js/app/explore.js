@@ -1829,7 +1829,6 @@ const ExploreModule = (() => {
 
         _syncExploreDrawerFromItem(item);
         _renderExploreDrawerDetails(item);
-        _setExploreDrawerExpanded(false);
         _openExploreDrawer(detailTrigger);
 
         const detailed = await _hydrateExploreItemDetail(item);
@@ -1873,7 +1872,6 @@ const ExploreModule = (() => {
 
       _syncExploreDrawerFromItem(item);
       _renderExploreDrawerDetails(item);
-      _setExploreDrawerExpanded(false);
       _openExploreDrawer(card);
 
       const detailed = await _hydrateExploreItemDetail(item);
