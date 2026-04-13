@@ -2051,19 +2051,12 @@ const ExploreModule = (() => {
         init._viewChangeBound = true;
 
         document.addEventListener("quacker:view-change", (e) => {
-          const viewId = e.detail?.viewId;
-
-          // Limpieza defensiva: si salimos de Biblioteca, no dejamos highlight pendiente
-          if (viewId !== "library" && window.__lastCreatedLibraryItemId) {
-            window.__lastCreatedLibraryItemId = null;
-          }
-
-          if (viewId !== "library") return;
+          if (e.detail?.viewId !== "explore") return;
 
           const global = $("#globalSearch");
-          searchTerm = (global?.value || "").trim().toLowerCase();
+          searchTerm = String(global?.value || "").trim();
 
-          const sort = $("#librarySort");
+          const sort = $("#exploreSort");
           if (sort) sort.value = sortMode;
 
           void load();
