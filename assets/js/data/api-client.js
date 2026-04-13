@@ -17,15 +17,13 @@ const ApiClient = (() => {
   const __hostname = String(window.location.hostname || "").toLowerCase();
   const __port = String(window.location.port || "");
   const __protocol = String(window.location.protocol || "").toLowerCase();
-
   const __isFileProtocol = __protocol === "file:";
   const __isLocalHost = __hostname === "localhost" || __hostname === "127.0.0.1";
   const __isNodeServer = __isLocalHost && __port === "3000";
   const __isStaticLocalDev = __isLocalHost && __port !== "3000";
-
   const __cfg = {
-    transport: (__isFileProtocol || __isStaticLocalDev) ? "local" : "http",
-    baseUrl: "/api",      // prefijo del backend. Ej: "https://api.quacker.app"
+    transport: __isFileProtocol ? "local" : "http",
+    baseUrl: "/api",
     timeoutMs: 12000
   };
 
