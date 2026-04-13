@@ -199,22 +199,46 @@ export async function searchTmdb(query) {
     .filter((item) => item.__score > 0)
     .sort((a, b) => {
       if (b.__score !== a.__score) return b.__score - a.__score;
-
       const hasCoverA = Number(Boolean(a.cover));
       const hasCoverB = Number(Boolean(b.cover));
-
       if (hasCoverA !== hasCoverB) return hasCoverB - hasCoverA;
-
       const yearA = Number(a.meta?.year || 0);
       const yearB = Number(b.meta?.year || 0);
-
       if (yearA !== yearB) return yearB - yearA;
-
       return a.title.localeCompare(b.title, "es", { sensitivity: "base" });
     })
     .map(({ __score, ...item }) => item);
 
   return merged.slice(0, 40);
+}
+
+export async function getWeeklyTrendingTmdb() {
+  const [moviesData, tvData] = await Promise.all([
+    _tmdbGet("/trending/movie/week", {
+      language: "es-ES",
+      page: 1
+    }),
+    _tmdbGet("/trending/tv/week", {
+      language: "es-ES",
+      page: 1
+    })
+  ]);
+
+  const movies = Array.isArray(moviesData?.results)
+    ? moviesData.results
+        .map(_baseSearchItemFromMovie)
+        .filter((item) => item.title && item.cover)
+        .slice(0, 3)
+    : [];
+
+  const series = Array.isArray(tvData?.results)
+    ? tvData.results
+        .map(_baseSearchItemFromTv)
+        .filter((item) => item.title && item.cover)
+        .slice(0, 3)
+    : [];
+
+  return { movies, series };
 }
 
 export async function getTmdbDetail({ type, externalId }) {
