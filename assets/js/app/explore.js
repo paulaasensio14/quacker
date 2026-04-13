@@ -243,18 +243,36 @@ const ExploreModule = (() => {
   const novedadesAll = visible.filter(isNewItem);
 
   // Destacados esta semana:
-  // mezcla equilibrada por tipo para v1 mientras no exista una fuente real de popularidad
-  const notNew = visible.filter((it) => !isNewItem(it));
+  // prioriza novedades recientes y completa con contenido no nuevo,
+  // manteniendo el objetivo de 3 por tipo cuando haya stock suficiente.
 
+  const notNew = visible.filter((it) => !isNewItem(it));
   const WEEKLY_PICK_LIMIT = 12;
+
   const WEEKLY_PICK_TYPES = ["serie", "pelicula", "book", "game"];
+
   const WEEKLY_PICK_PER_TYPE = 3;
 
+  const sortByNewestRelease = (items) => [...items].sort((a, b) => {
+    const aTs = Number(a?.__releaseTs || 0);
+    const bTs = Number(b?.__releaseTs || 0);
+    return bTs - aTs;
+  });
+
+  const takeWeeklyItemsByType = (type) => {
+    const newItemsOfType = sortByNewestRelease(
+      visible.filter((item) => item.type === type && isNewItem(item))
+    );
+
+    const fallbackItemsOfType = sortByNewestRelease(
+      visible.filter((item) => item.type === type && !isNewItem(item))
+    );
+
+    return [...newItemsOfType, ...fallbackItemsOfType].slice(0, WEEKLY_PICK_PER_TYPE);
+  };
+
   const weeklyPoolByType = Object.fromEntries(
-    WEEKLY_PICK_TYPES.map((type) => [
-      type,
-      notNew.filter((item) => item.type === type).slice(0, WEEKLY_PICK_PER_TYPE)
-    ])
+    WEEKLY_PICK_TYPES.map((type) => [type, takeWeeklyItemsByType(type)])
   );
 
   const tendenciasAll = [];
@@ -272,8 +290,8 @@ const ExploreModule = (() => {
   if (tendenciasAll.length < WEEKLY_PICK_LIMIT) {
     const selectedIds = new Set(tendenciasAll.map((item) => String(item.eid)));
 
-    const remainingWeeklyItems = notNew.filter(
-      (item) => !selectedIds.has(String(item.eid))
+    const remainingWeeklyItems = sortByNewestRelease(
+      visible.filter((item) => !selectedIds.has(String(item.eid)))
     );
 
     tendenciasAll.push(
@@ -282,8 +300,9 @@ const ExploreModule = (() => {
   }
 
   // Recomendados: el resto (sin duplicar con tendencias)
+
   const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
-  const recomendadosAll = notNew.filter((it) => !tendenciaIdsAll.has(String(it.eid)));
+  const recomendadosAll = visible.filter((it) => !tendenciaIdsAll.has(String(it.eid)));
 
   const SECTIONS = [
     {
