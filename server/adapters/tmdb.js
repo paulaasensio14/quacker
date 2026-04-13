@@ -213,32 +213,90 @@ export async function searchTmdb(query) {
 }
 
 export async function getWeeklyTrendingTmdb() {
-  const [moviesData, tvData] = await Promise.all([
-    _tmdbGet("/trending/movie/week", {
-      language: "es-ES",
-      page: 1
-    }),
-    _tmdbGet("/trending/tv/week", {
-      language: "es-ES",
-      page: 1
-    })
-  ]);
 
-  const movies = Array.isArray(moviesData?.results)
-    ? moviesData.results
-        .map(_baseSearchItemFromMovie)
-        .filter((item) => item.title && item.cover)
-        .slice(0, 3)
-    : [];
+ const [moviesData, tvData] = await Promise.all([
 
-  const series = Array.isArray(tvData?.results)
-    ? tvData.results
-        .map(_baseSearchItemFromTv)
-        .filter((item) => item.title && item.cover)
-        .slice(0, 3)
-    : [];
+ _tmdbGet("/trending/movie/week", {
 
-  return { movies, series };
+ language: "es-ES",
+
+ page: 1
+
+ }),
+
+ _tmdbGet("/trending/tv/week", {
+
+ language: "es-ES",
+
+ page: 1
+
+ })
+
+ ]);
+
+ const movies = Array.isArray(moviesData?.results)
+
+ ? moviesData.results
+
+ .map(_baseSearchItemFromMovie)
+
+ .filter((item) => item.title && item.cover)
+
+ .slice(0, 3)
+
+ : [];
+
+ const series = Array.isArray(tvData?.results)
+
+ ? tvData.results
+ .map(_baseSearchItemFromTv)
+
+ .filter((item) => item.title && item.cover)
+
+ .slice(0, 3)
+
+ : [];
+
+ return { movies, series };
+
+}
+
+export async function getWeeklyTrendingTmdbByType(type, limit = 3) {
+ const safeType = String(type || "").trim().toLowerCase();
+ const maxItems =
+ Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
+
+ if (safeType === "pelicula") {
+ const data = await _tmdbGet("/trending/movie/week", {
+ language: "es-ES",
+ page: 1
+ });
+
+ return Array.isArray(data?.results)
+ ? data.results
+ .map(_baseSearchItemFromMovie)
+ .filter((item) => item.title && item.cover)
+ .slice(0, maxItems)
+ : [];
+ }
+
+ if (safeType === "serie") {
+ const data = await _tmdbGet("/trending/tv/week", {
+ language: "es-ES",
+ page: 1
+ });
+
+ return Array.isArray(data?.results)
+ ? data.results
+ .map(_baseSearchItemFromTv)
+ .filter((item) => item.title && item.cover)
+ .slice(0, maxItems)
+ : [];
+ }
+
+ const err = new Error("invalid_tmdb_weekly_type");
+ err.status = 400;
+ throw err;
 }
 
 export async function getTmdbDetail({ type, externalId }) {
