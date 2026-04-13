@@ -240,69 +240,29 @@ const ExploreModule = (() => {
   const isNewItem = (it) => !!it.__isNew;
 
   // Novedades: todo lo “nuevo” (<= 30 días)
+
   const novedadesAll = visible.filter(isNewItem);
 
   // Destacados esta semana:
-  // prioriza novedades recientes y completa con contenido no nuevo,
-  // manteniendo el objetivo de 3 por tipo cuando haya stock suficiente.
+  // usar el orden original del feed que llega de la API,
+  // sin recomponer artificialmente por tipo en frontend.
 
-  const notNew = visible.filter((it) => !isNewItem(it));
   const WEEKLY_PICK_LIMIT = 12;
 
-  const WEEKLY_PICK_TYPES = ["serie", "pelicula", "book", "game"];
-
-  const WEEKLY_PICK_PER_TYPE = 3;
-
-  const sortByNewestRelease = (items) => [...items].sort((a, b) => {
-    const aTs = Number(a?.__releaseTs || 0);
-    const bTs = Number(b?.__releaseTs || 0);
-    return bTs - aTs;
+  const apiOrderedVisibleFeed = feed.filter((item) => {
+    if (dismissed.has(String(item.eid))) return false;
+    if (typeFilter !== "all" && item.type !== typeFilter) return false;
+    return true;
   });
 
-  const takeWeeklyItemsByType = (type) => {
-    const newItemsOfType = sortByNewestRelease(
-      visible.filter((item) => item.type === type && isNewItem(item))
-    );
+  const tendenciasAll = apiOrderedVisibleFeed.slice(0, WEEKLY_PICK_LIMIT);
 
-    const fallbackItemsOfType = sortByNewestRelease(
-      visible.filter((item) => item.type === type && !isNewItem(item))
-    );
-
-    return [...newItemsOfType, ...fallbackItemsOfType].slice(0, WEEKLY_PICK_PER_TYPE);
-  };
-
-  const weeklyPoolByType = Object.fromEntries(
-    WEEKLY_PICK_TYPES.map((type) => [type, takeWeeklyItemsByType(type)])
-  );
-
-  const tendenciasAll = [];
-
-  for (let round = 0; round < WEEKLY_PICK_PER_TYPE; round += 1) {
-    for (const type of WEEKLY_PICK_TYPES) {
-      const item = weeklyPoolByType[type][round];
-
-      if (item) {
-        tendenciasAll.push(item);
-      }
-    }
-  }
-
-  if (tendenciasAll.length < WEEKLY_PICK_LIMIT) {
-    const selectedIds = new Set(tendenciasAll.map((item) => String(item.eid)));
-
-    const remainingWeeklyItems = sortByNewestRelease(
-      visible.filter((item) => !selectedIds.has(String(item.eid)))
-    );
-
-    tendenciasAll.push(
-      ...remainingWeeklyItems.slice(0, WEEKLY_PICK_LIMIT - tendenciasAll.length)
-    );
-  }
-
-  // Recomendados: el resto (sin duplicar con tendencias)
+  // Recomendados: el resto del feed visible, sin duplicar con destacados
 
   const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
-  const recomendadosAll = visible.filter((it) => !tendenciaIdsAll.has(String(it.eid)));
+  const recomendadosAll = apiOrderedVisibleFeed.filter(
+    (it) => !tendenciaIdsAll.has(String(it.eid))
+  );
 
   const SECTIONS = [
     {
