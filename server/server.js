@@ -751,9 +751,10 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
       });
     }
     const db = _readDb();
+
     const bucket = _getUserBucket(db, req.session.userId);
 
-    const fallbackItems = (bucket.library || []).map((item) => ({
+    const libraryItems = (bucket.library || []).map((item) => ({
       eid: item?.id ? `library:${String(item.id)}` : _uid(),
       source: "library",
       externalId: item?.id ? String(item.id) : "",
@@ -764,6 +765,8 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
       description: "",
       meta: item?.meta || {}
     }));
+
+    const fallbackItems = libraryItems.length ? libraryItems : EXPLORE_FEED;
 
     return res.json({ items: fallbackItems });
   } catch (err) {
