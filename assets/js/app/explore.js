@@ -614,7 +614,14 @@ const ExploreModule = (() => {
 
   function _getExploreItemByEid(eid) {
     if (!eid) return null;
-    return feed.find((x) => String(x.eid) === String(eid)) || null;
+
+    const targetEid = String(eid);
+
+    return (
+      feed.find((x) => String(x.eid) === targetEid) ||
+      featuredFeed.find((x) => String(x.eid) === targetEid) ||
+      null
+    );
   }
 
   function _getActiveExploreItem() {
@@ -726,6 +733,12 @@ const ExploreModule = (() => {
     const targetEid = String(nextItem.eid);
 
     feed = feed.map((entry) =>
+      String(entry?.eid) === targetEid
+        ? { ...entry, ...nextItem, eid: targetEid }
+        : entry
+    );
+
+    featuredFeed = featuredFeed.map((entry) =>
       String(entry?.eid) === targetEid
         ? { ...entry, ...nextItem, eid: targetEid }
         : entry
