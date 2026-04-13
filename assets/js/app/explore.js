@@ -193,8 +193,7 @@ const ExploreModule = (() => {
     `;
 
     container.innerHTML = [
-      renderSkeletonSection(window.I18n.t("explore_section_trending"), 12),
-      renderSkeletonSection(window.I18n.t("explore_section_new"), 12)
+      renderSkeletonSection(window.I18n.t("explore_section_trending"), 12)
     ].join("");
   }
 
@@ -248,12 +247,6 @@ const ExploreModule = (() => {
     return true;
   });
   const tendenciasAll = featuredVisible;
-  const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
-
-  // Novedades: todo lo “nuevo” (<= 30 días), sin duplicar destacados
-  const novedadesAll = visible.filter(
-  (it) => isNewItem(it) && !tendenciaIdsAll.has(String(it.eid))
-  );
 
   const SECTIONS = [
     {
@@ -262,13 +255,6 @@ const ExploreModule = (() => {
       subtitle: window.I18n.t("explore_section_trending_sub"),
       limit: 12,
       items: tendenciasAll
-    },
-    {
-      key: "novedades",
-      title: window.I18n.t("explore_section_new"),
-      subtitle: window.I18n.t("explore_section_new_sub"),
-      limit: 12,
-      items: novedadesAll
     }
   ];
 
