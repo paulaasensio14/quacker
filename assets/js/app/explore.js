@@ -193,9 +193,8 @@ const ExploreModule = (() => {
     `;
 
     container.innerHTML = [
-      renderSkeletonSection(window.I18n.t("explore_section_new"), 12),
       renderSkeletonSection(window.I18n.t("explore_section_trending"), 12),
-      renderSkeletonSection(window.I18n.t("explore_section_recommended"), 12)
+      renderSkeletonSection(window.I18n.t("explore_section_new"), 12)
     ].join("");
   }
 
@@ -240,13 +239,13 @@ const ExploreModule = (() => {
   // sin recomponer artificialmente por tipo en frontend.
   const featuredSeen = new Set();
   const featuredVisible = featuredFeed.filter((item) => {
-  const eid = String(item?.eid || "").trim();
-  if (!eid) return false;
-  if (featuredSeen.has(eid)) return false;
-  if (dismissed.has(eid)) return false;
-  if (typeFilter !== "all" && item.type !== typeFilter) return false;
-  featuredSeen.add(eid);
-  return true;
+    const eid = String(item?.eid || "").trim();
+    if (!eid) return false;
+    if (featuredSeen.has(eid)) return false;
+    if (dismissed.has(eid)) return false;
+    if (typeFilter !== "all" && item.type !== typeFilter) return false;
+    featuredSeen.add(eid);
+    return true;
   });
   const tendenciasAll = featuredVisible;
   const tendenciaIdsAll = new Set(tendenciasAll.map((it) => String(it.eid)));
@@ -254,11 +253,6 @@ const ExploreModule = (() => {
   // Novedades: todo lo “nuevo” (<= 30 días), sin duplicar destacados
   const novedadesAll = visible.filter(
   (it) => isNewItem(it) && !tendenciaIdsAll.has(String(it.eid))
-  );
-
-  // Recomendados: el resto del feed visible, sin duplicar con destacados
-  const recomendadosAll = visible.filter(
-  (it) => !isNewItem(it) && !tendenciaIdsAll.has(String(it.eid))
   );
 
   const SECTIONS = [
@@ -275,13 +269,6 @@ const ExploreModule = (() => {
       subtitle: window.I18n.t("explore_section_new_sub"),
       limit: 12,
       items: novedadesAll
-    },
-    {
-      key: "recomendados",
-      title: window.I18n.t("explore_section_recommended"),
-      subtitle: window.I18n.t("explore_section_recommended_sub"),
-      limit: 12,
-      items: recomendadosAll
     }
   ];
 
