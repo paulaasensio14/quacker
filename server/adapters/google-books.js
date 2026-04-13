@@ -80,41 +80,65 @@ function _baseSearchItemFromVolume(item) {
 }
 
 export async function searchGoogleBooks(query) {
-  const q = String(query || "").trim();
 
-  if (!q) return [];
+ const q = String(query || "").trim();
 
-  const data = await _googleBooksGet("/volumes", {
-    q,
-    maxResults: 20,
-    printType: "books",
-    orderBy: "relevance"
-  });
+ if (!q) return [];
 
-  const items = Array.isArray(data?.items) ? data.items : [];
-  const normalizedQuery = String(q).trim().toLowerCase();
-  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+ const data = await _googleBooksGet("/volumes", {
+  q,
+  maxResults: 20,
+  printType: "books",
+  orderBy: "relevance"
+ });
 
-  return items
-    .map(_baseSearchItemFromVolume)
-    .filter((item) => {
-      if (!item?.externalId || !item?.title) return false;
+ const items = Array.isArray(data?.items) ? data.items : [];
+ const normalizedQuery = String(q).trim().toLowerCase();
+ const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
 
-      const title = String(item.title || "").trim().toLowerCase();
-      const author = String(item?.meta?.author || "").trim().toLowerCase();
+ return items
+ .map(_baseSearchItemFromVolume)
+ .filter((item) => {
+  if (!item?.externalId || !item?.title) return false;
+  const title = String(item.title || "").trim().toLowerCase();
+  const author = String(item?.meta?.author || "").trim().toLowerCase();
+  const strongMatch =
+    title === normalizedQuery ||
+    title.startsWith(normalizedQuery) ||
+    queryTokens.every((token) => title.includes(token) || author.includes(token));
+  const hasMinimumMetadata = Boolean(
+    item.cover || author || item.releaseDate || item.summary
+  );
 
-      const strongMatch =
-        title === normalizedQuery ||
-        title.startsWith(normalizedQuery) ||
-        queryTokens.every((token) => title.includes(token) || author.includes(token));
+  return strongMatch && hasMinimumMetadata;
+ })
+ .slice(0, 20);
+}
 
-      const hasMinimumMetadata = Boolean(
-        item.cover || author || item.releaseDate || item.summary
-      );
+export async function getWeeklyFeaturedGoogleBooks(limit = 3) {
+ const maxItems =
+ Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
 
-      return strongMatch && hasMinimumMetadata;
-    })
-    .slice(0, 20);
+ const data = await _googleBooksGet("/volumes", {
+ q: "subject:fiction",
+ maxResults: Math.max(maxItems * 4, 12),
+ printType: "books",
+ orderBy: "newest"
+ });
+
+ const items = Array.isArray(data?.items) ? data.items : [];
+
+ return items
+ .map(_baseSearchItemFromVolume)
+ .filter((item) => {
+ if (!item?.externalId || !item?.title) return false;
+ const author = String(item?.meta?.author || "").trim();
+ return Boolean(item.cover || item.releaseDate || item.summary || author);
+ })
+ .sort((a, b) =>
+ String(b.releaseDate || "").localeCompare(String(a.releaseDate || ""))
+ )
+ .slice(0, maxItems);
 }
 
 export async function getGoogleBookDetail(externalId) {
