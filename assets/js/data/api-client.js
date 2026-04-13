@@ -22,7 +22,7 @@ const ApiClient = (() => {
   const __isNodeServer = __isLocalHost && __port === "3000";
   const __isStaticLocalDev = __isLocalHost && __port !== "3000";
   const __cfg = {
-    transport: __isFileProtocol ? "local" : "http",
+    transport: (__isFileProtocol || __isStaticLocalDev) ? "local" : "http",
     baseUrl: "/api",
     timeoutMs: 12000
   };
