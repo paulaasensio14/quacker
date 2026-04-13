@@ -518,7 +518,7 @@ const ExploreModule = (() => {
       });
     }
 
-    __drawerDetailLoading = true;
+    __drawerDetailLoading = false;
     __drawerDetailError = false;
     _syncExploreDrawerDetailFeedback();
 
