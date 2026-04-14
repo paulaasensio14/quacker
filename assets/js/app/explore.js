@@ -886,6 +886,8 @@ const ExploreModule = (() => {
     const vm = _buildExploreDrawerTextModel(item);
     const metaVm = _buildExploreDrawerDetailMeta(item);
 
+    const titleEl = document.getElementById("exploreDrawerTitle");
+    const metaEl = document.getElementById("exploreDrawerMeta");
     const typeEl = document.getElementById("exploreDetailType");
     const releaseEl = document.getElementById("exploreDetailReleaseDate");
     const libraryEl = document.getElementById("exploreDetailLibraryState");
@@ -896,6 +898,8 @@ const ExploreModule = (() => {
     const metaPrimaryValueEl = document.getElementById("exploreDetailMetaPrimaryValue");
     const summaryEl = document.getElementById("exploreDetailSummary");
 
+    if (titleEl) titleEl.textContent = vm.title;
+    if (metaEl) metaEl.textContent = vm.meta;
     if (typeEl) typeEl.textContent = vm.detailType;
     if (releaseEl) releaseEl.textContent = vm.detailReleaseDate;
     if (libraryEl) libraryEl.textContent = vm.detailLibraryState;
