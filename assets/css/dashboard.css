@@ -6512,13 +6512,13 @@ body.modal-open{
 .explore-rating-ducks {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   margin-right: 10px;
 }
 
 .explore-rating-duck {
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   opacity: 0.25;
   transform: translateY(1px);
   transition: opacity 0.2s ease;
