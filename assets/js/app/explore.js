@@ -574,7 +574,6 @@ const ExploreModule = (() => {
     }
     const coverEl = document.getElementById("exploreDrawerCover");
     if (coverEl) {
-      coverEl.innerHTML = "";
       coverEl.classList.remove("is-fallback");
       coverEl.style.backgroundImage = "none";
       coverEl.style.backgroundSize = "";
@@ -1067,7 +1066,7 @@ const ExploreModule = (() => {
         coverEl.classList.add("is-fallback");
       }
     }
-    
+
     if (badgeEl) {
       badgeEl.textContent = vm.badge;
       badgeEl.hidden = !vm.hasBadge;
