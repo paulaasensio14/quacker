@@ -596,18 +596,6 @@ main.app-main {
   transform: translateX(0);
 }
 
-.explore-drawer.is-expanded {
-  top: var(--explore-expanded-top, 20px);
-  right: var(--explore-expanded-right, 20px);
-  bottom: var(--explore-expanded-bottom, 20px);
-  left: var(--explore-expanded-left, auto);
-  width: auto;
-  height: auto;
-  border: 3px solid var(--border-strong);
-  border-radius: 24px;
-  overflow: hidden;
-}
-
 .explore-drawer-inner {
   position: relative;
   height: 100%;
@@ -654,6 +642,18 @@ main.app-main {
   padding: 18px;
 }
 
+.explore-drawer.is-expanded {
+  top: var(--explore-expanded-top, 20px);
+  right: var(--explore-expanded-right, 20px);
+  bottom: var(--explore-expanded-bottom, 20px);
+  left: var(--explore-expanded-left, auto);
+  width: auto;
+  height: auto;
+  border: 3px solid var(--border-strong);
+  border-radius: 24px;
+  overflow: hidden;
+}
+
 .explore-drawer-body {
   position: relative;
   z-index: 3;
@@ -661,6 +661,33 @@ main.app-main {
   margin-top: -10px;
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.explore-drawer-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.explore-drawer.is-expanded .explore-drawer-content {
+  padding-top: 20px;
+  padding-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .explore-drawer.is-expanded .explore-drawer-cover {
+    min-height: 200px;
+    max-height: 30vh;
+  }
 }
 
 .explore-drawer-title-row {
@@ -724,16 +751,6 @@ main.app-main {
   color: #fff;
   font-weight: 700;
   backdrop-filter: blur(4px);
-}
-
-.explore-drawer-content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 18px 20px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .explore-drawer-summary {
@@ -6127,9 +6144,9 @@ body.modal-open{
 
 .explore-drawer-cover {
   position: relative;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: #0f172a;
+  min-height: 260px;
+  max-height: 320px;
+  flex: 0 0 auto;
 }
 
 .explore-drawer-cover::after {
@@ -6170,17 +6187,15 @@ body.modal-open{
 }
 
 .explore-drawer.is-expanded .explore-drawer-inner {
-  height: 100%;
-  max-height: none;
-}
-
-.explore-drawer.is-expanded .explore-drawer-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  height: 100%;
   min-height: 0;
+}
+
+.explore-drawer.is-expanded .explore-drawer-cover {
+  min-height: clamp(220px, 34vh, 320px);
+  max-height: 38vh;
 }
 
 .explore-drawer.is-expanded .explore-drawer-summary {
