@@ -1052,38 +1052,22 @@ const ExploreModule = (() => {
       const backdrop = _safeText(item?.backdrop).trim();
       const cover = _safeText(item?.cover).trim();
       const heroImage = backdrop || cover;
-      const title = _safeText(item?.title).trim();
-      const initials = title ? title.slice(0, 1).toUpperCase() : "Q";
-      const imageAlt = window.I18n
-        .t("explore_drawer_image_alt")
-        .replace("{title}", title || window.I18n.t("explore_content_fallback"));
 
       if (heroImage) {
-        coverEl.innerHTML = `
-          <img
-            class="explore-drawer-cover-img"
-            src="${heroImage}"
-            alt="${imageAlt}"
-            loading="lazy"
-            referrerpolicy="no-referrer"
-            onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback');"
-          />
-          <span class="explore-drawer-cover-initial">${initials}</span>
-        `;
+        coverEl.style.backgroundImage = `url("${heroImage}")`;
+        coverEl.style.backgroundSize = "cover";
+        coverEl.style.backgroundPosition = "center";
+        coverEl.style.backgroundRepeat = "no-repeat";
         coverEl.classList.remove("is-fallback");
-        coverEl.style.backgroundImage = "none";
-        coverEl.style.backgroundSize = "";
-        coverEl.style.backgroundPosition = "";
-        coverEl.style.backgroundRepeat = "";
       } else {
-        coverEl.innerHTML = `<span class="explore-drawer-cover-initial">${initials}</span>`;
-        coverEl.classList.add("is-fallback");
         coverEl.style.backgroundImage = "none";
         coverEl.style.backgroundSize = "";
         coverEl.style.backgroundPosition = "";
         coverEl.style.backgroundRepeat = "";
+        coverEl.classList.add("is-fallback");
       }
     }
+    
     if (badgeEl) {
       badgeEl.textContent = vm.badge;
       badgeEl.hidden = !vm.hasBadge;
