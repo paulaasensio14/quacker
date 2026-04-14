@@ -909,6 +909,7 @@ const ExploreModule = (() => {
     if (ratingEl) {
       const rawRating = Number(item?.rating || 0);
       const safeRating = Number.isFinite(rawRating) ? Math.max(0, Math.min(10, rawRating)) : 0;
+
       const duckCount = Math.round(safeRating / 2);
       const maxDucks = 5;
 
@@ -917,7 +918,7 @@ const ExploreModule = (() => {
 
         return `
           <img
-            src="assets/img/logo-quacker.png"
+            src="assets/img/quacker-rating.png"
             class="explore-rating-duck${filled ? " is-filled" : ""}"
             alt=""
             aria-hidden="true"
