@@ -531,8 +531,18 @@ const ExploreModule = (() => {
     _syncExploreDrawerListPicker();
 
     const activeItem = _getActiveExploreItem();
+
     if (activeItem) {
-      _hydrateExploreDrawerDetail(activeItem);
+      _refreshExploreDrawerLibraryState(activeItem)
+        .then((freshItem) => {
+          if (!freshItem) return;
+          _syncExploreDrawerFromItem(freshItem);
+          return _hydrateExploreDrawerDetail(freshItem);
+        })
+        .catch((error) => {
+          console.error("[Explore] failed to refresh drawer library state", error);
+          _hydrateExploreDrawerDetail(activeItem);
+        });
     }
   }
 
@@ -733,6 +743,30 @@ const ExploreModule = (() => {
     );
 
     return _getExploreItemByEid(targetEid);
+  }
+
+  async function _refreshExploreDrawerLibraryState(item) {
+    if (!item?.eid) return item || null;
+
+    const title = _safeText(item?.title).trim().toLowerCase();
+    const type = _safeText(item?.type).trim();
+
+    if (!title || !type) return item;
+
+    const library = await ApiClient.getLibrary();
+    const matchedItem = (library || []).find((entry) => {
+      const entryTitle = _safeText(entry?.title).trim().toLowerCase();
+      const entryType = _safeText(entry?.type).trim();
+      return entryTitle === title && entryType === type;
+    });
+
+    const updatedItem = {
+      ...item,
+      __inLibrary: !!matchedItem,
+      __libraryItemId: matchedItem?.id ? String(matchedItem.id) : ""
+    };
+
+    return _replaceExploreItemByEid(updatedItem) || updatedItem;
   }
 
   function _syncExploreDrawerViewport() {
