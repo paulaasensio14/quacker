@@ -6514,33 +6514,19 @@ body.modal-open{
   align-items: center;
   gap: 6px;
   margin-right: 10px;
-  vertical-align: middle;
 }
 
 .explore-rating-duck {
   width: 20px;
   height: 20px;
-  display: block;
+  opacity: 0.25;
+  transform: translateY(1px);
 }
 
-.explore-rating-duck path:first-child {
-  fill: rgba(255, 214, 79, 0.22);
-}
-
-.explore-rating-duck.is-filled path:first-child {
-  fill: #ffd54f;
-}
-
-.explore-rating-duck-eye {
-  fill: #1f2937;
-}
-
-.explore-rating-duck-beak {
-  fill: #ff9f1c;
+.explore-rating-duck.is-filled {
+  opacity: 1;
 }
 
 .explore-rating-number {
-  display: inline-block;
-  vertical-align: middle;
   font-weight: 700;
 }

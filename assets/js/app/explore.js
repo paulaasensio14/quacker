@@ -912,26 +912,22 @@ const ExploreModule = (() => {
       const duckCount = Math.round(safeRating / 2);
       const maxDucks = 5;
 
-      const duckSvg = (filled) => `
-        <svg
-          class="explore-rating-duck${filled ? " is-filled" : ""}"
-          viewBox="0 0 64 64"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M22 24c0-6 5-11 11-11 7 0 13 6 13 13 7 1 12 7 12 14 0 9-8 16-18 16H27C16 56 8 49 8 39c0-8 6-14 14-15z" />
-          <circle cx="38" cy="24" r="2.5" class="explore-rating-duck-eye" />
-          <path d="M47 30c4-1 7 1 9 3-2 3-5 5-9 4z" class="explore-rating-duck-beak" />
-        </svg>
-      `;
+      const ducks = Array.from({ length: maxDucks }, (_, i) => {
+        const filled = i < duckCount;
 
-      const ducksMarkup = Array.from({ length: maxDucks }, (_, index) =>
-        duckSvg(index < duckCount)
-      ).join("");
+        return `
+          <img
+            src="assets/img/logo-quacker.png"
+            class="explore-rating-duck${filled ? " is-filled" : ""}"
+            alt=""
+            aria-hidden="true"
+          />
+        `;
+      }).join("");
 
       ratingEl.innerHTML = `
         <span class="explore-rating-ducks" aria-label="${safeRating.toFixed(1)} sobre 10">
-          ${ducksMarkup}
+          ${ducks}
         </span>
         <span class="explore-rating-number">${safeRating.toFixed(1)}</span>
       `;
