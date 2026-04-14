@@ -938,9 +938,6 @@ const ExploreModule = (() => {
         ...item,
         ...cachedDetail,
         eid,
-        __inLibrary: item.__inLibrary,
-        __listsCount: item.__listsCount,
-        __libraryItemId: item.__libraryItemId,
         __saving: item.__saving
       };
 
@@ -973,9 +970,6 @@ const ExploreModule = (() => {
         ...item,
         ...detail,
         eid,
-        __inLibrary: item.__inLibrary,
-        __listsCount: item.__listsCount,
-        __libraryItemId: item.__libraryItemId,
         __saving: item.__saving
       };
 
