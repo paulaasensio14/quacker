@@ -1373,7 +1373,7 @@ const ExploreModule = (() => {
       }
     }
 
-    for (const item of feed) {
+    for (const item of [...feed, ...featuredFeed]) {
       const safeLibraryId = item.__libraryItemId ? String(item.__libraryItemId) : null;
       item.__listsCount = safeLibraryId
         ? Number(listsCountByLibraryId.get(safeLibraryId) || 0)
