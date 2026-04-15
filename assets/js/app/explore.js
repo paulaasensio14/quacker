@@ -1203,9 +1203,7 @@ const ExploreModule = (() => {
       console.error("Explore: no se pudo preparar el picker de listas", e);
     }
 
-    if (confirmBtn) {
-      confirmBtn.disabled = !select?.value;
-    }
+    _syncExploreListConfirmState();
 
     requestAnimationFrame(() => select?.focus?.());
   }
@@ -1220,6 +1218,13 @@ const ExploreModule = (() => {
     if (picker) picker.hidden = true;
     if (select) select.value = "";
     if (confirmBtn) confirmBtn.disabled = true;
+  }
+
+  function _syncExploreListConfirmState() {
+    const select = document.getElementById("exploreDrawerListSelect");
+    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
+    if (!confirmBtn) return;
+    confirmBtn.disabled = !String(select?.value || "").trim();
   }
 
   async function _saveActiveExploreItemToList(listId) {
@@ -2029,6 +2034,16 @@ const ExploreModule = (() => {
     }
 
     const cancelListBtn = document.getElementById("exploreDrawerCancelList");
+
+    const listSelect = document.getElementById("exploreDrawerListSelect");
+
+    if (listSelect && !listSelect.dataset.bound) {
+      listSelect.dataset.bound = "1";
+
+      listSelect.addEventListener("change", () => {
+        _syncExploreListConfirmState();
+      });
+    }
 
     if (cancelListBtn && !cancelListBtn.dataset.bound) {
       cancelListBtn.dataset.bound = "1";
