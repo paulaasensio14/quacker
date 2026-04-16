@@ -6547,40 +6547,35 @@ body.modal-open{
 }
 
 body.dark-theme .profile-card {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.04),
-    rgba(255, 255, 255, 0.01)
-  ), var(--bg-card);
+  background: #102235;
   color: var(--text-main);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
 body.dark-theme .profile-header h2,
 body.dark-theme .profile-form-group label {
-  color: var(--text-main);
+  color: #f8fafc;
 }
 
 body.dark-theme .profile-meta {
-  color: var(--text-muted);
+  color: #c7d2fe;
 }
 
 body.dark-theme .profile-form-group input,
 body.dark-theme .profile-form-group select,
 body.dark-theme .profile-form-group textarea {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-main);
-  border-color: var(--border-soft);
+  background: #1e293b;
+  color: #f8fafc;
+  border-color: #314158;
 }
 
 body.dark-theme .profile-form-group input::placeholder,
 body.dark-theme .profile-form-group textarea::placeholder {
-  color: var(--text-muted);
+  color: #94a3b8;
 }
 
 body.dark-theme #profileLanguage option {
-  background: var(--bg-card);
-  color: var(--text-main);
+  background: #1e293b;
+  color: #f8fafc;
 }
 
 body.dark-theme #profileFormErrors {
