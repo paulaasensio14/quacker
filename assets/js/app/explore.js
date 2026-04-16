@@ -1458,9 +1458,13 @@ const ExploreModule = (() => {
 
     const run = (async () => {
 
-      feed = feed.map((x) =>
-        x.eid === eid ? { ...x, __saving: true } : x
-      );
+    feed = feed.map((x) =>
+      x.eid === eid ? { ...x, __saving: true } : x
+    );
+
+    featuredFeed = featuredFeed.map((x) =>
+      x.eid === eid ? { ...x, __saving: true } : x
+    );
 
       _applyFilters();
 
