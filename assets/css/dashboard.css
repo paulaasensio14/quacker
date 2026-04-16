@@ -3136,10 +3136,9 @@ main.app-main {
 }
 
 /* ===== PROFILE VIEW ===== */
-
 .profile-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 
