@@ -838,17 +838,20 @@ const ExploreModule = (() => {
     const safeStatus = _safeText(statusLabel).trim();
     if (!safeStatus) return "";
 
+    const normalized = safeStatus.toLowerCase();
+
     const keyMap = {
-      "Returning Series": "explore_status_returning_series",
-      "Ended": "explore_status_ended",
-      "Canceled": "explore_status_canceled",
-      "Released": "explore_status_released",
-      "In Production": "explore_status_in_production",
-      "Planned": "explore_status_planned",
-      "Pilot": "explore_status_pilot"
+      "returning series": "explore_status_returning_series",
+      "ended": "explore_status_ended",
+      "canceled": "explore_status_canceled",
+      "released": "explore_status_released",
+      "in production": "explore_status_in_production",
+      "planned": "explore_status_planned",
+      "pilot": "explore_status_pilot"
     };
 
-    const i18nKey = keyMap[safeStatus];
+    const i18nKey = keyMap[normalized];
+
     if (!i18nKey) return safeStatus;
 
     const translated = window.I18n?.t?.(i18nKey);
