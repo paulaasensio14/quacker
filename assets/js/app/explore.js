@@ -1564,6 +1564,19 @@ const ExploreModule = (() => {
             : x
         );
 
+        featuredFeed = featuredFeed.map((x) =>
+          x.eid === eid
+            ? {
+                ...x,
+                __saving: false,
+                __inLibrary: true,
+                __libraryItemId: created?.id
+                  ? String(created.id)
+                  : (x.__libraryItemId ?? null)
+              }
+            : x
+        );
+
         await _syncInLibraryFlags();
 
         window.toast?.({
