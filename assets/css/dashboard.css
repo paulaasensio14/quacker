@@ -6563,13 +6563,19 @@ body.dark-theme .profile-meta {
 body.dark-theme .profile-form-group input,
 body.dark-theme .profile-form-group select,
 body.dark-theme .profile-form-group textarea {
-  background: #f9fafb;
-  color: #020617;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border-color: var(--border-soft);
 }
 
 body.dark-theme .profile-form-group input::placeholder,
 body.dark-theme .profile-form-group textarea::placeholder {
-  color: #6b7280;
+  color: var(--text-muted);
+}
+
+body.dark-theme #profileLanguage option {
+  background: var(--bg-card);
+  color: var(--text-main);
 }
 
 body.dark-theme #profileFormErrors {
