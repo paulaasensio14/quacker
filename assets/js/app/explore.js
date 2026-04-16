@@ -1323,21 +1323,25 @@ const ExploreModule = (() => {
 
     // Mantener el vínculo por ID si ya existe.
     // Solo usar title+type como fallback para items antiguos o aún no enlazados.
-    feed = feed.map((x) => {
-      const currentLibraryId = x.__libraryItemId ? String(x.__libraryItemId) : null;
-      const byId = currentLibraryId ? libraryById.get(currentLibraryId) : null;
-      const byKey = byId
-        ? null
-        : libraryByKey.get(`${_norm(x.title)}::${_safeText(x.type)}`);
+    const syncLibraryRefs = (items) =>
+      items.map((x) => {
+        const currentLibraryId = x.__libraryItemId ? String(x.__libraryItemId) : null;
+        const byId = currentLibraryId ? libraryById.get(currentLibraryId) : null;
+        const byKey = byId
+          ? null
+          : libraryByKey.get(`${_norm(x.title)}::${_safeText(x.type)}`);
 
-      const libraryItem = byId || byKey || null;
+        const libraryItem = byId || byKey || null;
 
-      return {
-        ...x,
-        __inLibrary: !!libraryItem,
-        __libraryItemId: libraryItem?.id ? String(libraryItem.id) : null
-      };
-    });
+        return {
+          ...x,
+          __inLibrary: !!libraryItem,
+          __libraryItemId: libraryItem?.id ? String(libraryItem.id) : null
+        };
+      });
+
+    feed = syncLibraryRefs(feed);
+    featuredFeed = syncLibraryRefs(featuredFeed);
 
     let lists = [];
     try {
