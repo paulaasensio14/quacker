@@ -834,6 +834,27 @@ const ExploreModule = (() => {
     };
   }
 
+  function _translateExploreStatusLabel(statusLabel) {
+    const safeStatus = _safeText(statusLabel).trim();
+    if (!safeStatus) return "";
+
+    const keyMap = {
+      "Returning Series": "explore_status_returning_series",
+      "Ended": "explore_status_ended",
+      "Canceled": "explore_status_canceled",
+      "Released": "explore_status_released",
+      "In Production": "explore_status_in_production",
+      "Planned": "explore_status_planned",
+      "Pilot": "explore_status_pilot"
+    };
+
+    const i18nKey = keyMap[safeStatus];
+    if (!i18nKey) return safeStatus;
+
+    const translated = window.I18n?.t?.(i18nKey);
+    return translated || safeStatus;
+  }
+
   function _buildExploreDrawerDetailMeta(item) {
     const genres = Array.isArray(item?.genres)
       ? item.genres.map((genre) => _safeText(genre).trim()).filter(Boolean)
@@ -847,7 +868,7 @@ const ExploreModule = (() => {
 
     const author = _safeText(item?.meta?.author).trim();
     const platforms = _safeText(item?.meta?.platforms).trim();
-    const statusLabel = _safeText(item?.statusLabel).trim();
+    const statusLabel = _translateExploreStatusLabel(item?.statusLabel);
     const runtimeNumber = Number(item?.runtime || 0);
     const totalPagesNumber = Number(item?.meta?.totalPages || 0);
 
