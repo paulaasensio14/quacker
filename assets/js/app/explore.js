@@ -261,6 +261,53 @@ const ExploreModule = (() => {
     if (empty) empty.hidden = hasAny;
   }
 
+  function _renderExploreSection(section, renderCard) {
+    const { key, title, subtitle, items, limit } = section;
+    if (!items || items.length === 0) return "";
+
+    const isExpanded = expandedSection === key;
+    const shownCount = isExpanded
+      ? Math.min(items.length, sectionShownCount[key] || limit)
+      : Math.min(items.length, limit);
+    const shown = items.slice(0, shownCount);
+
+    const canExpand = !isExpanded && items.length > limit;
+    const canLoadMore = isExpanded && shownCount < items.length;
+
+    return `
+      <section class="explore-section" data-section="${key}">
+        <header class="explore-section-header">
+          <div>
+            <h2 class="explore-section-title">${title}</h2>
+            ${subtitle ? `<p class="explore-section-sub">${subtitle}</p>` : ""}
+          </div>
+
+          <div class="explore-section-actions">
+            ${canExpand
+              ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="expand" data-section="${key}">${window.I18n.t("explore_action_view_more")}</button>`
+              : ""}
+
+            ${canLoadMore
+              ? `<button type="button" class="btn-ghost explore-section-btn"
+              data-explore-section-action="load-more"
+              data-section="${key}">
+              ${window.I18n.t("explore_action_load_more")}
+              </button>`
+              : ""}
+
+            ${isExpanded
+              ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="collapse">${window.I18n.t("explore_action_back")}</button>`
+              : ""}
+          </div>
+        </header>
+
+        <div class="explore-section-grid">
+          ${shown.map(renderCard).join("")}
+        </div>
+      </section>
+    `;
+  }
+
   function _render() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
@@ -331,54 +378,6 @@ const ExploreModule = (() => {
     return;
   }
 
-  const renderSection = (section) => {
-    const { key, title, subtitle, items, limit } = section;
-    if (!items || items.length === 0) return "";
-
-    const isExpanded = expandedSection === key;
-
-    // En modo normal mostramos el límite.
-    // En modo expandido mostramos sectionShownCount[key] y lo aumentamos con "Cargar más".
-    const shownCount = isExpanded ? Math.min(items.length, sectionShownCount[key] || limit) : Math.min(items.length, limit);
-    const shown = items.slice(0, shownCount);
-
-    const canExpand = !isExpanded && items.length > limit;
-    const canLoadMore = isExpanded && shownCount < items.length;
-
-    return `
-      <section class="explore-section" data-section="${key}">
-        <header class="explore-section-header">
-          <div>
-            <h2 class="explore-section-title">${title}</h2>
-            ${subtitle ? `<p class="explore-section-sub">${subtitle}</p>` : ""}
-          </div>
-
-          <div class="explore-section-actions">
-            ${canExpand
-            ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="expand" data-section="${key}">${window.I18n.t("explore_action_view_more")}</button>`
-            : ""}
-
-            ${canLoadMore
-            ? `<button type="button" class="btn-ghost explore-section-btn"
-            data-explore-section-action="load-more"
-            data-section="${key}">
-            ${window.I18n.t("explore_action_load_more")}
-            </button>`
-            : ""}
-
-            ${isExpanded
-            ? `<button type="button" class="btn-ghost explore-section-btn" data-explore-section-action="collapse">${window.I18n.t("explore_action_back")}</button>`
-            : ""}
-          </div>
-        </header>
-
-        <div class="explore-section-grid">
-          ${shown.map(renderCard).join("")}
-        </div>
-      </section>
-    `;
-  };
-
   const sectionsToRender = expandedSection
     ? SECTIONS.filter((s) => s.key === expandedSection)
     : SECTIONS;
@@ -386,7 +385,7 @@ const ExploreModule = (() => {
     const hasAny = sectionsToRender.some((s) => (s.items || []).length > 0);
 
     // Render secciones (aunque luego ocultemos la grid, para mantener consistencia interna)
-    container.innerHTML = sectionsToRender.map(renderSection).join("");
+    container.innerHTML = sectionsToRender.map((section) => _renderExploreSection(section, renderCard)).join("");
 
     // Si no hay resultados: ocultar grid y mostrar empty state
     container.hidden = !hasAny;
