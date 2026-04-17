@@ -388,40 +388,46 @@ const ExploreModule = (() => {
 
   }
 
-  function _applyFilters() {
-
+  function _getFeedVisible() {
     const t = typeFilter;
     const q = _norm(searchTerm);
+
     let out = [...feed];
 
-    // quitar ocultados
-    out = out.filter(x => !dismissed.has(String(x.eid)));
+    out = out.filter((x) => !dismissed.has(String(x.eid)));
 
-    if (t !== "all") out = out.filter(x => x.type === t);
-
-    if (sortMode === "title") {
-
-      out.sort((a, b) =>
-        _safeText(a.title).localeCompare(_safeText(b.title), "es", { sensitivity: "base" })
-      );
-
-    } else if (!q) {
-
-      // En búsquedas, respetamos el ranking/mezcla que ya viene del backend.
-      // Solo aplicamos "Más reciente" al feed sin query.
-      out.sort((a, b) => {
-        const da = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
-        const db = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
-
-        return db - da;
-      });
-
+    if (t !== "all") {
+      out = out.filter((x) => x.type === t);
     }
 
-    visible = out;
+    if (sortMode === "title") {
+      out.sort((a, b) =>
+        _safeText(a.title).localeCompare(_safeText(b.title), "es", {
+          sensitivity: "base",
+        })
+      );
+    } else if (!q) {
+      out.sort((a, b) => {
+        const aTs = Number(a?.__releaseTs || 0);
+        const bTs = Number(b?.__releaseTs || 0);
+        return bTs - aTs;
+      });
+    }
 
+    if (q) {
+      out = out.filter((x) => {
+        const title = _norm(x.title);
+        const summary = _norm(x.summary);
+        return title.includes(q) || summary.includes(q);
+      });
+    }
+
+    return out;
+  }
+
+  function _applyFilters() {
+    visible = _getFeedVisible();
     _render();
-
   }
 
   function _syncExploreToolbarUI() {
