@@ -796,23 +796,7 @@ const ExploreModule = (() => {
   }
 
   function _resolveLibraryItemIdForEntry(entry) {
-    const explicitId = String(entry?.__libraryItemId || "").trim();
-    if (explicitId) return explicitId;
-
-    // fallback: usar itemId del evento si coincide por contenido
-
-    const entryTitle = _safeText(entry?.title).trim().toLowerCase();
-    const entryType = _safeText(entry?.type).trim();
-
-    const activeLibraryCache = _libraryCache || [];
-
-    const match = activeLibraryCache.find((libItem) => {
-      const libTitle = _safeText(libItem?.title).trim().toLowerCase();
-      const libType = _safeText(libItem?.type).trim();
-      return libTitle === entryTitle && libType === entryType;
-    });
-
-    return match?.id ? String(match.id) : "";
+    return resolveLibraryItemIdFromCache(entry, _libraryCache);
   }
 
   function _patchExploreItemsByLibraryItemId(libraryItemId, patcher) {
