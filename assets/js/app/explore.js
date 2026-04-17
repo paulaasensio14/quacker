@@ -795,10 +795,6 @@ const ExploreModule = (() => {
     return _replaceExploreItemByEid(updatedItem) || updatedItem;
   }
 
-  function _resolveLibraryItemIdForEntry(entry) {
-    return resolveLibraryItemIdFromCache(entry, _libraryCache);
-  }
-
   function _patchExploreItemsByLibraryItemId(libraryItemId, patcher) {
     const targetLibraryItemId = String(libraryItemId || "").trim();
     if (!targetLibraryItemId || typeof patcher !== "function") return false;
@@ -806,7 +802,9 @@ const ExploreModule = (() => {
     let didChange = false;
 
     const applyPatch = (entry) => {
-      const entryLibraryItemId = _resolveLibraryItemIdForEntry(entry);
+      const entryLibraryItemId =
+        window.ItemIdentity.resolveLibraryItemIdFromCache(entry, _libraryCache);
+        
       if (entryLibraryItemId !== targetLibraryItemId) return entry;
 
       didChange = true;
