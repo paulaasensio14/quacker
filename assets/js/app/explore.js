@@ -222,6 +222,21 @@ const ExploreModule = (() => {
     };
   }
 
+  function _getFeaturedVisible() {
+    const featuredSeen = new Set();
+
+    return featuredFeed.filter((item) => {
+      const eid = String(item?.eid || "").trim();
+      if (!eid) return false;
+      if (featuredSeen.has(eid)) return false;
+      if (dismissed.has(eid)) return false;
+      if (typeFilter !== "all" && item.type !== typeFilter) return false;
+
+      featuredSeen.add(eid);
+      return true;
+    });
+  }
+
   function _render() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
@@ -236,17 +251,7 @@ const ExploreModule = (() => {
   // Destacados esta semana:
   // usar el orden original del feed que llega de la API,
   // sin recomponer artificialmente por tipo en frontend.
-  const featuredSeen = new Set();
-  const featuredVisible = featuredFeed.filter((item) => {
-    const eid = String(item?.eid || "").trim();
-    if (!eid) return false;
-    if (featuredSeen.has(eid)) return false;
-    if (dismissed.has(eid)) return false;
-    if (typeFilter !== "all" && item.type !== typeFilter) return false;
-    featuredSeen.add(eid);
-    return true;
-  });
-  const tendenciasAll = featuredVisible;
+  const tendenciasAll = _getFeaturedVisible();
 
   const SECTIONS = [
     {
