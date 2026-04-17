@@ -64,6 +64,77 @@ const ListsModule = (() => {
     return new Promise((res) => setTimeout(res, ms));
   }
 
+  function _getListItemEntryId(entry) {
+    return String(typeof entry === "string" ? entry : entry?.id || "");
+  }
+
+  function _patchListMembership(listId, itemId, action) {
+    const normalizedListId = String(listId || "").trim();
+    const normalizedItemId = String(itemId || "").trim();
+    const normalizedAction = String(action || "").trim();
+
+    if (!normalizedListId || !normalizedItemId) return false;
+    if (normalizedAction !== "list_item_added" && normalizedAction !== "list_item_removed") return false;
+
+    const list = (allLists || []).find((entry) => String(entry?.id) === normalizedListId);
+    if (!list) return false;
+
+    if (!Array.isArray(list.items)) {
+      list.items = [];
+    }
+
+    const exists = list.items.some((entry) => _getListItemEntryId(entry) === normalizedItemId);
+    let didChange = false;
+
+    if (normalizedAction === "list_item_added" && !exists) {
+      list.items.push({
+        id: normalizedItemId,
+        addedAt: new Date().toISOString()
+      });
+      didChange = true;
+    }
+
+    if (normalizedAction === "list_item_removed" && exists) {
+      list.items = list.items.filter((entry) => _getListItemEntryId(entry) !== normalizedItemId);
+      didChange = true;
+    }
+
+    if (!didChange) return false;
+
+    list.itemsCount = list.items.length;
+    list.updatedAt = new Date().toISOString();
+
+    return true;
+  }
+
+  async function _handleListsItemStateChanged(event) {
+    const detail = event?.detail || {};
+    if (detail.kind !== "item_state") return;
+
+    const action = String(detail.action || "").trim();
+    const listId = String(detail.listId || "").trim();
+    const itemId = String(detail.itemId || "").trim();
+
+    const didChange = _patchListMembership(listId, itemId, action);
+    if (!didChange) return;
+
+    const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
+    if (!isListsActive) return;
+
+    const detailOpen = !_getEl("listDetail")?.hidden && !!activeListId;
+
+    if (detailOpen && String(activeListId) === listId) {
+      const activeList = allLists.find((entry) => String(entry.id) === String(activeListId));
+      if (activeList) {
+        _renderActiveListDetailHeader(activeList);
+        await renderActiveListItems();
+      }
+      return;
+    }
+
+    render(false);
+  }
+
   function flashListItemCard(itemId) {
     if (!itemId) return;
 
@@ -801,6 +872,8 @@ const ListsModule = (() => {
         }
       }
     });
+
+    document.addEventListener("quacker:data-changed", _handleListsItemStateChanged);
 
     // Volver desde Explore a un detalle de lista concreto
     document.addEventListener("quacker:lists-open-detail", async (e) => {
