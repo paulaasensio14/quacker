@@ -1464,15 +1464,25 @@ const ApiClient = (() => {
     }
 
     if (_isHttp()) {
-      // Backend real (por partes)
-      const res = await _httpJson("GET", "/library");
-      // Permitimos dos formatos: array directo o wrapper { items: [...] }
-      const items = Array.isArray(res)
-        ? res
-        : (res && Array.isArray(res.items) ? res.items : []);
+      try {
+        // Backend real (por partes)
+        const res = await _httpJson("GET", "/library");
+        // Permitimos dos formatos: array directo o wrapper { items: [...] }
+        const items = Array.isArray(res)
+          ? res
+          : (res && Array.isArray(res.items) ? res.items : []);
 
-      _setLibraryCache(items);
-      return items.slice();
+        _setLibraryCache(items);
+        return items.slice();
+      } catch (error) {
+        console.error("[ApiClient] getLibrary failed", error);
+
+        const fallbackItems = Array.isArray(_libraryCache.items)
+          ? _libraryCache.items.slice()
+          : [];
+
+        return fallbackItems;
+      }
     }
 
     // modo local (demo)
