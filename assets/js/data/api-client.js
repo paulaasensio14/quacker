@@ -148,6 +148,14 @@ const ApiClient = (() => {
     }
   }
 
+  const LIBRARY_CACHE_TTL_MS = 30 * 1000;
+
+  let _libraryCache = {
+    transport: "",
+    timestamp: 0,
+    items: null
+  };
+
   // === helpers internos ===
   function _safeState() {
     if (typeof FakeBackend === "undefined") {
@@ -160,6 +168,34 @@ const ApiClient = (() => {
       };
     }
     return FakeBackend.getState();
+  }
+
+  function _invalidateLibraryCache() {
+    _libraryCache = {
+      transport: "",
+      timestamp: 0,
+      items: null
+    };
+  }
+
+  function _getLibraryCacheSnapshot() {
+    const now = Date.now();
+    const isFresh =
+      _libraryCache.transport === __cfg.transport &&
+      Array.isArray(_libraryCache.items) &&
+      now - _libraryCache.timestamp < LIBRARY_CACHE_TTL_MS;
+
+    if (!isFresh) return null;
+
+    return _libraryCache.items.slice();
+  }
+
+  function _setLibraryCache(items) {
+    _libraryCache = {
+      transport: __cfg.transport,
+      timestamp: Date.now(),
+      items: Array.isArray(items) ? items.slice() : []
+    };
   }
 
   function _formatTimeAgo(iso) {
@@ -179,6 +215,10 @@ const ApiClient = (() => {
 
   function _emitDataChanged(detail = {}) {
     try {
+      if (detail?.kind === "library") {
+        _invalidateLibraryCache();
+      }
+
       document.dispatchEvent(new CustomEvent("quacker:data-changed", { detail }));
     } catch (_) {
       // defensivo: si CustomEvent falla por algún motivo, no rompemos la app
@@ -1418,18 +1458,28 @@ const ApiClient = (() => {
 
   // === biblioteca ===
   async function getLibrary() {
+    const cachedItems = _getLibraryCacheSnapshot();
+    if (cachedItems) {
+      return cachedItems;
+    }
+
     if (_isHttp()) {
       // Backend real (por partes)
       const res = await _httpJson("GET", "/library");
       // Permitimos dos formatos: array directo o wrapper { items: [...] }
-      if (Array.isArray(res)) return res;
-      if (res && Array.isArray(res.items)) return res.items;
-      return [];
+      const items = Array.isArray(res)
+        ? res
+        : (res && Array.isArray(res.items) ? res.items : []);
+
+      _setLibraryCache(items);
+      return items.slice();
     }
 
     // modo local (demo)
     const state = _safeState();
-    return state.library || [];
+    const items = state.library || [];
+    _setLibraryCache(items);
+    return items.slice();
   }
 
   async function getLibraryItemById(itemId) {
