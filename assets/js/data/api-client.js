@@ -185,6 +185,23 @@ const ApiClient = (() => {
     }
   }
 
+  function _emitItemStateChanged({
+    action,
+    itemId = "",
+    listId = "",
+    sourceView = "api-client",
+    extra = {}
+  } = {}) {
+    _emitDataChanged({
+      kind: "item_state",
+      action: String(action || "").trim(),
+      itemId: itemId ? String(itemId) : "",
+      listId: listId ? String(listId) : "",
+      sourceView: String(sourceView || "api-client"),
+      ...extra
+    });
+  }
+
   // === auth (de momento fake) ===
   async function login(email, password) {
     if (_isHttp()) {
@@ -582,6 +599,12 @@ const ApiClient = (() => {
         itemId: String(itemId)
       });
 
+      _emitItemStateChanged({
+        action: "list_item_added",
+        itemId: String(itemId),
+        listId: String(listId)
+      });
+
       return res;
     }
 
@@ -625,6 +648,12 @@ const ApiClient = (() => {
       itemId: String(itemId)
     });
 
+    _emitItemStateChanged({
+      action: "list_item_added",
+      itemId: String(itemId),
+      listId: String(listId)
+    });
+
     return { ok: true, listId: String(listId), itemId: String(itemId) };
   }
 
@@ -642,6 +671,12 @@ const ApiClient = (() => {
         action: "remove_item",
         listId: String(listId),
         itemId: String(itemId)
+      });
+
+      _emitItemStateChanged({
+        action: "list_item_removed",
+        itemId: String(itemId),
+        listId: String(listId)
       });
 
       return res;
@@ -674,6 +709,12 @@ const ApiClient = (() => {
       action: "remove_item",
       listId: String(listId),
       itemId: String(itemId)
+    });
+
+    _emitItemStateChanged({
+      action: "list_item_removed",
+      itemId: String(itemId),
+      listId: String(listId)
     });
 
     return { ok: true, removed: before - list.items.length };
