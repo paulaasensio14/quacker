@@ -312,8 +312,8 @@ const ExploreModule = (() => {
     return [
       {
         key: "featured",
-        title: window.I18n.t("explore_section_featured_title"),
-        subtitle: window.I18n.t("explore_section_featured_subtitle"),
+        title: window.I18n.t("explore_section_trending"),
+        subtitle: "Lo más interesante para ver, leer o jugar esta semana",
         items: tendenciasAll,
         limit: 12,
       }
