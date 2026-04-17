@@ -299,13 +299,15 @@ const ExploreModule = (() => {
   };
 
   const normalizedSearch = _norm(searchTerm);
+  const isSearchMode = Boolean(normalizedSearch);
+  const activeItems = isSearchMode ? visible : tendenciasAll;
 
-  if (normalizedSearch) {
+  if (isSearchMode) {
     const titleSuffix = typeFilter !== "all" ? ` · ${TYPE_LABELS[typeFilter]?.() || typeFilter}` : "";
-    const hasAny = visible.length > 0;
+    const hasAny = activeItems.length > 0;
     const resultsTitle = window.I18n.t("explore_results_title");
     const resultsShowing = window.I18n.t("explore_results_showing")
-      .replace("{count}", String(visible.length))
+      .replace("{count}", String(activeItems.length))
       .replace("{suffix}", titleSuffix);
 
     container.innerHTML = hasAny ? `
@@ -315,7 +317,7 @@ const ExploreModule = (() => {
           <p class="explore-section-sub">${resultsShowing}</p>
         </div>
         <div class="explore-section-grid">
-          ${visible.map(renderCard).join("")}
+          ${activeItems.map(renderCard).join("")}
         </div>
       </section>
     ` : "";
