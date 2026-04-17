@@ -320,6 +320,13 @@ const ExploreModule = (() => {
     ];
   }
 
+  function _getSectionsToRender(SECTIONS) {
+    if (expandedSection) {
+      return SECTIONS.filter((s) => s.key === expandedSection);
+    }
+    return SECTIONS;
+  }
+
   function _render() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
@@ -382,9 +389,7 @@ const ExploreModule = (() => {
     return;
   }
 
-  const sectionsToRender = expandedSection
-    ? SECTIONS.filter((s) => s.key === expandedSection)
-    : SECTIONS;
+    const sectionsToRender = _getSectionsToRender(SECTIONS);
 
     const hasAny = sectionsToRender.some((s) => (s.items || []).length > 0);
 
