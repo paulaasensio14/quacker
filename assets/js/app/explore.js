@@ -308,6 +308,18 @@ const ExploreModule = (() => {
     `;
   }
 
+  function _getExploreSections(tendenciasAll) {
+    return [
+      {
+        key: "featured",
+        title: window.I18n.t("explore_section_featured_title"),
+        subtitle: window.I18n.t("explore_section_featured_subtitle"),
+        items: tendenciasAll,
+        limit: 12,
+      }
+    ];
+  }
+
   function _render() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
@@ -324,15 +336,7 @@ const ExploreModule = (() => {
   // sin recomponer artificialmente por tipo en frontend.
   const tendenciasAll = _getFeaturedVisible();
 
-  const SECTIONS = [
-    {
-      key: "tendencias",
-      title: window.I18n.t("explore_section_trending"),
-      subtitle: window.I18n.t("explore_section_trending_sub"),
-      limit: 12,
-      items: tendenciasAll
-    }
-  ];
+  const SECTIONS = _getExploreSections(tendenciasAll);
 
   // Inicializa shownCount si está a 0 (para modo expandido)
   for (const s of SECTIONS) {
