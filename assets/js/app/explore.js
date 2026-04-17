@@ -237,6 +237,30 @@ const ExploreModule = (() => {
     });
   }
 
+  function _renderSearchResults({ container, empty, activeItems, renderCard }) {
+    const titleSuffix = typeFilter !== "all" ? ` · ${TYPE_LABELS[typeFilter]?.() || typeFilter}` : "";
+    const hasAny = activeItems.length > 0;
+    const resultsTitle = window.I18n.t("explore_results_title");
+    const resultsShowing = window.I18n.t("explore_results_showing")
+      .replace("{count}", String(activeItems.length))
+      .replace("{suffix}", titleSuffix);
+
+    container.innerHTML = hasAny ? `
+      <section class="explore-results">
+        <div class="explore-results-head">
+          <h2 class="explore-section-title">${resultsTitle} “${searchTerm}”</h2>
+          <p class="explore-section-sub">${resultsShowing}</p>
+        </div>
+        <div class="explore-section-grid">
+          ${activeItems.map(renderCard).join("")}
+        </div>
+      </section>
+    ` : "";
+
+    container.hidden = !hasAny;
+    if (empty) empty.hidden = hasAny;
+  }
+
   function _render() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
@@ -303,27 +327,7 @@ const ExploreModule = (() => {
   const activeItems = isSearchMode ? visible : tendenciasAll;
 
   if (isSearchMode) {
-    const titleSuffix = typeFilter !== "all" ? ` · ${TYPE_LABELS[typeFilter]?.() || typeFilter}` : "";
-    const hasAny = activeItems.length > 0;
-    const resultsTitle = window.I18n.t("explore_results_title");
-    const resultsShowing = window.I18n.t("explore_results_showing")
-      .replace("{count}", String(activeItems.length))
-      .replace("{suffix}", titleSuffix);
-
-    container.innerHTML = hasAny ? `
-      <section class="explore-results">
-        <div class="explore-results-head">
-          <h2 class="explore-section-title">${resultsTitle} “${searchTerm}”</h2>
-          <p class="explore-section-sub">${resultsShowing}</p>
-        </div>
-        <div class="explore-section-grid">
-          ${activeItems.map(renderCard).join("")}
-        </div>
-      </section>
-    ` : "";
-
-    container.hidden = !hasAny;
-    if (empty) empty.hidden = hasAny;
+    _renderSearchResults({ container, empty, activeItems, renderCard });
     return;
   }
 
