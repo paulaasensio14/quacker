@@ -90,6 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.addEventListener("quacker:data-changed", (e) => {
     const detail = e?.detail || {};
     const kind = detail.kind || "";
+    const action = detail.action ? String(detail.action) : "";
     const itemId = detail.itemId ? String(detail.itemId) : null;
     const listId = detail.listId ? String(detail.listId) : null;
 
@@ -126,9 +127,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       }));
     }
 
-    // 4) Si estás en Biblioteca, recargar solo cuando cambian biblioteca o listas
+    // 4) Si estás en Biblioteca, recargar solo cuando hace falta de verdad.
+    // Para add/remove de items en listas usamos parche local en LibraryUI.
     const isLibraryActive = document.querySelector("#view-library")?.classList.contains("is-active");
-    if (isLibraryActive && (kind === "library" || kind === "lists")) {
+    const isListMembershipMutation =
+      kind === "lists" &&
+      (action === "add_item" || action === "remove_item");
+
+    if (isLibraryActive && (kind === "library" || (kind === "lists" && !isListMembershipMutation))) {
       scheduleLibraryRefresh();
     }
 

@@ -326,6 +326,39 @@ const LibraryUI = (() => {
   let itemsInAnyList = new Set();
   let typeFilter = "all";
   let statusFilter = "all";
+
+  function _handleLibraryItemStateChanged(event) {
+    const detail = event?.detail || {};
+    if (detail.kind !== "item_state") return;
+
+    const action = String(detail.action || "").trim();
+    const libraryItemId = String(detail.itemId || "").trim();
+    if (!libraryItemId) return;
+
+    let didChange = false;
+
+    if (action === "list_item_added") {
+      if (!itemsInAnyList.has(libraryItemId)) {
+        itemsInAnyList.add(libraryItemId);
+        didChange = true;
+      }
+    }
+
+    if (action === "list_item_removed") {
+      if (itemsInAnyList.has(libraryItemId)) {
+        itemsInAnyList.delete(libraryItemId);
+        didChange = true;
+      }
+    }
+
+    if (!didChange) return;
+
+    const isLibraryActive = document.querySelector("#view-library")?.classList.contains("is-active");
+    if (!isLibraryActive) return;
+
+    render();
+  }
+
   let sortMode = "recent";
   let searchTerm = "";
 
@@ -654,6 +687,8 @@ const LibraryUI = (() => {
   document.addEventListener("quacker:lang-change", () => {
     render();
   });
+
+  document.addEventListener("quacker:data-changed", _handleLibraryItemStateChanged);
 
   function render() {
     const grid = $("#libraryGrid");
