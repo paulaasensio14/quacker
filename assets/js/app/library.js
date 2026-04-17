@@ -102,6 +102,10 @@ function _showAddToListError(msg = "") {
 
 async function openAddToListModal(itemId) {
   const modal = document.getElementById("addToListModal");
+  if (modal) {
+    modal.dataset.itemId = String(itemId || "");
+  }
+  
   const optionsEl = document.getElementById("atl_listOptions");
   if (!modal || !optionsEl) return;
 
@@ -267,6 +271,20 @@ async function openAddToListModal(itemId) {
   }, 0);
 }
 
+async function _refreshAddToListModalIfOpen(libraryItemId) {
+  const modal = document.getElementById("addToListModal");
+  if (!modal || !modal.classList.contains("is-open")) return;
+
+  const currentItemId = modal.dataset.itemId || "";
+  if (String(currentItemId) !== String(libraryItemId)) return;
+
+  try {
+    await openAddToListModal(libraryItemId);
+  } catch (err) {
+    console.error("[Library] failed to refresh AddToList modal", err);
+  }
+}
+
 function closeAddToListModal() {
   const modal = document.getElementById("addToListModal");
   if (!modal) return;
@@ -367,6 +385,8 @@ const LibraryUI = (() => {
     }
 
     if (!didChange) return;
+
+    _refreshAddToListModalIfOpen(libraryItemId);
 
     const isLibraryActive = document.querySelector("#view-library")?.classList.contains("is-active");
     if (!isLibraryActive) return;
