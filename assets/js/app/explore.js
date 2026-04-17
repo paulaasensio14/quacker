@@ -825,13 +825,21 @@ const ExploreModule = (() => {
     const libraryItemId = String(detail.itemId || "").trim();
     if (!libraryItemId) return;
 
+    const hasAuthoritativeListsCount = Number.isFinite(Number(detail.listsCount));
+    const authoritativeListsCount = hasAuthoritativeListsCount
+      ? Math.max(0, Number(detail.listsCount))
+      : null;
+
     let didChange = false;
 
     if (action === "list_item_added") {
       didChange = _patchExploreItemsByLibraryItemId(libraryItemId, (entry) => ({
         __inLibrary: true,
         __libraryItemId: libraryItemId,
-        __listsCount: Number(entry?.__listsCount || 0) + 1
+        __listsCount:
+          authoritativeListsCount != null
+            ? authoritativeListsCount
+            : Number(entry?.__listsCount || 0) + 1
       }));
     }
 
@@ -839,7 +847,10 @@ const ExploreModule = (() => {
       didChange = _patchExploreItemsByLibraryItemId(libraryItemId, (entry) => ({
         __inLibrary: true,
         __libraryItemId: libraryItemId,
-        __listsCount: Math.max(0, Number(entry?.__listsCount || 0) - 1)
+        __listsCount:
+          authoritativeListsCount != null
+            ? authoritativeListsCount
+            : Math.max(0, Number(entry?.__listsCount || 0) - 1)
       }));
     }
 

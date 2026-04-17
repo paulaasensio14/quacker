@@ -336,18 +336,33 @@ const LibraryUI = (() => {
     if (!libraryItemId) return;
 
     let didChange = false;
+    const hasAuthoritativeInAnyList = typeof detail.inAnyList === "boolean";
 
-    if (action === "list_item_added") {
-      if (!itemsInAnyList.has(libraryItemId)) {
-        itemsInAnyList.add(libraryItemId);
-        didChange = true;
+    if (hasAuthoritativeInAnyList) {
+      if (detail.inAnyList) {
+        if (!itemsInAnyList.has(libraryItemId)) {
+          itemsInAnyList.add(libraryItemId);
+          didChange = true;
+        }
+      } else {
+        if (itemsInAnyList.has(libraryItemId)) {
+          itemsInAnyList.delete(libraryItemId);
+          didChange = true;
+        }
       }
-    }
+    } else {
+      if (action === "list_item_added") {
+        if (!itemsInAnyList.has(libraryItemId)) {
+          itemsInAnyList.add(libraryItemId);
+          didChange = true;
+        }
+      }
 
-    if (action === "list_item_removed") {
-      if (itemsInAnyList.has(libraryItemId)) {
-        itemsInAnyList.delete(libraryItemId);
-        didChange = true;
+      if (action === "list_item_removed") {
+        if (itemsInAnyList.has(libraryItemId)) {
+          itemsInAnyList.delete(libraryItemId);
+          didChange = true;
+        }
       }
     }
 

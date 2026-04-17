@@ -202,6 +202,33 @@ const ApiClient = (() => {
     });
   }
 
+  async function _getItemListRelationshipState(itemId) {
+    const normalizedItemId = String(itemId || "").trim();
+    if (!normalizedItemId) {
+      return {
+        inAnyList: false,
+        listsCount: 0
+      };
+    }
+
+    try {
+      const containingLists = await getListsContainingItem(normalizedItemId);
+      const listsCount = Array.isArray(containingLists) ? containingLists.length : 0;
+
+      return {
+        inAnyList: listsCount > 0,
+        listsCount
+      };
+    } catch (error) {
+      console.error("[ApiClient] failed to compute item list relationship state", error);
+
+      return {
+        inAnyList: false,
+        listsCount: 0
+      };
+    }
+  }
+
   // === auth (de momento fake) ===
   async function login(email, password) {
     if (_isHttp()) {
@@ -599,10 +626,13 @@ const ApiClient = (() => {
         itemId: String(itemId)
       });
 
+      const relationshipState = await _getItemListRelationshipState(itemId);
+
       _emitItemStateChanged({
         action: "list_item_added",
         itemId: String(itemId),
-        listId: String(listId)
+        listId: String(listId),
+        extra: relationshipState
       });
 
       return res;
@@ -648,10 +678,13 @@ const ApiClient = (() => {
       itemId: String(itemId)
     });
 
+    const relationshipState = await _getItemListRelationshipState(itemId);
+
     _emitItemStateChanged({
       action: "list_item_added",
       itemId: String(itemId),
-      listId: String(listId)
+      listId: String(listId),
+      extra: relationshipState
     });
 
     return { ok: true, listId: String(listId), itemId: String(itemId) };
@@ -673,10 +706,13 @@ const ApiClient = (() => {
         itemId: String(itemId)
       });
 
+      const relationshipState = await _getItemListRelationshipState(itemId);
+
       _emitItemStateChanged({
         action: "list_item_removed",
         itemId: String(itemId),
-        listId: String(listId)
+        listId: String(listId),
+        extra: relationshipState
       });
 
       return res;
@@ -711,10 +747,13 @@ const ApiClient = (() => {
       itemId: String(itemId)
     });
 
+    const relationshipState = await _getItemListRelationshipState(itemId);
+
     _emitItemStateChanged({
       action: "list_item_removed",
       itemId: String(itemId),
-      listId: String(listId)
+      listId: String(listId),
+      extra: relationshipState
     });
 
     return { ok: true, removed: before - list.items.length };
