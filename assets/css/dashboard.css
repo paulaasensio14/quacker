@@ -6551,7 +6551,10 @@ body.dark-theme .profile-card {
   color: #F8FAFC;
 }
 
-body.dark-theme .profile-header h2,
+body.dark-theme .profile-header h2 {
+  color: #F8FAFC;
+}
+
 body.dark-theme .profile-form-group label {
   color: #94A3B8;
 }
