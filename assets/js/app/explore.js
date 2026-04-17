@@ -778,6 +778,7 @@ const ExploreModule = (() => {
     if (!title || !type) return item;
 
     const library = await ApiClient.getLibrary();
+    window.__quackerLibraryCache = library || [];
     const matchedItem = (library || []).find((entry) => {
       const entryTitle = _safeText(entry?.title).trim().toLowerCase();
       const entryType = _safeText(entry?.type).trim();
@@ -793,6 +794,27 @@ const ExploreModule = (() => {
     return _replaceExploreItemByEid(updatedItem) || updatedItem;
   }
 
+  function _resolveLibraryItemIdForEntry(entry, fallbackItemId) {
+    const explicitId = String(entry?.__libraryItemId || "").trim();
+    if (explicitId) return explicitId;
+
+    // fallback: usar itemId del evento si coincide por contenido
+    if (!fallbackItemId) return "";
+
+    const entryTitle = _safeText(entry?.title).trim().toLowerCase();
+    const entryType = _safeText(entry?.type).trim();
+
+    const activeLibraryCache = window.__quackerLibraryCache || [];
+
+    const match = activeLibraryCache.find((libItem) => {
+      const libTitle = _safeText(libItem?.title).trim().toLowerCase();
+      const libType = _safeText(libItem?.type).trim();
+      return libTitle === entryTitle && libType === entryType;
+    });
+
+    return match?.id ? String(match.id) : "";
+  }
+
   function _patchExploreItemsByLibraryItemId(libraryItemId, patcher) {
     const targetLibraryItemId = String(libraryItemId || "").trim();
     if (!targetLibraryItemId || typeof patcher !== "function") return false;
@@ -800,7 +822,7 @@ const ExploreModule = (() => {
     let didChange = false;
 
     const applyPatch = (entry) => {
-      const entryLibraryItemId = String(entry?.__libraryItemId || "").trim();
+      const entryLibraryItemId = _resolveLibraryItemIdForEntry(entry, targetLibraryItemId);
       if (entryLibraryItemId !== targetLibraryItemId) return entry;
 
       didChange = true;
