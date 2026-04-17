@@ -1,4 +1,4 @@
-export function getLibraryItemId(item) {
+function getLibraryItemId(item) {
   if (!item) return "";
 
   if (item.__libraryItemId) {
@@ -12,7 +12,7 @@ export function getLibraryItemId(item) {
   return "";
 }
 
-export function getNormalizedContentKey(item) {
+function getNormalizedContentKey(item) {
   if (!item) return "";
 
   const title = String(item.title || "")
@@ -26,11 +26,11 @@ export function getNormalizedContentKey(item) {
   return `${type}::${title}`;
 }
 
-export function sameContentIdentity(a, b) {
+function sameContentIdentity(a, b) {
   return getNormalizedContentKey(a) === getNormalizedContentKey(b);
 }
 
-export function resolveLibraryItemIdFromCache(item, libraryCache = []) {
+function resolveLibraryItemIdFromCache(item, libraryCache = []) {
   const directId = getLibraryItemId(item);
   if (directId) return directId;
 
@@ -43,3 +43,10 @@ export function resolveLibraryItemIdFromCache(item, libraryCache = []) {
 
   return match?.id ? String(match.id) : "";
 }
+
+window.ItemIdentity = {
+  getLibraryItemId,
+  getNormalizedContentKey,
+  sameContentIdentity,
+  resolveLibraryItemIdFromCache
+};
