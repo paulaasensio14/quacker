@@ -6563,9 +6563,9 @@ body.dark-theme .profile-meta {
 body.dark-theme .profile-form-group input,
 body.dark-theme .profile-form-group select,
 body.dark-theme .profile-form-group textarea {
-  background: #334155;
+  background: #2B3A4F;
   color: #F8FAFC;
-  border-color: #000000;
+  border-color: #0F172A;
 }
 
 body.dark-theme .profile-form-group input::placeholder,
