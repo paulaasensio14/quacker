@@ -793,6 +793,70 @@ const ExploreModule = (() => {
     return _replaceExploreItemByEid(updatedItem) || updatedItem;
   }
 
+  function _patchExploreItemsByLibraryItemId(libraryItemId, patcher) {
+    const targetLibraryItemId = String(libraryItemId || "").trim();
+    if (!targetLibraryItemId || typeof patcher !== "function") return false;
+
+    let didChange = false;
+
+    const applyPatch = (entry) => {
+      const entryLibraryItemId = String(entry?.__libraryItemId || "").trim();
+      if (entryLibraryItemId !== targetLibraryItemId) return entry;
+
+      didChange = true;
+      return {
+        ...entry,
+        ...patcher(entry)
+      };
+    };
+
+    feed = feed.map(applyPatch);
+    featuredFeed = featuredFeed.map(applyPatch);
+    visible = visible.map(applyPatch);
+
+    return didChange;
+  }
+
+  function _handleExploreItemStateChanged(event) {
+    const detail = event?.detail || {};
+    if (detail.kind !== "item_state") return;
+
+    const action = String(detail.action || "").trim();
+    const libraryItemId = String(detail.itemId || "").trim();
+    if (!libraryItemId) return;
+
+    let didChange = false;
+
+    if (action === "list_item_added") {
+      didChange = _patchExploreItemsByLibraryItemId(libraryItemId, (entry) => ({
+        __inLibrary: true,
+        __libraryItemId: libraryItemId,
+        __listsCount: Number(entry?.__listsCount || 0) + 1
+      }));
+    }
+
+    if (action === "list_item_removed") {
+      didChange = _patchExploreItemsByLibraryItemId(libraryItemId, (entry) => ({
+        __inLibrary: true,
+        __libraryItemId: libraryItemId,
+        __listsCount: Math.max(0, Number(entry?.__listsCount || 0) - 1)
+      }));
+    }
+
+    if (!didChange) return;
+
+    _render();
+
+    const activeItem = _getActiveExploreItem();
+    const activeLibraryItemId = String(activeItem?.__libraryItemId || "").trim();
+
+    if (activeItem && activeLibraryItemId === libraryItemId) {
+      _syncExploreDrawerFromItem(activeItem);
+    }
+  }
+
+  document.addEventListener("quacker:data-changed", _handleExploreItemStateChanged);
+
   function _syncExploreDrawerViewport() {
     if (!__drawerExpanded) return;
 
