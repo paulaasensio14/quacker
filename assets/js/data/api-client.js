@@ -149,8 +149,15 @@ const ApiClient = (() => {
   }
 
   const LIBRARY_CACHE_TTL_MS = 30 * 1000;
+  const LISTS_CACHE_TTL_MS = 30 * 1000;
 
   let _libraryCache = {
+    transport: "",
+    timestamp: 0,
+    items: null
+  };
+
+  let _listsCache = {
     transport: "",
     timestamp: 0,
     items: null
@@ -178,6 +185,14 @@ const ApiClient = (() => {
     };
   }
 
+  function _invalidateListsCache() {
+    _listsCache = {
+      transport: "",
+      timestamp: 0,
+      items: null
+    };
+  }
+
   function _getLibraryCacheSnapshot() {
     const now = Date.now();
     const isFresh =
@@ -190,8 +205,28 @@ const ApiClient = (() => {
     return _libraryCache.items.slice();
   }
 
+  function _getListsCacheSnapshot() {
+    const now = Date.now();
+    const isFresh =
+      _listsCache.transport === __cfg.transport &&
+      Array.isArray(_listsCache.items) &&
+      now - _listsCache.timestamp < LISTS_CACHE_TTL_MS;
+
+    if (!isFresh) return null;
+
+    return _listsCache.items.slice();
+  }
+
   function _setLibraryCache(items) {
     _libraryCache = {
+      transport: __cfg.transport,
+      timestamp: Date.now(),
+      items: Array.isArray(items) ? items.slice() : []
+    };
+  }
+
+  function _setListsCache(items) {
+    _listsCache = {
       transport: __cfg.transport,
       timestamp: Date.now(),
       items: Array.isArray(items) ? items.slice() : []
@@ -217,6 +252,10 @@ const ApiClient = (() => {
     try {
       if (detail?.kind === "library") {
         _invalidateLibraryCache();
+      }
+
+      if (detail?.kind === "lists") {
+        _invalidateListsCache();
       }
 
       document.dispatchEvent(new CustomEvent("quacker:data-changed", { detail }));
@@ -437,16 +476,35 @@ const ApiClient = (() => {
 
   // === listas (por ahora simplemente devuelven lo del estado) ===
   async function getLists() {
-    if (_isHttp()) {
-      const res = await _httpJson("GET", "/lists");
-      return Array.isArray(res) ? res : [];
+    const cachedItems = _getListsCacheSnapshot();
+    if (cachedItems) {
+      return cachedItems;
     }
 
-    ensureListsSeeded();
+    if (_isHttp()) {
+      try {
+        const res = await _httpJson("GET", "/lists");
+        const items = Array.isArray(res)
+          ? res
+          : (res && Array.isArray(res.items) ? res.items : []);
+
+        _setListsCache(items);
+        return items.slice();
+      } catch (error) {
+        console.error("[ApiClient] getLists failed", error);
+
+        const fallbackItems = Array.isArray(_listsCache.items)
+          ? _listsCache.items.slice()
+          : [];
+
+        return fallbackItems;
+      }
+    }
 
     const state = _safeState();
-    state.lists = Array.isArray(state.lists) ? state.lists : [];
-    return state.lists;
+    const items = state.lists || [];
+    _setListsCache(items);
+    return items.slice();
   }
 
   // Devuelve las listas donde está un item (para deshabilitar opciones y pintar estado)
