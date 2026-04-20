@@ -1168,6 +1168,18 @@ const ApiClient = (() => {
 
   // === NOTIFICACIONES ===
   async function addNotification({ title, text = "", color = "#2563eb", icon = "check" } = {}) {
+    if (_isHttp()) {
+      return {
+        ok: true,
+        skipped: true,
+        reason: "http_not_supported",
+        title: title || "Notificación",
+        text,
+        color,
+        icon
+      };
+    }
+
     const state = _safeState();
     state.notifications = state.notifications || [];
 
@@ -1201,6 +1213,10 @@ const ApiClient = (() => {
 
   // === RACHA (notificación por hitos) ===
   async function maybeNotifyStreak() {
+    if (_isHttp()) {
+      return { ok: true, notified: false, skipped: true, reason: "http_not_supported" };
+    }
+
     const state = _safeState();
     state.user = state.user || {};
 
@@ -2681,6 +2697,10 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: sugerencias ===
   async function getSuggestions() {
+    if (_isHttp()) {
+      return [];
+    }
+
     const state = _safeState();
     const library = state.library || [];
     if (!library.length) return [];
