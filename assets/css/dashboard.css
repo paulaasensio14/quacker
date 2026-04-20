@@ -3614,6 +3614,12 @@ main.app-main {
   margin-bottom: 10px;
 }
 
+.modal-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
 .modal-field label {
   display: block;
   font-size: 0.8rem;

@@ -41,6 +41,164 @@ function _showAddLibError(msg = "") {
   box.textContent = msg || "";
 }
 
+function _addLibraryT(key, params) {
+  return window.I18n?.t?.(key, params) ?? key;
+}
+
+function _getAddLibraryDynamicFieldsRoot() {
+  return document.getElementById("addLib_dynamicFields");
+}
+
+function _renderAddLibraryDynamicFields(type = "serie") {
+  const root = _getAddLibraryDynamicFieldsRoot();
+  if (!root) return;
+
+  if (type === "book") {
+    root.innerHTML = `
+      <div class="modal-field">
+        <label>${_addLibraryT("library_add_modal_author_label")}</label>
+        <input
+          id="addLib_author"
+          type="text"
+          placeholder="${_addLibraryT("library_add_modal_author_placeholder")}"
+        />
+      </div>
+      <div class="modal-field-grid">
+        <div class="modal-field">
+          <label>${_addLibraryT("library_add_modal_total_pages_label")}</label>
+          <input id="addLib_totalPages" type="number" min="1" inputmode="numeric" />
+        </div>
+        <div class="modal-field">
+          <label>${_addLibraryT("library_add_modal_pages_read_label")}</label>
+          <input id="addLib_pagesRead" type="number" min="0" inputmode="numeric" />
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (type === "serie") {
+    root.innerHTML = `
+      <div class="modal-field-grid">
+        <div class="modal-field">
+          <label>${_addLibraryT("library_add_modal_total_seasons_label")}</label>
+          <input id="addLib_totalSeasons" type="number" min="1" inputmode="numeric" />
+        </div>
+        <div class="modal-field">
+          <label>${_addLibraryT("library_add_modal_total_episodes_label")}</label>
+          <input id="addLib_totalEpisodes" type="number" min="1" inputmode="numeric" />
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (type === "game") {
+    root.innerHTML = `
+      <div class="modal-field">
+        <label>${_addLibraryT("library_add_modal_platform_label")}</label>
+        <input
+          id="addLib_platform"
+          type="text"
+          placeholder="${_addLibraryT("library_add_modal_platform_placeholder")}"
+        />
+      </div>
+    `;
+    return;
+  }
+
+  root.innerHTML = "";
+}
+
+function _buildAddLibraryExtras(type = "pelicula") {
+  const meta = {};
+  let progress = 0;
+  let focusSelector = "";
+  const errors = [];
+
+  const setFirstError = (message, selector) => {
+    errors.push(message);
+    if (!focusSelector) focusSelector = selector;
+  };
+
+  const readText = (id) => String(document.getElementById(id)?.value || "").trim();
+
+  if (type === "book") {
+    const author = readText("addLib_author");
+    const rawTotalPages = readText("addLib_totalPages");
+    const rawPagesRead = readText("addLib_pagesRead");
+
+    if (author) {
+      meta.author = author.slice(0, 120);
+    }
+
+    let totalPages = null;
+
+    if (rawTotalPages) {
+      totalPages = Number(rawTotalPages);
+      if (!Number.isInteger(totalPages) || totalPages <= 0) {
+        setFirstError(_addLibraryT("library_add_invalid_total_pages"), "#addLib_totalPages");
+      } else {
+        meta.totalPages = totalPages;
+      }
+    }
+
+    if (rawPagesRead) {
+      const pagesRead = Number(rawPagesRead);
+
+      if (!Number.isInteger(pagesRead) || pagesRead < 0) {
+        setFirstError(_addLibraryT("library_add_invalid_pages_read"), "#addLib_pagesRead");
+      } else if (!Number.isInteger(totalPages) || totalPages <= 0) {
+        setFirstError(_addLibraryT("library_add_pages_read_requires_total"), "#addLib_totalPages");
+      } else if (pagesRead > totalPages) {
+        setFirstError(_addLibraryT("library_add_pages_read_exceeds_total"), "#addLib_pagesRead");
+      } else {
+        meta.pagesRead = pagesRead;
+        progress = totalPages > 0
+          ? Math.max(0, Math.min(100, Math.round((pagesRead / totalPages) * 100)))
+          : 0;
+      }
+    }
+  }
+
+  if (type === "serie") {
+    const rawTotalSeasons = readText("addLib_totalSeasons");
+    const rawTotalEpisodes = readText("addLib_totalEpisodes");
+
+    if (rawTotalSeasons) {
+      const totalSeasons = Number(rawTotalSeasons);
+      if (!Number.isInteger(totalSeasons) || totalSeasons <= 0) {
+        setFirstError(_addLibraryT("library_add_invalid_total_seasons"), "#addLib_totalSeasons");
+      } else {
+        meta.totalSeasons = totalSeasons;
+      }
+    }
+
+    if (rawTotalEpisodes) {
+      const totalEpisodes = Number(rawTotalEpisodes);
+      if (!Number.isInteger(totalEpisodes) || totalEpisodes <= 0) {
+        setFirstError(_addLibraryT("library_add_invalid_total_episodes"), "#addLib_totalEpisodes");
+      } else {
+        meta.totalEpisodes = totalEpisodes;
+      }
+    }
+  }
+
+  if (type === "game") {
+    const platform = readText("addLib_platform");
+    if (platform) {
+      meta.platform = platform.slice(0, 120);
+    }
+  }
+
+  return {
+    errors,
+    focusSelector,
+    meta,
+    progress
+  };
+}
+
 function openAddLibraryModal() {
   const modal = document.getElementById("addLibraryModal");
   if (!modal) return;
@@ -53,6 +211,7 @@ function openAddLibraryModal() {
 
   if (titleInput) titleInput.value = "";
   if (typeSelect) typeSelect.value = "serie";
+  _renderAddLibraryDynamicFields("serie");
 
   if (window.UIModal && typeof window.UIModal.open === "function") {
     window.UIModal.open(modal, {
@@ -91,6 +250,7 @@ function closeAddLibraryModal() {
 
   __addLibraryModalLastFocus = null;
   _showAddLibError("");
+  _renderAddLibraryDynamicFields("");
 }
 
 function _showAddToListError(msg = "") {
@@ -451,12 +611,20 @@ const LibraryUI = (() => {
       const read = Number(meta.pagesRead || 0);
       const total = Number(meta.totalPages || 0);
       if (total > 0) return `${read} / ${total} ${t("library_pages")}`;
+      if (String(meta.author || "").trim()) return String(meta.author).trim();
       return "";
     }
 
-    if (type === "pelicula" || type === "game") {
+    if (type === "pelicula") {
       const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
       return pct ? `${pct}%` : "";
+    }
+
+    if (type === "game") {
+      const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
+      if (pct) return `${pct}%`;
+      if (String(meta.platform || "").trim()) return String(meta.platform).trim();
+      return "";
     }
 
     return "";
@@ -578,6 +746,7 @@ const LibraryUI = (() => {
       const haystack = normalizeSearchText([
         item.title,
         item.meta?.author,
+        item.meta?.platform,
         item.meta?.studio,
         item.meta?.year
       ].filter(Boolean).join(" "));
@@ -1513,6 +1682,12 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
     });
 
     // Guardar
+    document.getElementById("addLib_type")?.addEventListener("change", (e) => {
+      const nextType = String(e?.target?.value || "serie");
+      _renderAddLibraryDynamicFields(nextType);
+      _showAddLibError("");
+    });
+
     document.getElementById("saveAddLibraryModal")?.addEventListener("click", async () => {
       const titleInput = document.getElementById("addLib_title");
       const typeSelect = document.getElementById("addLib_type");
@@ -1553,6 +1728,15 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
         return;
       }
 
+      const extraPayload = _buildAddLibraryExtras(type);
+      if (extraPayload.errors.length) {
+        _showAddLibError(extraPayload.errors[0]);
+        if (extraPayload.focusSelector) {
+          document.querySelector(extraPayload.focusSelector)?.focus?.();
+        }
+        return;
+      }
+
       const btn = document.getElementById("saveAddLibraryModal");
       const cancelBtn = document.getElementById("cancelAddLibraryModal");
       const closeBtn = document.getElementById("closeAddLibraryModal");
@@ -1571,7 +1755,20 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
       if (closeBtn) closeBtn.disabled = true;
 
       try {
-        const created = await ApiClient.createLibraryItem({ title: normalizedTitle, type });
+        const payload = {
+          title: normalizedTitle,
+          type
+        };
+
+        if (Object.keys(extraPayload.meta || {}).length > 0) {
+          payload.meta = extraPayload.meta;
+        }
+
+        if (Number.isFinite(Number(extraPayload.progress)) && Number(extraPayload.progress) > 0) {
+          payload.progress = Number(extraPayload.progress);
+        }
+
+        const created = await ApiClient.createLibraryItem(payload);
 
         window.__lastCreatedLibraryItemId = created?.id || null;
 
