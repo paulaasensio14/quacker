@@ -1670,46 +1670,51 @@ const ApiClient = (() => {
   }
 
   async function progressLibraryItem(itemId, delta = 5) {
-    
-    // =========================
-    // HTTP (backend real)
-    // =========================
-    if (_isHttp()) {
-      const targetId = String(itemId);
-
-      // Traemos item actual del backend
-      const current = await _httpJson("GET", `/library/${encodeURIComponent(targetId)}`);
-      if (!current) return { ok: false, reason: "not_found" };
-
-      const prev = Number(current.progress ?? 0);
-      const safeDelta = Math.max(1, Math.min(100, Number(delta || 0)));
-      const next = Math.min(100, Math.max(0, prev + safeDelta));
-
-      const justCompleted = next >= 100 && prev < 100;
-
-      const payload = {
-        progress: next,
-        status: next >= 100 ? "completed" : current.status
-      };
-
-      const res = await _httpJson(
-        "PATCH",
-        `/library/${encodeURIComponent(targetId)}`,
-        payload
-      );
-
-      _emitDataChanged({ kind: "library", action: "progress", itemId: targetId });
-
-      return { ok: true, justCompleted, itemId: targetId };
-    }
-
     if (itemId == null) return { ok: false, reason: "missing_id" };
 
-    const state = _safeState();
+    const targetId = String(itemId);
+    const current = await getLibraryItemById(targetId);
+    if (!current) return { ok: false, reason: "not_found" };
 
-    _emitDataChanged({ kind: "library", action: "progress", itemId: targetId });
+    const prev = Math.max(0, Math.min(100, Number(current.progress ?? 0)));
+    const safeDelta = Math.max(1, Math.min(100, Number(delta || 0)));
+    const next = Math.min(100, Math.max(0, prev + safeDelta));
+    const justCompleted = next >= 100 && prev < 100;
 
-    return { ok: true, justCompleted, itemId: targetId };
+    const nextItem = {
+      ...current,
+      progress: next
+    };
+
+    if (current.type === "book") {
+      const totalPages = Number(current.meta?.totalPages || 0);
+      if (totalPages > 0) {
+        nextItem.meta = {
+          ...(current.meta || {}),
+          pagesRead: Math.min(
+            totalPages,
+            Math.max(0, Math.round((next / 100) * totalPages))
+          )
+        };
+      }
+    }
+
+    const updated = await updateLibraryItem(nextItem, { logActivity: true });
+    if (!updated?.ok) {
+      return updated || { ok: false, reason: "update_failed" };
+    }
+
+    let deltaLabel = `${Math.round(next)}%`;
+    if (current.type === "book" && Number(nextItem.meta?.totalPages || 0) > 0) {
+      deltaLabel = `${Number(nextItem.meta.pagesRead || 0)}/${Number(nextItem.meta.totalPages || 0)} páginas`;
+    }
+
+    return {
+      ok: true,
+      justCompleted,
+      itemId: targetId,
+      deltaLabel: justCompleted ? "Completado" : deltaLabel
+    };
   }
 
   // === biblioteca ===
