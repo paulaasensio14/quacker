@@ -122,6 +122,51 @@ function _isSameLibraryIdentity(a, b) {
   return aTitle === bTitle && aType === bType;
 }
 
+function _getDefaultLibraryStatus(type) {
+  return type === "book"
+    ? "reading"
+    : type === "game"
+      ? "playing"
+      : type === "serie"
+        ? "watching"
+        : "watching";
+}
+
+function _normalizeLibraryStatus(status, type, progress, fallbackStatus = "") {
+  const safeStatus = String(status || "").trim().toLowerCase();
+  const safeType = String(type || "").trim().toLowerCase();
+  const safeProgress = Number.isFinite(Number(progress))
+    ? Math.max(0, Math.min(100, Number(progress)))
+    : 0;
+  const defaultStatus = _getDefaultLibraryStatus(safeType);
+
+  if (safeProgress >= 100) {
+    return "completed";
+  }
+
+  if (!safeStatus) {
+    return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
+  }
+
+  if (safeStatus === "pending" || safeStatus === "not_started") {
+    return "not_started";
+  }
+
+  if (safeStatus === "in_progress") {
+    return defaultStatus;
+  }
+
+  if (safeStatus === "watching" || safeStatus === "reading" || safeStatus === "playing") {
+    return safeStatus;
+  }
+
+  if (safeStatus === "completed") {
+    return "completed";
+  }
+
+  return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
+}
+
 function _hashPassword(password) {
   const normalizedPassword = String(password || "");
   const salt = crypto.randomBytes(16).toString("hex");
@@ -1271,6 +1316,15 @@ app.post("/api/library", _requireAuth, (req, res) => {
   );
 
   const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+  const allowedStatuses = new Set([
+    "pending",
+    "not_started",
+    "in_progress",
+    "watching",
+    "reading",
+    "playing",
+    "completed"
+  ]);
 
   if (!title) {
     return res.status(400).json({ error: "missing_title" });
@@ -1286,6 +1340,17 @@ app.post("/api/library", _requireAuth, (req, res) => {
 
   if (!allowedTypes.has(type)) {
     return res.status(400).json({ error: "invalid_type" });
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(data, "status") &&
+    data.status != null &&
+    String(data.status).trim() !== ""
+  ) {
+    const status = String(data.status || "").trim().toLowerCase();
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({ error: "invalid_status" });
+    }
   }
 
   const rawProgress = Number(data.progress ?? 0);
@@ -1332,17 +1397,10 @@ app.post("/api/library", _requireAuth, (req, res) => {
 
   const nowIso = new Date().toISOString();
 
-  const defaultStatus =
-    type === "book" ? "reading" :
-    type === "game" ? "playing" :
-    type === "serie" ? "watching" :
-    "watching";
-
   let safeProgress = Number(progress);
   if (!Number.isFinite(safeProgress)) safeProgress = 0;
   safeProgress = Math.max(0, Math.min(100, safeProgress));
-
-  delete data.status;
+  const status = _normalizeLibraryStatus(data.status, type, safeProgress);
   
   const item = {
     id: _uid(),
@@ -1350,7 +1408,7 @@ app.post("/api/library", _requireAuth, (req, res) => {
     title,
     source: canonicalIdentity.source,
     externalId: canonicalIdentity.externalId,
-    status: defaultStatus,
+    status,
     progress: safeProgress,
     meta: sanitizedMeta,
     cover: String(data.cover || "").trim().slice(0, 500),
@@ -1392,6 +1450,8 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
   const allowedStatuses = new Set([
     "pending",
+    "not_started",
+    "in_progress",
     "watching",
     "reading",
     "playing",
@@ -1463,13 +1523,11 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, "status")) {
-    const status = String(patch.status || "").trim();
+    const status = String(patch.status || "").trim().toLowerCase();
 
     if (!allowedStatuses.has(status)) {
       return res.status(400).json({ error: "invalid_status" });
     }
-
-    next.status = status;
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, "progress")) {
@@ -1480,6 +1538,13 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   } else {
     next.progress = Math.max(0, Math.min(100, Number(prev.progress ?? 0)));
   }
+
+  next.status = _normalizeLibraryStatus(
+    Object.prototype.hasOwnProperty.call(patch, "status") ? patch.status : prev.status,
+    next.type,
+    next.progress,
+    prev.status
+  );
 
   if (Object.prototype.hasOwnProperty.call(patch, "cover")) {
     next.cover = String(patch.cover || "").trim();
