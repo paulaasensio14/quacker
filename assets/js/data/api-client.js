@@ -1869,6 +1869,10 @@ const ApiClient = (() => {
     state.library = state.library || [];
 
     const type = data.type || "pelicula";
+    const rawProgress = Number(data.progress ?? 0);
+    const safeProgress = Number.isFinite(rawProgress)
+      ? Math.max(0, Math.min(100, rawProgress))
+      : 0;
 
     const defaultStatus =
       type === "book" ? "reading" :
@@ -1876,16 +1880,21 @@ const ApiClient = (() => {
       type === "serie" ? "watching" :
       "watching";
 
+    const normalizedStatus = String(data.status || "").trim() || defaultStatus;
+    const nowIso = new Date().toISOString();
+
     const newItem = {
-      id: String(Date.now()),
+      id: data.id != null ? String(data.id) : String(Date.now()),
       type,
       title: (data.title || "").trim(),
-      status: defaultStatus,
-      progress: 0,
+      source: String(data.source || "").trim(),
+      externalId: String(data.externalId || "").trim(),
+      status: normalizedStatus,
+      progress: safeProgress,
       meta: data.meta || {},
       cover: data.cover || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: String(data.createdAt || nowIso),
+      updatedAt: String(data.updatedAt || nowIso)
     };
 
     state.library.push(newItem);

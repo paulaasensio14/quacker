@@ -1762,10 +1762,12 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
           actionLabel: t("common_undo"),
           onAction: async () => {
             try {
-              await ApiClient.createLibraryItem({
+              const restored = await ApiClient.createLibraryItem({
                 id: itemToRestore.id,
                 type: itemToRestore.type,
                 title: itemToRestore.title,
+                source: itemToRestore.source || "",
+                externalId: itemToRestore.externalId || "",
                 status: itemToRestore.status,
                 progress: itemToRestore.progress,
                 meta: itemToRestore.meta || {},
@@ -1774,10 +1776,17 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
                 updatedAt: itemToRestore.updatedAt
               });
 
+              const restoredItemId = String(restored?.id || "");
+              if (!restoredItemId) {
+                throw new Error("restore_missing_item_id");
+              }
+
               for (const list of listsToRestore || []) {
                 if (!list?.id) continue;
-                await ApiClient.addLibraryItemToList(String(list.id), String(itemToRestore.id));
+                await ApiClient.addLibraryItemToList(String(list.id), restoredItemId);
               }
+
+              window.__lastCreatedLibraryItemId = restoredItemId;
 
               window.toast?.({
                 title: t("library_restore_success_title"),
