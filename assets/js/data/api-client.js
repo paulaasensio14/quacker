@@ -248,6 +248,71 @@ const ApiClient = (() => {
     return `Hace ${diffD} días`;
   }
 
+  function _getDefaultLibraryStatus(type) {
+    return type === "book"
+      ? "reading"
+      : type === "game"
+        ? "playing"
+        : type === "serie"
+          ? "watching"
+          : "watching";
+  }
+
+  function _normalizeLibraryStatus(status, type, progress, fallbackStatus = "") {
+    const safeStatus = String(status || "").trim().toLowerCase();
+    const safeType = String(type || "").trim().toLowerCase();
+    const safeProgress = Number.isFinite(Number(progress))
+      ? Math.max(0, Math.min(100, Number(progress)))
+      : 0;
+    const defaultStatus = _getDefaultLibraryStatus(safeType);
+
+    if (safeProgress >= 100) {
+      return "completed";
+    }
+
+    if (!safeStatus) {
+      return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
+    }
+
+    if (safeProgress <= 0) {
+      if (safeStatus === "pending" || safeStatus === "not_started") {
+        return "not_started";
+      }
+
+      if (safeStatus === "completed") {
+        return "not_started";
+      }
+
+      if (safeStatus === "in_progress") {
+        return defaultStatus;
+      }
+
+      if (safeStatus === "watching" || safeStatus === "reading" || safeStatus === "playing") {
+        return safeStatus;
+      }
+
+      return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
+    }
+
+    if (safeStatus === "pending" || safeStatus === "not_started") {
+      return defaultStatus;
+    }
+
+    if (safeStatus === "in_progress") {
+      return defaultStatus;
+    }
+
+    if (safeStatus === "watching" || safeStatus === "reading" || safeStatus === "playing") {
+      return safeStatus;
+    }
+
+    if (safeStatus === "completed") {
+      return defaultStatus;
+    }
+
+    return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
+  }
+
   function _emitDataChanged(detail = {}) {
     try {
       if (detail?.kind === "library") {
@@ -1625,8 +1690,7 @@ const ApiClient = (() => {
     const pct = Math.max(0, Math.min(100, Number(next.progress ?? 0)));
     next.progress = pct;
 
-    if (pct >= 100) next.status = "completed";
-    if (pct <= 0 && next.status === "completed") next.status = "not_started";
+    next.status = _normalizeLibraryStatus(next.status, next.type, pct, prev.status);
 
     state.library[idx] = next;
 
@@ -1891,7 +1955,12 @@ const ApiClient = (() => {
       type === "serie" ? "watching" :
       "watching";
 
-    const normalizedStatus = String(data.status || "").trim() || defaultStatus;
+    const normalizedStatus = _normalizeLibraryStatus(
+      data.status,
+      type,
+      safeProgress,
+      defaultStatus
+    );
     const nowIso = new Date().toISOString();
 
     const newItem = {

@@ -148,8 +148,28 @@ function _normalizeLibraryStatus(status, type, progress, fallbackStatus = "") {
     return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
   }
 
+  if (safeProgress <= 0) {
+    if (safeStatus === "pending" || safeStatus === "not_started") {
+      return "not_started";
+    }
+
+    if (safeStatus === "completed") {
+      return "not_started";
+    }
+
+    if (safeStatus === "in_progress") {
+      return defaultStatus;
+    }
+
+    if (safeStatus === "watching" || safeStatus === "reading" || safeStatus === "playing") {
+      return safeStatus;
+    }
+
+    return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
+  }
+
   if (safeStatus === "pending" || safeStatus === "not_started") {
-    return "not_started";
+    return defaultStatus;
   }
 
   if (safeStatus === "in_progress") {
@@ -161,7 +181,7 @@ function _normalizeLibraryStatus(status, type, progress, fallbackStatus = "") {
   }
 
   if (safeStatus === "completed") {
-    return "completed";
+    return defaultStatus;
   }
 
   return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
