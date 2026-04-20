@@ -485,19 +485,27 @@ function _scoreExploreSearchItem(item, query) {
     typeIntent = "game";
   } else if (q.includes("book") || q.includes("novel") || q.includes("libro")) {
     typeIntent = "book";
-  } else if (q.includes("movie") || q.includes("film") || q.includes("pelicula") || q.includes("serie") || q.includes("series")) {
-    typeIntent = "movie";
+  } else if (q.includes("serie") || q.includes("series") || q.includes("tv") || q.includes("show")) {
+    typeIntent = "serie";
+  } else if (q.includes("movie") || q.includes("film") || q.includes("pelicula") || q.includes("película")) {
+    typeIntent = "pelicula";
   }
 
-  if (typeIntent === "movie") {
-    if (item.type === "movie") score += 8;
-    if (item.type === "series") score += 4;
+  if (typeIntent === "pelicula") {
+    if (item.type === "pelicula") score += 8;
+    if (item.type === "serie") score += 4;
+    if (item.type === "game") score -= 3;
+  }
+
+  if (typeIntent === "serie") {
+    if (item.type === "serie") score += 10;
+    if (item.type === "pelicula") score += 3;
     if (item.type === "game") score -= 3;
   }
 
   if (typeIntent === "game") {
     if (item.type === "game") score += 10;
-    if (item.type === "movie") score -= 3;
+    if (item.type === "pelicula" || item.type === "serie") score -= 3;
   }
 
   if (typeIntent === "book") {
