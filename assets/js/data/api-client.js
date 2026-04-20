@@ -523,22 +523,22 @@ const ApiClient = (() => {
     });
   }
 
-  // Explore: contar listas por título + tipo (helper)
-  async function getListsCountByLibraryMatch({ title, type }) {
-    if (!title || !type) return 0;
+  // Explore: contar listas por identidad canónica cuando exista.
+  // title+type queda como compatibilidad para items legacy.
+  async function getListsCountByLibraryMatch({ title, type, source = "", externalId = "" } = {}) {
+    if ((!title || !type) && (!source || !externalId)) return 0;
 
     const lists = await getLists();
     const library = await getLibrary();
 
-    const libItem = (library || []).find(
-      (i) =>
-        String(i?.title || "").trim().toLowerCase() === String(title).trim().toLowerCase() &&
-        String(i?.type || "") === String(type)
-    );
+    const libId =
+      window.ItemIdentity?.resolveLibraryItemIdFromCache?.(
+        { title, type, source, externalId },
+        library || []
+      ) || "";
 
-    if (!libItem) return 0;
+    if (!libId) return 0;
 
-    const libId = String(libItem.id);
     let count = 0;
 
     for (const list of lists || []) {
@@ -554,19 +554,28 @@ const ApiClient = (() => {
     return count;
   }
 
-  // Devuelve un mapa de conteos por key "title::type" para toda la biblioteca.
-  // Esto evita hacer 1 llamada por item desde Explore.
+  // Devuelve un mapa de conteos por identidad:
+  // - canonical key "source::externalId" cuando exista
+  // - legacy key "type::title" como fallback/compatibilidad
   async function getListsCountMapByLibraryKey() {
     const lists = await getLists();
     const library = await getLibrary();
 
-    const idToKey = new Map();
+    const idToKeys = new Map();
 
     for (const item of library || []) {
       if (!item?.id) continue;
 
-      const key = `${String(item?.title || "").trim().toLowerCase()}::${String(item?.type || "")}`;
-      idToKey.set(String(item.id), key);
+      const keys = new Set();
+      const canonicalKey = window.ItemIdentity?.getCanonicalContentKey?.(item) || "";
+      const normalizedKey = window.ItemIdentity?.getNormalizedContentKey?.(item) || "";
+
+      if (canonicalKey) keys.add(canonicalKey);
+      if (normalizedKey) keys.add(normalizedKey);
+
+      if (keys.size > 0) {
+        idToKeys.set(String(item.id), [...keys]);
+      }
     }
 
     const counts = Object.create(null);
@@ -578,10 +587,12 @@ const ApiClient = (() => {
         const id = typeof entry === "string" ? entry : entry?.id;
         if (!id) continue;
 
-        const key = idToKey.get(String(id));
-        if (!key) continue;
+        const keys = idToKeys.get(String(id));
+        if (!Array.isArray(keys) || keys.length === 0) continue;
 
-        counts[key] = (counts[key] || 0) + 1;
+        for (const key of keys) {
+          counts[key] = (counts[key] || 0) + 1;
+        }
       }
     }
 
