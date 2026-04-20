@@ -773,18 +773,14 @@ const ExploreModule = (() => {
   async function _refreshExploreDrawerLibraryState(item) {
     if (!item?.eid) return item || null;
 
-    const title = _safeText(item?.title).trim().toLowerCase();
-    const type = _safeText(item?.type).trim();
-
-    if (!title || !type) return item;
-
     const library = await ApiClient.getLibrary();
     _libraryCache = library || [];
-    const matchedItem = (library || []).find((entry) => {
-      const entryTitle = _safeText(entry?.title).trim().toLowerCase();
-      const entryType = _safeText(entry?.type).trim();
-      return entryTitle === title && entryType === type;
-    });
+    const matchedLibraryItemId =
+      window.ItemIdentity?.resolveLibraryItemIdFromCache?.(item, library) || "";
+
+    const matchedItem = (library || []).find(
+      (entry) => String(entry?.id || "") === String(matchedLibraryItemId)
+    );
 
     const updatedItem = {
       ...item,
@@ -1442,6 +1438,15 @@ const ExploreModule = (() => {
         .map(item => [String(item.id), item])
     );
 
+    const libraryByCanonicalKey = new Map(
+      lib
+        .map(item => [
+          window.ItemIdentity?.getCanonicalContentKey?.(item) || "",
+          item
+        ])
+        .filter(([key]) => Boolean(key))
+    );
+
     const libraryByKey = new Map(
       lib.map(item => [
         `${_norm(item.title)}::${_safeText(item.type)}`,
@@ -1455,11 +1460,15 @@ const ExploreModule = (() => {
       items.map((x) => {
         const currentLibraryId = x.__libraryItemId ? String(x.__libraryItemId) : null;
         const byId = currentLibraryId ? libraryById.get(currentLibraryId) : null;
-        const byKey = byId
+        const canonicalKey = window.ItemIdentity?.getCanonicalContentKey?.(x) || "";
+        const byCanonical = byId || !canonicalKey
+          ? null
+          : libraryByCanonicalKey.get(canonicalKey);
+        const byKey = byId || byCanonical
           ? null
           : libraryByKey.get(`${_norm(x.title)}::${_safeText(x.type)}`);
 
-        const libraryItem = byId || byKey || null;
+        const libraryItem = byId || byCanonical || byKey || null;
 
         return {
           ...x,
@@ -1672,6 +1681,8 @@ const ExploreModule = (() => {
         const payload = {
           title: item.title,
           type: normalizedType,
+          source: String(item?.source || "").trim(),
+          externalId: String(item?.externalId || "").trim(),
           progress: 0,
           cover: String(item?.cover || "").trim(),
           meta

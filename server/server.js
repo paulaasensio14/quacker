@@ -75,6 +75,53 @@ function _uid() {
   return `u_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
+function _normalizeContentText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function _normalizeCanonicalIdentity(source, externalId) {
+  const safeSource = String(source || "").trim().toLowerCase();
+  const safeExternalId = String(externalId || "").trim();
+
+  if (!safeSource || !safeExternalId) {
+    return {
+      source: "",
+      externalId: ""
+    };
+  }
+
+  return {
+    source: safeSource,
+    externalId: safeExternalId
+  };
+}
+
+function _hasCanonicalIdentity(item) {
+  return Boolean(
+    String(item?.source || "").trim() &&
+    String(item?.externalId || "").trim()
+  );
+}
+
+function _isSameLibraryIdentity(a, b) {
+  const aHasCanonical = _hasCanonicalIdentity(a);
+  const bHasCanonical = _hasCanonicalIdentity(b);
+
+  if (aHasCanonical && bHasCanonical) {
+    return (
+      String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
+      String(a.externalId).trim() === String(b.externalId).trim()
+    );
+  }
+
+  const aTitle = _normalizeContentText(a?.title).toLocaleLowerCase("es");
+  const bTitle = _normalizeContentText(b?.title).toLocaleLowerCase("es");
+  const aType = String(a?.type || "").trim();
+  const bType = String(b?.type || "").trim();
+
+  return aTitle === bTitle && aType === bType;
+}
+
 function _hashPassword(password) {
   const normalizedPassword = String(password || "");
   const salt = crypto.randomBytes(16).toString("hex");
@@ -1208,8 +1255,12 @@ app.get("/api/library/:id", _requireAuth, (req, res) => {
 
 app.post("/api/library", _requireAuth, (req, res) => {
   const data = req.body || {};
-  const title = String(data.title || "").replace(/\s+/g, " ").trim();
+  const title = _normalizeContentText(data.title);
   const type = String(data.type || "pelicula").trim().toLowerCase();
+  const canonicalIdentity = _normalizeCanonicalIdentity(
+    data.source,
+    data.externalId
+  );
 
   const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
 
@@ -1237,12 +1288,14 @@ app.post("/api/library", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
 
-  const normalizedTitle = title.toLocaleLowerCase("es").trim();
-  const duplicate = bucket.library.find((it) => {
-    const currentTitle = String(it?.title || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
-    const currentType = String(it?.type || "").trim();
-    return currentTitle === normalizedTitle && currentType === type;
-  });
+  const duplicate = bucket.library.find((it) =>
+    _isSameLibraryIdentity(it, {
+      title,
+      type,
+      source: canonicalIdentity.source,
+      externalId: canonicalIdentity.externalId
+    })
+  );
   if (duplicate) {
     return res.status(409).json({ error: "duplicate_item" });
   }
@@ -1286,7 +1339,9 @@ app.post("/api/library", _requireAuth, (req, res) => {
   const item = {
     id: _uid(),
     type,
-    title: String(title).replace(/\s+/g, " ").trim(),
+    title,
+    source: canonicalIdentity.source,
+    externalId: canonicalIdentity.externalId,
     status: defaultStatus,
     progress: safeProgress,
     meta: sanitizedMeta,
@@ -1312,6 +1367,8 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   const allowedPatchFields = new Set([
     "title",
     "type",
+    "source",
+    "externalId",
     "status",
     "progress",
     "meta",
@@ -1342,10 +1399,16 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   const prev = bucket.library[idx];
   const nowIso = new Date().toISOString();
 
-  const next = { ...prev, ...patch, id: prev.id, createdAt: prev.createdAt, updatedAt: new Date().toISOString() };
+  const next = {
+    ...prev,
+    ...patch,
+    id: prev.id,
+    createdAt: prev.createdAt,
+    updatedAt: new Date().toISOString()
+  };
 
   if (Object.prototype.hasOwnProperty.call(patch, "title")) {
-    const title = String(patch.title || "").replace(/\s+/g, " ").trim();
+    const title = _normalizeContentText(patch.title);
 
     next.title = title;
 
@@ -1372,6 +1435,23 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     }
 
     next.type = type;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(patch, "source") ||
+    Object.prototype.hasOwnProperty.call(patch, "externalId")
+  ) {
+    const canonicalIdentity = _normalizeCanonicalIdentity(
+      Object.prototype.hasOwnProperty.call(patch, "source") ? patch.source : prev.source,
+      Object.prototype.hasOwnProperty.call(patch, "externalId") ? patch.externalId : prev.externalId
+    );
+
+    next.source = canonicalIdentity.source;
+    next.externalId = canonicalIdentity.externalId;
+  } else {
+    const canonicalIdentity = _normalizeCanonicalIdentity(prev.source, prev.externalId);
+    next.source = canonicalIdentity.source;
+    next.externalId = canonicalIdentity.externalId;
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, "status")) {
@@ -1439,12 +1519,15 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     next.meta = { ...(prev.meta || {}) };
   }
 
-  const normalizedNextTitle = String(next.title || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
   const duplicate = bucket.library.find((it) => {
     if (String(it?.id) === id) return false;
-    const currentTitle = String(it?.title || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
-    const currentType = String(it?.type || "").trim();
-    return currentTitle === normalizedNextTitle && currentType === String(next.type || "").trim();
+
+    return _isSameLibraryIdentity(it, {
+      title: next.title,
+      type: next.type,
+      source: next.source,
+      externalId: next.externalId
+    });
   });
   if (duplicate) {
     return res.status(409).json({ error: "duplicate_item" });
