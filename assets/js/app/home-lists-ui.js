@@ -520,7 +520,8 @@ async function renderHomeDashboard() {
     const backlogContainer = $("#backlogList");
     if (backlogContainer) {
 
-      // Dedupe defensivo: por ID y también por (type + title)
+      // Dedupe defensivo: por ID y por identidad de contenido.
+      // Si existe identidad canónica, no colapsamos items distintos con el mismo título.
       const seenIds = new Set();
       const seenKeys = new Set();
 
@@ -533,12 +534,16 @@ async function renderHomeDashboard() {
           seenIds.add(String(it.id));
         }
 
-        // 2) Dedupe por clave lógica: type + title (evita duplicados “visuales”)
-        const t = String(it.type || "").trim().toLowerCase();
+        // 2) Dedupe por identidad compartida, con fallback legacy
         const title = String(it.title || "").trim().toLowerCase();
-        const key = `${t}||${title}`;
-
         if (!title) return false; // si no hay título, no pintamos
+
+        const key =
+          window.ItemIdentity?.getCanonicalContentKey?.(it) ||
+          window.ItemIdentity?.getNormalizedContentKey?.(it) ||
+          "";
+
+        if (!key) return false;
         if (seenKeys.has(key)) return false;
         seenKeys.add(key);
 
