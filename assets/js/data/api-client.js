@@ -2575,11 +2575,19 @@ const ApiClient = (() => {
 
   // === NOTIFICACIONES (dashboard) ===
   async function getNotifications() {
+    if (_isHttp()) {
+      return [];
+    }
+
     const state = _safeState();
     return state.notifications || [];
   }
 
   async function dismissNotification(notificationId) {
+    if (_isHttp()) {
+      return { ok: true, skipped: true, reason: "http_not_supported" };
+    }
+
     const state = _safeState();
     state.notifications = (state.notifications || []).filter(
       (n) => String(n.id) !== String(notificationId)
@@ -2594,6 +2602,10 @@ const ApiClient = (() => {
   }
 
   async function clearNotifications() {
+    if (_isHttp()) {
+      return { ok: true, skipped: true, reason: "http_not_supported" };
+    }
+
     const state = _safeState();
     state.notifications = [];
 
@@ -2606,6 +2618,10 @@ const ApiClient = (() => {
   }
 
   async function setNotifications(nextList = []) {
+    if (_isHttp()) {
+      return { ok: true, skipped: true, reason: "http_not_supported", count: 0 };
+    }
+
     const state = _safeState();
     state.notifications = Array.isArray(nextList) ? nextList : [];
 
