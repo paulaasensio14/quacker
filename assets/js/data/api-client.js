@@ -2816,14 +2816,7 @@ const ApiClient = (() => {
       return { ok: false };
     }
 
-    let item = null;
-
-    if (_isHttp()) {
-      item = await getLibraryItemById(itemId);
-    } else {
-      const state = _safeState();
-      item = (state.library || []).find(i => String(i.id) === String(itemId));
-    }
+    const item = await getLibraryItemById(itemId);
 
     if (!item) {
       return { ok: false, reason: "item_not_found" };
@@ -2832,15 +2825,18 @@ const ApiClient = (() => {
     const prevProgress = Number(item.progress || 0);
     let nextProgress = prevProgress;
     let meta = { ...(item.meta || {}) };
+    let deltaLabel = "";
 
     switch (item.type) {
 
       case "serie":
         nextProgress = Math.min(100, prevProgress + 5);
+        deltaLabel = `${Math.round(nextProgress)}%`;
         break;
 
       case "pelicula":
         nextProgress = Math.min(100, prevProgress + 10);
+        deltaLabel = `${Math.round(nextProgress)}%`;
         break;
 
       case "book":
@@ -2852,53 +2848,44 @@ const ApiClient = (() => {
           const nextPages = Math.min(total, prevPages + 20);
           meta.pagesRead = nextPages;
           nextProgress = Math.round((nextPages / total) * 100);
+          deltaLabel = `${nextPages}/${total} páginas`;
         } else {
           nextProgress = Math.min(100, prevProgress + 5);
+          deltaLabel = `${Math.round(nextProgress)}%`;
         }
 
         break;
 
       case "game":
         nextProgress = Math.min(100, prevProgress + 5);
+        deltaLabel = `${Math.round(nextProgress)}%`;
         break;
 
       default:
         nextProgress = Math.min(100, prevProgress + 5);
+        deltaLabel = `${Math.round(nextProgress)}%`;
     }
+
+    const justCompleted = prevProgress < 100 && nextProgress >= 100;
 
     const updatedItem = {
       ...item,
       progress: nextProgress,
-      meta,
-      updatedAt: new Date().toISOString()
+      meta
     };
 
-    if (_isHttp()) {
-      await updateLibraryItem(updatedItem, { logActivity: true });
-    } else {
-      const state = _safeState();
-      const idx = state.library.findIndex(i => String(i.id) === String(itemId));
-      if (idx !== -1) {
-        state.library[idx] = updatedItem;
-        FakeBackend.saveState(state);
-      }
+    const result = await updateLibraryItem(updatedItem, { logActivity: true });
+    if (!result?.ok) {
+      return result || { ok: false, reason: "update_failed" };
     }
-
-    window.dispatchEvent(
-      new CustomEvent("quacker:data-changed", {
-        detail: {
-          kind: "library",
-          action: "quick_progress",
-          itemId: String(itemId)
-        }
-      })
-    );
 
     return {
       ok: true,
       itemId: String(itemId),
       prevProgress,
-      nextProgress
+      nextProgress,
+      justCompleted,
+      deltaLabel: justCompleted ? "Completado" : deltaLabel
     };
 
   }
