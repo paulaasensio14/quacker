@@ -225,11 +225,84 @@ const ApiClient = (() => {
     };
   }
 
+  function _normalizeListRecord(list) {
+    if (!list || typeof list !== "object") return null;
+
+    const items = Array.isArray(list.items) ? list.items.slice() : [];
+    const safeVisibility = String(list.visibility || "").trim().toLowerCase();
+
+    return {
+      ...list,
+      id: list.id != null ? String(list.id) : "",
+      name: String(list.name || "").trim(),
+      description: String(list.description || "").trim(),
+      visibility: ["private", "public", "collab"].includes(safeVisibility)
+        ? safeVisibility
+        : "private",
+      items,
+      itemsCount: items.length,
+      createdAt: String(list.createdAt || ""),
+      updatedAt: String(list.updatedAt || "")
+    };
+  }
+
+  function _normalizeListCollection(items) {
+    return (Array.isArray(items) ? items : [])
+      .map((entry) => _normalizeListRecord(entry))
+      .filter(Boolean);
+  }
+
+  function _buildListMutationResult(action, payload = {}) {
+    const list =
+      payload?.list && typeof payload.list === "object"
+        ? _normalizeListRecord(payload.list)
+        : null;
+
+    const result = {
+      ok: payload?.ok !== false,
+      action: String(action || "").trim(),
+      listId: String(payload?.listId || list?.id || "").trim(),
+      itemId: String(payload?.itemId || "").trim()
+    };
+
+    if (Object.prototype.hasOwnProperty.call(payload, "already")) {
+      result.already = Boolean(payload.already);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "deleted")) {
+      const deleted = Number(payload.deleted);
+      result.deleted = Number.isFinite(deleted) ? Math.max(0, deleted) : 0;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "removed")) {
+      const removed = Number(payload.removed);
+      result.removed = Number.isFinite(removed) ? Math.max(0, removed) : 0;
+    }
+
+    if (list) {
+      result.list = list;
+    }
+
+    return result;
+  }
+
+  function _buildListMutationList(action, list) {
+    const normalized = _normalizeListRecord(list);
+    if (!normalized) return null;
+
+    return {
+      ...normalized,
+      ok: true,
+      action: String(action || "").trim(),
+      listId: String(normalized.id || "").trim()
+    };
+  }
+
   function _setListsCache(items) {
     _listsCache = {
       transport: __cfg.transport,
       timestamp: Date.now(),
-      items: Array.isArray(items) ? items.slice() : []
+      items: _normalizeListCollection(items)
     };
   }
 
@@ -552,9 +625,10 @@ const ApiClient = (() => {
         const items = Array.isArray(res)
           ? res
           : (res && Array.isArray(res.items) ? res.items : []);
+        const normalizedItems = _normalizeListCollection(items);
 
-        _setListsCache(items);
-        return items.slice();
+        _setListsCache(normalizedItems);
+        return normalizedItems.slice();
       } catch (error) {
         console.error("[ApiClient] getLists failed", error);
 
@@ -567,7 +641,7 @@ const ApiClient = (() => {
     }
 
     const state = _safeState();
-    const items = state.lists || [];
+    const items = _normalizeListCollection(state.lists || []);
     _setListsCache(items);
     return items.slice();
   }
@@ -667,28 +741,30 @@ const ApiClient = (() => {
   async function createList(listData) {
     if (_isHttp()) {
       const res = await _httpJson("POST", "/lists", listData);
+      const created = _buildListMutationList("create", res);
 
       _emitDataChanged({
         kind: "lists",
         action: "create",
-        listId: String(res?.id || "")
+        listId: String(created?.id || "")
       });
 
-      return res;
+      return created;
     }
 
     const state = _safeState();
     state.lists = state.lists || [];
+    const nowIso = new Date().toISOString();
 
-    const newList = {
+    const newList = _normalizeListRecord({
       id: String(Date.now()),
       name: listData.name,
       description: listData.description || "",
       visibility: listData.visibility || "private",
       items: listData.items || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      createdAt: nowIso,
+      updatedAt: nowIso
+    });
 
     state.lists.push(newList);
 
@@ -702,7 +778,7 @@ const ApiClient = (() => {
       listId: String(newList.id)
     });
 
-    return newList;
+    return _buildListMutationList("create", newList);
   }
 
   async function updateList(listId, patch = {}) {
@@ -712,6 +788,7 @@ const ApiClient = (() => {
         `/lists/${encodeURIComponent(listId)}`,
         patch
       );
+      const updated = _buildListMutationList("update", res);
 
       _emitDataChanged({
         kind: "lists",
@@ -719,7 +796,7 @@ const ApiClient = (() => {
         listId: String(listId)
       });
 
-      return res;
+      return updated;
     }
 
     const state = _safeState();
@@ -730,7 +807,11 @@ const ApiClient = (() => {
     if (idx === -1) return null;
 
     const prev = lists[idx];
-    const next = { ...prev, ...patch, updatedAt: new Date().toISOString() };
+    const next = _normalizeListRecord({
+      ...prev,
+      ...patch,
+      updatedAt: new Date().toISOString()
+    });
     lists[idx] = next;
 
     if (typeof FakeBackend !== "undefined") {
@@ -743,7 +824,7 @@ const ApiClient = (() => {
       listId: String(listId)
     });
 
-    return next;
+    return _buildListMutationList("update", next);
   }
 
   async function deleteList(listId) {
@@ -759,7 +840,10 @@ const ApiClient = (() => {
         listId: String(listId)
       });
 
-      return res;
+      return _buildListMutationResult("delete", {
+        ...res,
+        listId: String(listId)
+      });
     }
 
     const state = _safeState();
@@ -779,7 +863,11 @@ const ApiClient = (() => {
       listId: String(listId)
     });
 
-    return { ok: true, deleted: before - state.lists.length };
+    return _buildListMutationResult("delete", {
+      ok: true,
+      listId: String(listId),
+      deleted: before - state.lists.length
+    });
   }
 
   // === listas: añadir / quitar items ===
@@ -809,7 +897,11 @@ const ApiClient = (() => {
         extra: relationshipState
       });
 
-      return res;
+      return _buildListMutationResult("add_item", {
+        ...res,
+        listId: String(listId),
+        itemId: String(res?.itemId || itemId)
+      });
     }
 
     ensureListsSeeded();
@@ -831,7 +923,13 @@ const ApiClient = (() => {
     });
 
     if (already) {
-      return { ok: true, already: true };
+      return _buildListMutationResult("add_item", {
+        ok: true,
+        already: true,
+        listId: String(listId),
+        itemId: String(itemId),
+        list
+      });
     }
 
     list.items.push({
@@ -861,7 +959,12 @@ const ApiClient = (() => {
       extra: relationshipState
     });
 
-    return { ok: true, listId: String(listId), itemId: String(itemId) };
+    return _buildListMutationResult("add_item", {
+      ok: true,
+      listId: String(listId),
+      itemId: String(itemId),
+      list
+    });
   }
 
   async function removeLibraryItemFromList(listId, itemId) {
@@ -889,7 +992,11 @@ const ApiClient = (() => {
         extra: relationshipState
       });
 
-      return res;
+      return _buildListMutationResult("remove_item", {
+        ...res,
+        listId: String(listId),
+        itemId: String(itemId)
+      });
     }
 
     ensureListsSeeded();
@@ -930,7 +1037,13 @@ const ApiClient = (() => {
       extra: relationshipState
     });
 
-    return { ok: true, removed: before - list.items.length };
+    return _buildListMutationResult("remove_item", {
+      ok: true,
+      listId: String(listId),
+      itemId: String(itemId),
+      removed: before - list.items.length,
+      list
+    });
   }
 
   async function setLists(nextLists = []) {
