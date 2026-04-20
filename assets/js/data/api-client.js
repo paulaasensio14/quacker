@@ -2204,10 +2204,6 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: feed de actividad (lista) ===
   async function getRecentActivitiesDetailed(limit = 30, filter = "all") {
-    const state = _safeState();
-    const activities = Array.isArray(state.activities) ? state.activities : [];
-    const library = Array.isArray(state.library) ? state.library : [];
-
     const MEANINGFUL = new Set(["progress", "completed"]); // resume NO cuenta
 
     function typeLabel(t) {
@@ -2248,10 +2244,52 @@ const ApiClient = (() => {
       return "";
     }
 
+    if (_isHttp()) {
+      const library = await getLibrary();
+
+      const filtered = (library || [])
+        .map((item) => {
+          const pct = Math.max(0, Math.min(100, Number(item?.progress ?? 0)));
+          const type =
+            pct >= 100 || item?.status === "completed"
+              ? "completed"
+              : pct > 0
+                ? "progress"
+                : null;
+
+          if (!type) return null;
+
+          return {
+            id: item?.id ? `library:${String(item.id)}` : "",
+            type,
+            label: typeLabel(type),
+            targetId: item?.id ? String(item.id) : "",
+            itemTitle: item?.title || "Contenido",
+            itemMeta: metaForItem(item),
+            timeAgo: formatTimeAgo(item?.updatedAt || item?.createdAt || ""),
+            createdAt: item?.updatedAt || item?.createdAt || ""
+          };
+        })
+        .filter(Boolean)
+        .filter((entry) => {
+          if (filter === "all" || !filter) return true;
+          return entry.type === filter;
+        })
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, limit)
+        .map(({ createdAt, ...entry }) => entry);
+
+      return filtered;
+    }
+
+    const state = _safeState();
+    const activities = Array.isArray(state.activities) ? state.activities : [];
+    const library = Array.isArray(state.library) ? state.library : [];
+
     const filtered = activities
       .filter((a) => MEANINGFUL.has(a.type))
       .filter((a) => {
-        if (filter === "all") return true;
+        if (filter === "all" || !filter) return true;
         return a.type === filter;
       })
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -2260,15 +2298,10 @@ const ApiClient = (() => {
         const item = library.find((i) => i.id === act.targetId) || null;
 
         return {
-          id: act.id,
-
-          // TIPO DE ACTIVIDAD (no de contenido)
-          activityType: act.type, // "progress" | "completed"
-
-          // Tipo real del contenido (para iconos secundarios si quieres)
-          itemType: item?.type || "other",
-
-          itemId: act.targetId || null,
+          id: act.id || `${String(act.type || "activity")}:${String(act.targetId || "")}:${String(act.createdAt || "")}`,
+          type: act.type,
+          label: typeLabel(act.type),
+          targetId: act.targetId || null,
           itemTitle: item?.title || "Contenido",
           itemMeta: metaForItem(item),
           timeAgo: _formatTimeAgo(act.createdAt)
