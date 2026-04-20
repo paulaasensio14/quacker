@@ -668,67 +668,15 @@ const ExploreModule = (() => {
   }
 
   async function _handleExploreDrawerAddToListClick() {
-    __drawerListsPickerOpen = !__drawerListsPickerOpen;
-    _syncExploreDrawerListPicker();
-
-    if (!__drawerListsPickerOpen) return;
-
-    await _populateExploreDrawerListPicker();
-  }
-
-  async function _handleExploreDrawerConfirmListClick() {
     const activeItem = _getActiveExploreItem();
-    const select = document.getElementById("exploreDrawerListSelect");
-    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
+    if (!activeItem) return;
 
-    if (!activeItem || !select) return;
-
-    const listId = String(select.value || "").trim();
-    if (!listId) return;
-
-    if (confirmBtn) confirmBtn.disabled = true;
-
-    try {
-      let libraryItemId = String(activeItem.__libraryItemId || "").trim();
-
-      if (!libraryItemId) {
-        const saved = await ApiClient.addLibraryItem({
-          title: activeItem.title,
-          type: activeItem.type,
-          cover: activeItem.cover,
-          releaseDate: activeItem.releaseDate,
-          summary: activeItem.summary,
-          backdrop: activeItem.backdrop,
-          source: activeItem.source,
-          externalId: activeItem.externalId
-        });
-
-        libraryItemId = String(saved?.id || "").trim();
-      }
-
-      if (!libraryItemId) {
-        throw new Error("missing_library_item_id");
-      }
-
-      await ApiClient.addLibraryItemToList(listId, libraryItemId);
-
-      const nextItem = _replaceExploreItemByEid({
-        ...activeItem,
-        __inLibrary: true,
-        __libraryItemId: libraryItemId,
-        __listsCount: Number(activeItem.__listsCount || 0) + 1
-      });
-
-      if (nextItem) _syncExploreDrawerFromItem(nextItem);
-
-      __drawerListsPickerOpen = false;
-      _syncExploreDrawerListPicker();
-      select.value = "";
-    } catch (err) {
-      console.error("[Explore] add to list failed", err);
-    } finally {
-      if (confirmBtn) confirmBtn.disabled = false;
+    if (__drawerListsPickerOpen) {
+      _closeExploreListPicker();
+      return;
     }
+
+    await _openExploreListPicker();
   }
 
   function _syncExploreDrawerDetailFeedback() {
@@ -2054,18 +2002,7 @@ const ExploreModule = (() => {
       if (addListsBtn) {
         e.preventDefault();
         e.stopPropagation();
-
-        console.log("click list button");
-
-        const item = _getActiveExploreItem();
-        if (!item) return;
-
-        if (__drawerListsPickerOpen) {
-          _closeExploreListPicker();
-          return;
-        }
-
-        await _openExploreListPicker();
+        await _handleExploreDrawerAddToListClick();
         return;
       }
     });
