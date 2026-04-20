@@ -3,6 +3,14 @@
 const ProfileModule = (() => {
   const $ = (sel) => document.querySelector(sel);
   const t = (key) => window.I18n?.t?.(key) ?? key;
+  const PRESET_AVATARS = Object.freeze([
+    { id: "av1", name: "Avatar 1", src: "assets/img/avatars/avatar-1.png" },
+    { id: "av2", name: "Avatar 2", src: "assets/img/avatars/avatar-2.png" },
+    { id: "av3", name: "Avatar 3", src: "assets/img/avatars/avatar-3.png" },
+    { id: "av4", name: "Avatar 4", src: "assets/img/avatars/avatar-4.png" },
+  ]);
+  const DEFAULT_AVATAR_SRC = PRESET_AVATARS[0].src;
+  const VALID_PRESET_AVATAR_SRCS = new Set(PRESET_AVATARS.map((avatar) => avatar.src));
   let initialData = null;
   let isBound = false;
   let pendingAvatarDataUrl = null;
@@ -95,18 +103,27 @@ const ProfileModule = (() => {
     btn.disabled = !hasChanges;
   }
 
-  function updateHeaderAvatars(avatarUrl) {
+  function resolveAvatarSrc(avatarUrl) {
     const safeAvatar = String(avatarUrl || "").trim();
-    const fallbackAvatar = "assets/img/avatar-default.svg";
+
+    if (!safeAvatar) return DEFAULT_AVATAR_SRC;
+    if (safeAvatar.startsWith("data:image/")) return safeAvatar;
+    if (VALID_PRESET_AVATAR_SRCS.has(safeAvatar)) return safeAvatar;
+
+    return DEFAULT_AVATAR_SRC;
+  }
+
+  function updateHeaderAvatars(avatarUrl) {
+    const safeAvatar = resolveAvatarSrc(avatarUrl);
 
     const chipImg = document.querySelector("#profileChip .avatar-circle img");
-    if (chipImg) chipImg.src = safeAvatar || fallbackAvatar;
+    if (chipImg) chipImg.src = safeAvatar;
 
     const menuImg = document.querySelector("#profileMenu .profile-menu-avatar img");
-    if (menuImg) menuImg.src = safeAvatar || fallbackAvatar;
+    if (menuImg) menuImg.src = safeAvatar;
 
     const homeBannerImg = document.getElementById("homeBannerAvatar");
-    if (homeBannerImg) homeBannerImg.src = safeAvatar || fallbackAvatar;
+    if (homeBannerImg) homeBannerImg.src = safeAvatar;
   }
 
   function updateHeaderUI(user) {
@@ -128,21 +145,8 @@ const ProfileModule = (() => {
     const img = $("#profileAvatarImg");
     if (!img) return;
 
-    const safeAvatar = String(dataUrl || "").trim();
-    const fallbackAvatar = "assets/img/avatar-default.svg";
-
-    img.src = safeAvatar || fallbackAvatar;
+    img.src = resolveAvatarSrc(dataUrl);
   }
-
-  // ===== Avatares predefinidos =====
-  const PRESET_AVATARS = [
-    { id: "av1", name: "Avatar 1", src: "assets/img/avatars/avatar-1.png" },
-    { id: "av2", name: "Avatar 2", src: "assets/img/avatars/avatar-2.png" },
-    { id: "av3", name: "Avatar 3", src: "assets/img/avatars/avatar-3.png" },
-    { id: "av4", name: "Avatar 4", src: "assets/img/avatars/avatar-4.png" },
-    { id: "av5", name: "Avatar 5", src: "assets/img/avatars/avatar-5.png" },
-    { id: "av6", name: "Avatar 6", src: "assets/img/avatars/avatar-6.png" },
-  ];
 
   function openAvatarPickerModal() {
     const modal = document.getElementById("avatarPickerModal");
