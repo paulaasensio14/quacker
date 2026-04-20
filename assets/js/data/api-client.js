@@ -1120,7 +1120,16 @@ const ApiClient = (() => {
 
   // === preferencias (dashboard) ===
   // Regla: la UI NO toca localStorage. Migraciones legacy ocurren solo en FakeBackend.
-  function getUserPreferences() {
+  async function getUserPreferences() {
+    if (_isHttp()) {
+      const user = await getUser();
+
+      return {
+        theme: user?.theme === "dark" ? "dark" : "light",
+        language: user?.language === "en" ? "en" : "es"
+      };
+    }
+
     const state = _safeState();
     state.user = state.user || {};
 

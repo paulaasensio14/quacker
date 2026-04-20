@@ -12,9 +12,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const session = await ApiClient.getCurrentSession();
 
     const savedLang = localStorage.getItem("quacker:lang");
+    const sessionLang = session?.user?.language;
 
-    if (!savedLang && session?.user?.preferredLanguage) {
-      window.I18n.setLang(session.user.preferredLanguage);
+    if (!savedLang && (sessionLang === "en" || sessionLang === "es")) {
+      window.I18n.setLang(sessionLang);
     }
   } catch (e) {
     console.error("Session bootstrap error", e);
@@ -289,6 +290,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Cargar preferencia inicial
     (async () => {
       try {
+        const transport = String(ApiClient.getTransportInfo?.()?.transport || "").trim().toLowerCase();
+        if (transport === "http") {
+          const prefs = await ApiClient.getUserPreferences?.();
+          const lang = (prefs?.language === "en" || prefs?.language === "es")
+            ? prefs.language
+            : (window.I18n?.getLang?.() || "es");
+
+          window.I18n?.setLang?.(lang);
+          applyActiveLang(lang);
+          return;
+        }
+
         const savedLang = localStorage.getItem("quacker:lang");
 
         if (savedLang === "en" || savedLang === "es") {
