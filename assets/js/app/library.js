@@ -473,6 +473,20 @@ function assertLibraryMutationOk(result, fallbackReason = "mutation_failed") {
   throw createLibraryMutationError(result, fallbackReason);
 }
 
+function assertLibraryItemWithId(result, fallbackReason = "missing_item_id") {
+  const item = assertLibraryMutationOk(result, fallbackReason);
+  const itemId = item?.id != null ? String(item.id).trim() : "";
+
+  if (!itemId) {
+    throw createLibraryMutationError({ ok: false, reason: fallbackReason }, fallbackReason);
+  }
+
+  return {
+    ...item,
+    id: itemId
+  };
+}
+
 function getLibraryActionErrorMessage(err, fallback = _addLibraryT("common_try_again")) {
   const errorCode =
     err?.body?.error ||
@@ -1838,9 +1852,12 @@ const LibraryUI = (() => {
           payload.progress = Number(extraPayload.progress);
         }
 
-        const created = await ApiClient.createLibraryItem(payload);
+        const created = assertLibraryItemWithId(
+          await ApiClient.createLibraryItem(payload),
+          "create_failed"
+        );
 
-        window.__lastCreatedLibraryItemId = created?.id || null;
+        window.__lastCreatedLibraryItemId = created.id;
 
         closeAddLibraryModal();
 
@@ -2029,24 +2046,24 @@ const LibraryUI = (() => {
           actionLabel: t("common_undo"),
           onAction: async () => {
             try {
-              const restored = await ApiClient.createLibraryItem({
-                id: itemToRestore.id,
-                type: itemToRestore.type,
-                title: itemToRestore.title,
-                source: itemToRestore.source || "",
-                externalId: itemToRestore.externalId || "",
-                status: itemToRestore.status,
-                progress: itemToRestore.progress,
-                meta: itemToRestore.meta || {},
-                cover: itemToRestore.cover || "",
-                createdAt: itemToRestore.createdAt,
-                updatedAt: itemToRestore.updatedAt
-              });
+              const restored = assertLibraryItemWithId(
+                await ApiClient.createLibraryItem({
+                  id: itemToRestore.id,
+                  type: itemToRestore.type,
+                  title: itemToRestore.title,
+                  source: itemToRestore.source || "",
+                  externalId: itemToRestore.externalId || "",
+                  status: itemToRestore.status,
+                  progress: itemToRestore.progress,
+                  meta: itemToRestore.meta || {},
+                  cover: itemToRestore.cover || "",
+                  createdAt: itemToRestore.createdAt,
+                  updatedAt: itemToRestore.updatedAt
+                }),
+                "restore_missing_item_id"
+              );
 
-              const restoredItemId = String(restored?.id || "");
-              if (!restoredItemId) {
-                throw new Error("restore_missing_item_id");
-              }
+              const restoredItemId = restored.id;
 
               for (const list of listsToRestore || []) {
                 if (!list?.id) continue;
