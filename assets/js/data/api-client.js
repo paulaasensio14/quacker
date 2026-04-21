@@ -394,6 +394,34 @@ const ApiClient = (() => {
     });
   }
 
+  function _normalizeListNameOrThrow(value) {
+    const name = _normalizeContentText(value);
+
+    if (!name) {
+      throw _makeApiError("missing_name", 400);
+    }
+
+    if (name.length < 2) {
+      throw _makeApiError("name_too_short", 400);
+    }
+
+    if (name.length > 80) {
+      throw _makeApiError("name_too_long", 400);
+    }
+
+    return name;
+  }
+
+  function _normalizeListVisibilityOrThrow(value = "private") {
+    const visibility = String(value || "private").trim().toLowerCase();
+
+    if (!["private", "public", "collab"].includes(visibility)) {
+      throw _makeApiError("invalid_visibility", 400);
+    }
+
+    return visibility;
+  }
+
   function _buildListMutationResult(action, payload = {}) {
     const list =
       payload?.list && typeof payload.list === "object"
@@ -881,8 +909,16 @@ const ApiClient = (() => {
   }
 
   async function createList(listData) {
+    const name = _normalizeListNameOrThrow(listData?.name);
+    const description = String(listData?.description || "").trim();
+    const visibility = _normalizeListVisibilityOrThrow(listData?.visibility || "private");
+
     if (_isHttp()) {
-      const res = await _httpJson("POST", "/lists", listData);
+      const res = await _httpJson("POST", "/lists", {
+        name,
+        description,
+        visibility
+      });
       const created = _buildListMutationList("create", res);
 
       _emitDataChanged({
@@ -900,10 +936,10 @@ const ApiClient = (() => {
 
     const newList = _normalizeListRecord({
       id: String(Date.now()),
-      name: listData.name,
-      description: listData.description || "",
-      visibility: listData.visibility || "private",
-      items: listData.items || [],
+      name,
+      description,
+      visibility,
+      items: [],
       createdAt: nowIso,
       updatedAt: nowIso
     });
@@ -924,11 +960,29 @@ const ApiClient = (() => {
   }
 
   async function updateList(listId, patch = {}) {
+    if (!listId) {
+      throw _makeApiError("not_found", 404);
+    }
+
+    const safePatch = {};
+
+    if (Object.prototype.hasOwnProperty.call(patch, "name")) {
+      safePatch.name = _normalizeListNameOrThrow(patch.name);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "description")) {
+      safePatch.description = String(patch.description || "").trim();
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "visibility")) {
+      safePatch.visibility = _normalizeListVisibilityOrThrow(patch.visibility);
+    }
+
     if (_isHttp()) {
       const res = await _httpJson(
         "PATCH",
         `/lists/${encodeURIComponent(listId)}`,
-        patch
+        safePatch
       );
       const updated = _buildListMutationList("update", res);
 
@@ -946,12 +1000,14 @@ const ApiClient = (() => {
     const lists = state.lists;
 
     const idx = lists.findIndex(l => String(l.id) === String(listId));
-    if (idx === -1) return null;
+    if (idx === -1) {
+      throw _makeApiError("not_found", 404);
+    }
 
     const prev = lists[idx];
     const next = _normalizeListRecord({
       ...prev,
-      ...patch,
+      ...safePatch,
       updatedAt: new Date().toISOString()
     });
     lists[idx] = next;
@@ -970,6 +1026,10 @@ const ApiClient = (() => {
   }
 
   async function deleteList(listId) {
+    if (!listId) {
+      throw _makeApiError("not_found", 404);
+    }
+
     if (_isHttp()) {
       const res = await _httpJson(
         "DELETE",
@@ -995,6 +1055,11 @@ const ApiClient = (() => {
       l => String(l.id) !== String(listId)
     );
 
+    const deleted = before - state.lists.length;
+    if (deleted <= 0) {
+      throw _makeApiError("not_found", 404);
+    }
+
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
     }
@@ -1008,7 +1073,7 @@ const ApiClient = (() => {
     return _buildListMutationResult("delete", {
       ok: true,
       listId: String(listId),
-      deleted: before - state.lists.length
+      deleted
     });
   }
 
