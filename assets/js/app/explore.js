@@ -1642,6 +1642,11 @@ const ExploreModule = (() => {
         };
 
         const created = await ApiClient.createLibraryItem(payload);
+        const createdId = created?.id ? String(created.id) : "";
+
+        if (created?.ok === false || !createdId) {
+          throw new Error(created?.reason || created?.error || "create_failed");
+        }
 
         feed = feed.map((x) =>
           x.eid === eid
@@ -1649,9 +1654,7 @@ const ExploreModule = (() => {
                 ...x,
                 __saving: false,
                 __inLibrary: true,
-                __libraryItemId: created?.id
-                  ? String(created.id)
-                  : (x.__libraryItemId ?? null)
+                __libraryItemId: createdId
               }
             : x
         );
@@ -1662,9 +1665,7 @@ const ExploreModule = (() => {
                 ...x,
                 __saving: false,
                 __inLibrary: true,
-                __libraryItemId: created?.id
-                  ? String(created.id)
-                  : (x.__libraryItemId ?? null)
+                __libraryItemId: createdId
               }
             : x
         );
@@ -1693,7 +1694,7 @@ const ExploreModule = (() => {
 
         return {
           ok: true,
-          createdId: created?.id ? String(created.id) : null
+          createdId
         };
       } catch (err) {
         if (err?.status === 409 || err?.error === "duplicate_item") {
@@ -1703,31 +1704,71 @@ const ExploreModule = (() => {
             console.error(syncErr);
           }
 
+          const fresh = _getExploreItemByEid(eid);
+          const resolvedLibraryItemId = fresh?.__libraryItemId
+            ? String(fresh.__libraryItemId)
+            : "";
+
+          if (!resolvedLibraryItemId) {
+            console.error(err);
+
+            feed = feed.map((x) =>
+              x.eid === eid ? { ...x, __saving: false } : x
+            );
+
+            featuredFeed = featuredFeed.map((x) =>
+              x.eid === eid ? { ...x, __saving: false } : x
+            );
+
+            _applyFilters();
+
+            window.toast?.({
+              title: window.I18n.t("explore_library_add_error"),
+              message: window.I18n.t("explore_try_again"),
+              type: "error",
+              duration: 3000
+            });
+
+            return { ok: false, createdId: null };
+          }
+
           feed = feed.map((x) =>
             x.eid === eid
               ? {
                   ...x,
                   __saving: false,
-                  __inLibrary: true
+                  __inLibrary: true,
+                  __libraryItemId: resolvedLibraryItemId
+                }
+              : x
+          );
+
+          featuredFeed = featuredFeed.map((x) =>
+            x.eid === eid
+              ? {
+                  ...x,
+                  __saving: false,
+                  __inLibrary: true,
+                  __libraryItemId: resolvedLibraryItemId
                 }
               : x
           );
 
           _applyFilters();
 
-          const fresh = _getExploreItemByEid(eid);
-
           return {
             ok: true,
-            createdId: fresh?.__libraryItemId
-              ? String(fresh.__libraryItemId)
-              : null
+            createdId: resolvedLibraryItemId
           };
         }
 
         console.error(err);
 
         feed = feed.map((x) =>
+          x.eid === eid ? { ...x, __saving: false } : x
+        );
+
+        featuredFeed = featuredFeed.map((x) =>
           x.eid === eid ? { ...x, __saving: false } : x
         );
 
