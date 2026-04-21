@@ -2045,7 +2045,7 @@ const LibraryUI = (() => {
         console.error(e);
         window.toast?.({
           title: t("library_delete_error_title"),
-          message: t("common_try_again"),
+          message: getLibraryActionErrorMessage(e),
           type: "error",
           duration: 3000
         });
@@ -2331,7 +2331,10 @@ function deleteLibraryItemAnimated(itemId, opts = {}) {
 
   const doDelete = async () => {
     try {
-      const result = await ApiClient.deleteLibraryItem(itemId);
+      const result = assertLibraryMutationOk(
+        await ApiClient.deleteLibraryItem(itemId),
+        "delete_failed"
+      );
       closeProgressModal();
 
       // Toast SOLO si no es silencioso
@@ -2351,7 +2354,7 @@ function deleteLibraryItemAnimated(itemId, opts = {}) {
       if (!opts.silentError) {
         window.toast?.({
           title: t("library_delete_error_title"),
-          message: t("home_notif_try_again"),
+          message: getLibraryActionErrorMessage(e),
           type: "error",
           duration: 3000
         });
