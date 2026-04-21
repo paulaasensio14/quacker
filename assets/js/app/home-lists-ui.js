@@ -21,6 +21,11 @@ window.typeLabel = window.typeLabel || ((t) => {
   return i18n.t(map[t]) || window.TYPE_LABELS[t]?.() || i18n.t("lists_type_content");
 });
 
+function assertHomeMutationOk(result, fallbackReason = "mutation_failed") {
+  if (result && result.ok !== false) return result;
+  throw new Error(result?.reason || result?.error || fallbackReason);
+}
+
 // Meta visible (serie/libro/otros) para cards del Home
 function formatMetaLine(item) {
   const type = item?.type || "";
@@ -856,15 +861,14 @@ async function renderHomeDashboard() {
     return true;
   }
 
-  // ===== HELPER GENERAL: aplicar progreso rápido a un contenido (con Deshacer) =====
   async function applyProgressTick(itemId, sourceBtn = null) {
     if (!itemId) return;
 
-    // Evitar doble click si el mismo botón dispara varias veces
+    // Evitar doble click.
     if (sourceBtn && sourceBtn.dataset.busy === "1") return;
     if (sourceBtn) sourceBtn.dataset.busy = "1";
 
-    // Snapshot antes del cambio (para Deshacer)
+    // Snapshot para deshacer.
     let snapshotBefore = null;
     try {
       snapshotBefore = await ApiClient.getLibraryItemById(itemId);
@@ -873,7 +877,6 @@ async function renderHomeDashboard() {
       snapshotBefore = null;
     }
 
-    // Estado visual del botón (si lo tenemos)
     const prevHtml = sourceBtn ? sourceBtn.innerHTML : null;
     if (sourceBtn) {
       sourceBtn.disabled = true;
@@ -884,13 +887,14 @@ async function renderHomeDashboard() {
     }
 
     try {
-      // Marca temporal para deshacer activities creadas por ESTE click (racha/estadísticas coherentes)
       const sinceIso = new Date(Date.now() - 2000).toISOString();
 
-      // Nuevo motor: progreso rápido por tipo
-      const res = await (ApiClient.applyQuickProgress
-        ? ApiClient.applyQuickProgress(itemId)
-        : ApiClient.progressLibraryItem(itemId, 5)
+      const res = assertHomeMutationOk(
+        await (ApiClient.applyQuickProgress
+          ? ApiClient.applyQuickProgress(itemId)
+          : ApiClient.progressLibraryItem(itemId, 5)
+        ),
+        "quick_progress_failed"
       );
 
       const title = res?.justCompleted
@@ -916,18 +920,21 @@ async function renderHomeDashboard() {
         onAction: snapshotBefore
           ? async () => {
               try {
-                await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+                assertHomeMutationOk(
+                  await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false }),
+                  "undo_failed"
+                );
 
-                // Importante: borrar las activities generadas por el progreso rápido
                 if (ApiClient.undoActivitiesForItemSince) {
-                  await ApiClient.undoActivitiesForItemSince(itemId, sinceIso);
+                  assertHomeMutationOk(
+                    await ApiClient.undoActivitiesForItemSince(itemId, sinceIso),
+                    "undo_activities_failed"
+                  );
                 }
 
-                // UI: si quedó una card optimista/pending en "Continúa", la quitamos ya
                 const pending = document.querySelector(`.cw-card.is-pending[data-id="${CSS.escape(String(itemId))}"]`);
                 if (pending) pending.remove();
 
-                // Evitar highlight si se deshace
                 if (lastResumedItemId === itemId) lastResumedItemId = null;
 
                 window.toast?.({
@@ -949,9 +956,6 @@ async function renderHomeDashboard() {
           : null
       });
 
-      // No refrescamos manualmente:
-      // ApiClient emite "quacker:data-changed" y app-core dispara "quacker:home-refresh"
-
     } catch (e) {
       console.error(e);
       window.toast?.({
@@ -964,7 +968,6 @@ async function renderHomeDashboard() {
       if (sourceBtn) {
         sourceBtn.disabled = false;
         sourceBtn.dataset.busy = "0";
-        // La UI real se re-renderiza con eventos; pero restauramos el HTML por si tarda un frame
         sourceBtn.innerHTML = prevHtml || sourceBtn.innerHTML;
       }
     }
@@ -1025,14 +1028,11 @@ async function renderHomeDashboard() {
   async function retomarItem(itemId, card) {
     if (!itemId || !card) return;
 
-    // Evitar doble click
+    // Evitar doble click.
     if (card.dataset.busy === "1") return;
     card.dataset.busy = "1";
 
-    // Snapshot del item ANTES de tocar nada (para Deshacer)
-
-    // Marca de tiempo para deshacer: debe capturarse antes de cualquier operación async
-    // para poder revertir con precisión las activities creadas por este flujo.
+    // Marca para deshacer activities.
     const undoSinceIso = new Date().toISOString();
 
     let snapshotBefore = null;
@@ -1057,29 +1057,24 @@ async function renderHomeDashboard() {
       `;
     }
 
-    // Animación de salida
     card.classList.add("is-removing");
 
     try {
       await new Promise((r) => setTimeout(r, 220));
 
-      // 1) Marcar como retomado (no cuenta para racha)
-      const resumeRes = await ApiClient.resumeLibraryItem(itemId);
-      if (!resumeRes || resumeRes.ok !== true) {
-        throw new Error(resumeRes?.reason || "resume_failed");
-      }
-
-      // 2) Aplicar mini progreso real (sí cuenta para racha)
-      const progRes = await (ApiClient.applyQuickProgress
-        ? ApiClient.applyQuickProgress(itemId)
-        : ApiClient.progressLibraryItem(itemId, 5)
+      const resumeRes = assertHomeMutationOk(
+        await ApiClient.resumeLibraryItem(itemId),
+        "resume_failed"
       );
-      if (!progRes || progRes.ok !== true) {
-        throw new Error(progRes?.reason || "quick_progress_failed");
-      }
 
-      // No quitamos la card manualmente.
-      // ApiClient emite "quacker:data-changed" y app-core refresca Home (quacker:home-refresh).
+      const progRes = assertHomeMutationOk(
+        await (ApiClient.applyQuickProgress
+          ? ApiClient.applyQuickProgress(itemId)
+          : ApiClient.progressLibraryItem(itemId, 5)
+        ),
+        "quick_progress_failed"
+      );
+
       const days = Math.max(0, Number(resumeRes?.daysSinceLast ?? 0));
       const dayKey = days === 1 ? "home_day_singular" : "home_day_plural";
       const delta = progRes?.deltaLabel
@@ -1104,24 +1099,24 @@ async function renderHomeDashboard() {
         actionLabel: snapshotBefore ? window.I18n.t("common_undo") : null,
         onAction: snapshotBefore ? async () => {
           try {
-            // 1) Restaurar el item sin crear nueva activity
-            await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+            assertHomeMutationOk(
+              await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false }),
+              "undo_failed"
+            );
 
-            // Feedback defensivo: si quedara alguna card "pending" por estados anteriores, la retiramos.
             try {
               const safeId = (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
               const pending = document.querySelector(`#continueGrid .cw-card.is-pending[data-id="${safeId}"]`);
               if (pending && pending.parentElement) pending.remove();
             } catch (_) {
-              // defensivo
+              // No bloquea el deshacer.
             }
 
-            // 2) Eliminar las activities creadas por el flujo "Retomar"
             if (ApiClient.transport !== "http" && ApiClient.undoActivitiesForItemSince) {
-              const undoActsRes = await ApiClient.undoActivitiesForItemSince(itemId, undoSinceIso);
-              if (undoActsRes && undoActsRes.ok === false) {
-                throw new Error(undoActsRes.reason || "undo_activities_failed");
-              }
+              assertHomeMutationOk(
+                await ApiClient.undoActivitiesForItemSince(itemId, undoSinceIso),
+                "undo_activities_failed"
+              );
             }
 
             window.toast?.({
@@ -1156,9 +1151,6 @@ async function renderHomeDashboard() {
       if (btn) btn.dataset.busy = "0";
       
       card.dataset.busy = "0";
-
-      // No reinsertamos HTML ni re-enganchamos listeners.
-      // Si algo falla, restauramos estado visual y el render oficial (home-refresh) se encargará del DOM.
 
       window.toast?.({
         title: window.I18n.t("home_backlog_resume_error_title"),
