@@ -1315,6 +1315,13 @@ const ApiClient = (() => {
       const res = await _httpJson("PUT", "/lists", {
         lists: safeLists
       });
+      const lists = Array.isArray(res?.lists)
+        ? _normalizeListCollection(res.lists)
+        : null;
+
+      if (!lists || lists.length !== safeLists.length) {
+        throw _makeApiError("invalid_lists_response", 502);
+      }
 
       _emitDataChanged({
         kind: "lists",
@@ -1323,8 +1330,8 @@ const ApiClient = (() => {
 
       return {
         ok: true,
-        count: Array.isArray(res?.lists) ? res.lists.length : 0,
-        lists: _normalizeListCollection(res?.lists || [])
+        count: lists.length,
+        lists
       };
     }
 
