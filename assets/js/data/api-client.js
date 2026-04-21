@@ -1056,6 +1056,14 @@ const ApiClient = (() => {
         "DELETE",
         `/lists/${encodeURIComponent(listId)}`
       );
+      const result = _buildListMutationResult("delete", {
+        ...res,
+        listId: String(listId)
+      });
+
+      if (Number(result.deleted || 0) <= 0) {
+        throw _makeApiError("invalid_delete_response", 502);
+      }
 
       _emitDataChanged({
         kind: "lists",
@@ -1063,10 +1071,7 @@ const ApiClient = (() => {
         listId: String(listId)
       });
 
-      return _buildListMutationResult("delete", {
-        ...res,
-        listId: String(listId)
-      });
+      return result;
     }
 
     const state = _safeState();
@@ -2272,11 +2277,16 @@ const ApiClient = (() => {
     // HTTP (backend real)
     // =========================
     if (_isHttp()) {
-      await _httpJson("DELETE", `/library/${encodeURIComponent(idStr)}`);
+      const res = await _httpJson("DELETE", `/library/${encodeURIComponent(idStr)}`);
+      const deleted = Number(res?.deleted || 0);
+
+      if (!Number.isFinite(deleted) || deleted <= 0) {
+        throw _makeApiError("invalid_delete_response", 502);
+      }
 
       _emitDataChanged({ kind: "library", action: "delete", itemId: idStr });
 
-      return { ok: true };
+      return { ok: true, deleted };
     }
 
     // =========================
