@@ -456,6 +456,81 @@ function closeAddToListModal() {
   _showAddToListError("");
 }
 
+function createLibraryMutationError(result, fallbackReason = "mutation_failed") {
+  const reason = result?.reason || result?.error || fallbackReason;
+  const err = new Error(reason);
+
+  err.error = reason;
+  err.reason = reason;
+  err.body = { error: reason };
+  err.result = result;
+
+  return err;
+}
+
+function assertLibraryMutationOk(result, fallbackReason = "mutation_failed") {
+  if (result && result.ok !== false) return result;
+  throw createLibraryMutationError(result, fallbackReason);
+}
+
+function getLibraryActionErrorMessage(err, fallback = _addLibraryT("common_try_again")) {
+  const errorCode =
+    err?.body?.error ||
+    err?.error ||
+    err?.reason ||
+    err?.result?.reason ||
+    "";
+
+  if (errorCode === "not_found") {
+    return _addLibraryT("library_error_not_found");
+  }
+
+  if (errorCode === "invalid_status") {
+    return _addLibraryT("library_error_invalid_status");
+  }
+
+  if (errorCode === "invalid_type") {
+    return _addLibraryT("library_error_invalid_type");
+  }
+
+  if (errorCode === "missing_title" || errorCode === "title_too_short" || errorCode === "title_too_long") {
+    return _addLibraryT("library_error_invalid_title_data");
+  }
+
+  return fallback;
+}
+
+function getLibraryUndoErrorMessage(err, fallback = _addLibraryT("common_try_again")) {
+  const errorCode =
+    err?.body?.error ||
+    err?.error ||
+    err?.reason ||
+    err?.result?.reason ||
+    "";
+
+  if (errorCode === "not_found") {
+    return _addLibraryT("library_undo_error_not_found");
+  }
+
+  if (errorCode === "invalid_status") {
+    return _addLibraryT("library_undo_error_invalid_status");
+  }
+
+  if (errorCode === "invalid_type") {
+    return _addLibraryT("library_undo_error_invalid_type");
+  }
+
+  if (
+    errorCode === "missing_title" ||
+    errorCode === "title_too_short" ||
+    errorCode === "title_too_long"
+  ) {
+    return _addLibraryT("library_undo_error_invalid_title_data");
+  }
+
+  return fallback;
+}
+
 const LibraryUI = (() => {
   const t = (key, params) => window.I18n?.t?.(key, params) ?? key;
 
@@ -1287,54 +1362,6 @@ const LibraryUI = (() => {
     }, 520);
   }
 
-function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
-  const errorCode = err?.body?.error || err?.error || "";
-
-  if (errorCode === "not_found") {
-    return t("library_error_not_found");
-  }
-
-  if (errorCode === "invalid_status") {
-    return t("library_error_invalid_status");
-  }
-
-  if (errorCode === "invalid_type") {
-    return t("library_error_invalid_type");
-  }
-
-  if (errorCode === "missing_title" || errorCode === "title_too_short" || errorCode === "title_too_long") {
-    return t("library_error_invalid_title_data");
-  }
-
-  return fallback;
-}
-
-  function getLibraryUndoErrorMessage(err, fallback = t("common_try_again")) {
-    const errorCode = err?.body?.error || err?.error || "";
-
-    if (errorCode === "not_found") {
-      return t("library_undo_error_not_found");
-    }
-
-    if (errorCode === "invalid_status") {
-      return t("library_undo_error_invalid_status");
-    }
-
-    if (errorCode === "invalid_type") {
-      return t("library_undo_error_invalid_type");
-    }
-
-    if (
-      errorCode === "missing_title" ||
-      errorCode === "title_too_short" ||
-      errorCode === "title_too_long"
-    ) {
-      return t("library_undo_error_invalid_title_data");
-    }
-
-    return fallback;
-  }
-
   async function applyQuickProgressWithUndo(itemId) {
     const card = document.querySelector(`.library-card[data-id="${itemId}"]`);
     if (card?.dataset.busy === "1") return;
@@ -1356,7 +1383,10 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
       // Marcador temporal para deshacer activities creadas por ESTE click
       const sinceIso = new Date(Date.now() - 2000).toISOString();
 
-      const res = await ApiClient.resumeLibraryItem(itemId);
+      const res = assertLibraryMutationOk(
+        await ApiClient.resumeLibraryItem(itemId),
+        "resume_failed"
+      );
 
       const justCompleted = !!res?.justCompleted;
       const title = justCompleted
@@ -1383,7 +1413,10 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
         onAction: snapshotBefore
           ? async () => {
               try {
-                await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+                assertLibraryMutationOk(
+                  await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false }),
+                  "undo_failed"
+                );
 
                 // Borrar activities creadas por este progreso rápido (racha/estadísticas coherentes)
                 await ApiClient.undoActivitiesForItemSince(itemId, sinceIso);
@@ -1445,7 +1478,10 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
         snapshotBefore = null;
       }
 
-      const res = await ApiClient.completeLibraryItem(itemId);
+      const res = assertLibraryMutationOk(
+        await ApiClient.completeLibraryItem(itemId),
+        "complete_failed"
+      );
 
       // Feedback visual inmediato
       playLibraryQuickFx(itemId, "complete");
@@ -1459,7 +1495,10 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
         onAction: snapshotBefore
           ? async () => {
               try {
-                await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+                assertLibraryMutationOk(
+                  await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false }),
+                  "undo_failed"
+                );
 
                 // FX de confirmación al restaurar
                 flashLibraryCard(itemId);
@@ -1489,7 +1528,7 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
 
       window.toast?.({
         title: t("library_complete_error_title"),
-        message: t("common_try_again"),
+        message: getLibraryActionErrorMessage(e),
         type: "error",
         duration: 3600
       });
@@ -2216,7 +2255,10 @@ async function saveLibraryItem(updatedItem) {
   const sinceIso = new Date(Date.now() - 2000).toISOString();
 
   try {
-    const res = await ApiClient.updateLibraryItem(updatedItem, { logActivity: true });
+    const res = assertLibraryMutationOk(
+      await ApiClient.updateLibraryItem(updatedItem, { logActivity: true }),
+      "update_failed"
+    );
 
     closeProgressModal();
 
@@ -2234,7 +2276,10 @@ async function saveLibraryItem(updatedItem) {
       onAction: snapshotBefore ? async () => {
         try {
           // 1) Restaurar item SIN volver a registrar activity
-          await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false });
+          assertLibraryMutationOk(
+            await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false }),
+            "undo_failed"
+          );
 
           // 2) Borrar activities creadas por el guardado
           // (esto además reconcilia la racha de forma defensiva)
@@ -2253,7 +2298,7 @@ async function saveLibraryItem(updatedItem) {
           console.error(e);
           window.toast?.({
             title: t("library_progress_undo_error_title"),
-            message: t("home_notif_try_again"),
+            message: getLibraryUndoErrorMessage(e),
             type: "error",
             duration: 3200
           });
@@ -2266,7 +2311,7 @@ async function saveLibraryItem(updatedItem) {
     console.error(e);
     window.toast?.({
       title: t("library_progress_save_error_title"),
-      message: t("home_notif_try_again"),
+      message: getLibraryActionErrorMessage(e),
       type: "error",
       duration: 3000
     });
