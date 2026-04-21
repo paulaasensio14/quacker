@@ -357,6 +357,43 @@ const ApiClient = (() => {
       .filter(Boolean);
   }
 
+  function _sanitizeListsForSetAll(nextLists = []) {
+    if (!Array.isArray(nextLists)) {
+      throw _makeApiError("invalid_lists_payload", 400);
+    }
+
+    const nowIso = new Date().toISOString();
+
+    return nextLists.map((list, index) => {
+      const items = Array.isArray(list?.items) ? list.items : [];
+      const safeVisibility = String(list?.visibility || "").trim().toLowerCase();
+      const safeItems = items
+        .map((entry) => {
+          const rawId = typeof entry === "string" ? entry : entry?.id;
+          if (!rawId) return null;
+
+          return {
+            id: String(rawId),
+            addedAt: entry?.addedAt || nowIso
+          };
+        })
+        .filter(Boolean);
+
+      return {
+        id: list?.id ? String(list.id) : `local_list_${Date.now()}_${index}`,
+        name: _normalizeContentText(list?.name) || "Sin nombre",
+        description: String(list?.description || "").trim(),
+        visibility: ["private", "public", "collab"].includes(safeVisibility)
+          ? safeVisibility
+          : "private",
+        items: safeItems,
+        itemsCount: safeItems.length,
+        createdAt: list?.createdAt || nowIso,
+        updatedAt: nowIso
+      };
+    });
+  }
+
   function _buildListMutationResult(action, payload = {}) {
     const list =
       payload?.list && typeof payload.list === "object"
@@ -1152,9 +1189,11 @@ const ApiClient = (() => {
   }
 
   async function setLists(nextLists = []) {
+    const safeLists = _sanitizeListsForSetAll(nextLists);
+
     if (_isHttp()) {
       const res = await _httpJson("PUT", "/lists", {
-        lists: Array.isArray(nextLists) ? nextLists : []
+        lists: safeLists
       });
 
       _emitDataChanged({
@@ -1164,12 +1203,13 @@ const ApiClient = (() => {
 
       return {
         ok: true,
-        count: Array.isArray(res?.lists) ? res.lists.length : 0
+        count: Array.isArray(res?.lists) ? res.lists.length : 0,
+        lists: _normalizeListCollection(res?.lists || [])
       };
     }
 
     const state = _safeState();
-    state.lists = Array.isArray(nextLists) ? nextLists : [];
+    state.lists = safeLists;
 
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
@@ -1180,7 +1220,7 @@ const ApiClient = (() => {
       action: "set_all"
     });
 
-    return { ok: true, count: state.lists.length };
+    return { ok: true, count: state.lists.length, lists: _cloneCollection(state.lists) };
   }
 
   // === perfil / usuario ===
