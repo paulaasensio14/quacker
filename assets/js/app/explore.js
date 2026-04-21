@@ -1365,6 +1365,11 @@ const ExploreModule = (() => {
           _showDrawerInlineNote(drawerNoteMessage);
         }
       }
+    } catch (err) {
+      console.error("[Explore] add item to list failed", err);
+      _showDrawerInlineNotePersistent(
+        window.I18n.t("explore_drawer_list_add_error")
+      );
     } finally {
       _setDrawerButtonLoading(confirmBtn, false);
     }
@@ -2107,7 +2112,7 @@ const ExploreModule = (() => {
       });
     }
 
-    // AÑADIR A LISTA (NUEVO)
+    // Añadir a lista
 
     const confirmListBtn = document.getElementById("exploreDrawerConfirmList");
 
