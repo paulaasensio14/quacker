@@ -177,6 +177,27 @@ const ApiClient = (() => {
     return FakeBackend.getState();
   }
 
+  function _cloneData(value) {
+    if (value == null || typeof value !== "object") return value;
+
+    if (typeof structuredClone === "function") {
+      try {
+        return structuredClone(value);
+      } catch (_) {}
+    }
+
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_) {
+      if (Array.isArray(value)) return value.map((entry) => _cloneData(entry));
+      return { ...value };
+    }
+  }
+
+  function _cloneCollection(items) {
+    return (Array.isArray(items) ? items : []).map((item) => _cloneData(item));
+  }
+
   function _invalidateLibraryCache() {
     _libraryCache = {
       transport: "",
@@ -202,7 +223,7 @@ const ApiClient = (() => {
 
     if (!isFresh) return null;
 
-    return _libraryCache.items.slice();
+    return _cloneCollection(_libraryCache.items);
   }
 
   function _getListsCacheSnapshot() {
@@ -214,14 +235,14 @@ const ApiClient = (() => {
 
     if (!isFresh) return null;
 
-    return _listsCache.items.slice();
+    return _cloneCollection(_listsCache.items);
   }
 
   function _setLibraryCache(items) {
     _libraryCache = {
       transport: __cfg.transport,
       timestamp: Date.now(),
-      items: Array.isArray(items) ? items.slice() : []
+      items: _cloneCollection(items)
     };
   }
 
@@ -302,7 +323,7 @@ const ApiClient = (() => {
     _listsCache = {
       transport: __cfg.transport,
       timestamp: Date.now(),
-      items: _normalizeListCollection(items)
+      items: _cloneCollection(_normalizeListCollection(items))
     };
   }
 
@@ -628,12 +649,12 @@ const ApiClient = (() => {
         const normalizedItems = _normalizeListCollection(items);
 
         _setListsCache(normalizedItems);
-        return normalizedItems.slice();
+        return _cloneCollection(normalizedItems);
       } catch (error) {
         console.error("[ApiClient] getLists failed", error);
 
         const fallbackItems = Array.isArray(_listsCache.items)
-          ? _listsCache.items.slice()
+          ? _cloneCollection(_listsCache.items)
           : [];
 
         return fallbackItems;
@@ -643,7 +664,7 @@ const ApiClient = (() => {
     const state = _safeState();
     const items = _normalizeListCollection(state.lists || []);
     _setListsCache(items);
-    return items.slice();
+    return _cloneCollection(items);
   }
 
   // Devuelve las listas donde está un item (para deshabilitar opciones y pintar estado)
@@ -1750,12 +1771,12 @@ const ApiClient = (() => {
           : (res && Array.isArray(res.items) ? res.items : []);
 
         _setLibraryCache(items);
-        return items.slice();
+        return _cloneCollection(items);
       } catch (error) {
         console.error("[ApiClient] getLibrary failed", error);
 
         const fallbackItems = Array.isArray(_libraryCache.items)
-          ? _libraryCache.items.slice()
+          ? _cloneCollection(_libraryCache.items)
           : [];
 
         return fallbackItems;
@@ -1766,7 +1787,7 @@ const ApiClient = (() => {
     const state = _safeState();
     const items = state.library || [];
     _setLibraryCache(items);
-    return items.slice();
+    return _cloneCollection(items);
   }
 
   async function getLibraryItemById(itemId) {
@@ -1776,7 +1797,7 @@ const ApiClient = (() => {
       try {
         const res = await _httpJson("GET", `/library/${encodeURIComponent(String(itemId))}`);
         if (!res) return null;
-        return res && res.item ? res.item : res;
+        return _cloneData(res && res.item ? res.item : res);
       } catch (_) {
         return null;
       }
@@ -1784,7 +1805,8 @@ const ApiClient = (() => {
 
     const state = _safeState();
     const library = state.library || [];
-    return library.find(i => String(i.id) === String(itemId)) || null;
+    const item = library.find(i => String(i.id) === String(itemId)) || null;
+    return _cloneData(item);
   }
 
   async function updateLibraryItem(updatedItem, { logActivity = true } = {}) {
