@@ -1056,7 +1056,7 @@ const ListsModule = (() => {
       if (cancelBtn) cancelBtn.disabled = true;
       if (closeBtn) closeBtn.disabled = true;
 
-      // 1) Snapshot COMPLETO de listas (para deshacer perfecto: ids/orden/items)
+      // Snapshot para poder deshacer.
       lastDeletedListSnapshot = {
         deletedId: String(pendingDeleteListId),
         deletedName: (() => {
@@ -1067,46 +1067,52 @@ const ListsModule = (() => {
       };
 
       try {
-        // Animación de salida (antes de borrar)
         const card = _findListCardById(pendingDeleteListId);
         if (card) {
           card.classList.add("is-removing");
           await _sleep(200);
         }
 
-        // 2) Borramos la lista
         await ApiClient.deleteList(pendingDeleteListId);
 
-        // 3) Cerramos modal y recargamos
         closeConfirmDeleteListModal();
         await load();
 
-        // 4) Mostramos toast con "Deshacer" (restauración perfecta vía snapshot)
         const snap = lastDeletedListSnapshot;
 
         if (snap?.lists?.length || Array.isArray(snap?.lists)) {
           window.toast?.({
-            title: "Lista eliminada",
-            message: `Se ha eliminado: ${snap.deletedName}`,
+            title: t("lists_delete_success_title"),
+            message: t("lists_delete_success_text").replace("{name}", snap.deletedName),
             type: "info",
             duration: 5000,
-            actionLabel: "Deshacer",
+            actionLabel: t("lists_undo"),
             onAction: async () => {
-              // Si ya no hay snapshot, no hacemos nada
               if (!lastDeletedListSnapshot?.lists) return;
 
               const snapshotToRestore = lastDeletedListSnapshot;
-              // Consumimos el snapshot para evitar dobles “deshacer”
-              lastDeletedListSnapshot = null;
 
-              await ApiClient.setLists(snapshotToRestore.lists);
+              try {
+                const restoreResult = await ApiClient.setLists(snapshotToRestore.lists);
+                if (!restoreResult?.ok) throw new Error("restore_failed");
+                lastDeletedListSnapshot = null;
+              } catch (e) {
+                console.error(e);
+                lastDeletedListSnapshot = snapshotToRestore;
 
-              // Defensivo: si estamos en la vista de Listas, recargamos para que sea inmediato
+                window.toast?.({
+                  title: t("lists_delete_undo_error_title"),
+                  message: t("lists_delete_undo_error_text"),
+                  type: "error",
+                  duration: 3200
+                });
+                return;
+              }
+
               const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
               if (isListsActive) {
                 await load();
 
-                // micro-FX + scroll a la tarjeta restaurada (premium y claro)
                 requestAnimationFrame(() => {
                   const card = _findListCardById(snapshotToRestore.deletedId);
                   if (card) {
@@ -1118,8 +1124,8 @@ const ListsModule = (() => {
               }
 
               window.toast?.({
-                title: "Cambios deshechos",
-                message: `Se restauró: ${snapshotToRestore.deletedName}`,
+                title: t("lists_delete_undo_success_title"),
+                message: t("lists_delete_undo_success_text").replace("{name}", snapshotToRestore.deletedName),
                 type: "success",
                 duration: 2200
               });
@@ -1128,7 +1134,7 @@ const ListsModule = (() => {
         }
       } catch (err) {
         console.error(err);
-        _showConfirmDeleteErrors("No se pudo eliminar la lista. Inténtalo de nuevo.");
+        _showConfirmDeleteErrors(t("lists_delete_error_text"));
       } finally {
         if (btn) {
           btn.disabled = false;
