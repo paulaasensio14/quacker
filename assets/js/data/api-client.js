@@ -941,11 +941,16 @@ const ApiClient = (() => {
         visibility
       });
       const created = _buildListMutationList("create", res);
+      const createdId = created?.id ? String(created.id).trim() : "";
+
+      if (!createdId) {
+        throw _makeApiError("invalid_list_response", 502);
+      }
 
       _emitDataChanged({
         kind: "lists",
         action: "create",
-        listId: String(created?.id || "")
+        listId: createdId
       });
 
       return created;
@@ -1006,11 +1011,17 @@ const ApiClient = (() => {
         safePatch
       );
       const updated = _buildListMutationList("update", res);
+      const updatedId = updated?.id ? String(updated.id).trim() : "";
+      const targetId = String(listId).trim();
+
+      if (!updatedId || updatedId !== targetId) {
+        throw _makeApiError("invalid_list_response", 502);
+      }
 
       _emitDataChanged({
         kind: "lists",
         action: "update",
-        listId: String(listId)
+        listId: targetId
       });
 
       return updated;
