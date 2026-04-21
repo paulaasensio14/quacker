@@ -177,6 +177,14 @@ const ApiClient = (() => {
     return FakeBackend.getState();
   }
 
+  function _makeApiError(errorCode, status = 400, body = null) {
+    const err = new Error(errorCode);
+    err.status = status;
+    err.error = errorCode;
+    err.body = body || { error: errorCode };
+    return err;
+  }
+
   function _cloneData(value) {
     if (value == null || typeof value !== "object") return value;
 
@@ -196,6 +204,82 @@ const ApiClient = (() => {
 
   function _cloneCollection(items) {
     return (Array.isArray(items) ? items : []).map((item) => _cloneData(item));
+  }
+
+  function _normalizeContentText(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
+
+  function _normalizeCanonicalIdentity(source, externalId) {
+    const safeSource = String(source || "").trim().toLowerCase();
+    const safeExternalId = String(externalId || "").trim();
+
+    if (!safeSource || !safeExternalId) {
+      return {
+        source: "",
+        externalId: ""
+      };
+    }
+
+    return {
+      source: safeSource,
+      externalId: safeExternalId
+    };
+  }
+
+  function _hasCanonicalIdentity(item) {
+    return Boolean(
+      String(item?.source || "").trim() &&
+      String(item?.externalId || "").trim()
+    );
+  }
+
+  function _isSameLibraryIdentity(a, b) {
+    const aHasCanonical = _hasCanonicalIdentity(a);
+    const bHasCanonical = _hasCanonicalIdentity(b);
+
+    if (aHasCanonical && bHasCanonical) {
+      return (
+        String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
+        String(a.externalId).trim() === String(b.externalId).trim()
+      );
+    }
+
+    const aTitle = _normalizeContentText(a?.title).toLocaleLowerCase("es");
+    const bTitle = _normalizeContentText(b?.title).toLocaleLowerCase("es");
+    const aType = String(a?.type || "").trim();
+    const bType = String(b?.type || "").trim();
+
+    return aTitle === bTitle && aType === bType;
+  }
+
+  function _sanitizeLibraryMeta(meta) {
+    const allowedMetaKeys = new Set([
+      "totalEpisodes",
+      "totalSeasons",
+      "totalPages",
+      "totalChapters",
+      "platform",
+      "author",
+      "season",
+      "episode",
+      "pagesRead",
+      "seasonBreakdown"
+    ]);
+
+    const sanitizedMeta = {};
+
+    if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+      return sanitizedMeta;
+    }
+
+    for (const key of Object.keys(meta)) {
+      if (allowedMetaKeys.has(key)) {
+        sanitizedMeta[key] = meta[key];
+      }
+    }
+
+    return sanitizedMeta;
   }
 
   function _invalidateLibraryCache() {
@@ -2108,36 +2192,85 @@ const ApiClient = (() => {
     const state = _safeState();
     state.library = state.library || [];
 
-    const type = data.type || "pelicula";
+    const title = _normalizeContentText(data.title);
+    const type = String(data.type || "pelicula").trim().toLowerCase();
+    const canonicalIdentity = _normalizeCanonicalIdentity(
+      data.source,
+      data.externalId
+    );
+    const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+    const allowedStatuses = new Set([
+      "pending",
+      "not_started",
+      "in_progress",
+      "watching",
+      "reading",
+      "playing",
+      "completed"
+    ]);
+
+    if (!title) {
+      throw _makeApiError("missing_title", 400);
+    }
+
+    if (title.length < 2) {
+      throw _makeApiError("title_too_short", 400);
+    }
+
+    if (title.length > 120) {
+      throw _makeApiError("title_too_long", 400);
+    }
+
+    if (!allowedTypes.has(type)) {
+      throw _makeApiError("invalid_type", 400);
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(data, "status") &&
+      data.status != null &&
+      String(data.status).trim() !== ""
+    ) {
+      const status = String(data.status || "").trim().toLowerCase();
+      if (!allowedStatuses.has(status)) {
+        throw _makeApiError("invalid_status", 400);
+      }
+    }
+
+    const duplicate = state.library.find((it) =>
+      _isSameLibraryIdentity(it, {
+        title,
+        type,
+        source: canonicalIdentity.source,
+        externalId: canonicalIdentity.externalId
+      })
+    );
+
+    if (duplicate) {
+      throw _makeApiError("duplicate_item", 409);
+    }
+
     const rawProgress = Number(data.progress ?? 0);
     const safeProgress = Number.isFinite(rawProgress)
       ? Math.max(0, Math.min(100, rawProgress))
       : 0;
 
-    const defaultStatus =
-      type === "book" ? "reading" :
-      type === "game" ? "playing" :
-      type === "serie" ? "watching" :
-      "watching";
-
     const normalizedStatus = _normalizeLibraryStatus(
       data.status,
       type,
-      safeProgress,
-      defaultStatus
+      safeProgress
     );
     const nowIso = new Date().toISOString();
 
     const newItem = {
       id: data.id != null ? String(data.id) : String(Date.now()),
       type,
-      title: (data.title || "").trim(),
-      source: String(data.source || "").trim(),
-      externalId: String(data.externalId || "").trim(),
+      title,
+      source: canonicalIdentity.source,
+      externalId: canonicalIdentity.externalId,
       status: normalizedStatus,
       progress: safeProgress,
-      meta: data.meta || {},
-      cover: data.cover || "",
+      meta: _sanitizeLibraryMeta(data.meta),
+      cover: String(data.cover || "").trim().slice(0, 500),
       createdAt: String(data.createdAt || nowIso),
       updatedAt: String(data.updatedAt || nowIso)
     };
