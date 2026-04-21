@@ -1133,6 +1133,20 @@ const ApiClient = (() => {
         `/lists/${encodeURIComponent(safeListId)}/items`,
         { itemId: safeItemId }
       );
+      const result = _buildListMutationResult("add_item", {
+        ...res,
+        listId: safeListId,
+        itemId: String(res?.itemId || safeItemId)
+      });
+      const listItems = Array.isArray(result.list?.items) ? result.list.items : [];
+      const itemInList = listItems.some((entry) => {
+        const id = typeof entry === "string" ? entry : entry?.id;
+        return String(id) === safeItemId;
+      });
+
+      if (!result.ok || result.listId !== safeListId || result.itemId !== safeItemId || !itemInList) {
+        throw _makeApiError("invalid_add_item_response", 502);
+      }
 
       _emitDataChanged({
         kind: "lists",
@@ -1150,11 +1164,7 @@ const ApiClient = (() => {
         extra: relationshipState
       });
 
-      return _buildListMutationResult("add_item", {
-        ...res,
-        listId: safeListId,
-        itemId: String(res?.itemId || safeItemId)
-      });
+      return result;
     }
 
     ensureListsSeeded();
