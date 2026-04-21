@@ -64,6 +64,41 @@ const ListsModule = (() => {
     return new Promise((res) => setTimeout(res, ms));
   }
 
+  function createListMutationError(result, fallbackReason = "mutation_failed") {
+    const reason =
+      result?.body?.error ||
+      result?.reason ||
+      result?.error ||
+      fallbackReason;
+    const err = new Error(reason);
+
+    err.error = reason;
+    err.reason = reason;
+    err.body = result?.body || { error: reason };
+    err.result = result;
+
+    return err;
+  }
+
+  function assertListMutationOk(result, fallbackReason = "mutation_failed") {
+    if (result && result.ok !== false) return result;
+    throw createListMutationError(result, fallbackReason);
+  }
+
+  function assertListWithId(result, fallbackReason = "missing_list_id") {
+    const list = assertListMutationOk(result, fallbackReason);
+    const listId = list?.id != null ? String(list.id).trim() : "";
+
+    if (!listId) {
+      throw createListMutationError({ ok: false, reason: fallbackReason }, fallbackReason);
+    }
+
+    return {
+      ...list,
+      id: listId
+    };
+  }
+
   function _getListItemEntryId(entry) {
     return String(typeof entry === "string" ? entry : entry?.id || "");
   }
@@ -551,21 +586,10 @@ const ListsModule = (() => {
     }
 
     try{
-      const res = await ApiClient.removeLibraryItemFromList(listId, id);
-
-      if (!res?.ok){
-        if (card){
-          card.classList.remove("is-leaving");
-          card.dataset.busy = "0";
-        }
-        window.toast?.({
-          title: t("lists_remove_error_title"),
-          message: t("lists_remove_error_text"),
-          type: "error",
-          duration: 3200
-        });
-        return;
-      }
+      assertListMutationOk(
+        await ApiClient.removeLibraryItemFromList(listId, id),
+        "remove_failed"
+      );
 
       // Actualizamos estado en memoria (sin tocar DOM manualmente)
       const listRef = (allLists || []).find(l => String(l.id) === String(listId));
@@ -590,8 +614,10 @@ const ListsModule = (() => {
         actionLabel: t("lists_undo"),
         onAction: async () => {
           try{
-            const addRes = await ApiClient.addLibraryItemToList(listId, id);
-            if (!addRes?.ok) throw new Error("add_failed");
+            assertListMutationOk(
+              await ApiClient.addLibraryItemToList(listId, id),
+              "undo_failed"
+            );
 
             window.toast?.({
               title: t("lists_undo_success_title"),
@@ -799,13 +825,19 @@ const ListsModule = (() => {
 
     try {
       if (editingListId) {
-        await ApiClient.updateList(editingListId, { name, description, visibility });
+        assertListMutationOk(
+          await ApiClient.updateList(editingListId, { name, description, visibility }),
+          "update_failed"
+        );
       } else {
-        const created = await ApiClient.createList({ name, description, visibility, items: [] });
+        const created = assertListWithId(
+          await ApiClient.createList({ name, description, visibility, items: [] }),
+          "create_failed"
+        );
 
         if (__returnToAddToListItemId) {
           document.dispatchEvent(new CustomEvent("quacker:lists-created", {
-            detail: { listId: created?.id ?? null, returnToAddToListItemId: __returnToAddToListItemId }
+            detail: { listId: created.id, returnToAddToListItemId: __returnToAddToListItemId }
           }));
           __returnToAddToListItemId = null;
         }
@@ -1107,7 +1139,10 @@ const ListsModule = (() => {
           await _sleep(200);
         }
 
-        await ApiClient.deleteList(pendingDeleteListId);
+        assertListMutationOk(
+          await ApiClient.deleteList(pendingDeleteListId),
+          "delete_failed"
+        );
 
         closeConfirmDeleteListModal();
         await load();
@@ -1127,8 +1162,10 @@ const ListsModule = (() => {
               const snapshotToRestore = lastDeletedListSnapshot;
 
               try {
-                const restoreResult = await ApiClient.setLists(snapshotToRestore.lists);
-                if (!restoreResult?.ok) throw new Error("restore_failed");
+                assertListMutationOk(
+                  await ApiClient.setLists(snapshotToRestore.lists),
+                  "restore_failed"
+                );
                 lastDeletedListSnapshot = null;
               } catch (e) {
                 console.error(e);
