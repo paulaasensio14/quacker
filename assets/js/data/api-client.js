@@ -206,6 +206,27 @@ const ApiClient = (() => {
     return (Array.isArray(items) ? items : []).map((item) => _cloneData(item));
   }
 
+  function _extractLibraryMutationItem(response, fallbackReason = "invalid_library_response", expectedId = "") {
+    const item = response?.item && typeof response.item === "object"
+      ? response.item
+      : response;
+    const itemId = item?.id != null ? String(item.id).trim() : "";
+    const safeExpectedId = expectedId != null ? String(expectedId).trim() : "";
+
+    if (!item || typeof item !== "object" || !itemId) {
+      throw _makeApiError(fallbackReason, 502);
+    }
+
+    if (safeExpectedId && itemId !== safeExpectedId) {
+      throw _makeApiError(fallbackReason, 502);
+    }
+
+    return _cloneData({
+      ...item,
+      id: itemId
+    });
+  }
+
   function _normalizeContentText(value) {
     return String(value || "").replace(/\s+/g, " ").trim();
   }
@@ -1866,10 +1887,10 @@ const ApiClient = (() => {
       };
 
       const res = await _httpJson("PATCH", `/library/${encodeURIComponent(targetId)}`, payload);
-      const item = (res && res.item) ? res.item : res;
+      const item = _extractLibraryMutationItem(res, "invalid_complete_response", targetId);
 
       _emitDataChanged({ kind: "library", action: "complete", itemId: targetId });
-      return { ok: true, itemId: targetId, title: item?.title || current.title };
+      return { ok: true, itemId: targetId, title: item.title || current.title };
     }
 
     // =========================
@@ -2039,9 +2060,7 @@ const ApiClient = (() => {
       };
 
       const res = await _httpJson("PATCH", `/library/${encodeURIComponent(itemId)}`, payload);
-
-      // Permitimos que el backend devuelva { item } o el item directo
-      const item = (res && res.item) ? res.item : res;
+      const item = _extractLibraryMutationItem(res, "invalid_update_response", itemId);
 
       _emitDataChanged({ kind: "library", action: "update", itemId });
 
@@ -2442,8 +2461,10 @@ const ApiClient = (() => {
 
     if (_isHttp()) {
       const res = await _httpJson("POST", "/library", data);
-      _emitDataChanged({ kind: "library", action: "create", itemId: String(res?.id || "") });
-      return res;
+      const item = _extractLibraryMutationItem(res, "invalid_create_response");
+
+      _emitDataChanged({ kind: "library", action: "create", itemId: String(item.id) });
+      return item;
     }
 
     const state = _safeState();
