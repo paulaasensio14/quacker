@@ -1934,21 +1934,21 @@ function getLibraryActionErrorMessage(err, fallback = t("common_try_again")) {
         const itemToRestore = await ApiClient.getLibraryItemById(itemId);
 
         let listsToRestore = [];
-      try {
-        listsToRestore = await ApiClient.getListsContainingItem(itemId);
-      } catch (e) {
-        console.error(e);
-        listsToRestore = [];
-      }
+        try {
+          listsToRestore = await ApiClient.getListsContainingItem(itemId);
+        } catch (e) {
+          console.error(e);
+          listsToRestore = [];
+        }
 
         // Si no existe, borramos sin undo
         if (!itemToRestore) {
-          deleteLibraryItemAnimated(itemId, { silentToast: true });
+          await deleteLibraryItemAnimated(itemId, { silentToast: true, silentError: true });
           return;
         }
 
         // Borrado animado (silencioso: el toast con undo lo gestionamos aquí)
-        deleteLibraryItemAnimated(itemId, { silentToast: true });
+        await deleteLibraryItemAnimated(itemId, { silentToast: true, silentError: true });
 
         // Toast con botón deshacer
         window.toast?.({
@@ -2275,7 +2275,7 @@ async function saveLibraryItem(updatedItem) {
 }
 
 function deleteLibraryItemAnimated(itemId, opts = {}) {
-  if (!itemId) return;
+  if (!itemId) return Promise.resolve({ ok: false, reason: "missing_id" });
 
   const safeId =
     (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
@@ -2286,7 +2286,7 @@ function deleteLibraryItemAnimated(itemId, opts = {}) {
 
   const doDelete = async () => {
     try {
-      await ApiClient.deleteLibraryItem(itemId);
+      const result = await ApiClient.deleteLibraryItem(itemId);
       closeProgressModal();
 
       // Toast SOLO si no es silencioso
@@ -2298,37 +2298,49 @@ function deleteLibraryItemAnimated(itemId, opts = {}) {
           duration: 2400
         });
       }
+
+      return result || { ok: true };
     } catch (e) {
       console.error(e);
-      window.toast?.({
-        title: t("library_delete_error_title"),
-        message: t("home_notif_try_again"),
-        type: "error",
-        duration: 3000
-      });
+
+      if (!opts.silentError) {
+        window.toast?.({
+          title: t("library_delete_error_title"),
+          message: t("home_notif_try_again"),
+          type: "error",
+          duration: 3000
+        });
+      }
+
       if (card) card.classList.remove("is-removing");
+      throw e;
     }
   };
 
   if (!card) {
-    doDelete();
-    return;
+    return doDelete();
   }
 
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    card.removeEventListener("transitionend", onEnd);
-    doDelete();
-  };
+  return new Promise((resolve, reject) => {
+    let done = false;
+    let timerId = null;
 
-  const onEnd = (e) => {
-    if (e.propertyName === "opacity") finish();
-  };
+    const finish = () => {
+      if (done) return;
+      done = true;
+      card.removeEventListener("transitionend", onEnd);
+      if (timerId) clearTimeout(timerId);
 
-  card.addEventListener("transitionend", onEnd);
-  setTimeout(finish, 250);
+      doDelete().then(resolve).catch(reject);
+    };
+
+    const onEnd = (e) => {
+      if (e.propertyName === "opacity") finish();
+    };
+
+    card.addEventListener("transitionend", onEnd);
+    timerId = setTimeout(finish, 250);
+  });
 }
 
 function computeProgressForItem(item) {
