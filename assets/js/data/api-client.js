@@ -1079,35 +1079,44 @@ const ApiClient = (() => {
 
   // === listas: añadir / quitar items ===
   async function addLibraryItemToList(listId, itemId) {
-    if (!listId || !itemId) return { ok: false };
+    const safeListId = String(listId || "").trim();
+    const safeItemId = String(itemId || "").trim();
+
+    if (!safeListId) {
+      throw _makeApiError("list_not_found", 404);
+    }
+
+    if (!safeItemId) {
+      throw _makeApiError("missing_item_id", 400);
+    }
 
     if (_isHttp()) {
       const res = await _httpJson(
         "POST",
-        `/lists/${encodeURIComponent(listId)}/items`,
-        { itemId: String(itemId) }
+        `/lists/${encodeURIComponent(safeListId)}/items`,
+        { itemId: safeItemId }
       );
 
       _emitDataChanged({
         kind: "lists",
         action: "add_item",
-        listId: String(listId),
-        itemId: String(itemId)
+        listId: safeListId,
+        itemId: safeItemId
       });
 
-      const relationshipState = await _getItemListRelationshipState(itemId);
+      const relationshipState = await _getItemListRelationshipState(safeItemId);
 
       _emitItemStateChanged({
         action: "list_item_added",
-        itemId: String(itemId),
-        listId: String(listId),
+        itemId: safeItemId,
+        listId: safeListId,
         extra: relationshipState
       });
 
       return _buildListMutationResult("add_item", {
         ...res,
-        listId: String(listId),
-        itemId: String(res?.itemId || itemId)
+        listId: safeListId,
+        itemId: String(res?.itemId || safeItemId)
       });
     }
 
@@ -1115,32 +1124,36 @@ const ApiClient = (() => {
 
     const state = _safeState();
     state.lists = state.lists || [];
-    const list = state.lists.find(l => String(l.id) === String(listId));
-    if (!list) return { ok: false, reason: "list_not_found" };
+    const list = state.lists.find(l => String(l.id) === safeListId);
+    if (!list) {
+      throw _makeApiError("list_not_found", 404);
+    }
 
     const library = _isHttp() ? await getLibrary() : (state.library || []);
-    const itemExists = library.some(i => String(i.id) === String(itemId));
-    if (!itemExists) return { ok: false, reason: "item_not_found" };
+    const itemExists = library.some(i => String(i.id) === safeItemId);
+    if (!itemExists) {
+      throw _makeApiError("item_not_found", 404);
+    }
 
     list.items = Array.isArray(list.items) ? list.items : [];
 
     const already = list.items.some(x => {
       const id = (typeof x === "string") ? x : x?.id;
-      return String(id) === String(itemId);
+      return String(id) === safeItemId;
     });
 
     if (already) {
       return _buildListMutationResult("add_item", {
         ok: true,
         already: true,
-        listId: String(listId),
-        itemId: String(itemId),
+        listId: safeListId,
+        itemId: safeItemId,
         list
       });
     }
 
     list.items.push({
-      id: String(itemId),
+      id: safeItemId,
       addedAt: new Date().toISOString()
     });
     list.itemsCount = list.items.length;
@@ -1153,56 +1166,65 @@ const ApiClient = (() => {
     _emitDataChanged({
       kind: "lists",
       action: "add_item",
-      listId: String(listId),
-      itemId: String(itemId)
+      listId: safeListId,
+      itemId: safeItemId
     });
 
-    const relationshipState = await _getItemListRelationshipState(itemId);
+    const relationshipState = await _getItemListRelationshipState(safeItemId);
 
     _emitItemStateChanged({
       action: "list_item_added",
-      itemId: String(itemId),
-      listId: String(listId),
+      itemId: safeItemId,
+      listId: safeListId,
       extra: relationshipState
     });
 
     return _buildListMutationResult("add_item", {
       ok: true,
-      listId: String(listId),
-      itemId: String(itemId),
+      listId: safeListId,
+      itemId: safeItemId,
       list
     });
   }
 
   async function removeLibraryItemFromList(listId, itemId) {
-    if (!listId || !itemId) return { ok: false };
+    const safeListId = String(listId || "").trim();
+    const safeItemId = String(itemId || "").trim();
+
+    if (!safeListId) {
+      throw _makeApiError("list_not_found", 404);
+    }
+
+    if (!safeItemId) {
+      throw _makeApiError("missing_item_id", 400);
+    }
 
     if (_isHttp()) {
       const res = await _httpJson(
         "DELETE",
-        `/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`
+        `/lists/${encodeURIComponent(safeListId)}/items/${encodeURIComponent(safeItemId)}`
       );
 
       _emitDataChanged({
         kind: "lists",
         action: "remove_item",
-        listId: String(listId),
-        itemId: String(itemId)
+        listId: safeListId,
+        itemId: safeItemId
       });
 
-      const relationshipState = await _getItemListRelationshipState(itemId);
+      const relationshipState = await _getItemListRelationshipState(safeItemId);
 
       _emitItemStateChanged({
         action: "list_item_removed",
-        itemId: String(itemId),
-        listId: String(listId),
+        itemId: safeItemId,
+        listId: safeListId,
         extra: relationshipState
       });
 
       return _buildListMutationResult("remove_item", {
         ...res,
-        listId: String(listId),
-        itemId: String(itemId)
+        listId: safeListId,
+        itemId: safeItemId
       });
     }
 
@@ -1210,15 +1232,17 @@ const ApiClient = (() => {
 
     const state = _safeState();
     state.lists = state.lists || [];
-    const list = state.lists.find(l => String(l.id) === String(listId));
-    if (!list) return { ok: false, reason: "list_not_found" };
+    const list = state.lists.find(l => String(l.id) === safeListId);
+    if (!list) {
+      throw _makeApiError("list_not_found", 404);
+    }
 
     list.items = Array.isArray(list.items) ? list.items : [];
     const before = list.items.length;
 
     list.items = list.items.filter(x => {
       const id = (typeof x === "string") ? x : x?.id;
-      return String(id) !== String(itemId);
+      return String(id) !== safeItemId;
     });
 
     list.itemsCount = list.items.length;
@@ -1231,23 +1255,23 @@ const ApiClient = (() => {
     _emitDataChanged({
       kind: "lists",
       action: "remove_item",
-      listId: String(listId),
-      itemId: String(itemId)
+      listId: safeListId,
+      itemId: safeItemId
     });
 
-    const relationshipState = await _getItemListRelationshipState(itemId);
+    const relationshipState = await _getItemListRelationshipState(safeItemId);
 
     _emitItemStateChanged({
       action: "list_item_removed",
-      itemId: String(itemId),
-      listId: String(listId),
+      itemId: safeItemId,
+      listId: safeListId,
       extra: relationshipState
     });
 
     return _buildListMutationResult("remove_item", {
       ok: true,
-      listId: String(listId),
-      itemId: String(itemId),
+      listId: safeListId,
+      itemId: safeItemId,
       removed: before - list.items.length,
       list
     });
