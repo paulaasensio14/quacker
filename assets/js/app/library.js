@@ -1620,6 +1620,8 @@ const LibraryUI = (() => {
       if (cancelBtn) cancelBtn.disabled = true;
       if (closeBtn) closeBtn.disabled = true;
 
+      const wasInAnyList = itemsInAnyList.has(String(itemId));
+
       // Snapshot de listas para Undo (antes de mutar)
       let listsSnapshot = null;
       try {
@@ -1632,22 +1634,48 @@ const LibraryUI = (() => {
       }
 
       try {
-        const results = await Promise.all(
+        const settledResults = await Promise.allSettled(
           selected.map((listId) => ApiClient.addLibraryItemToList(listId, itemId))
+        );
+        const results = settledResults.map((entry) =>
+          entry.status === "fulfilled"
+            ? entry.value
+            : { ok: false, error: entry.reason }
         );
 
         const addedCount = results.filter(r => r?.ok && !r?.already).length;
         const alreadyCount = results.filter(r => r?.ok && r?.already).length;
         const failedCount = results.filter(r => !r?.ok).length;
 
-        // Si alguna falló, mostramos error y NO cerramos el modal (para que el usuario pueda reintentar)
+        // Si alguna falló, restauramos snapshot para no dejar listas a medio actualizar.
         if (failedCount > 0) {
+          if (listsSnapshot) {
+            try {
+              assertLibraryMutationOk(
+                await ApiClient.setLists(listsSnapshot),
+                "add_to_list_rollback_failed"
+              );
+            } catch (rollbackErr) {
+              console.error("[Library] add-to-list rollback failed", rollbackErr);
+            }
+          }
+
+          if (wasInAnyList) {
+            itemsInAnyList.add(String(itemId));
+          } else {
+            itemsInAnyList.delete(String(itemId));
+          }
+          setListButtonState(itemId, wasInAnyList);
+
           _showAddToListError(t("library_add_to_list_partial_error"));
           return;
         }
 
         // Mensaje de feedback (sin emojis)
         if (addedCount === 0 && alreadyCount > 0) {
+          itemsInAnyList.add(String(itemId));
+          setListButtonState(itemId, true);
+
           window.toast?.({
             title: t("library_add_to_list_no_changes_title"),
             message: t("library_add_to_list_no_changes_message"),
@@ -1658,7 +1686,6 @@ const LibraryUI = (() => {
           return;
         }
 
-        const wasInAnyList = itemsInAnyList.has(String(itemId));
         const nextIsInAnyList = wasInAnyList || addedCount > 0;
 
         if (nextIsInAnyList) {
