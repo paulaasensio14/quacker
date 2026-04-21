@@ -1418,10 +1418,11 @@ const LibraryUI = (() => {
                   "undo_failed"
                 );
 
-                // Borrar activities creadas por este progreso rápido (racha/estadísticas coherentes)
-                await ApiClient.undoActivitiesForItemSince(itemId, sinceIso);
+                assertLibraryMutationOk(
+                  await ApiClient.undoActivitiesForItemSince(itemId, sinceIso),
+                  "undo_activities_failed"
+                );
 
-                // Feedback inmediato
                 flashLibraryCard(itemId);
 
                 window.toast?.({
@@ -1705,7 +1706,10 @@ const LibraryUI = (() => {
           actionLabel: listsSnapshot ? t("common_undo") : null,
           onAction: listsSnapshot ? async () => {
             try {
-              await ApiClient.setLists(listsSnapshot);
+              assertLibraryMutationOk(
+                await ApiClient.setLists(listsSnapshot),
+                "undo_failed"
+              );
 
               if (!wasInAnyList) {
                 itemsInAnyList.delete(String(itemId));
@@ -2046,7 +2050,10 @@ const LibraryUI = (() => {
 
               for (const list of listsToRestore || []) {
                 if (!list?.id) continue;
-                await ApiClient.addLibraryItemToList(String(list.id), restoredItemId);
+                assertLibraryMutationOk(
+                  await ApiClient.addLibraryItemToList(String(list.id), restoredItemId),
+                  "restore_list_membership_failed"
+                );
               }
 
               window.__lastCreatedLibraryItemId = restoredItemId;
@@ -2308,11 +2315,11 @@ async function saveLibraryItem(updatedItem) {
             "undo_failed"
           );
 
-          // 2) Borrar activities creadas por el guardado
-          // (esto además reconcilia la racha de forma defensiva)
-          await ApiClient.undoActivitiesForItemSince(updatedItem.id, sinceIso);
+          assertLibraryMutationOk(
+            await ApiClient.undoActivitiesForItemSince(updatedItem.id, sinceIso),
+            "undo_activities_failed"
+          );
 
-          // Feedback inmediato
           flashLibraryCard(updatedItem.id);
 
           window.toast?.({
