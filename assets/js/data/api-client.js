@@ -1929,17 +1929,145 @@ const ApiClient = (() => {
     if (idx === -1) return { ok: false, reason: "not_found" };
 
     const prev = state.library[idx];
+    const allowedPatchFields = new Set([
+      "title",
+      "type",
+      "source",
+      "externalId",
+      "status",
+      "progress",
+      "meta",
+      "cover"
+    ]);
+    const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+    const allowedStatuses = new Set([
+      "pending",
+      "not_started",
+      "in_progress",
+      "watching",
+      "reading",
+      "playing",
+      "completed"
+    ]);
+    const patch = {};
+
+    for (const key of Object.keys(updatedItem || {})) {
+      if (allowedPatchFields.has(key)) {
+        patch[key] = updatedItem[key];
+      }
+    }
+
     const next = {
       ...prev,
-      ...updatedItem,
-      meta: { ...(prev.meta || {}), ...(updatedItem.meta || {}) },
+      ...patch,
+      id: prev.id,
+      createdAt: prev.createdAt,
       updatedAt: new Date().toISOString()
     };
 
-    const pct = Math.max(0, Math.min(100, Number(next.progress ?? 0)));
+    if (Object.prototype.hasOwnProperty.call(patch, "title")) {
+      const title = _normalizeContentText(patch.title);
+
+      if (!title) {
+        throw _makeApiError("missing_title", 400);
+      }
+
+      if (title.length < 2) {
+        throw _makeApiError("title_too_short", 400);
+      }
+
+      if (title.length > 120) {
+        throw _makeApiError("title_too_long", 400);
+      }
+
+      next.title = title;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "type")) {
+      const type = String(patch.type || "").trim();
+
+      if (!allowedTypes.has(type)) {
+        throw _makeApiError("invalid_type", 400);
+      }
+
+      next.type = type;
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(patch, "source") ||
+      Object.prototype.hasOwnProperty.call(patch, "externalId")
+    ) {
+      const canonicalIdentity = _normalizeCanonicalIdentity(
+        Object.prototype.hasOwnProperty.call(patch, "source") ? patch.source : prev.source,
+        Object.prototype.hasOwnProperty.call(patch, "externalId") ? patch.externalId : prev.externalId
+      );
+
+      next.source = canonicalIdentity.source;
+      next.externalId = canonicalIdentity.externalId;
+    } else {
+      const canonicalIdentity = _normalizeCanonicalIdentity(prev.source, prev.externalId);
+      next.source = canonicalIdentity.source;
+      next.externalId = canonicalIdentity.externalId;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "status")) {
+      const status = String(patch.status || "").trim().toLowerCase();
+
+      if (!allowedStatuses.has(status)) {
+        throw _makeApiError("invalid_status", 400);
+      }
+    }
+
+    const rawProgress = Object.prototype.hasOwnProperty.call(patch, "progress")
+      ? Number(patch.progress)
+      : Number(prev.progress ?? 0);
+    const pct = Number.isFinite(rawProgress)
+      ? Math.max(0, Math.min(100, rawProgress))
+      : 0;
     next.progress = pct;
 
-    next.status = _normalizeLibraryStatus(next.status, next.type, pct, prev.status);
+    next.status = _normalizeLibraryStatus(
+      Object.prototype.hasOwnProperty.call(patch, "status") ? patch.status : prev.status,
+      next.type,
+      pct,
+      prev.status
+    );
+
+    if (Object.prototype.hasOwnProperty.call(patch, "cover")) {
+      next.cover = String(patch.cover || "").trim().slice(0, 500);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, "meta")) {
+      if (patch.meta !== undefined && (typeof patch.meta !== "object" || Array.isArray(patch.meta))) {
+        throw _makeApiError("invalid_meta", 400);
+      }
+
+      next.meta = patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta)
+        ? { ...(prev.meta || {}), ..._sanitizeLibraryMeta(patch.meta) }
+        : { ...(prev.meta || {}) };
+    } else {
+      next.meta = { ...(prev.meta || {}) };
+    }
+
+    const duplicate = state.library.find((it) => {
+      if (String(it?.id) === String(prev.id)) return false;
+
+      return _isSameLibraryIdentity(it, {
+        title: next.title,
+        type: next.type,
+        source: next.source,
+        externalId: next.externalId
+      });
+    });
+
+    if (duplicate) {
+      throw _makeApiError("duplicate_item", 409);
+    }
+
+    if (next.progress >= 100) {
+      next.progress = 100;
+      next.status = "completed";
+    }
 
     state.library[idx] = next;
 
