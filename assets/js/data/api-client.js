@@ -1225,6 +1225,15 @@ const ApiClient = (() => {
         "DELETE",
         `/lists/${encodeURIComponent(safeListId)}/items/${encodeURIComponent(safeItemId)}`
       );
+      const result = _buildListMutationResult("remove_item", {
+        ...res,
+        listId: safeListId,
+        itemId: safeItemId
+      });
+
+      if (Number(result.removed || 0) <= 0) {
+        throw _makeApiError("item_not_in_list", 404);
+      }
 
       _emitDataChanged({
         kind: "lists",
@@ -1242,11 +1251,7 @@ const ApiClient = (() => {
         extra: relationshipState
       });
 
-      return _buildListMutationResult("remove_item", {
-        ...res,
-        listId: safeListId,
-        itemId: safeItemId
-      });
+      return result;
     }
 
     ensureListsSeeded();
@@ -1265,6 +1270,11 @@ const ApiClient = (() => {
       const id = (typeof x === "string") ? x : x?.id;
       return String(id) !== safeItemId;
     });
+
+    const removed = before - list.items.length;
+    if (removed <= 0) {
+      throw _makeApiError("item_not_in_list", 404);
+    }
 
     list.itemsCount = list.items.length;
     list.updatedAt = new Date().toISOString();
@@ -1293,7 +1303,7 @@ const ApiClient = (() => {
       ok: true,
       listId: safeListId,
       itemId: safeItemId,
-      removed: before - list.items.length,
+      removed,
       list
     });
   }

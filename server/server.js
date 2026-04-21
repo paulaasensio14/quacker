@@ -1301,11 +1301,16 @@ app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
     return String(id) !== itemId;
   });
 
+  const removed = before - list.items.length;
+  if (removed <= 0) {
+    return res.status(404).json({ error: "item_not_in_list" });
+  }
+
   list.itemsCount = list.items.length;
   list.updatedAt = new Date().toISOString();
 
   _writeDb(db);
-  res.json({ ok: true, removed: before - list.items.length });
+  res.json({ ok: true, removed });
 });
 
 // ===== LIBRARY =====
