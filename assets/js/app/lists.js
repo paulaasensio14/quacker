@@ -734,13 +734,50 @@ const ListsModule = (() => {
     box.textContent = "";
   }
 
+  function getListModalErrorMessage(err) {
+    const code = err?.body?.error || err?.error || err?.reason || "";
+
+    if (code === "missing_name") return t("lists_modal_name_required");
+    if (code === "name_too_short") return t("lists_modal_name_too_short");
+    if (code === "name_too_long") return t("lists_modal_name_too_long");
+    if (code === "invalid_visibility") return t("lists_modal_invalid_visibility");
+    if (code === "not_found") return t("lists_modal_not_found");
+
+    return t("lists_modal_save_error");
+  }
+
   async function saveListFromModal() {
-    const name = (document.getElementById("lm_name")?.value || "").trim();
+    const nameInput = document.getElementById("lm_name");
+    const name = (nameInput?.value || "").replace(/\s+/g, " ").trim();
     const description = (document.getElementById("lm_desc")?.value || "").trim();
     const visibility = document.getElementById("lm_visibility")?.value || "private";
+    const validVisibilities = new Set(["private", "public", "collab"]);
+
+    if (nameInput && nameInput.value !== name) {
+      nameInput.value = name;
+    }
 
     if (!name) {
       showListErrors(t("lists_modal_name_required"));
+      nameInput?.focus?.();
+      return;
+    }
+
+    if (name.length < 2) {
+      showListErrors(t("lists_modal_name_too_short"));
+      nameInput?.focus?.();
+      return;
+    }
+
+    if (name.length > 80) {
+      showListErrors(t("lists_modal_name_too_long"));
+      nameInput?.focus?.();
+      return;
+    }
+
+    if (!validVisibilities.has(String(visibility).trim().toLowerCase())) {
+      showListErrors(t("lists_modal_invalid_visibility"));
+      document.getElementById("lm_visibility")?.focus?.();
       return;
     }
 
@@ -750,7 +787,7 @@ const ListsModule = (() => {
     const prevHtml = saveBtn?.innerHTML || (editingListId ? t("common_save") : t("common_create"));
 
     if (saveBtn) {
-      // Evitar doble click si ya está guardando
+      // Evitar doble click.
       if (saveBtn.dataset.busy === "1") return;
       saveBtn.disabled = true;
       saveBtn.dataset.busy = "1";
@@ -762,13 +799,10 @@ const ListsModule = (() => {
 
     try {
       if (editingListId) {
-        // EDITAR
         await ApiClient.updateList(editingListId, { name, description, visibility });
       } else {
-        // CREAR
         const created = await ApiClient.createList({ name, description, visibility, items: [] });
 
-        // Si venimos desde "Añadir a listas" (Biblioteca), avisamos para volver al flujo
         if (__returnToAddToListItemId) {
           document.dispatchEvent(new CustomEvent("quacker:lists-created", {
             detail: { listId: created?.id ?? null, returnToAddToListItemId: __returnToAddToListItemId }
@@ -781,7 +815,7 @@ const ListsModule = (() => {
       await load();
     } catch (e) {
       console.error(e);
-      showListErrors(t("lists_modal_save_error"));
+      showListErrors(getListModalErrorMessage(e));
     } finally {
       if (saveBtn) {
         saveBtn.disabled = false;
