@@ -2326,7 +2326,8 @@ const ApiClient = (() => {
   async function deleteLibraryItem(itemId) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
 
-    const idStr = String(itemId);
+    const idStr = String(itemId).trim();
+    if (!idStr) return { ok: false, reason: "missing_id" };
 
     // =========================
     // HTTP (backend real)
@@ -2366,7 +2367,7 @@ const ApiClient = (() => {
 
       const filtered = arr.filter((entry) => {
         const id = (typeof entry === "string") ? entry : entry?.id;
-        return String(id) !== idStr;
+        return String(id).trim() !== idStr;
       });
 
       if (filtered.length !== before) {
