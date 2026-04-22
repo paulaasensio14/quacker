@@ -1788,6 +1788,8 @@ const LibraryUI = (() => {
       const closeBtn = document.getElementById("closeAddToListModal");
       const prevHtml = btn?.innerHTML || t("library_add_to_list_confirm");
 
+      if (btn?.dataset.busy === "1") return;
+
       if (btn) {
         btn.disabled = true;
         btn.dataset.busy = "1";
