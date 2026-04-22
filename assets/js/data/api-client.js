@@ -843,7 +843,8 @@ const ApiClient = (() => {
       } catch (error) {
         console.error("[ApiClient] getLists failed", error);
 
-        const fallbackItems = Array.isArray(_listsCache.items)
+        const fallbackItems =
+          _listsCache.transport === __cfg.transport && Array.isArray(_listsCache.items)
           ? _cloneCollection(_listsCache.items)
           : [];
 
@@ -2072,7 +2073,8 @@ const ApiClient = (() => {
       } catch (error) {
         console.error("[ApiClient] getLibrary failed", error);
 
-        const fallbackItems = Array.isArray(_libraryCache.items)
+        const fallbackItems =
+          _libraryCache.transport === __cfg.transport && Array.isArray(_libraryCache.items)
           ? _cloneCollection(_libraryCache.items)
           : [];
 
