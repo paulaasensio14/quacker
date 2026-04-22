@@ -1611,7 +1611,7 @@ const LibraryUI = (() => {
         message,
         type: justCompleted ? "success" : "info",
         duration: 5200,
-        actionLabel: snapshotBefore ? "Deshacer" : null,
+        actionLabel: snapshotBefore ? t("common_undo") : null,
         onAction: snapshotBefore
           ? async () => {
               try {
@@ -2337,8 +2337,8 @@ const LibraryUI = (() => {
         // ApiClient emite "quacker:data-changed" y app-core refresca Biblioteca si está activa.
       } catch (err) {
         window.toast?.({
-          title: "No se pudo completar",
-          message: "Inténtalo de nuevo.",
+          title: t("library_complete_error_title"),
+          message: t("common_try_again"),
           type: "error",
           duration: 3600
         });
