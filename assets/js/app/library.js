@@ -1563,7 +1563,9 @@ const LibraryUI = (() => {
   }
 
   async function applyQuickProgressWithUndo(itemId) {
-    const card = document.querySelector(`.library-card[data-id="${itemId}"]`);
+    const safeId =
+      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
     if (card?.dataset.busy === "1") return;
 
     if (card) card.dataset.busy = "1";
@@ -1662,7 +1664,9 @@ const LibraryUI = (() => {
   }
 
   async function markAsCompletedWithUndo(itemId) {
-    const card = document.querySelector(`.library-card[data-id="${itemId}"]`);
+    const safeId =
+      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
     if (card?.dataset.busy === "1") return;
 
     if (card) card.dataset.busy = "1";
