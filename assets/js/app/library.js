@@ -548,6 +548,43 @@ function getLibraryUndoErrorMessage(err, fallback = _addLibraryT("common_try_aga
 const LibraryUI = (() => {
   const t = (key, params) => window.I18n?.t?.(key, params) ?? key;
 
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function normalizeImageUrl(value) {
+    const url = String(value || "").trim();
+    if (!url || /[\u0000-\u001f]/.test(url)) return "";
+
+    if (
+      /^https?:\/\//i.test(url) ||
+      /^data:image\//i.test(url) ||
+      /^blob:/i.test(url) ||
+      url.startsWith("/") ||
+      url.startsWith("./") ||
+      url.startsWith("../")
+    ) {
+      return url;
+    }
+
+    return "";
+  }
+
+  function buildCoverStyle(cover, type) {
+    const url = normalizeImageUrl(cover);
+    if (!url) return "";
+
+    const fit = type === "game" ? "cover" : "contain";
+    const cssUrl = escapeHtml(JSON.stringify(url));
+
+    return `style="background-image:url(${cssUrl}); background-size:${fit}; background-position:center; background-repeat:no-repeat; background-color:var(--surface-soft, #f8fafc);"`;
+  }
+
   const savedFilters = loadLibraryFilters();
 
   if (savedFilters) {
@@ -1086,27 +1123,39 @@ const LibraryUI = (() => {
       const statusLabel = statusToLabel(item);
       const pText = progressText(item);
       const btnLabel = primaryButtonLabel(item);
-      const coverFit = item.type === "game" ? "cover" : "contain";
-      const coverStyle = item.cover ? `style="background-image:url('${item.cover}'); background-size:${coverFit}; background-position:center; background-repeat:no-repeat; background-color:#f8fafc;"` : "";
+      const itemId = String(item.id || "");
+      const safeItemId = escapeHtml(itemId);
+      const safeTitle = escapeHtml(item.title || t("common_untitled"));
+      const safeTypeName = escapeHtml(typeName);
+      const safeStatusLabel = escapeHtml(statusLabel);
+      const safeProgressText = escapeHtml(pText);
+      const safeBtnLabel = escapeHtml(btnLabel || "");
+      const coverStyle = buildCoverStyle(item.cover, item.type);
       const isInAnyList = itemsInAnyList.has(String(item.id));
       const listLabel = isInAnyList ? t("library_card_in_lists") : t("lists_detail_title");
       const listAriaLabel = isInAnyList ? t("library_card_remove_from_lists") : t("library_card_add_to_lists");
+      const safeListLabel = escapeHtml(listLabel);
+      const safeListAriaLabel = escapeHtml(listAriaLabel);
+      const safeEditProgressLabel = escapeHtml(t("library_edit_progress"));
+      const safeEditLabel = escapeHtml(t("library_edit"));
+      const safeMarkCompletedLabel = escapeHtml(t("library_mark_completed"));
+      const isHighlighted = String(window.__lastCreatedLibraryItemId || "") === itemId;
       
       return `
-        <article class="lib-card ${window.__lastCreatedLibraryItemId == item.id ? "is-highlight" : ""}" data-id="${item.id}">
+        <article class="lib-card ${isHighlighted ? "is-highlight" : ""}" data-id="${safeItemId}">
           <div class="lib-cover" ${coverStyle}>
             <button
               class="lib-cover-list-btn lib-list-btn ${isInAnyList ? "is-added" : ""}"
               type="button"
               data-action="add-to-list"
-              data-id="${item.id}"
-              aria-label="${listAriaLabel}"
-              title="${listLabel}"
+              data-id="${safeItemId}"
+              aria-label="${safeListAriaLabel}"
+              title="${safeListLabel}"
             >
-              <span class="lib-list-label sr-only">${listLabel}</span>
+              <span class="lib-list-label sr-only">${safeListLabel}</span>
             </button>
 
-            <span class="lib-cover-type-icon" role="img" aria-label="${typeName}" title="${typeName}">
+            <span class="lib-cover-type-icon" role="img" aria-label="${safeTypeName}" title="${safeTypeName}">
               ${typeIcon}
             </span>
 
@@ -1114,9 +1163,9 @@ const LibraryUI = (() => {
               class="lib-cover-menu-btn"
               type="button"
               data-action="edit-progress"
-              data-id="${item.id}"
-              aria-label="${t("library_edit_progress")}"
-              title="${t("library_edit")}"
+              data-id="${safeItemId}"
+              aria-label="${safeEditProgressLabel}"
+              title="${safeEditLabel}"
             >
               <span aria-hidden="true">⋮</span>
             </button>
@@ -1127,11 +1176,11 @@ const LibraryUI = (() => {
           </div>
 
           <div class="lib-body">
-            <div class="lib-title">${item.title || t("common_untitled")}</div>
+            <div class="lib-title">${safeTitle}</div>
 
             <div class="lib-meta-row">
-              <span class="lib-status-badge is-${statusKey}">${statusLabel}</span>
-              ${statusKey !== "completed" ? `<div class="lib-progress-text">${pText}</div>` : ``}
+              <span class="lib-status-badge is-${statusKey}">${safeStatusLabel}</span>
+              ${statusKey !== "completed" ? `<div class="lib-progress-text">${safeProgressText}</div>` : ``}
             </div>
 
             <div class="lib-footer">
@@ -1144,9 +1193,9 @@ const LibraryUI = (() => {
                         class="lib-primary-btn"
                         type="button"
                         data-action="primary"
-                        data-id="${item.id}"
+                        data-id="${safeItemId}"
                       >
-                        <span>${btnLabel}</span>
+                        <span>${safeBtnLabel}</span>
                       </button>`
                     : ""
                 }
@@ -1157,9 +1206,9 @@ const LibraryUI = (() => {
                       <button
                         class="lib-complete-btn"
                         type="button"
-                        data-id="${item.id}"
-                        aria-label="${t("library_mark_completed")}"
-                        title="${t("library_mark_completed")}"
+                        data-id="${safeItemId}"
+                        aria-label="${safeMarkCompletedLabel}"
+                        title="${safeMarkCompletedLabel}"
                       >
                         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                           <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
