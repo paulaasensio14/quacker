@@ -280,6 +280,7 @@ const ApiClient = (() => {
       "totalSeasons",
       "totalPages",
       "totalChapters",
+      "year",
       "platform",
       "author",
       "season",

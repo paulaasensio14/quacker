@@ -1605,11 +1605,18 @@ const ExploreModule = (() => {
         : [];
 
         const normalizedType = String(item?.type || "").trim();
+        const releaseYear = Number(
+          item?.meta?.year || String(item?.releaseDate || "").slice(0, 4)
+        );
+        const baseMeta = Number.isFinite(releaseYear) && releaseYear > 0
+          ? { year: releaseYear }
+          : {};
 
-        let meta = {};
+        let meta = { ...baseMeta };
 
         if (normalizedType === "serie") {
           meta = {
+            ...baseMeta,
             totalSeasons,
             totalEpisodes,
             seasonBreakdown,
@@ -1620,14 +1627,21 @@ const ExploreModule = (() => {
 
         if (normalizedType === "book") {
           meta = {
+            ...baseMeta,
+            author: String(item?.meta?.author || "").trim(),
             totalPages: item?.meta?.totalPages || null,
             pagesRead: 0
           };
         }
 
         if (normalizedType === "game") {
+          const platform = String(
+            item?.meta?.platform || item?.meta?.platforms || ""
+          ).trim();
+
           meta = {
-            platform: item?.meta?.platform || null
+            ...baseMeta,
+            platform: platform || null
           };
         }
 
