@@ -1797,7 +1797,7 @@ const ApiClient = (() => {
     state.activities = state.activities || [];
 
     const item = state.library.find((i) => String(i.id).trim() === targetId);
-    if (!item) return { ok: false };
+    if (!item) return { ok: false, reason: "not_found" };
 
     const now = new Date();
     let lastDate = null;
@@ -1968,7 +1968,7 @@ const ApiClient = (() => {
     state.activities = state.activities || [];
 
     const item = state.library.find(i => String(i.id).trim() === targetId);
-    if (!item) return { ok: false };
+    if (!item) return { ok: false, reason: "not_found" };
 
     // Si ya estaba completado, no hacemos nada
     if (item.progress >= 100 || item.status === "completed") {
