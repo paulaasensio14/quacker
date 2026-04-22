@@ -1087,18 +1087,23 @@ const LibraryUI = (() => {
       countInline.textContent = "";
     }
 
+    const safeKicker = escapeHtml(t("nav_library"));
+    const safeTitle = escapeHtml(t("library_load_error_title"));
+    const safeText = escapeHtml(t("library_load_error_text"));
+    const safeRetryLabel = escapeHtml(t("library_retry"));
+
     grid.innerHTML = `
       <div class="lib-empty-state" style="grid-column:1/-1;">
         <div class="lib-empty-state-card lib-empty-state-card--error" role="status" aria-live="polite">
           <div class="lib-empty-state-icon" aria-hidden="true">!</div>
-          <div class="lib-empty-state-kicker">${t("nav_library")}</div>
-          <div class="lib-empty-state-title">${t("library_load_error_title")}</div>
+          <div class="lib-empty-state-kicker">${safeKicker}</div>
+          <div class="lib-empty-state-title">${safeTitle}</div>
           <div class="lib-empty-state-text">
-            ${t("library_load_error_text")}
+            ${safeText}
           </div>
           <div class="empty-state-actions">
             <button type="button" class="btn-primary" id="libRetryLoadBtn">
-              ${t("library_retry")}
+              ${safeRetryLabel}
             </button>
           </div>
         </div>
@@ -1147,6 +1152,11 @@ const LibraryUI = (() => {
       const hasAnyItems = Array.isArray(allItems) && allItems.length > 0;
 
       if (!hasAnyItems) {
+        const safeKicker = escapeHtml(t("nav_library"));
+        const safeTitle = escapeHtml(t("library_empty_initial_title"));
+        const safeText = escapeHtml(t("library_empty_initial_text"));
+        const safeCta = escapeHtml(t("library_empty_initial_cta"));
+
         grid.innerHTML = `
           <div class="lib-empty-state">
             <div class="lib-empty-state-card" role="status" aria-live="polite">
@@ -1156,13 +1166,13 @@ const LibraryUI = (() => {
                   <path d="M8.75 6.5h6.5v1.5h-6.5V6.5Zm0 3h6.5V11h-6.5V9.5Zm0 3h4.5V14h-4.5v-1.5Z"/>
                 </svg>
               </div>
-              <div class="lib-empty-state-kicker">${t("nav_library")}</div>
-              <h3 class="lib-empty-state-title">${t("library_empty_initial_title")}</h3>
+              <div class="lib-empty-state-kicker">${safeKicker}</div>
+              <h3 class="lib-empty-state-title">${safeTitle}</h3>
               <p class="lib-empty-state-text">
-                ${t("library_empty_initial_text")}
+                ${safeText}
               </p>
               <div class="lib-empty-state-actions">
-                <button id="libEmptyAddBtn" class="btn btn-primary">+ ${t("library_empty_initial_cta")}</button>
+                <button id="libEmptyAddBtn" class="btn btn-primary">+ ${safeCta}</button>
               </div>
             </div>
           </div>
@@ -1175,14 +1185,17 @@ const LibraryUI = (() => {
       }
 
       const emptyState = getEmptyStateConfig();
+      const safeTitle = escapeHtml(emptyState.title);
+      const safeDescription = escapeHtml(emptyState.description);
+      const safeActionLabel = escapeHtml(emptyState.actionLabel);
 
       grid.innerHTML = `
         <div class="lib-empty-state">
           <div class="lib-empty-state-card" role="status" aria-live="polite">
-            <h3 class="lib-empty-state-title">${emptyState.title}</h3>
-            <p class="lib-empty-state-text">${emptyState.description}</p>
+            <h3 class="lib-empty-state-title">${safeTitle}</h3>
+            <p class="lib-empty-state-text">${safeDescription}</p>
             <div class="lib-empty-state-actions">
-              <button id="libEmptyResetBtn" class="btn btn-secondary">${emptyState.actionLabel}</button>
+              <button id="libEmptyResetBtn" class="btn btn-secondary">${safeActionLabel}</button>
             </div>
           </div>
         </div>
