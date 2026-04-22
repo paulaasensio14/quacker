@@ -144,6 +144,10 @@ function _normalizeLibraryStatus(status, type, progress, fallbackStatus = "") {
     return "completed";
   }
 
+  if (!safeStatus && safeProgress <= 0 && !fallbackStatus) {
+    return "not_started";
+  }
+
   if (!safeStatus) {
     return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
   }
