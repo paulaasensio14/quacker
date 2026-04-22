@@ -2448,6 +2448,15 @@ async function getLibraryItemById(id) {
   }
 }
 
+function showProgressItemLoadError() {
+  window.toast?.({
+    title: t("library_progress_load_error_title"),
+    message: t("library_progress_item_not_found"),
+    type: "error",
+    duration: 3000
+  });
+}
+
 async function saveLibraryItem(updatedItem) {
   if (!updatedItem?.id) return { ok: false };
 
@@ -2745,8 +2754,13 @@ async function openProgressModal(itemId) {
   const body = document.getElementById("progressModalBody");
   const title = document.getElementById("progressModalTitle");
 
+  if (!modal || !body || !title) return;
+
   const item = await getLibraryItemById(itemId);
-  if (!item || !modal || !body || !title) return;
+  if (!item) {
+    showProgressItemLoadError();
+    return;
+  }
 
   modal.dataset.itemId = itemId;
   title.textContent = `${t("library_edit_progress")} · ${item.title || ""}`;
@@ -2852,7 +2866,10 @@ async function saveProgressModal() {
   if (!itemId) return;
 
   const item = await getLibraryItemById(itemId);
-  if (!item) return;
+  if (!item) {
+    showProgressItemLoadError();
+    return;
+  }
 
   const body = document.getElementById("progressModalBody");
 
@@ -2868,7 +2885,7 @@ async function saveProgressModal() {
   const errors = validateProgress(item, values);
   showProgressErrors(errors);
   
-  if (errors.length) return; // No guarda si no hay errores
+  if (errors.length) return; // No guarda si hay errores
 
   item.meta = item.meta || {};
 
