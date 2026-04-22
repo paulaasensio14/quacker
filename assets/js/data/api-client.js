@@ -2122,6 +2122,8 @@ const ApiClient = (() => {
 
   async function updateLibraryItem(updatedItem, { logActivity = true } = {}) {
     if (!updatedItem?.id) return { ok: false, reason: "missing_id" };
+    const itemId = String(updatedItem.id).trim();
+    if (!itemId) return { ok: false, reason: "missing_id" };
 
     // =========================
     // HTTP (backend real)
@@ -2129,10 +2131,9 @@ const ApiClient = (() => {
     if (_isHttp()) {
       // Nota: el backend debe decidir si registra activity (progress/completed) según logActivity
       // para mantener racha coherente sin que el cliente toque /activities directamente.
-      const itemId = String(updatedItem.id);
-
       const payload = {
         ...updatedItem,
+        id: itemId,
         logActivity: !!logActivity
       };
 
@@ -2150,7 +2151,7 @@ const ApiClient = (() => {
     const state = _safeState();
     state.library = state.library || [];
 
-    const idx = state.library.findIndex(i => String(i.id) === String(updatedItem.id));
+    const idx = state.library.findIndex(i => String(i.id).trim() === itemId);
     if (idx === -1) return { ok: false, reason: "not_found" };
 
     const prev = state.library[idx];
@@ -2185,7 +2186,7 @@ const ApiClient = (() => {
     const next = {
       ...prev,
       ...patch,
-      id: prev.id,
+      id: itemId,
       createdAt: prev.createdAt,
       updatedAt: new Date().toISOString()
     };
@@ -2275,7 +2276,7 @@ const ApiClient = (() => {
     }
 
     const duplicate = state.library.find((it) => {
-      if (String(it?.id) === String(prev.id)) return false;
+      if (String(it?.id).trim() === itemId) return false;
 
       return _isSameLibraryIdentity(it, {
         title: next.title,
@@ -2318,7 +2319,7 @@ const ApiClient = (() => {
       }
     }
 
-    _emitDataChanged({ kind: "library", action: "update", itemId: String(next.id) });
+    _emitDataChanged({ kind: "library", action: "update", itemId });
 
     return { ok: true, item: next };
   }
