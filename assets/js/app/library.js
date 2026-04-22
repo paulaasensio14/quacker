@@ -317,6 +317,7 @@ async function openAddToListModal(itemId) {
   const alreadyIds = new Set((alreadyIn || []).map(l => String(l.id)));
 
   optionsEl.innerHTML = "";
+  let initialFocusSelector = "#confirmAddToListModal";
 
   if (listsLoadFailed) {
     _showAddToListError("");
@@ -364,6 +365,7 @@ async function openAddToListModal(itemId) {
 
   if (!lists.length) {
     _showAddToListError("");
+    initialFocusSelector = "#atlCreateListBtn";
 
     optionsEl.innerHTML = `
       <div class="atl-empty-state">
@@ -438,14 +440,14 @@ async function openAddToListModal(itemId) {
   }
 
   window.UIModal?.open(modal, {
-    initialFocusSelector: "#confirmAddToListModal",
+    initialFocusSelector,
     lastFocusEl: __addToListModalLastFocus
   });
 
   // foco: primera opción seleccionable si existe
   setTimeout(() => {
     const firstEnabled = optionsEl.querySelector('input[type="checkbox"]:not(:disabled)');
-    firstEnabled?.focus?.();
+    if (firstEnabled) firstEnabled.focus();
   }, 0);
 }
 
