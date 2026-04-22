@@ -284,6 +284,7 @@ const ApiClient = (() => {
       "author",
       "season",
       "episode",
+      "hoursPlayed",
       "pagesRead",
       "seasonBreakdown"
     ]);

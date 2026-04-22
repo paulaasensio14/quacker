@@ -1407,6 +1407,7 @@ app.post("/api/library", _requireAuth, (req, res) => {
     "author",
     "season",
     "episode",
+    "hoursPlayed",
     "pagesRead",
     "seasonBreakdown"
   ]);
@@ -1593,6 +1594,7 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
       "author",
       "season",
       "episode",
+      "hoursPlayed",
       "pagesRead",
       "seasonBreakdown"
     ]);
