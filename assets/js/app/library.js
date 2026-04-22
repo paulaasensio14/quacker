@@ -2729,11 +2729,21 @@ function validateProgress(item, values) {
   // Game: % obligatorio, pero >100 se permite porque se completará automáticamente
   if (item.type === "game") {
     const pct = Number(values.progress);
+    const rawHours = String(values.hoursPlayed ?? "").trim();
 
     if (!Number.isFinite(pct)) {
       errors.push(t("library_progress_invalid"));
     } else if (pct < 0) {
       errors.push(t("library_progress_negative"));
+    }
+
+    if (rawHours !== "") {
+      const hours = Number(rawHours);
+      if (!Number.isFinite(hours)) {
+        errors.push(t("library_progress_hours_invalid"));
+      } else if (hours < 0) {
+        errors.push(t("library_progress_hours_negative"));
+      }
     }
   }
 
@@ -2759,6 +2769,7 @@ function wireLiveProgressValidation(item) {
       season: body?.querySelector('[name="season"]')?.value,
       episode: body?.querySelector('[name="episode"]')?.value,
       progress: body?.querySelector('[name="progress"]')?.value,
+      hoursPlayed: body?.querySelector('[name="hoursPlayed"]')?.value,
       movieStatus: body?.querySelector('[name="movieStatus"]')?.value,
     };
 
@@ -2904,6 +2915,7 @@ async function saveProgressModal() {
     season: body?.querySelector('[name="season"]')?.value,
     episode: body?.querySelector('[name="episode"]')?.value,
     progress: body?.querySelector('[name="progress"]')?.value,
+    hoursPlayed: body?.querySelector('[name="hoursPlayed"]')?.value,
     movieStatus: body?.querySelector('[name="movieStatus"]')?.value,
   };
 
@@ -2926,9 +2938,10 @@ async function saveProgressModal() {
     item.progress = Math.max(0, Math.min(100, pct));
   } else if (item.type === "game") {
     const pct = Number(document.getElementById("pm_percent")?.value ?? 0);
-    const hours = Number(document.getElementById("pm_hours")?.value ?? 0);
+    const rawHours = String(document.getElementById("pm_hours")?.value ?? "").trim();
+    const hours = rawHours === "" ? 0 : Number(rawHours);
     item.progress = Math.max(0, Math.min(100, pct));
-    item.meta.hoursPlayed = Math.max(0, hours);
+    item.meta.hoursPlayed = Number.isFinite(hours) ? Math.max(0, hours) : 0;
   } else if (item.type === "pelicula") {
     item.status = document.getElementById("pm_movieStatus")?.value || "not_started";
   } else {
