@@ -333,6 +333,14 @@ const ApiClient = (() => {
     return _cloneCollection(_libraryCache.items);
   }
 
+  function _getCachedLibraryItemById(itemId) {
+    const safeItemId = String(itemId || "").trim();
+    if (!safeItemId || !Array.isArray(_libraryCache.items)) return null;
+
+    const item = _libraryCache.items.find((entry) => String(entry?.id) === safeItemId) || null;
+    return _cloneData(item);
+  }
+
   function _getListsCacheSnapshot() {
     const now = Date.now();
     const isFresh =
@@ -2075,20 +2083,31 @@ const ApiClient = (() => {
 
   async function getLibraryItemById(itemId) {
     if (itemId == null) return null;
+    const safeItemId = String(itemId).trim();
+    if (!safeItemId) return null;
 
     if (_isHttp()) {
       try {
-        const res = await _httpJson("GET", `/library/${encodeURIComponent(String(itemId))}`);
+        const res = await _httpJson("GET", `/library/${encodeURIComponent(safeItemId)}`);
         if (!res) return null;
         return _cloneData(res && res.item ? res.item : res);
-      } catch (_) {
-        return null;
+      } catch (error) {
+        console.error("[ApiClient] getLibraryItemById failed", error);
+        if (error?.status === 401 || error?.status === 404) {
+          return null;
+        }
+        return _getCachedLibraryItemById(safeItemId);
       }
+    }
+
+    const cachedItem = _getCachedLibraryItemById(safeItemId);
+    if (cachedItem) {
+      return cachedItem;
     }
 
     const state = _safeState();
     const library = state.library || [];
-    const item = library.find(i => String(i.id) === String(itemId)) || null;
+    const item = library.find(i => String(i.id) === safeItemId) || null;
     return _cloneData(item);
   }
 
