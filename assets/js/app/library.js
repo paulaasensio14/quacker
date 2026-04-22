@@ -2194,7 +2194,7 @@ const LibraryUI = (() => {
 
         // Si no existe, borramos sin undo
         if (!itemToRestore) {
-          await deleteLibraryItemAnimated(itemId, { silentToast: true, silentError: true });
+          await deleteLibraryItemAnimated(itemId, { silentToast: false, silentError: true });
           return;
         }
 
