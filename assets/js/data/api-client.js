@@ -1635,13 +1635,15 @@ const ApiClient = (() => {
   }
 
   async function resumeLibraryItem(itemId) {
-    if (!itemId) return { ok: false };
+    if (itemId == null) return { ok: false, reason: "missing_id" };
+    const targetId = String(itemId).trim();
+    if (!targetId) return { ok: false, reason: "missing_id" };
 
     // =========================
     // HTTP (backend real)
     // =========================
     if (_isHttp()) {
-      const item = await getLibraryItemById(itemId);
+      const item = await getLibraryItemById(targetId);
       if (!item || !item.id) return { ok: false, reason: "not_found" };
 
       const now = new Date();
@@ -1753,7 +1755,7 @@ const ApiClient = (() => {
         return {
           ok: true,
           daysSinceLast,
-          itemId: item.id,
+          itemId: targetId,
           title: item.title,
           justCompleted,
           deltaLabel: justCompleted
@@ -1782,7 +1784,7 @@ const ApiClient = (() => {
       return {
         ok: true,
         daysSinceLast,
-        itemId: item.id,
+        itemId: targetId,
         title: item.title
       };
     }
@@ -1794,14 +1796,14 @@ const ApiClient = (() => {
     state.library = state.library || [];
     state.activities = state.activities || [];
 
-    const item = state.library.find((i) => String(i.id) === String(itemId));
+    const item = state.library.find((i) => String(i.id).trim() === targetId);
     if (!item) return { ok: false };
 
     const now = new Date();
     let lastDate = null;
 
     (state.activities || []).forEach((act) => {
-      if (String(act.targetId) !== String(itemId)) return;
+      if (String(act.targetId).trim() !== targetId) return;
       if (!act.createdAt) return;
       const d = new Date(act.createdAt);
       if (!lastDate || d > lastDate) lastDate = d;
@@ -1909,7 +1911,7 @@ const ApiClient = (() => {
       FakeBackend.addActivity({
         type: "resume",
         targetType: "library_item",
-        targetId: item.id,
+        targetId,
         minutes: 0
       });
     }
@@ -1925,8 +1927,8 @@ const ApiClient = (() => {
       });
     }
 
-    _emitDataChanged({ kind: "library", action: "resume", itemId: String(item.id) });
-    return { ok: true, daysSinceLast, itemId: item.id, title: item.title };
+    _emitDataChanged({ kind: "library", action: "resume", itemId: targetId });
+    return { ok: true, daysSinceLast, itemId: targetId, title: item.title };
   }
 
   // Completar contenido (desde Biblioteca / Home)
