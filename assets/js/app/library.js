@@ -55,7 +55,7 @@ function _escapeLibraryHtml(value) {
 }
 
 function _libraryHtmlT(key, params) {
-  return _escapeLibraryHtml(t(key, params));
+  return _escapeLibraryHtml(_addLibraryT(key, params));
 }
 
 function _safeNumberInputValue(value, fallback = 0) {
@@ -74,20 +74,20 @@ function _renderAddLibraryDynamicFields(type = "serie") {
   if (type === "book") {
     root.innerHTML = `
       <div class="modal-field">
-        <label>${_addLibraryT("library_add_modal_author_label")}</label>
+        <label>${_libraryHtmlT("library_add_modal_author_label")}</label>
         <input
           id="addLib_author"
           type="text"
-          placeholder="${_addLibraryT("library_add_modal_author_placeholder")}"
+          placeholder="${_libraryHtmlT("library_add_modal_author_placeholder")}"
         />
       </div>
       <div class="modal-field-grid">
         <div class="modal-field">
-          <label>${_addLibraryT("library_add_modal_total_pages_label")}</label>
+          <label>${_libraryHtmlT("library_add_modal_total_pages_label")}</label>
           <input id="addLib_totalPages" type="number" min="1" inputmode="numeric" />
         </div>
         <div class="modal-field">
-          <label>${_addLibraryT("library_add_modal_pages_read_label")}</label>
+          <label>${_libraryHtmlT("library_add_modal_pages_read_label")}</label>
           <input id="addLib_pagesRead" type="number" min="0" inputmode="numeric" />
         </div>
       </div>
@@ -99,11 +99,11 @@ function _renderAddLibraryDynamicFields(type = "serie") {
     root.innerHTML = `
       <div class="modal-field-grid">
         <div class="modal-field">
-          <label>${_addLibraryT("library_add_modal_total_seasons_label")}</label>
+          <label>${_libraryHtmlT("library_add_modal_total_seasons_label")}</label>
           <input id="addLib_totalSeasons" type="number" min="1" inputmode="numeric" />
         </div>
         <div class="modal-field">
-          <label>${_addLibraryT("library_add_modal_total_episodes_label")}</label>
+          <label>${_libraryHtmlT("library_add_modal_total_episodes_label")}</label>
           <input id="addLib_totalEpisodes" type="number" min="1" inputmode="numeric" />
         </div>
       </div>
@@ -114,11 +114,11 @@ function _renderAddLibraryDynamicFields(type = "serie") {
   if (type === "game") {
     root.innerHTML = `
       <div class="modal-field">
-        <label>${_addLibraryT("library_add_modal_platform_label")}</label>
+        <label>${_libraryHtmlT("library_add_modal_platform_label")}</label>
         <input
           id="addLib_platform"
           type="text"
-          placeholder="${_addLibraryT("library_add_modal_platform_placeholder")}"
+          placeholder="${_libraryHtmlT("library_add_modal_platform_placeholder")}"
         />
       </div>
     `;
