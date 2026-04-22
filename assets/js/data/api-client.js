@@ -1931,14 +1931,14 @@ const ApiClient = (() => {
 
   // Completar contenido (desde Biblioteca / Home)
   async function completeLibraryItem(itemId) {
-    if (!itemId) return { ok: false };
+    if (itemId == null) return { ok: false, reason: "missing_id" };
+    const targetId = String(itemId).trim();
+    if (!targetId) return { ok: false, reason: "missing_id" };
 
     // =========================
     // HTTP (backend real)
     // =========================
     if (_isHttp()) {
-      const targetId = String(itemId);
-
       const current = await _httpJson("GET", `/library/${encodeURIComponent(targetId)}`);
       if (!current) return { ok: false, reason: "not_found" };
 
@@ -1965,7 +1965,7 @@ const ApiClient = (() => {
     state.library = state.library || [];
     state.activities = state.activities || [];
 
-    const item = state.library.find(i => String(i.id) === String(itemId));
+    const item = state.library.find(i => String(i.id).trim() === targetId);
     if (!item) return { ok: false };
 
     // Si ya estaba completado, no hacemos nada
@@ -1986,7 +1986,7 @@ const ApiClient = (() => {
       FakeBackend.addActivity({
         type: "completed",
         targetType: "library_item",
-        targetId: item.id,
+        targetId,
         minutes: 0
       });
     }
@@ -2001,14 +2001,15 @@ const ApiClient = (() => {
 
     await maybeNotifyStreak();
 
-    _emitDataChanged({ kind: "library", action: "complete", itemId: String(itemId) });
-    return { ok: true, itemId: item.id, title: item.title };
+    _emitDataChanged({ kind: "library", action: "complete", itemId: targetId });
+    return { ok: true, itemId: targetId, title: item.title };
   }
 
   async function progressLibraryItem(itemId, delta = 5) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
 
-    const targetId = String(itemId);
+    const targetId = String(itemId).trim();
+    if (!targetId) return { ok: false, reason: "missing_id" };
     const current = await getLibraryItemById(targetId);
     if (!current) return { ok: false, reason: "not_found" };
 
@@ -3442,11 +3443,16 @@ const ApiClient = (() => {
 
   async function applyQuickProgress(itemId) {
 
-    if (!itemId) {
-      return { ok: false };
+    if (itemId == null) {
+      return { ok: false, reason: "missing_id" };
     }
 
-    const item = await getLibraryItemById(itemId);
+    const targetId = String(itemId).trim();
+    if (!targetId) {
+      return { ok: false, reason: "missing_id" };
+    }
+
+    const item = await getLibraryItemById(targetId);
 
     if (!item) {
       return { ok: false, reason: "item_not_found" };
@@ -3511,7 +3517,7 @@ const ApiClient = (() => {
 
     return {
       ok: true,
-      itemId: String(itemId),
+      itemId: targetId,
       prevProgress,
       nextProgress,
       justCompleted,
