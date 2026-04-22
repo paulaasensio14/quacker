@@ -45,6 +45,24 @@ function _addLibraryT(key, params) {
   return window.I18n?.t?.(key, params) ?? key;
 }
 
+function _escapeLibraryHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function _libraryHtmlT(key, params) {
+  return _escapeLibraryHtml(t(key, params));
+}
+
+function _safeNumberInputValue(value, fallback = 0) {
+  const number = Number(value ?? fallback);
+  return _escapeLibraryHtml(Number.isFinite(number) ? number : fallback);
+}
+
 function _getAddLibraryDynamicFieldsRoot() {
   return document.getElementById("addLib_dynamicFields");
 }
@@ -2610,7 +2628,9 @@ function showProgressErrors(errors) {
   }
 
   box.style.display = "block";
-  box.innerHTML = errors.map(e => `<div class="error-line">• ${e}</div>`).join("");
+  box.innerHTML = errors
+    .map((error) => `<div class="error-line">&bull; ${_escapeLibraryHtml(error)}</div>`)
+    .join("");
   saveBtn.disabled = true;
 }
 
@@ -2722,49 +2742,49 @@ async function openProgressModal(itemId) {
 
   // Formularios por tipo
   if (item.type === "book") {
-    const read = Number(item.meta.pagesRead ?? 0);
-    const total = Number(item.meta.totalPages ?? 1);
+    const read = _safeNumberInputValue(item.meta.pagesRead, 0);
+    const total = _safeNumberInputValue(item.meta.totalPages, 1);
     body.innerHTML = `
       <div class="modal-field">
-        <label>${t("library_progress_pages_read")}</label>
+        <label>${_libraryHtmlT("library_progress_pages_read")}</label>
         <input id="pm_pagesRead" name="pagesRead" type="number" min="0" value="${read}">
       </div>
       <div class="modal-field">
-        <label>${t("library_progress_total_pages")}</label>
+        <label>${_libraryHtmlT("library_progress_total_pages")}</label>
         <input id="pm_totalPages" name="totalPages" type="number" min="1" value="${total}">
       </div>
       <p style="color:var(--text-muted);font-size:.9rem;margin-top:6px;">
-        ${t("library_progress_auto_percent")}
+        ${_libraryHtmlT("library_progress_auto_percent")}
       </p>
     `;
   } else if (item.type === "serie") {
-    const s = Number(item.meta.season ?? 1);
-    const e = Number(item.meta.episode ?? 1);
-    const pct = Number(item.progress ?? 0);
+    const s = _safeNumberInputValue(item.meta.season, 1);
+    const e = _safeNumberInputValue(item.meta.episode, 1);
+    const pct = _safeNumberInputValue(item.progress, 0);
     body.innerHTML = `
       <div class="modal-field">
-        <label>${t("library_progress_season")}</label>
+        <label>${_libraryHtmlT("library_progress_season")}</label>
         <input id="pm_season" name="season" type="number" min="1" value="${s}">
       </div>
       <div class="modal-field">
-        <label>${t("library_progress_episode")}</label>
+        <label>${_libraryHtmlT("library_progress_episode")}</label>
         <input id="pm_episode" name="episode" type="number" min="1" value="${e}">
       </div>
       <div class="modal-field">
-        <label>${t("library_progress_percent_optional")}</label>
+        <label>${_libraryHtmlT("library_progress_percent_optional")}</label>
         <input id="pm_percent" name="progress" type="number" min="0" max="100" value="${pct}">
       </div>
     `;
   } else if (item.type === "game") {
-    const pct = Number(item.progress ?? 0);
-    const hours = Number(item.meta.hoursPlayed ?? 0);
+    const pct = _safeNumberInputValue(item.progress, 0);
+    const hours = _safeNumberInputValue(item.meta.hoursPlayed, 0);
     body.innerHTML = `
       <div class="modal-field">
-        <label>${t("library_progress_percent_completed")}</label>
+        <label>${_libraryHtmlT("library_progress_percent_completed")}</label>
         <input id="pm_percent" name="progress" type="number" min="0" max="100" value="${pct}">
       </div>
       <div class="modal-field">
-        <label>${t("library_progress_hours_played_optional")}</label>
+        <label>${_libraryHtmlT("library_progress_hours_played_optional")}</label>
         <input id="pm_hours" name="hoursPlayed" type="number" min="0" value="${hours}">
       </div>
     `;
@@ -2772,18 +2792,18 @@ async function openProgressModal(itemId) {
     const isCompleted = item.status === "completed" || Number(item.progress ?? 0) >= 100;
     body.innerHTML = `
       <div class="modal-field">
-        <label>${t("library_progress_status")}</label>
+        <label>${_libraryHtmlT("library_progress_status")}</label>
         <select id="pm_movieStatus" name="movieStatus">
-          <option value="not_started" ${!isCompleted ? "selected" : ""}>${t("library_progress_not_started")}</option>
-          <option value="completed" ${isCompleted ? "selected" : ""}>${t("library_progress_watched")}</option>
+          <option value="not_started" ${!isCompleted ? "selected" : ""}>${_libraryHtmlT("library_progress_not_started")}</option>
+          <option value="completed" ${isCompleted ? "selected" : ""}>${_libraryHtmlT("library_progress_watched")}</option>
         </select>
       </div>
     `;
   } else {
-    const pct = Number(item.progress ?? 0);
+    const pct = _safeNumberInputValue(item.progress, 0);
     body.innerHTML = `
       <div class="modal-field">
-        <label>${t("library_progress_percent_completed")}</label>
+        <label>${_libraryHtmlT("library_progress_percent_completed")}</label>
         <input id="pm_percent" name="progress" type="number" min="0" max="100" value="${pct}">
       </div>
     `;
