@@ -1524,29 +1524,7 @@ app.post("/api/library", _requireAuth, (req, res) => {
     return res.status(409).json({ error: "duplicate_item" });
   }
 
-  const allowedMetaKeys = new Set([
-    "totalEpisodes",
-    "totalSeasons",
-    "totalPages",
-    "totalChapters",
-    "year",
-    "platform",
-    "author",
-    "season",
-    "episode",
-    "hoursPlayed",
-    "pagesRead",
-    "seasonBreakdown"
-  ]);
-
-  const sanitizedMeta = {};
-  if (data.meta && typeof data.meta === "object" && !Array.isArray(data.meta)) {
-    for (const key of Object.keys(data.meta)) {
-      if (allowedMetaKeys.has(key)) {
-        sanitizedMeta[key] = data.meta[key];
-      }
-    }
-  }
+  const sanitizedMeta = _sanitizeLibraryMeta(data.meta);
 
   const nowIso = new Date().toISOString();
 
@@ -1711,30 +1689,7 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     }
 
     if (patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta)) {
-
-    const allowedMetaKeys = new Set([
-      "totalEpisodes",
-      "totalSeasons",
-      "totalPages",
-      "totalChapters",
-      "year",
-      "platform",
-      "author",
-      "season",
-      "episode",
-      "hoursPlayed",
-      "pagesRead",
-      "seasonBreakdown"
-    ]);
-
-      const sanitizedMeta = {};
-
-      for (const key of Object.keys(patch.meta)) {
-        if (allowedMetaKeys.has(key)) {
-          sanitizedMeta[key] = patch.meta[key];
-        }
-      }
-
+      const sanitizedMeta = _sanitizeLibraryMeta(patch.meta);
       next.meta = {
         ...(prev.meta || {}),
         ...sanitizedMeta
