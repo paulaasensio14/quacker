@@ -31,6 +31,7 @@ const ExploreModule = (() => {
   let __drawerDetailError = false;
   let __drawerDetailReqSeq = 0;
   const __drawerDetailCache = new Map();
+  let __libraryStateSyncPromise = null;
 
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
@@ -765,9 +766,52 @@ const ExploreModule = (() => {
     return didChange;
   }
 
-  function _handleExploreItemStateChanged(event) {
+  function _scheduleExploreLibraryStateSync() {
+    if (__libraryStateSyncPromise) return __libraryStateSyncPromise;
+
+    __libraryStateSyncPromise = Promise.resolve()
+      .then(() => _syncInLibraryFlags())
+      .then(() => {
+        _applyFilters();
+
+        if (!__drawerOpen) return;
+
+        const activeItem = _getActiveExploreItem();
+        if (!activeItem) return;
+
+        _syncExploreDrawerFromItem(activeItem);
+        _renderExploreDrawerDetails(activeItem);
+      })
+      .catch((error) => {
+        console.error("[Explore] failed to sync library state", error);
+      })
+      .finally(() => {
+        __libraryStateSyncPromise = null;
+      });
+
+    return __libraryStateSyncPromise;
+  }
+
+  function _handleExploreDataChanged(event) {
     const detail = event?.detail || {};
-    if (detail.kind !== "item_state") return;
+    const kind = String(detail.kind || "").trim();
+
+    if (kind === "library") {
+      void _scheduleExploreLibraryStateSync();
+      return;
+    }
+
+    if (kind === "lists") {
+      const listAction = String(detail.action || "").trim();
+
+      if (listAction !== "add_item" && listAction !== "remove_item") {
+        void _scheduleExploreLibraryStateSync();
+      }
+
+      return;
+    }
+
+    if (kind !== "item_state") return;
 
     const action = String(detail.action || "").trim();
     const libraryItemId = String(detail.itemId || "").trim();
@@ -814,7 +858,7 @@ const ExploreModule = (() => {
     }
   }
 
-  document.addEventListener("quacker:data-changed", _handleExploreItemStateChanged);
+  document.addEventListener("quacker:data-changed", _handleExploreDataChanged);
 
   function _syncExploreDrawerViewport() {
     if (!__drawerExpanded) return;
