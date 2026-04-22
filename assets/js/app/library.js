@@ -2459,6 +2459,12 @@ function showProgressItemLoadError() {
   });
 }
 
+function normalizeProgressModalMeta(meta) {
+  return meta && typeof meta === "object" && !Array.isArray(meta)
+    ? { ...meta }
+    : {};
+}
+
 async function saveLibraryItem(updatedItem) {
   if (!updatedItem?.id) return { ok: false };
 
@@ -2767,7 +2773,7 @@ async function openProgressModal(itemId) {
   modal.dataset.itemId = itemId;
   title.textContent = `${t("library_edit_progress")} · ${item.title || ""}`;
 
-  item.meta = item.meta || {};
+  item.meta = normalizeProgressModalMeta(item.meta);
 
   // Formularios por tipo
   if (item.type === "book") {
@@ -2889,7 +2895,7 @@ async function saveProgressModal() {
   
   if (errors.length) return; // No guarda si hay errores
 
-  item.meta = item.meta || {};
+  item.meta = normalizeProgressModalMeta(item.meta);
 
   if (item.type === "book") {
     const read = Number(document.getElementById("pm_pagesRead")?.value ?? 0);
