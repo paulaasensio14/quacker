@@ -335,7 +335,13 @@ const ApiClient = (() => {
 
   function _getCachedLibraryItemById(itemId) {
     const safeItemId = String(itemId || "").trim();
-    if (!safeItemId || !Array.isArray(_libraryCache.items)) return null;
+    if (
+      !safeItemId ||
+      _libraryCache.transport !== __cfg.transport ||
+      !Array.isArray(_libraryCache.items)
+    ) {
+      return null;
+    }
 
     const item = _libraryCache.items.find((entry) => String(entry?.id) === safeItemId) || null;
     return _cloneData(item);
@@ -2092,10 +2098,10 @@ const ApiClient = (() => {
         if (!res) return null;
         return _cloneData(res && res.item ? res.item : res);
       } catch (error) {
-        console.error("[ApiClient] getLibraryItemById failed", error);
         if (error?.status === 401 || error?.status === 404) {
           return null;
         }
+        console.error("[ApiClient] getLibraryItemById failed", error);
         return _getCachedLibraryItemById(safeItemId);
       }
     }
