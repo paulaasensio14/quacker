@@ -332,10 +332,10 @@ async function openAddToListModal(itemId) {
           </svg>
         </div>
 
-        <div class="atl-empty-title">${t("library_add_to_list_load_error_title")}</div>
-        <div class="atl-empty-sub">${t("library_add_to_list_load_error_text")}</div>
+        <div class="atl-empty-title">${_libraryHtmlT("library_add_to_list_load_error_title")}</div>
+        <div class="atl-empty-sub">${_libraryHtmlT("library_add_to_list_load_error_text")}</div>
 
-        <button type="button" class="btn-primary" id="atlRetryLoadListsBtn">${t("library_retry")}</button>
+        <button type="button" class="btn-primary" id="atlRetryLoadListsBtn">${_libraryHtmlT("library_retry")}</button>
       </div>
     `;
 
@@ -376,10 +376,10 @@ async function openAddToListModal(itemId) {
           </svg>
         </div>
 
-        <div class="atl-empty-title">${t("library_add_to_list_empty_title")}</div>
-        <div class="atl-empty-sub">${t("library_add_to_list_empty_text")}</div>
+        <div class="atl-empty-title">${_libraryHtmlT("library_add_to_list_empty_title")}</div>
+        <div class="atl-empty-sub">${_libraryHtmlT("library_add_to_list_empty_text")}</div>
 
-        <button type="button" class="btn-primary" id="atlCreateListBtn">${t("library_add_to_list_empty_cta")}</button>
+        <button type="button" class="btn-primary" id="atlCreateListBtn">${_libraryHtmlT("library_add_to_list_empty_cta")}</button>
       </div>
     `;
 
