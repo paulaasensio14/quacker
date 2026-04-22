@@ -317,7 +317,14 @@ async function openAddToListModal(itemId) {
   const alreadyIds = new Set((alreadyIn || []).map(l => String(l.id)));
 
   optionsEl.innerHTML = "";
+  optionsEl.onchange = null;
   let initialFocusSelector = "#confirmAddToListModal";
+
+  const updateConfirmState = () => {
+    const confirmBtn = document.getElementById("confirmAddToListModal");
+    const hasSelection = !!optionsEl.querySelector('input[type="checkbox"]:not(:disabled):checked');
+    if (confirmBtn) confirmBtn.disabled = !hasSelection;
+  };
 
   if (listsLoadFailed) {
     _showAddToListError("");
@@ -432,8 +439,16 @@ async function openAddToListModal(itemId) {
       optionsEl.appendChild(row);
     });
 
-    const confirmBtn = document.getElementById("confirmAddToListModal");
-    if (confirmBtn) confirmBtn.disabled = false;
+    optionsEl.onchange = (event) => {
+      if (!event.target?.matches?.('input[type="checkbox"]')) return;
+      _showAddToListError("");
+      updateConfirmState();
+    };
+
+    updateConfirmState();
+    if (!optionsEl.querySelector('input[type="checkbox"]:not(:disabled)')) {
+      initialFocusSelector = "#cancelAddToListModal";
+    }
 
     // Limpiamos la preselección después de pintar la lista
     window.__quackerPreselectListId = null;
