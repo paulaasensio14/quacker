@@ -1692,11 +1692,11 @@ const LibraryUI = (() => {
       playLibraryQuickFx(itemId, "complete");
 
       window.toast?.({
-        title: "Contenido completado",
-        message: "Se ha marcado como finalizado.",
+        title: t("library_quick_progress_completed_title"),
+        message: t("library_quick_progress_completed_message"),
         type: "success",
         duration: 5200,
-        actionLabel: snapshotBefore ? "Deshacer" : null,
+        actionLabel: snapshotBefore ? t("common_undo") : null,
         onAction: snapshotBefore
           ? async () => {
               try {
@@ -1709,16 +1709,16 @@ const LibraryUI = (() => {
                 flashLibraryCard(itemId);
 
                 window.toast?.({
-                  title: "Cambios revertidos",
-                  message: "Se ha restaurado el estado anterior.",
+                  title: t("library_quick_progress_undo_success_title"),
+                  message: t("library_quick_progress_undo_success_message"),
                   type: "success",
                   duration: 2400
                 });
               } catch (e) {
                 console.error(e);
                 window.toast?.({
-                  title: "No se pudo deshacer",
-                  message: getLibraryUndoErrorMessage(e, "Inténtalo de nuevo."),
+                  title: t("library_quick_progress_undo_error_title"),
+                  message: getLibraryUndoErrorMessage(e),
                   type: "error",
                   duration: 3200
                 });
