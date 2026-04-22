@@ -2383,16 +2383,17 @@ const ApiClient = (() => {
 
   async function restoreLibraryItem(item, { toFront = true } = {}) {
     if (!item?.id) return { ok: false, reason: "missing_id" };
+    const restoredItemId = String(item.id).trim();
+    if (!restoredItemId) return { ok: false, reason: "missing_id" };
 
     if (_isHttp()) {
-      const itemId = String(item.id);
       const res = await _httpJson("POST", "/library/restore", {
         item,
         toFront
       });
-      const restored = _extractLibraryMutationItem(res, "invalid_restore_response", itemId);
+      const restored = _extractLibraryMutationItem(res, "invalid_restore_response", restoredItemId);
 
-      _emitDataChanged({ kind: "library", action: "restore", itemId });
+      _emitDataChanged({ kind: "library", action: "restore", itemId: restoredItemId });
 
       return {
         ok: true,
@@ -2404,21 +2405,89 @@ const ApiClient = (() => {
     const state = _safeState();
     state.library = state.library || [];
 
-    const exists = state.library.some(i => String(i.id) === String(item.id));
-    if (exists) return { ok: true, already: true, item };
+    const exists = state.library.find(i => String(i.id) === restoredItemId);
+    if (exists) return { ok: true, already: true, item: exists };
+
+    const title = _normalizeContentText(item.title);
+    const type = String(item.type || "pelicula").trim().toLowerCase();
+    const canonicalIdentity = _normalizeCanonicalIdentity(item.source, item.externalId);
+    const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+    const allowedStatuses = new Set([
+      "pending",
+      "not_started",
+      "in_progress",
+      "watching",
+      "reading",
+      "playing",
+      "completed"
+    ]);
+
+    if (!title) {
+      throw _makeApiError("missing_title", 400);
+    }
+
+    if (title.length < 2) {
+      throw _makeApiError("title_too_short", 400);
+    }
+
+    if (title.length > 120) {
+      throw _makeApiError("title_too_long", 400);
+    }
+
+    if (!allowedTypes.has(type)) {
+      throw _makeApiError("invalid_type", 400);
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(item, "status") &&
+      item.status != null &&
+      String(item.status).trim() !== ""
+    ) {
+      const status = String(item.status || "").trim().toLowerCase();
+      if (!allowedStatuses.has(status)) {
+        throw _makeApiError("invalid_status", 400);
+      }
+    }
+
+    const duplicate = state.library.find((entry) =>
+      _isSameLibraryIdentity(entry, {
+        title,
+        type,
+        source: canonicalIdentity.source,
+        externalId: canonicalIdentity.externalId
+      })
+    );
+
+    if (duplicate) {
+      throw _makeApiError("duplicate_item", 409);
+    }
+
+    const rawProgress = Number(item.progress ?? 0);
+    const safeProgress = Number.isFinite(rawProgress)
+      ? Math.max(0, Math.min(100, rawProgress))
+      : 0;
+    const nowIso = new Date().toISOString();
 
     const restored = {
-      ...item,
-      updatedAt: new Date().toISOString()
+      id: restoredItemId,
+      type,
+      title,
+      source: canonicalIdentity.source,
+      externalId: canonicalIdentity.externalId,
+      status: _normalizeLibraryStatus(item.status, type, safeProgress),
+      progress: safeProgress,
+      meta: _sanitizeLibraryMeta(item.meta),
+      cover: String(item.cover || "").trim().slice(0, 500),
+      createdAt: String(item.createdAt || nowIso),
+      updatedAt: nowIso
     };
-    if (!restored.createdAt) restored.createdAt = restored.updatedAt;
 
     if (toFront) state.library.unshift(restored);
     else state.library.push(restored);
 
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
-      _emitDataChanged({ kind: "library", action: "restore", itemId: String(item.id) });
+      _emitDataChanged({ kind: "library", action: "restore", itemId: restoredItemId });
     }
 
     return { ok: true, item: restored };
