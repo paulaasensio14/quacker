@@ -2901,9 +2901,37 @@ async function saveProgressModal() {
   const itemId = modal?.dataset.itemId;
   if (!itemId) return;
 
+  const saveBtn = document.getElementById("saveProgressBtn");
+  const cancelBtn = document.getElementById("cancelProgressBtn");
+  const closeBtn = document.getElementById("closeProgressModal");
+
+  if (saveBtn?.dataset.busy === "1") return;
+
+  const prevSaveHtml = saveBtn?.innerHTML || t("common_save");
+  const restoreControls = (enableSave = true) => {
+    if (saveBtn && document.body.contains(saveBtn)) {
+      saveBtn.dataset.busy = "0";
+      saveBtn.disabled = !enableSave;
+      saveBtn.innerHTML = prevSaveHtml;
+    }
+
+    if (cancelBtn && document.body.contains(cancelBtn)) cancelBtn.disabled = false;
+    if (closeBtn && document.body.contains(closeBtn)) closeBtn.disabled = false;
+  };
+
+  if (saveBtn) {
+    saveBtn.dataset.busy = "1";
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = ` ${t("library_progress_saving")} `;
+  }
+
+  if (cancelBtn) cancelBtn.disabled = true;
+  if (closeBtn) closeBtn.disabled = true;
+
   const item = await getLibraryItemById(itemId);
   if (!item) {
     showProgressItemLoadError();
+    restoreControls(true);
     return;
   }
 
@@ -2922,7 +2950,12 @@ async function saveProgressModal() {
   const errors = validateProgress(item, values);
   showProgressErrors(errors);
   
-  if (errors.length) return; // No guarda si hay errores
+  if (errors.length) {
+    restoreControls(false);
+    return; // No guarda si hay errores
+  }
+
+  if (saveBtn) saveBtn.disabled = true;
 
   item.meta = normalizeProgressModalMeta(item.meta);
 
@@ -2955,34 +2988,9 @@ async function saveProgressModal() {
   item.updatedAt = new Date().toISOString();
   if (!item.createdAt) item.createdAt = item.updatedAt;
 
-  const saveBtn = document.getElementById("saveProgressBtn");
-  const cancelBtn = document.getElementById("cancelProgressBtn");
-  const closeBtn = document.getElementById("closeProgressModal");
-
-  // Anti doble click / estado busy
-  if (saveBtn && saveBtn.dataset.busy === "1") return;
-
-  const prevSaveHtml = saveBtn?.innerHTML || t("common_save");
-  if (saveBtn) {
-    saveBtn.dataset.busy = "1";
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = ` ${t("library_progress_saving")} `;
-  }
-
-  if (cancelBtn) cancelBtn.disabled = true;
-  if (closeBtn) closeBtn.disabled = true;
-
   try {
     await saveLibraryItem(item);
   } finally {
-    // Ojo: saveLibraryItem puede cerrar el modal, así que comprobamos que sigan en DOM
-    if (saveBtn && document.body.contains(saveBtn)) {
-      saveBtn.dataset.busy = "0";
-      saveBtn.disabled = false;
-      saveBtn.innerHTML = prevSaveHtml;
-    }
-
-    if (cancelBtn && document.body.contains(cancelBtn)) cancelBtn.disabled = false;
-    if (closeBtn && document.body.contains(closeBtn)) closeBtn.disabled = false;
+    restoreControls(true);
   }
 }
