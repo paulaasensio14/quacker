@@ -585,6 +585,86 @@ const LibraryUI = (() => {
     return `style="background-image:url(${cssUrl}); background-size:${fit}; background-position:center; background-repeat:no-repeat; background-color:var(--surface-soft, #f8fafc);"`;
   }
 
+  function clampProgress(value) {
+    const progress = Number(value ?? 0);
+    return Number.isFinite(progress)
+      ? Math.max(0, Math.min(100, progress))
+      : 0;
+  }
+
+  function safeDateString(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+
+    const timestamp = new Date(text).getTime();
+    return Number.isFinite(timestamp) ? text : "";
+  }
+
+  function safeTimestamp(value) {
+    const timestamp = new Date(value || 0).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
+
+  function normalizeLibraryItemForView(item) {
+    if (!item || typeof item !== "object" || item.id == null) return null;
+
+    const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+    const allowedStatuses = new Set([
+      "pending",
+      "not_started",
+      "in_progress",
+      "watching",
+      "reading",
+      "playing",
+      "completed"
+    ]);
+    const type = allowedTypes.has(String(item.type || "").trim())
+      ? String(item.type).trim()
+      : "pelicula";
+    const meta = item.meta && typeof item.meta === "object" && !Array.isArray(item.meta)
+      ? { ...item.meta }
+      : {};
+
+    let progress = clampProgress(item.progress);
+    let status = allowedStatuses.has(String(item.status || "").trim())
+      ? String(item.status).trim()
+      : "not_started";
+
+    if (type === "book") {
+      const read = Number(meta.pagesRead || 0);
+      const total = Number(meta.totalPages || 0);
+      if (Number.isFinite(read) && Number.isFinite(total) && total > 0) {
+        meta.pagesRead = Math.max(0, Math.min(total, read));
+        meta.totalPages = total;
+        progress = clampProgress((meta.pagesRead / total) * 100);
+      }
+    }
+
+    if (type === "pelicula") {
+      progress = status === "completed" || progress >= 100 ? 100 : 0;
+    }
+
+    if (progress >= 100) {
+      progress = 100;
+      status = "completed";
+    } else if (status === "completed") {
+      status = progress > 0 ? "in_progress" : "not_started";
+    }
+
+    return {
+      ...item,
+      id: String(item.id),
+      title: String(item.title || "").replace(/\s+/g, " ").trim(),
+      type,
+      status,
+      progress,
+      meta,
+      cover: normalizeImageUrl(item.cover),
+      createdAt: safeDateString(item.createdAt),
+      updatedAt: safeDateString(item.updatedAt)
+    };
+  }
+
   const savedFilters = loadLibraryFilters();
 
   if (savedFilters) {
@@ -887,11 +967,11 @@ const LibraryUI = (() => {
     const arr = items.slice();
 
     function recentTs(item) {
-      return new Date(item.updatedAt || item.createdAt || 0).getTime();
+      return safeTimestamp(item.updatedAt || item.createdAt);
     }
 
     function createdTs(item) {
-      return new Date(item.createdAt || 0).getTime();
+      return safeTimestamp(item.createdAt);
     }
 
     function titleText(item) {
@@ -1261,7 +1341,9 @@ const LibraryUI = (() => {
         renderLibrarySkeleton();
       }
 
-      allItems = await ApiClient.getLibrary();
+      allItems = (await ApiClient.getLibrary())
+        .map(normalizeLibraryItemForView)
+        .filter(Boolean);
 
       // Construimos un Set con todos los itemId que ya están en alguna lista
       itemsInAnyList = new Set();
