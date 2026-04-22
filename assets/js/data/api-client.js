@@ -2336,6 +2336,7 @@ const ApiClient = (() => {
         throw _makeApiError("invalid_delete_response", 502);
       }
 
+      _invalidateListsCache();
       _emitDataChanged({ kind: "library", action: "delete", itemId: idStr });
 
       return { ok: true, deleted };
@@ -2376,6 +2377,7 @@ const ApiClient = (() => {
       FakeBackend.saveState(state);
     }
 
+    _invalidateListsCache();
     _emitDataChanged({ kind: "library", action: "delete", itemId: idStr });
 
     return { ok: true, removed };
