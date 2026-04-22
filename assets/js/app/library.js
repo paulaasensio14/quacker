@@ -2328,9 +2328,9 @@ const LibraryUI = (() => {
         // Completado con snapshot + undo + micro-FX (patrón unificado)
         const result = await markAsCompletedWithUndo(itemId);
 
-        // Si la función devolvió ok:false sin lanzar, tratamos como error
+        // La función ya muestra su propio error si falla.
         if (result && result.ok === false) {
-          throw new Error("complete_failed");
+          return;
         }
 
         // No hacemos load() manual:
