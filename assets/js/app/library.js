@@ -580,6 +580,10 @@ function getLibraryUndoErrorMessage(err, fallback = _addLibraryT("common_try_aga
     return _addLibraryT("library_undo_error_invalid_title_data");
   }
 
+  if (errorCode === "duplicate_item") {
+    return _addLibraryT("library_undo_error_duplicate");
+  }
+
   return fallback;
 }
 
@@ -2269,7 +2273,7 @@ const LibraryUI = (() => {
               console.error(e);
               window.toast?.({
                 title: t("library_restore_error_title"),
-                message: t("common_try_again"),
+                message: getLibraryUndoErrorMessage(e),
                 type: "error",
                 duration: 3000
               });

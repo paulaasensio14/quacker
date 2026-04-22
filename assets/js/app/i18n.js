@@ -163,6 +163,7 @@
       library_undo_error_invalid_status: "No se pudo restaurar el estado anterior.",
       library_undo_error_invalid_type: "No se pudo restaurar el tipo de contenido.",
       library_undo_error_invalid_title_data: "No se pudo restaurar el título anterior.",
+      library_undo_error_duplicate: "Este contenido ya está en tu biblioteca.",
 
       library_quick_progress_completed_title: "Contenido completado",
       library_quick_progress_completed_message: "Se ha marcado como finalizado.",
@@ -739,6 +740,7 @@
       library_undo_error_invalid_status: "The previous status could not be restored.",
       library_undo_error_invalid_type: "The content type could not be restored.",
       library_undo_error_invalid_title_data: "The previous title could not be restored.",
+      library_undo_error_duplicate: "This content is already in your library.",
 
       library_quick_progress_completed_title: "Content completed",
       library_quick_progress_completed_message: "It has been marked as finished.",
