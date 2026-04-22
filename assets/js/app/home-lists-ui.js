@@ -1112,7 +1112,8 @@ async function renderHomeDashboard() {
               // No bloquea el deshacer.
             }
 
-            if (ApiClient.transport !== "http" && ApiClient.undoActivitiesForItemSince) {
+            const transport = ApiClient.getTransportInfo?.().transport || "local";
+            if (transport !== "http" && ApiClient.undoActivitiesForItemSince) {
               assertHomeMutationOk(
                 await ApiClient.undoActivitiesForItemSince(itemId, undoSinceIso),
                 "undo_activities_failed"
