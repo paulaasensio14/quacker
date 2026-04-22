@@ -509,7 +509,10 @@ function assertLibraryMutationOk(result, fallbackReason = "mutation_failed") {
 }
 
 function assertLibraryItemWithId(result, fallbackReason = "missing_item_id") {
-  const item = assertLibraryMutationOk(result, fallbackReason);
+  const mutation = assertLibraryMutationOk(result, fallbackReason);
+  const item = mutation?.item && typeof mutation.item === "object"
+    ? mutation.item
+    : mutation;
   const itemId = item?.id != null ? String(item.id).trim() : "";
 
   if (!itemId) {
@@ -2228,7 +2231,7 @@ const LibraryUI = (() => {
           onAction: async () => {
             try {
               const restored = assertLibraryItemWithId(
-                await ApiClient.createLibraryItem({
+                await ApiClient.restoreLibraryItem({
                   id: itemToRestore.id,
                   type: itemToRestore.type,
                   title: itemToRestore.title,

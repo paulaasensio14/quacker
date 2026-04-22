@@ -2359,6 +2359,23 @@ const ApiClient = (() => {
   async function restoreLibraryItem(item, { toFront = true } = {}) {
     if (!item?.id) return { ok: false, reason: "missing_id" };
 
+    if (_isHttp()) {
+      const itemId = String(item.id);
+      const res = await _httpJson("POST", "/library/restore", {
+        item,
+        toFront
+      });
+      const restored = _extractLibraryMutationItem(res, "invalid_restore_response", itemId);
+
+      _emitDataChanged({ kind: "library", action: "restore", itemId });
+
+      return {
+        ok: true,
+        already: !!res?.already,
+        item: restored
+      };
+    }
+
     const state = _safeState();
     state.library = state.library || [];
 

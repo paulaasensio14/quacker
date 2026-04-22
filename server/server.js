@@ -122,6 +122,37 @@ function _isSameLibraryIdentity(a, b) {
   return aTitle === bTitle && aType === bType;
 }
 
+function _sanitizeLibraryMeta(meta) {
+  const allowedMetaKeys = new Set([
+    "totalEpisodes",
+    "totalSeasons",
+    "totalPages",
+    "totalChapters",
+    "year",
+    "platform",
+    "author",
+    "season",
+    "episode",
+    "hoursPlayed",
+    "pagesRead",
+    "seasonBreakdown"
+  ]);
+
+  const sanitizedMeta = {};
+
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+    return sanitizedMeta;
+  }
+
+  for (const key of Object.keys(meta)) {
+    if (allowedMetaKeys.has(key)) {
+      sanitizedMeta[key] = meta[key];
+    }
+  }
+
+  return sanitizedMeta;
+}
+
 function _getDefaultLibraryStatus(type) {
   return type === "book"
     ? "reading"
@@ -1333,6 +1364,97 @@ app.get("/api/library/:id", _requireAuth, (req, res) => {
   if (!item) return res.status(404).json({ error: "not_found" });
 
   res.json(item);
+});
+
+app.post("/api/library/restore", _requireAuth, (req, res) => {
+  const body = req.body || {};
+  const data = body.item && typeof body.item === "object" && !Array.isArray(body.item)
+    ? body.item
+    : body;
+
+  const id = String(data.id || "").trim();
+  const title = _normalizeContentText(data.title);
+  const type = String(data.type || "pelicula").trim().toLowerCase();
+  const canonicalIdentity = _normalizeCanonicalIdentity(data.source, data.externalId);
+
+  const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+  const allowedStatuses = new Set([
+    "pending",
+    "not_started",
+    "in_progress",
+    "watching",
+    "reading",
+    "playing",
+    "completed"
+  ]);
+
+  if (!id) return res.status(400).json({ error: "missing_id" });
+  if (!title) return res.status(400).json({ error: "missing_title" });
+  if (title.length < 2) return res.status(400).json({ error: "title_too_short" });
+  if (title.length > 120) return res.status(400).json({ error: "title_too_long" });
+  if (!allowedTypes.has(type)) return res.status(400).json({ error: "invalid_type" });
+
+  if (
+    Object.prototype.hasOwnProperty.call(data, "status") &&
+    data.status != null &&
+    String(data.status).trim() !== ""
+  ) {
+    const status = String(data.status || "").trim().toLowerCase();
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({ error: "invalid_status" });
+    }
+  }
+
+  const rawProgress = Number(data.progress ?? 0);
+  const safeProgress = Number.isFinite(rawProgress)
+    ? Math.max(0, Math.min(100, rawProgress))
+    : 0;
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  bucket.library = Array.isArray(bucket.library) ? bucket.library : [];
+
+  const existing = bucket.library.find((it) => String(it.id) === id);
+  if (existing) {
+    return res.json({ ok: true, already: true, item: existing });
+  }
+
+  const duplicate = bucket.library.find((it) =>
+    _isSameLibraryIdentity(it, {
+      title,
+      type,
+      source: canonicalIdentity.source,
+      externalId: canonicalIdentity.externalId
+    })
+  );
+  if (duplicate) {
+    return res.status(409).json({ error: "duplicate_item" });
+  }
+
+  const nowIso = new Date().toISOString();
+  const item = {
+    id,
+    type,
+    title,
+    source: canonicalIdentity.source,
+    externalId: canonicalIdentity.externalId,
+    status: _normalizeLibraryStatus(data.status, type, safeProgress),
+    progress: safeProgress,
+    meta: _sanitizeLibraryMeta(data.meta),
+    cover: String(data.cover || "").trim().slice(0, 500),
+    createdAt: String(data.createdAt || nowIso),
+    updatedAt: nowIso
+  };
+
+  if (body.toFront === false) {
+    bucket.library.push(item);
+  } else {
+    bucket.library.unshift(item);
+  }
+
+  _writeDb(db);
+
+  res.status(201).json({ ok: true, item });
 });
 
 app.post("/api/library", _requireAuth, (req, res) => {
