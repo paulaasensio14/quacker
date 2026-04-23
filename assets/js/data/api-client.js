@@ -2217,7 +2217,7 @@ const ApiClient = (() => {
 
   async function updateLibraryItem(updatedItem, { logActivity = true } = {}) {
     if (!updatedItem?.id) return { ok: false, reason: "missing_id" };
-    const itemId = String(updatedItem.id).trim();
+    const itemId = _normalizeDataId(updatedItem.id);
     if (!itemId) return { ok: false, reason: "missing_id" };
 
     // =========================
@@ -2246,7 +2246,7 @@ const ApiClient = (() => {
     const state = _safeState();
     state.library = state.library || [];
 
-    const idx = state.library.findIndex(i => String(i.id).trim() === itemId);
+    const idx = state.library.findIndex((i) => _normalizeDataId(i?.id) === itemId);
     if (idx === -1) return { ok: false, reason: "not_found" };
 
     const prev = state.library[idx];
@@ -2371,7 +2371,7 @@ const ApiClient = (() => {
     }
 
     const duplicate = state.library.find((it) => {
-      if (String(it?.id).trim() === itemId) return false;
+      if (_normalizeDataId(it?.id) === itemId) return false;
 
       return _isSameLibraryIdentity(it, {
         title: next.title,
@@ -2405,7 +2405,7 @@ const ApiClient = (() => {
           FakeBackend.addActivity({
             type: actType,
             targetType: "library_item",
-            targetId: next.id,
+            targetId: itemId,
             minutes: 20
           });
 
