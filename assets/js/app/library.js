@@ -650,6 +650,8 @@ const LibraryUI = (() => {
 
   function normalizeLibraryItemForView(item) {
     if (!item || typeof item !== "object" || item.id == null) return null;
+    const normalizedItemId = String(item.id).trim();
+    if (!normalizedItemId) return null;
 
     const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
     const allowedStatuses = new Set([
@@ -696,7 +698,7 @@ const LibraryUI = (() => {
 
     return {
       ...item,
-      id: String(item.id),
+      id: normalizedItemId,
       title: String(item.title || "").replace(/\s+/g, " ").trim(),
       type,
       status,
@@ -1259,7 +1261,7 @@ const LibraryUI = (() => {
       const statusLabel = statusToLabel(item);
       const pText = progressText(item);
       const btnLabel = primaryButtonLabel(item);
-      const itemId = String(item.id || "");
+      const itemId = String(item.id || "").trim();
       const safeItemId = escapeHtml(itemId);
       const safeTitle = escapeHtml(item.title || t("common_untitled"));
       const safeTypeName = escapeHtml(typeName);
@@ -1267,7 +1269,7 @@ const LibraryUI = (() => {
       const safeProgressText = escapeHtml(pText);
       const safeBtnLabel = escapeHtml(btnLabel || "");
       const coverStyle = buildCoverStyle(item.cover, item.type);
-      const isInAnyList = itemsInAnyList.has(String(item.id));
+      const isInAnyList = itemsInAnyList.has(itemId);
       const listLabel = isInAnyList ? t("library_card_in_lists") : t("lists_detail_title");
       const listAriaLabel = isInAnyList ? t("library_card_remove_from_lists") : t("library_card_add_to_lists");
       const safeListLabel = escapeHtml(listLabel);
@@ -1409,7 +1411,8 @@ const LibraryUI = (() => {
           const arr = Array.isArray(l.items) ? l.items : [];
           arr.forEach((entry) => {
             const id = typeof entry === "string" ? entry : entry?.id;
-            if (id != null) itemsInAnyList.add(String(id));
+            const normalizedId = String(id || "").trim();
+            if (normalizedId) itemsInAnyList.add(normalizedId);
           });
         });
       } catch (err) {
