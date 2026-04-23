@@ -1613,6 +1613,8 @@ const ApiClient = (() => {
 
   async function undoActivitiesForItemSince(itemId, sinceIso) {
     if (!itemId || !sinceIso) return { ok: false, reason: "missing_params" };
+    const normalizedItemId = String(itemId || "").trim();
+    if (!normalizedItemId) return { ok: false, reason: "missing_params" };
 
     // En HTTP aún no existe Activities real en backend.
     // El undo visual/persistente del item se hace restaurando snapshot con updateLibraryItem().
@@ -1620,7 +1622,7 @@ const ApiClient = (() => {
       _emitDataChanged({
         kind: "activities",
         action: "undo_since",
-        itemId: String(itemId),
+        itemId: normalizedItemId,
         removed: 0
       });
 
@@ -1635,7 +1637,7 @@ const ApiClient = (() => {
     state.user = state.user || {};
 
     const res = FakeBackend.removeActivitiesForItemSince(
-      String(itemId),
+      normalizedItemId,
       String(sinceIso),
       ["resume", "progress", "completed"]
     );
@@ -1645,7 +1647,7 @@ const ApiClient = (() => {
     _emitDataChanged({
       kind: "activities",
       action: "undo_since",
-      itemId: String(itemId),
+      itemId: normalizedItemId,
       removed
     });
 
