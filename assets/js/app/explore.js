@@ -71,6 +71,10 @@ const ExploreModule = (() => {
     return _safeText(s).trim().toLowerCase();
   }
 
+  function _normalizeId(value) {
+    return _safeText(value).trim();
+  }
+
   function _normalizeExploreItem(rawItem, index = 0) {
     const raw = rawItem && typeof rawItem === "object" ? rawItem : {};
     const eid = raw.eid ?? `explore_${index + 1}`;
@@ -212,7 +216,7 @@ const ExploreModule = (() => {
     const isNew = _isNewByDate(item?.releaseDate);
     const saved = !!item?.__inLibrary;
     const saving = !!item?.__saving;
-    const eid = item?.eid ? String(item.eid) : "";
+    const eid = _normalizeId(item?.eid);
 
     return {
       title,
@@ -228,7 +232,7 @@ const ExploreModule = (() => {
     const featuredSeen = new Set();
 
     return featuredFeed.filter((item) => {
-      const eid = String(item?.eid || "").trim();
+      const eid = _normalizeId(item?.eid);
       if (!eid) return false;
       if (featuredSeen.has(eid)) return false;
       if (dismissed.has(eid)) return false;
@@ -410,7 +414,7 @@ const ExploreModule = (() => {
 
     let out = [...feed];
 
-    out = out.filter((x) => !dismissed.has(String(x.eid)));
+    out = out.filter((x) => !dismissed.has(_normalizeId(x?.eid)));
 
     if (t !== "all") {
       out = out.filter((x) => x.type === t);
@@ -631,13 +635,12 @@ const ExploreModule = (() => {
   }
 
   function _getExploreItemByEid(eid) {
-    if (!eid) return null;
-
-    const targetEid = String(eid);
+    const targetEid = _normalizeId(eid);
+    if (!targetEid) return null;
 
     return (
-      feed.find((x) => String(x.eid) === targetEid) ||
-      featuredFeed.find((x) => String(x.eid) === targetEid) ||
+      feed.find((x) => _normalizeId(x?.eid) === targetEid) ||
+      featuredFeed.find((x) => _normalizeId(x?.eid) === targetEid) ||
       null
     );
   }
@@ -694,24 +697,23 @@ const ExploreModule = (() => {
   }
 
   function _replaceExploreItemByEid(nextItem) {
-    if (!nextItem?.eid) return nextItem || null;
-
-    const targetEid = String(nextItem.eid);
+    const targetEid = _normalizeId(nextItem?.eid);
+    if (!targetEid) return nextItem || null;
 
     feed = feed.map((entry) =>
-      String(entry?.eid) === targetEid
+      _normalizeId(entry?.eid) === targetEid
         ? { ...entry, ...nextItem, eid: targetEid }
         : entry
     );
 
     featuredFeed = featuredFeed.map((entry) =>
-      String(entry?.eid) === targetEid
+      _normalizeId(entry?.eid) === targetEid
         ? { ...entry, ...nextItem, eid: targetEid }
         : entry
     );
 
     visible = visible.map((entry) =>
-      String(entry?.eid) === targetEid
+      _normalizeId(entry?.eid) === targetEid
         ? { ...entry, ...nextItem, eid: targetEid }
         : entry
     );
@@ -724,31 +726,33 @@ const ExploreModule = (() => {
 
     const library = await ApiClient.getLibrary();
     _libraryCache = library || [];
-    const matchedLibraryItemId =
-      window.ItemIdentity?.resolveLibraryItemIdFromCache?.(item, library) || "";
+    const matchedLibraryItemId = _normalizeId(
+      window.ItemIdentity?.resolveLibraryItemIdFromCache?.(item, library)
+    );
 
     const matchedItem = (library || []).find(
-      (entry) => String(entry?.id || "") === String(matchedLibraryItemId)
+      (entry) => _normalizeId(entry?.id) === matchedLibraryItemId
     );
 
     const updatedItem = {
       ...item,
       __inLibrary: !!matchedItem,
-      __libraryItemId: matchedItem?.id ? String(matchedItem.id) : ""
+      __libraryItemId: _normalizeId(matchedItem?.id)
     };
 
     return _replaceExploreItemByEid(updatedItem) || updatedItem;
   }
 
   function _patchExploreItemsByLibraryItemId(libraryItemId, patcher) {
-    const targetLibraryItemId = String(libraryItemId || "").trim();
+    const targetLibraryItemId = _normalizeId(libraryItemId);
     if (!targetLibraryItemId || typeof patcher !== "function") return false;
 
     let didChange = false;
 
     const applyPatch = (entry) => {
-      const entryLibraryItemId =
-        window.ItemIdentity.resolveLibraryItemIdFromCache(entry, _libraryCache);
+      const entryLibraryItemId = _normalizeId(
+        window.ItemIdentity.resolveLibraryItemIdFromCache(entry, _libraryCache)
+      );
         
       if (entryLibraryItemId !== targetLibraryItemId) return entry;
 
@@ -814,7 +818,7 @@ const ExploreModule = (() => {
     if (kind !== "item_state") return;
 
     const action = String(detail.action || "").trim();
-    const libraryItemId = String(detail.itemId || "").trim();
+    const libraryItemId = _normalizeId(detail.itemId);
     if (!libraryItemId) return;
 
     const hasAuthoritativeListsCount = Number.isFinite(Number(detail.listsCount));
@@ -851,7 +855,7 @@ const ExploreModule = (() => {
     _render();
 
     const activeItem = _getActiveExploreItem();
-    const activeLibraryItemId = String(activeItem?.__libraryItemId || "").trim();
+    const activeLibraryItemId = _normalizeId(activeItem?.__libraryItemId);
 
     if (activeItem && activeLibraryItemId === libraryItemId) {
       _syncExploreDrawerFromItem(activeItem);
@@ -1097,7 +1101,7 @@ const ExploreModule = (() => {
     const source = _safeText(item?.source).trim();
     const type = _safeText(item?.type).trim();
     const externalId = _safeText(item?.externalId).trim();
-    const eid = _safeText(item?.eid).trim();
+    const eid = _normalizeId(item?.eid);
 
     if (!source || !type || !externalId || !eid) return;
 
@@ -1177,8 +1181,10 @@ const ExploreModule = (() => {
 
   function _syncExploreDrawerFromItem(item) {
     if (!item) return null;
+    const drawerEid = _normalizeId(item.eid);
+    if (!drawerEid) return item;
 
-    activeEid = String(item.eid);
+    activeEid = drawerEid;
 
     const vm = _buildExploreDrawerTextModel(item);
     const titleEl = document.getElementById("exploreDrawerTitle");
@@ -1217,12 +1223,12 @@ const ExploreModule = (() => {
     }
 
     if (addLibraryBtn) {
-      addLibraryBtn.dataset.eid = String(item.eid);
+      addLibraryBtn.dataset.eid = drawerEid;
       addLibraryBtn.disabled = !!item.__saving;
     }
 
     if (addListsBtn) {
-      addListsBtn.dataset.eid = String(item.eid);
+      addListsBtn.dataset.eid = drawerEid;
       addListsBtn.disabled = !!item.__saving;
     }
 
@@ -1236,6 +1242,7 @@ const ExploreModule = (() => {
     const select = document.getElementById("exploreDrawerListSelect");
     const confirmBtn = document.getElementById("exploreDrawerConfirmList");
     if (!select) return;
+    const normalizedPreselectedListId = _normalizeId(preselectedListId);
 
     let lists = [];
     try {
@@ -1256,10 +1263,11 @@ const ExploreModule = (() => {
     select.appendChild(placeholderOption);
 
     for (const list of safeLists) {
-      if (!list?.id) continue;
+      const listId = _normalizeId(list?.id);
+      if (!listId) continue;
 
       const option = document.createElement("option");
-      option.value = String(list.id);
+      option.value = listId;
       option.textContent =
         _safeText(list.name) ||
         window.I18n.t("explore_drawer_list_untitled");
@@ -1278,8 +1286,8 @@ const ExploreModule = (() => {
       select.appendChild(emptyOption);
     }
 
-    if (preselectedListId && hasLists) {
-      select.value = String(preselectedListId);
+    if (normalizedPreselectedListId && hasLists) {
+      select.value = normalizedPreselectedListId;
     }
 
     select.disabled = !hasLists;
@@ -1340,12 +1348,13 @@ const ExploreModule = (() => {
     const select = document.getElementById("exploreDrawerListSelect");
     const confirmBtn = document.getElementById("exploreDrawerConfirmList");
     if (!confirmBtn) return;
-    confirmBtn.disabled = !String(select?.value || "").trim();
+    confirmBtn.disabled = !_normalizeId(select?.value);
   }
 
   async function _saveActiveExploreItemToList(listId) {
+    const normalizedListId = _normalizeId(listId);
     const item = _getActiveExploreItem();
-    if (!item || !listId) return;
+    if (!item || !normalizedListId) return;
 
     const confirmBtn = document.getElementById("exploreDrawerConfirmList");
     _setDrawerButtonLoading(confirmBtn, true);
@@ -1356,10 +1365,10 @@ const ExploreModule = (() => {
 
       const freshItem = _getExploreItemByEid(item.eid);
 
-      const libraryItemId =
+      const libraryItemId = _normalizeId(
         ensured.createdId ||
-        freshItem?.__libraryItemId ||
-        null;
+        freshItem?.__libraryItemId
+      );
 
       if (!libraryItemId) {
         _showDrawerInlineNotePersistent(
@@ -1369,8 +1378,8 @@ const ExploreModule = (() => {
       }
 
       const result = await ApiClient.addLibraryItemToList(
-        String(listId),
-        String(libraryItemId)
+        normalizedListId,
+        libraryItemId
       );
 
       let drawerNoteMessage = "";
@@ -1431,8 +1440,8 @@ const ExploreModule = (() => {
 
     const libraryById = new Map(
       lib
-        .filter(item => item?.id)
-        .map(item => [String(item.id), item])
+        .filter((item) => _normalizeId(item?.id))
+        .map((item) => [_normalizeId(item.id), item])
     );
 
     const libraryByCanonicalKey = new Map(
@@ -1455,7 +1464,7 @@ const ExploreModule = (() => {
     // Solo usar title+type como fallback para items antiguos o aún no enlazados.
     const syncLibraryRefs = (items) =>
       items.map((x) => {
-        const currentLibraryId = x.__libraryItemId ? String(x.__libraryItemId) : null;
+        const currentLibraryId = _normalizeId(x.__libraryItemId) || null;
         const byId = currentLibraryId ? libraryById.get(currentLibraryId) : null;
         const canonicalKey = window.ItemIdentity?.getCanonicalContentKey?.(x) || "";
         const byCanonical = byId || !canonicalKey
@@ -1470,7 +1479,7 @@ const ExploreModule = (() => {
         return {
           ...x,
           __inLibrary: !!libraryItem,
-          __libraryItemId: libraryItem?.id ? String(libraryItem.id) : null
+          __libraryItemId: _normalizeId(libraryItem?.id) || null
         };
       });
 
@@ -1500,7 +1509,8 @@ const ExploreModule = (() => {
 
         if (!rawId) continue;
 
-        const safeId = String(rawId);
+        const safeId = _normalizeId(rawId);
+        if (!safeId) continue;
         if (seenInList.has(safeId)) continue;
         seenInList.add(safeId);
 
@@ -1512,7 +1522,7 @@ const ExploreModule = (() => {
     }
 
     for (const item of [...feed, ...featuredFeed]) {
-      const safeLibraryId = item.__libraryItemId ? String(item.__libraryItemId) : null;
+      const safeLibraryId = _normalizeId(item.__libraryItemId) || null;
       item.__listsCount = safeLibraryId
         ? Number(listsCountByLibraryId.get(safeLibraryId) || 0)
         : 0;
@@ -1573,7 +1583,7 @@ const ExploreModule = (() => {
   }
 
   async function _ensureInLibrary(item) {
-    const eid = item?.eid ? String(item.eid) : "";
+    const eid = _normalizeId(item?.eid);
     if (!eid) return { ok: false, createdId: null };
 
     const current = _getExploreItemByEid(eid);
@@ -1581,7 +1591,7 @@ const ExploreModule = (() => {
     if (current?.__inLibrary) {
       return {
         ok: true,
-        createdId: current.__libraryItemId ? String(current.__libraryItemId) : null
+        createdId: _normalizeId(current.__libraryItemId) || null
       };
     }
 
@@ -1700,7 +1710,7 @@ const ExploreModule = (() => {
         };
 
         const created = await ApiClient.createLibraryItem(payload);
-        const createdId = created?.id ? String(created.id) : "";
+        const createdId = _normalizeId(created?.id);
 
         if (created?.ok === false || !createdId) {
           throw new Error(created?.reason || created?.error || "create_failed");
@@ -1763,9 +1773,7 @@ const ExploreModule = (() => {
           }
 
           const fresh = _getExploreItemByEid(eid);
-          const resolvedLibraryItemId = fresh?.__libraryItemId
-            ? String(fresh.__libraryItemId)
-            : "";
+          const resolvedLibraryItemId = _normalizeId(fresh?.__libraryItemId);
 
           if (!resolvedLibraryItemId) {
             console.error(err);
@@ -2325,7 +2333,7 @@ function openAddToLibraryModal(eid) {
   const modal = document.getElementById("addFromExploreModal");
   if (!modal) return;
 
-  modal.dataset.eid = eid;
+  modal.dataset.eid = (eid ?? "").toString().trim();
   modal.classList.add("open");
 }
 
