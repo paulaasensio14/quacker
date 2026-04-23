@@ -2688,7 +2688,7 @@ const ApiClient = (() => {
       const res = await _httpJson("POST", "/library", data);
       const item = _extractLibraryMutationItem(res, "invalid_create_response");
 
-      _emitDataChanged({ kind: "library", action: "create", itemId: String(item.id) });
+      _emitDataChanged({ kind: "library", action: "create", itemId: item.id });
       return item;
     }
 
@@ -2763,9 +2763,14 @@ const ApiClient = (() => {
       safeProgress
     );
     const nowIso = new Date().toISOString();
+    const createdId = data.id != null ? String(data.id).trim() : String(Date.now());
+
+    if (!createdId) {
+      throw _makeApiError("missing_id", 400);
+    }
 
     const newItem = {
-      id: data.id != null ? String(data.id) : String(Date.now()),
+      id: createdId,
       type,
       title,
       source: canonicalIdentity.source,
@@ -2784,7 +2789,7 @@ const ApiClient = (() => {
       FakeBackend.saveState(state);
     }
 
-    _emitDataChanged({ kind: "library", action: "create", itemId: String(newItem.id) });
+    _emitDataChanged({ kind: "library", action: "create", itemId: createdId });
 
     return newItem;
   }
