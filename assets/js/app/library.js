@@ -63,6 +63,16 @@ function _safeNumberInputValue(value, fallback = 0) {
   return _escapeLibraryHtml(Number.isFinite(number) ? number : fallback);
 }
 
+function _normalizeLibraryItemId(value) {
+  return String(value ?? "").trim();
+}
+
+function _getLibrarySafeItemId(itemId) {
+  const normalizedItemId = _normalizeLibraryItemId(itemId);
+  if (!normalizedItemId) return "";
+  return (window.CSS && CSS.escape) ? CSS.escape(normalizedItemId) : normalizedItemId;
+}
+
 function _getAddLibraryDynamicFieldsRoot() {
   return document.getElementById("addLib_dynamicFields");
 }
@@ -471,11 +481,12 @@ async function _refreshAddToListModalIfOpen(libraryItemId) {
   const modal = document.getElementById("addToListModal");
   if (!modal || !modal.classList.contains("is-open")) return;
 
-  const currentItemId = modal.dataset.itemId || "";
-  if (String(currentItemId) !== String(libraryItemId)) return;
+  const currentItemId = _normalizeLibraryItemId(modal.dataset.itemId);
+  const normalizedLibraryItemId = _normalizeLibraryItemId(libraryItemId);
+  if (!normalizedLibraryItemId || currentItemId !== normalizedLibraryItemId) return;
 
   try {
-    await openAddToListModal(libraryItemId);
+    await openAddToListModal(normalizedLibraryItemId);
   } catch (err) {
     console.error("[Library] failed to refresh AddToList modal", err);
   }
@@ -1277,7 +1288,7 @@ const LibraryUI = (() => {
       const safeEditProgressLabel = escapeHtml(t("library_edit_progress"));
       const safeEditLabel = escapeHtml(t("library_edit"));
       const safeMarkCompletedLabel = escapeHtml(t("library_mark_completed"));
-      const isHighlighted = String(window.__lastCreatedLibraryItemId || "") === itemId;
+      const isHighlighted = _normalizeLibraryItemId(window.__lastCreatedLibraryItemId) === itemId;
       
       return `
         <article class="lib-card ${isHighlighted ? "is-highlight" : ""}" data-id="${safeItemId}">
@@ -1442,23 +1453,23 @@ const LibraryUI = (() => {
   }
 
   function captureLibraryAnchor(itemId) {
-    if (!itemId) return;
+    const normalizedItemId = _normalizeLibraryItemId(itemId);
+    if (!normalizedItemId) return;
 
-    const safeId =
-      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const safeId = _getLibrarySafeItemId(normalizedItemId);
 
     const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
     const scroller = __getScrollContainer();
 
     if (!card) {
-      __pendingAnchor = { itemId: String(itemId), prevScrollTop: scroller.scrollTop, prevTop: null };
+      __pendingAnchor = { itemId: normalizedItemId, prevScrollTop: scroller.scrollTop, prevTop: null };
       return;
     }
 
     const rect = card.getBoundingClientRect();
 
     __pendingAnchor = {
-      itemId: String(itemId),
+      itemId: normalizedItemId,
       prevScrollTop: scroller.scrollTop,
       prevTop: rect.top
     };
@@ -1470,8 +1481,8 @@ const LibraryUI = (() => {
     const { itemId, prevScrollTop, prevTop } = __pendingAnchor;
     __pendingAnchor = null;
 
-    const safeId =
-      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const safeId = _getLibrarySafeItemId(itemId);
+    if (!safeId) return;
 
     const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
     const scroller = __getScrollContainer();
@@ -1496,10 +1507,10 @@ const LibraryUI = (() => {
   }
 
   function flashLibraryCard(itemId) {
-    if (!itemId) return;
+    const normalizedItemId = _normalizeLibraryItemId(itemId);
+    if (!normalizedItemId) return;
 
-    const safeId =
-      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const safeId = _getLibrarySafeItemId(normalizedItemId);
 
     const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
     if (!card) return;
@@ -1519,10 +1530,10 @@ const LibraryUI = (() => {
   }
 
   function setListButtonState(itemId, isAdded, { pulse = false } = {}) {
-    if (!itemId) return;
+    const normalizedItemId = _normalizeLibraryItemId(itemId);
+    if (!normalizedItemId) return;
 
-    const safeId =
-      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const safeId = _getLibrarySafeItemId(normalizedItemId);
 
     const btn = document.querySelector(
       `.lib-list-btn[data-action="add-to-list"][data-id="${safeId}"]`
@@ -1546,10 +1557,10 @@ const LibraryUI = (() => {
   }
 
   function playLibraryQuickFx(itemId, kind = "progress") {
-    if (!itemId) return;
+    const normalizedItemId = _normalizeLibraryItemId(itemId);
+    if (!normalizedItemId) return;
 
-    const safeId =
-      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const safeId = _getLibrarySafeItemId(normalizedItemId);
 
     const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
     if (!card) return;
@@ -1567,20 +1578,20 @@ const LibraryUI = (() => {
   }
 
   async function applyQuickProgressWithUndo(itemId) {
-    const safeId =
-      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const normalizedItemId = _normalizeLibraryItemId(itemId);
+    const safeId = _getLibrarySafeItemId(normalizedItemId);
     const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
     if (card?.dataset.busy === "1") return;
 
     if (card) card.dataset.busy = "1";
 
     try {
-      if (!itemId) return { ok: false };
+      if (!normalizedItemId) return { ok: false };
 
       // Snapshot antes del progreso rápido (para Deshacer)
       let snapshotBefore = null;
       try {
-        snapshotBefore = await ApiClient.getLibraryItemById(itemId);
+        snapshotBefore = await ApiClient.getLibraryItemById(normalizedItemId);
         if (!snapshotBefore || !snapshotBefore.id) snapshotBefore = null;
       } catch (_) {
         snapshotBefore = null;
@@ -1590,7 +1601,7 @@ const LibraryUI = (() => {
       const sinceIso = new Date(Date.now() - 2000).toISOString();
 
       const res = assertLibraryMutationOk(
-        await ApiClient.resumeLibraryItem(itemId),
+        await ApiClient.resumeLibraryItem(normalizedItemId),
         "resume_failed"
       );
 
@@ -1608,7 +1619,7 @@ const LibraryUI = (() => {
           );
 
       // Micro-feedback visual en la card
-      playLibraryQuickFx(itemId, justCompleted ? "complete" : "progress");
+      playLibraryQuickFx(normalizedItemId, justCompleted ? "complete" : "progress");
 
       window.toast?.({
         title,
@@ -1625,11 +1636,11 @@ const LibraryUI = (() => {
                 );
 
                 assertLibraryMutationOk(
-                  await ApiClient.undoActivitiesForItemSince(itemId, sinceIso),
+                  await ApiClient.undoActivitiesForItemSince(normalizedItemId, sinceIso),
                   "undo_activities_failed"
                 );
 
-                flashLibraryCard(itemId);
+                flashLibraryCard(normalizedItemId);
 
                 window.toast?.({
                   title: t("library_quick_progress_undo_success_title"),
@@ -1668,32 +1679,32 @@ const LibraryUI = (() => {
   }
 
   async function markAsCompletedWithUndo(itemId) {
-    const safeId =
-      (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const normalizedItemId = _normalizeLibraryItemId(itemId);
+    const safeId = _getLibrarySafeItemId(normalizedItemId);
     const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
     if (card?.dataset.busy === "1") return;
 
     if (card) card.dataset.busy = "1";
 
     try {
-      if (!itemId) return { ok: false };
+      if (!normalizedItemId) return { ok: false };
 
       // Snapshot previo
       let snapshotBefore = null;
       try {
-        snapshotBefore = await ApiClient.getLibraryItemById(itemId);
+        snapshotBefore = await ApiClient.getLibraryItemById(normalizedItemId);
         if (!snapshotBefore || !snapshotBefore.id) snapshotBefore = null;
       } catch (_) {
         snapshotBefore = null;
       }
 
       const res = assertLibraryMutationOk(
-        await ApiClient.completeLibraryItem(itemId),
+        await ApiClient.completeLibraryItem(normalizedItemId),
         "complete_failed"
       );
 
       // Feedback visual inmediato
-      playLibraryQuickFx(itemId, "complete");
+      playLibraryQuickFx(normalizedItemId, "complete");
 
       window.toast?.({
         title: t("library_quick_progress_completed_title"),
@@ -1710,7 +1721,7 @@ const LibraryUI = (() => {
                 );
 
                 // FX de confirmación al restaurar
-                flashLibraryCard(itemId);
+                flashLibraryCard(normalizedItemId);
 
                 window.toast?.({
                   title: t("library_quick_progress_undo_success_title"),
@@ -2053,7 +2064,7 @@ const LibraryUI = (() => {
           "create_failed"
         );
 
-        window.__lastCreatedLibraryItemId = created.id;
+        window.__lastCreatedLibraryItemId = _normalizeLibraryItemId(created.id);
 
         closeAddLibraryModal();
 
@@ -2202,7 +2213,7 @@ const LibraryUI = (() => {
     // Eliminar (con animación) + Toast "Deshacer"
     document.getElementById("deleteItemBtn")?.addEventListener("click", async () => {
       const modal = document.getElementById("progressModal");
-      const itemId = modal?.dataset.itemId;
+      const itemId = _normalizeLibraryItemId(modal?.dataset.itemId);
       if (!itemId) return;
 
       const btn = document.getElementById("deleteItemBtn");
@@ -2259,12 +2270,13 @@ const LibraryUI = (() => {
                 "restore_missing_item_id"
               );
 
-              const restoredItemId = restored.id;
+              const restoredItemId = _normalizeLibraryItemId(restored.id);
 
               for (const list of listsToRestore || []) {
-                if (!list?.id) continue;
+                const listId = String(list?.id || "").trim();
+                if (!listId || !restoredItemId) continue;
                 assertLibraryMutationOk(
-                  await ApiClient.addLibraryItemToList(String(list.id), restoredItemId),
+                  await ApiClient.addLibraryItemToList(listId, restoredItemId),
                   "restore_list_membership_failed"
                 );
               }
@@ -2582,10 +2594,10 @@ async function saveLibraryItem(updatedItem) {
 }
 
 function deleteLibraryItemAnimated(itemId, opts = {}) {
-  if (!itemId) return Promise.resolve({ ok: false, reason: "missing_id" });
+  const normalizedItemId = _normalizeLibraryItemId(itemId);
+  if (!normalizedItemId) return Promise.resolve({ ok: false, reason: "missing_id" });
 
-  const safeId =
-    (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+  const safeId = _getLibrarySafeItemId(normalizedItemId);
 
   const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
 
@@ -2594,7 +2606,7 @@ function deleteLibraryItemAnimated(itemId, opts = {}) {
   const doDelete = async () => {
     try {
       const result = assertLibraryMutationOk(
-        await ApiClient.deleteLibraryItem(itemId),
+        await ApiClient.deleteLibraryItem(normalizedItemId),
         "delete_failed"
       );
       closeProgressModal();
@@ -2807,13 +2819,14 @@ async function openProgressModal(itemId) {
 
   if (!modal || !body || !title) return;
 
-  const item = await getLibraryItemById(itemId);
+  const normalizedItemId = _normalizeLibraryItemId(itemId);
+  const item = await getLibraryItemById(normalizedItemId);
   if (!item) {
     showProgressItemLoadError();
     return;
   }
 
-  modal.dataset.itemId = itemId;
+  modal.dataset.itemId = normalizedItemId;
   title.textContent = `${t("library_edit_progress")} · ${item.title || ""}`;
 
   item.meta = normalizeProgressModalMeta(item.meta);
@@ -2913,7 +2926,7 @@ function closeProgressModal() {
 
 async function saveProgressModal() {
   const modal = document.getElementById("progressModal");
-  const itemId = modal?.dataset.itemId;
+  const itemId = _normalizeLibraryItemId(modal?.dataset.itemId);
   if (!itemId) return;
 
   const saveBtn = document.getElementById("saveProgressBtn");
