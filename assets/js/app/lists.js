@@ -42,6 +42,10 @@ const ListsModule = (() => {
     return (v ?? "").toString();
   }
 
+  function _normalizeId(value) {
+    return String(value || "").trim();
+  }
+
   function _visibilityLabel(v) {
     if (v === "public") return t("lists_visibility_public");
     if (v === "collab") return t("lists_visibility_collab");
@@ -386,9 +390,12 @@ const ListsModule = (() => {
   }
 
   async function openListDetail(listId) {
-    activeListId = String(listId);
+    const normalizedListId = _normalizeId(listId);
+    if (!normalizedListId) return;
 
-    const list = allLists.find(l => String(l.id) === activeListId);
+    activeListId = normalizedListId;
+
+    const list = allLists.find(l => _normalizeId(l.id) === activeListId);
     if (!list) return;
 
     const detail = _getEl("listDetail");
@@ -451,7 +458,7 @@ const ListsModule = (() => {
     const hint = _getEl("listDetailHint");
     if (!grid || !empty) return;
 
-    const list = allLists.find(l => String(l.id) === String(activeListId));
+    const list = allLists.find(l => _normalizeId(l.id) === _normalizeId(activeListId));
     if (!list){
       grid.innerHTML = "";
       empty.style.display = "block";
@@ -570,8 +577,9 @@ const ListsModule = (() => {
   async function removeItemFromActiveList(itemId){
     if (!activeListId || !itemId) return;
 
-    const listId = String(activeListId);
-    const id = String(itemId);
+    const listId = _normalizeId(activeListId);
+    const id = _normalizeId(itemId);
+    if (!listId || !id) return;
 
     // Animación de salida (optimista)
     const card = document.querySelector(
@@ -592,11 +600,11 @@ const ListsModule = (() => {
       );
 
       // Actualizamos estado en memoria (sin tocar DOM manualmente)
-      const listRef = (allLists || []).find(l => String(l.id) === String(listId));
+      const listRef = (allLists || []).find(l => _normalizeId(l.id) === listId);
       if (listRef && Array.isArray(listRef.items)) {
         listRef.items = listRef.items.filter((x) => {
           const entryId = typeof x === "string" ? x : x?.id;
-          return String(entryId) !== String(id);
+          return _normalizeId(entryId) !== id;
         });
 
         listRef.itemsCount = listRef.items.length;
@@ -627,17 +635,17 @@ const ListsModule = (() => {
             });
 
             // Estado en memoria + repintado instantáneo del detalle
-            const listRef = (allLists || []).find(l => String(l.id) === String(listId));
+            const listRef = (allLists || []).find(l => _normalizeId(l.id) === listId);
             if (listRef && Array.isArray(listRef.items)) {
               // Evitar duplicados si el usuario deshace dos veces rápido
               const exists = listRef.items.some((x) => {
                 const entryId = typeof x === "string" ? x : x?.id;
-                return String(entryId) === String(id);
+                return _normalizeId(entryId) === id;
               });
 
               if (!exists) {
                 listRef.items.push({
-                  id: String(id),
+                  id,
                   addedAt: new Date().toISOString()
                 });
               }
@@ -707,11 +715,13 @@ const ListsModule = (() => {
 
     hideListErrors();
 
-    if (listId) {
+    const normalizedListId = _normalizeId(listId);
+
+    if (normalizedListId) {
 
       // MODO EDITAR
-      editingListId = String(listId);
-      const list = allLists.find(l => String(l.id) === editingListId);
+      editingListId = normalizedListId;
+      const list = allLists.find(l => _normalizeId(l.id) === editingListId);
 
       if (!list) return;
       if (titleEl) titleEl.textContent = t("lists_modal_edit_title");
