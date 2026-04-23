@@ -28,6 +28,16 @@ const NotificationsUI = (() => {
 
   let __lastFocusEl = null;
 
+  function _normalizeNotifId(value) {
+    return String(value ?? "").trim();
+  }
+
+  function _getSafeNotifId(value) {
+    const normalizedId = _normalizeNotifId(value);
+    if (!normalizedId) return "";
+    return (window.CSS && CSS.escape) ? CSS.escape(normalizedId) : normalizedId;
+  }
+
   function normalizeNotifColor(notif) {
     const iconKind = String(notif?.icon || "").trim().toLowerCase();
 
@@ -98,7 +108,9 @@ const NotificationsUI = (() => {
 
       const cardEl = activeEl.closest?.(".notif-card");
       if (!__restoreFocus && cardEl) {
-        const id = String(cardEl.getAttribute("data-notif-id") || cardEl.dataset?.notifId || "");
+        const id = _normalizeNotifId(
+          cardEl.getAttribute("data-notif-id") || cardEl.dataset?.notifId
+        );
         if (id && activeEl.classList.contains("notif-mark-btn")) {
           __restoreFocus = { kind: "markOne", notifId: id };
         }
@@ -126,20 +138,27 @@ const NotificationsUI = (() => {
     if (panelOpen) {
       if (!Array.isArray(__frozenOrderIds)) {
         const firstSorted = sortByRules(list);
-        __frozenOrderIds = firstSorted.map((x) => String(x.id));
+        __frozenOrderIds = firstSorted
+          .map((x) => _normalizeNotifId(x.id))
+          .filter(Boolean);
       }
 
-      const byId = new Map(list.map((x) => [String(x.id), x]));
+      const byId = new Map(
+        list
+          .map((x) => [_normalizeNotifId(x.id), x])
+          .filter(([id]) => !!id)
+      );
       sortedList = [];
 
       for (const id of __frozenOrderIds) {
-        const item = byId.get(String(id));
+        const item = byId.get(_normalizeNotifId(id));
         if (item) sortedList.push(item);
       }
 
       // Nuevas (no estaban en el freeze) -> al final
       for (const item of list) {
-        const id = String(item.id);
+        const id = _normalizeNotifId(item.id);
+        if (!id) continue;
         if (!__frozenOrderIds.includes(id)) {
           sortedList.push(item);
           __frozenOrderIds.push(id);
@@ -152,7 +171,7 @@ const NotificationsUI = (() => {
 
     // Detectar nuevas notificaciones (comparando con el render anterior)
     const prevIds = __prevNotifIds;
-    const nextIds = new Set((list || []).map((x) => String(x.id)));
+    const nextIds = new Set((list || []).map((x) => _normalizeNotifId(x.id)).filter(Boolean));
 
     // Contador
     notifCountEl.textContent = list.length;
@@ -205,7 +224,8 @@ const NotificationsUI = (() => {
     if (emptyStateEl) emptyStateEl.hidden = true;
 
     sortedList.forEach((n) => {
-      const notifId = String(n.id);
+      const notifId = _normalizeNotifId(n.id);
+      if (!notifId) return;
 
       const card = document.createElement("div");
       card.className = "notif-card";
@@ -356,9 +376,7 @@ const NotificationsUI = (() => {
           }
 
           if (__restoreFocus.kind === "markOne") {
-            const safe = (window.CSS && CSS.escape)
-              ? CSS.escape(String(__restoreFocus.notifId))
-              : String(__restoreFocus.notifId);
+            const safe = _getSafeNotifId(__restoreFocus.notifId);
 
             const btn = panel.querySelector?.(`.notif-card[data-notif-id="${safe}"] .notif-mark-btn`);
             btn?.focus?.();
