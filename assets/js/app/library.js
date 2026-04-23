@@ -279,16 +279,17 @@ function _showAddToListError(msg = "") {
 }
 
 async function openAddToListModal(itemId) {
+  const normalizedItemId = String(itemId || "").trim();
   const modal = document.getElementById("addToListModal");
   if (modal) {
-    modal.dataset.itemId = String(itemId || "");
+    modal.dataset.itemId = normalizedItemId;
   }
   
   const optionsEl = document.getElementById("atl_listOptions");
   if (!modal || !optionsEl) return;
 
   _showAddToListError("");
-  modal.dataset.itemId = String(itemId || "");
+  modal.dataset.itemId = normalizedItemId;
 
   // Defensivo: si el modal se abre desde un flujo que no viene de click directo
   if (!__addToListModalLastFocus) {
@@ -309,12 +310,12 @@ async function openAddToListModal(itemId) {
   // Deshabilitar listas donde ya está el item
   let alreadyIn = [];
   try {
-    alreadyIn = await ApiClient.getListsContainingItem(itemId);
+    alreadyIn = await ApiClient.getListsContainingItem(normalizedItemId);
   } catch (e) {
     console.error(e);
     alreadyIn = [];
   }
-  const alreadyIds = new Set((alreadyIn || []).map(l => String(l.id)));
+  const alreadyIds = new Set((alreadyIn || []).map((l) => String(l.id || "").trim()));
 
   optionsEl.innerHTML = "";
   optionsEl.onchange = null;
@@ -363,7 +364,7 @@ async function openAddToListModal(itemId) {
       document
         .getElementById("atlRetryLoadListsBtn")
         ?.addEventListener("click", () => {
-          openAddToListModal(itemId);
+          openAddToListModal(normalizedItemId);
         });
     }
 
@@ -406,13 +407,13 @@ async function openAddToListModal(itemId) {
 
       requestAnimationFrame(() => {
         document.dispatchEvent(new CustomEvent("quacker:lists-create-request", {
-          detail: { returnToAddToListItemId: itemId }
+          detail: { returnToAddToListItemId: normalizedItemId }
         }));
       });
     });
   } else {
     lists.forEach((l) => {
-      const id = String(l.id);
+      const id = String(l.id || "").trim();
       const name = l.name || t("lists_untitled");
       const isAlready = alreadyIds.has(id);
 
@@ -426,7 +427,7 @@ async function openAddToListModal(itemId) {
       cb.checked = false;
 
       // Si acabamos de crear una lista desde este flujo, la preseleccionamos
-      if (window.__quackerPreselectListId && String(window.__quackerPreselectListId) === id && !isAlready) {
+      if (window.__quackerPreselectListId && String(window.__quackerPreselectListId || "").trim() === id && !isAlready) {
         cb.checked = true;
       }
 
@@ -2359,8 +2360,8 @@ const LibraryUI = (() => {
     // volvemos a Biblioteca y reabrimos el modal preseleccionando la lista creada.
     document.addEventListener("quacker:lists-created", (e) => {
       const detail = e?.detail || {};
-      const itemId = detail.returnToAddToListItemId ? String(detail.returnToAddToListItemId) : null;
-      const listId = detail.listId != null ? String(detail.listId) : null;
+      const itemId = String(detail.returnToAddToListItemId || "").trim();
+      const listId = detail.listId != null ? String(detail.listId).trim() : null;
 
       if (!itemId) return;
 
