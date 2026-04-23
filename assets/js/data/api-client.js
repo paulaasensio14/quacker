@@ -235,6 +235,33 @@ const ApiClient = (() => {
     return String(value || "").trim();
   }
 
+  function _normalizeNotificationId(value) {
+    return _normalizeDataId(value);
+  }
+
+  function _normalizeNotificationsList(items) {
+    const seen = new Set();
+
+    return (Array.isArray(items) ? items : [])
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+
+        const notificationId = _normalizeNotificationId(entry.id);
+        if (!notificationId) return null;
+
+        return {
+          ...entry,
+          id: notificationId
+        };
+      })
+      .filter((entry) => {
+        if (!entry || seen.has(entry.id)) return false;
+        seen.add(entry.id);
+        return true;
+      })
+      .slice(0, 30);
+  }
+
   function _normalizeCanonicalIdentity(source, externalId) {
     const safeSource = String(source || "").trim().toLowerCase();
     const safeExternalId = String(externalId || "").trim();
@@ -1562,7 +1589,7 @@ const ApiClient = (() => {
     }
 
     const state = _safeState();
-    state.notifications = state.notifications || [];
+    state.notifications = _normalizeNotificationsList(state.notifications);
 
     const nowIso = new Date().toISOString();
 
@@ -1577,19 +1604,21 @@ const ApiClient = (() => {
     };
 
     // Insertar al principio (más reciente arriba)
-    state.notifications.unshift(notif);
-
-    // Limitar para que no crezcan infinito (UX + rendimiento)
-    if (state.notifications.length > 30) {
-      state.notifications = state.notifications.slice(0, 30);
-    }
+    state.notifications = _normalizeNotificationsList([notif, ...state.notifications]);
 
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
-      _emitDataChanged({ kind: "notifications", action: "add", notificationId: String(notif?.id || "") });
+      _emitDataChanged({
+        kind: "notifications",
+        action: "add",
+        notificationId: _normalizeNotificationId(notif?.id)
+      });
     }
 
-    return notif;
+    return _cloneData({
+      ...notif,
+      id: _normalizeNotificationId(notif.id)
+    });
   }
 
   // === RACHA (notificación por hitos) ===
@@ -3399,7 +3428,8 @@ const ApiClient = (() => {
     }
 
     const state = _safeState();
-    return state.notifications || [];
+    state.notifications = _normalizeNotificationsList(state.notifications);
+    return _cloneCollection(state.notifications);
   }
 
   async function dismissNotification(notificationId) {
@@ -3407,14 +3437,23 @@ const ApiClient = (() => {
       return { ok: true, skipped: true, reason: "http_not_supported" };
     }
 
+    const targetNotificationId = _normalizeNotificationId(notificationId);
+    if (!targetNotificationId) {
+      return { ok: false, reason: "missing_id" };
+    }
+
     const state = _safeState();
-    state.notifications = (state.notifications || []).filter(
-      (n) => String(n.id) !== String(notificationId)
+    state.notifications = _normalizeNotificationsList(state.notifications).filter(
+      (n) => _normalizeNotificationId(n.id) !== targetNotificationId
     );
 
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
-      _emitDataChanged({ kind: "notifications", action: "dismiss", notificationId: String(notificationId) });
+      _emitDataChanged({
+        kind: "notifications",
+        action: "dismiss",
+        notificationId: targetNotificationId
+      });
     }
 
     return { ok: true };
@@ -3442,7 +3481,7 @@ const ApiClient = (() => {
     }
 
     const state = _safeState();
-    state.notifications = Array.isArray(nextList) ? nextList : [];
+    state.notifications = _normalizeNotificationsList(nextList);
 
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
