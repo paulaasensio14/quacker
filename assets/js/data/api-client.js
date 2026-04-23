@@ -210,8 +210,8 @@ const ApiClient = (() => {
     const item = response?.item && typeof response.item === "object"
       ? response.item
       : response;
-    const itemId = item?.id != null ? String(item.id).trim() : "";
-    const safeExpectedId = expectedId != null ? String(expectedId).trim() : "";
+    const itemId = _normalizeDataId(item?.id);
+    const safeExpectedId = _normalizeDataId(expectedId);
 
     if (!item || typeof item !== "object" || !itemId) {
       throw _makeApiError(fallbackReason, 502);
@@ -512,8 +512,8 @@ const ApiClient = (() => {
     const result = {
       ok: payload?.ok !== false,
       action: String(action || "").trim(),
-      listId: String(payload?.listId || list?.id || "").trim(),
-      itemId: String(payload?.itemId || "").trim()
+      listId: _normalizeDataId(payload?.listId || list?.id),
+      itemId: _normalizeDataId(payload?.itemId)
     };
 
     if (Object.prototype.hasOwnProperty.call(payload, "already")) {
@@ -695,8 +695,8 @@ const ApiClient = (() => {
     sourceView = "api-client",
     extra = {}
   } = {}) {
-    const normalizedItemId = String(itemId || "").trim();
-    const normalizedListId = String(listId || "").trim();
+    const normalizedItemId = _normalizeDataId(itemId);
+    const normalizedListId = _normalizeDataId(listId);
 
     _emitDataChanged({
       kind: "item_state",
