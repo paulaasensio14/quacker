@@ -770,6 +770,29 @@ const ExploreModule = (() => {
     return didChange;
   }
 
+  function _patchExploreItemsByEid(eid, patcher) {
+    const targetEid = _normalizeId(eid);
+    if (!targetEid || typeof patcher !== "function") return false;
+
+    let didChange = false;
+
+    const applyPatch = (entry) => {
+      if (_normalizeId(entry?.eid) !== targetEid) return entry;
+
+      didChange = true;
+      return {
+        ...entry,
+        ...patcher(entry)
+      };
+    };
+
+    feed = feed.map(applyPatch);
+    featuredFeed = featuredFeed.map(applyPatch);
+    visible = visible.map(applyPatch);
+
+    return didChange;
+  }
+
   function _scheduleExploreLibraryStateSync() {
     if (__libraryStateSyncPromise) return __libraryStateSyncPromise;
 
@@ -1570,7 +1593,7 @@ const ExploreModule = (() => {
 
     try {
       const arr = await ApiClient.getExploreDismissed();
-      dismissed = new Set((arr || []).map(String));
+      dismissed = new Set((arr || []).map((entry) => _normalizeId(entry)).filter(Boolean));
     } catch (e) {
       console.error(e);
       dismissed = new Set();
@@ -1602,13 +1625,7 @@ const ExploreModule = (() => {
 
     const run = (async () => {
 
-    feed = feed.map((x) =>
-      x.eid === eid ? { ...x, __saving: true } : x
-    );
-
-    featuredFeed = featuredFeed.map((x) =>
-      x.eid === eid ? { ...x, __saving: true } : x
-    );
+    _patchExploreItemsByEid(eid, () => ({ __saving: true }));
 
       _applyFilters();
 
@@ -1716,27 +1733,11 @@ const ExploreModule = (() => {
           throw new Error(created?.reason || created?.error || "create_failed");
         }
 
-        feed = feed.map((x) =>
-          x.eid === eid
-            ? {
-                ...x,
-                __saving: false,
-                __inLibrary: true,
-                __libraryItemId: createdId
-              }
-            : x
-        );
-
-        featuredFeed = featuredFeed.map((x) =>
-          x.eid === eid
-            ? {
-                ...x,
-                __saving: false,
-                __inLibrary: true,
-                __libraryItemId: createdId
-              }
-            : x
-        );
+        _patchExploreItemsByEid(eid, () => ({
+          __saving: false,
+          __inLibrary: true,
+          __libraryItemId: createdId
+        }));
 
         await _syncInLibraryFlags();
 
@@ -1778,13 +1779,7 @@ const ExploreModule = (() => {
           if (!resolvedLibraryItemId) {
             console.error(err);
 
-            feed = feed.map((x) =>
-              x.eid === eid ? { ...x, __saving: false } : x
-            );
-
-            featuredFeed = featuredFeed.map((x) =>
-              x.eid === eid ? { ...x, __saving: false } : x
-            );
+            _patchExploreItemsByEid(eid, () => ({ __saving: false }));
 
             _applyFilters();
 
@@ -1798,27 +1793,11 @@ const ExploreModule = (() => {
             return { ok: false, createdId: null };
           }
 
-          feed = feed.map((x) =>
-            x.eid === eid
-              ? {
-                  ...x,
-                  __saving: false,
-                  __inLibrary: true,
-                  __libraryItemId: resolvedLibraryItemId
-                }
-              : x
-          );
-
-          featuredFeed = featuredFeed.map((x) =>
-            x.eid === eid
-              ? {
-                  ...x,
-                  __saving: false,
-                  __inLibrary: true,
-                  __libraryItemId: resolvedLibraryItemId
-                }
-              : x
-          );
+          _patchExploreItemsByEid(eid, () => ({
+            __saving: false,
+            __inLibrary: true,
+            __libraryItemId: resolvedLibraryItemId
+          }));
 
           _applyFilters();
 
@@ -1830,13 +1809,7 @@ const ExploreModule = (() => {
 
         console.error(err);
 
-        feed = feed.map((x) =>
-          x.eid === eid ? { ...x, __saving: false } : x
-        );
-
-        featuredFeed = featuredFeed.map((x) =>
-          x.eid === eid ? { ...x, __saving: false } : x
-        );
+        _patchExploreItemsByEid(eid, () => ({ __saving: false }));
 
         _applyFilters();
 
