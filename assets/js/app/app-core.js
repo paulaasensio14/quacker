@@ -90,10 +90,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // emitimos refrescos oficiales para mantener Home / Explore / Listas sincronizados.
   document.addEventListener("quacker:data-changed", (e) => {
     const detail = e?.detail || {};
-    const kind = detail.kind || "";
-    const action = detail.action ? String(detail.action) : "";
-    const itemId = detail.itemId ? String(detail.itemId) : null;
-    const listId = detail.listId ? String(detail.listId) : null;
+    const kind = String(detail.kind || "").trim();
+    const action = String(detail.action || "").trim();
+    const itemId = detail.itemId != null ? String(detail.itemId).trim() : null;
+    const listId = detail.listId != null ? String(detail.listId).trim() : null;
 
     // 1) Home + notificaciones solo cuando cambia contenido real (no para ajustes de usuario)
     const affectsHome =
