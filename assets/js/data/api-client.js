@@ -2158,7 +2158,7 @@ const ApiClient = (() => {
 
   async function getLibraryItemById(itemId) {
     if (itemId == null) return null;
-    const safeItemId = String(itemId).trim();
+    const safeItemId = _normalizeDataId(itemId);
     if (!safeItemId) return null;
 
     if (_isHttp()) {
@@ -2182,7 +2182,7 @@ const ApiClient = (() => {
 
     const state = _safeState();
     const library = state.library || [];
-    const item = library.find(i => String(i.id) === safeItemId) || null;
+    const item = library.find((i) => _normalizeDataId(i?.id) === safeItemId) || null;
     return _cloneData(item);
   }
 
@@ -2393,7 +2393,7 @@ const ApiClient = (() => {
   async function deleteLibraryItem(itemId) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
 
-    const idStr = String(itemId).trim();
+    const idStr = _normalizeDataId(itemId);
     if (!idStr) return { ok: false, reason: "missing_id" };
 
     // =========================
@@ -2420,7 +2420,7 @@ const ApiClient = (() => {
     state.library = state.library || [];
     state.lists = state.lists || [];
 
-    const idx = state.library.findIndex(i => String(i.id) === idStr);
+    const idx = state.library.findIndex((i) => _normalizeDataId(i?.id) === idStr);
     if (idx === -1) return { ok: false, reason: "not_found" };
 
     const removed = state.library[idx];
@@ -2456,7 +2456,7 @@ const ApiClient = (() => {
 
   async function restoreLibraryItem(item, { toFront = true } = {}) {
     if (!item?.id) return { ok: false, reason: "missing_id" };
-    const restoredItemId = String(item.id).trim();
+    const restoredItemId = _normalizeDataId(item.id);
     if (!restoredItemId) return { ok: false, reason: "missing_id" };
 
     if (_isHttp()) {
@@ -2478,7 +2478,7 @@ const ApiClient = (() => {
     const state = _safeState();
     state.library = state.library || [];
 
-    const exists = state.library.find(i => String(i.id) === restoredItemId);
+    const exists = state.library.find((i) => _normalizeDataId(i?.id) === restoredItemId);
     if (exists) return { ok: true, already: true, item: exists };
 
     const title = _normalizeContentText(item.title);
