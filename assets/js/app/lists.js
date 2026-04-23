@@ -1007,7 +1007,7 @@ const ListsModule = (() => {
         const editBtn = e.target.closest('[data-action="edit-list"]');
         if (editBtn) {
           e.stopPropagation();
-          const id = editBtn.dataset.id;
+          const id = _normalizeId(editBtn.dataset.id);
           if (!id) return;
           openListModal(id);
           return;
@@ -1039,7 +1039,7 @@ const ListsModule = (() => {
         // Click normal en la card: abrir detalle
         const card = e.target.closest(".list-card");
         if (card) {
-          const id = card.dataset.id;
+          const id = _normalizeId(card.dataset.id);
           if (!id) return;
           await openListDetail(id);
         }
@@ -1112,7 +1112,7 @@ const ListsModule = (() => {
         const rm = e.target.closest('[data-action="remove-from-list"]');
         if (!rm) return;
 
-        const itemId = rm.dataset.itemId;
+        const itemId = _normalizeId(rm.dataset.itemId);
         if (!itemId) return;
 
         await removeItemFromActiveList(itemId);
