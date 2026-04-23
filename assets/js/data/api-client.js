@@ -416,10 +416,11 @@ const ApiClient = (() => {
 
     const items = Array.isArray(list.items) ? list.items.slice() : [];
     const safeVisibility = String(list.visibility || "").trim().toLowerCase();
+    const listId = _normalizeDataId(list.id);
 
     return {
       ...list,
-      id: list.id != null ? String(list.id) : "",
+      id: listId,
       name: String(list.name || "").trim(),
       description: String(list.description || "").trim(),
       visibility: ["private", "public", "collab"].includes(safeVisibility)
@@ -451,17 +452,18 @@ const ApiClient = (() => {
       const safeItems = items
         .map((entry) => {
           const rawId = typeof entry === "string" ? entry : entry?.id;
-          if (!rawId) return null;
+          const itemId = _normalizeDataId(rawId);
+          if (!itemId) return null;
 
           return {
-            id: String(rawId),
+            id: itemId,
             addedAt: entry?.addedAt || nowIso
           };
         })
         .filter(Boolean);
 
       return {
-        id: list?.id ? String(list.id) : `local_list_${Date.now()}_${index}`,
+        id: _normalizeDataId(list?.id) || `local_list_${Date.now()}_${index}`,
         name: _normalizeContentText(list?.name) || "Sin nombre",
         description: String(list?.description || "").trim(),
         visibility: ["private", "public", "collab"].includes(safeVisibility)
