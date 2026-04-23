@@ -1804,7 +1804,7 @@ const LibraryUI = (() => {
     document.addEventListener("click", (e) => {
       const btn = e.target.closest('[data-action="add-to-list"]');
       if (!btn) return;
-      const id = btn.dataset.id;
+      const id = _normalizeLibraryItemId(btn.dataset.id);
       if (!id) return;
       __addToListModalLastFocus = btn;
       openAddToListModal(id);
@@ -2150,7 +2150,7 @@ const LibraryUI = (() => {
       const btn = e.target.closest('.lib-primary-btn[data-action="primary"]');
       if (!btn) return;
 
-      const id = btn.dataset.id;
+      const id = _normalizeLibraryItemId(btn.dataset.id);
       if (!id) return;
 
       captureLibraryAnchor(id);
@@ -2200,9 +2200,11 @@ const LibraryUI = (() => {
     document.addEventListener("click", (e) => {
       const btn = e.target.closest('[data-action="edit-progress"]');
       if (!btn) return;
+      const itemId = _normalizeLibraryItemId(btn.dataset.id);
+      if (!itemId) return;
 
       __progressModalLastFocus = btn;
-      openProgressModal(btn.dataset.id);
+      openProgressModal(itemId);
     });
 
     // Cerrar/guardar modal
@@ -2320,7 +2322,7 @@ const LibraryUI = (() => {
       const btn = e.target.closest(".lib-complete-btn");
       if (!btn) return;
 
-      const itemId = btn.dataset.id;
+      const itemId = _normalizeLibraryItemId(btn.dataset.id);
       if (!itemId) return;
 
       captureLibraryAnchor(itemId);
