@@ -939,7 +939,7 @@ const ApiClient = (() => {
   // Devuelve las listas donde está un item (para deshabilitar opciones y pintar estado)
   async function getListsContainingItem(itemId) {
     if (itemId == null) return [];
-    const target = String(itemId).trim();
+    const target = _normalizeDataId(itemId);
     if (!target) return [];
 
     const lists = await getLists();
@@ -948,7 +948,7 @@ const ApiClient = (() => {
       const arr = Array.isArray(l.items) ? l.items : [];
       return arr.some((entry) => {
         const id = typeof entry === "string" ? entry : entry?.id;
-        return String(id).trim() === target;
+        return _normalizeDataId(id) === target;
       });
     });
   }
@@ -2463,7 +2463,7 @@ const ApiClient = (() => {
 
       const filtered = arr.filter((entry) => {
         const id = (typeof entry === "string") ? entry : entry?.id;
-        return String(id).trim() !== idStr;
+        return _normalizeDataId(id) !== idStr;
       });
 
       if (filtered.length !== before) {
