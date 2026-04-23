@@ -2690,7 +2690,7 @@ const ApiClient = (() => {
   }
 
   async function dismissExploreItem(eid) {
-    const key = String(eid || "").trim();
+    const key = _normalizeDataId(eid);
     if (!key) return { ok: false };
 
     const state = _safeState();
