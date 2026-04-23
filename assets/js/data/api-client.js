@@ -709,7 +709,7 @@ const ApiClient = (() => {
   }
 
   async function _getItemListRelationshipState(itemId) {
-    const normalizedItemId = String(itemId || "").trim();
+    const normalizedItemId = _normalizeDataId(itemId);
     if (!normalizedItemId) {
       return {
         inAnyList: false,
@@ -1669,7 +1669,7 @@ const ApiClient = (() => {
 
   async function undoActivitiesForItemSince(itemId, sinceIso) {
     if (!itemId || !sinceIso) return { ok: false, reason: "missing_params" };
-    const normalizedItemId = String(itemId || "").trim();
+    const normalizedItemId = _normalizeDataId(itemId);
     if (!normalizedItemId) return { ok: false, reason: "missing_params" };
 
     // En HTTP aún no existe Activities real en backend.
@@ -2799,7 +2799,7 @@ const ApiClient = (() => {
       safeProgress
     );
     const nowIso = new Date().toISOString();
-    const createdId = data.id != null ? String(data.id).trim() : String(Date.now());
+    const createdId = data.id != null ? _normalizeDataId(data.id) : String(Date.now());
 
     if (!createdId) {
       throw _makeApiError("missing_id", 400);
