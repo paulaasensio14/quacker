@@ -441,7 +441,7 @@ async function openAddToListModal(itemId) {
       cb.checked = false;
 
       // Si acabamos de crear una lista desde este flujo, la preseleccionamos
-      if (window.__quackerPreselectListId && String(window.__quackerPreselectListId || "").trim() === id && !isAlready) {
+      if (window.__quackerPreselectListId && _normalizeLibraryListId(window.__quackerPreselectListId) === id && !isAlready) {
         cb.checked = true;
       }
 
@@ -2382,7 +2382,7 @@ const LibraryUI = (() => {
     document.addEventListener("quacker:lists-created", (e) => {
       const detail = e?.detail || {};
       const itemId = _normalizeLibraryItemId(detail.returnToAddToListItemId);
-      const listId = detail.listId != null ? String(detail.listId).trim() : null;
+      const listId = _normalizeLibraryListId(detail.listId) || null;
 
       if (!itemId) return;
 
