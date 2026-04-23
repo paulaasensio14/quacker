@@ -189,8 +189,11 @@ const ListsModule = (() => {
   }
 
   function _findListCardById(id) {
+    const normalizedId = _normalizeId(id);
+    if (!normalizedId) return null;
+
     // CSS.escape no existe en algunos navegadores viejos, pero aquí casi seguro que sí.
-    const safe = (window.CSS && CSS.escape) ? CSS.escape(String(id)) : String(id);
+    const safe = (window.CSS && CSS.escape) ? CSS.escape(normalizedId) : normalizedId;
     return document.querySelector(`.list-card[data-id="${safe}"]`);
   }
 
@@ -1006,8 +1009,9 @@ const ListsModule = (() => {
         if (delBtn) {
           e.stopPropagation();
 
-          const id = delBtn.dataset.id;
+          const id = _normalizeId(delBtn.dataset.id);
           const name = delBtn.dataset.name || "esta lista";
+          if (!id) return;
 
           pendingDeleteListId = id;
 
@@ -1111,7 +1115,8 @@ const ListsModule = (() => {
 
     // Confirmar eliminar (CON toast y deshacer)
     document.getElementById("confirmDeleteList")?.addEventListener("click", async () => {
-      if (!pendingDeleteListId) return;
+      const targetListId = _normalizeId(pendingDeleteListId);
+      if (!targetListId) return;
 
       const btn = document.getElementById("confirmDeleteList");
       const cancelBtn = document.getElementById("cancelDeleteList");
@@ -1134,23 +1139,23 @@ const ListsModule = (() => {
 
       // Snapshot para poder deshacer.
       lastDeletedListSnapshot = {
-        deletedId: String(pendingDeleteListId),
+        deletedId: targetListId,
         deletedName: (() => {
-          const found = allLists.find(l => String(l.id) === String(pendingDeleteListId));
+          const found = allLists.find(l => _normalizeId(l.id) === targetListId);
           return found?.name ? String(found.name) : "Lista";
         })(),
         lists: JSON.parse(JSON.stringify(allLists || []))
       };
 
       try {
-        const card = _findListCardById(pendingDeleteListId);
+        const card = _findListCardById(targetListId);
         if (card) {
           card.classList.add("is-removing");
           await _sleep(200);
         }
 
         assertListMutationOk(
-          await ApiClient.deleteList(pendingDeleteListId),
+          await ApiClient.deleteList(targetListId),
           "delete_failed"
         );
 
