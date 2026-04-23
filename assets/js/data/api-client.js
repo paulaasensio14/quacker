@@ -3334,11 +3334,12 @@ const ApiClient = (() => {
 
     if (!_isHttp()) {
       activities.forEach((act) => {
-        if (!act.targetId || !act.createdAt) return;
-        const prev = lastActivityMap.get(act.targetId);
+        const targetId = _normalizeDataId(act?.targetId);
+        if (!targetId || !act.createdAt) return;
+        const prev = lastActivityMap.get(targetId);
         const curr = new Date(act.createdAt);
         if (!prev || curr > prev) {
-          lastActivityMap.set(act.targetId, curr);
+          lastActivityMap.set(targetId, curr);
         }
       });
     }
@@ -3369,6 +3370,9 @@ const ApiClient = (() => {
         return pct > 0 && pct < 100 && item.status !== "completed";
       })
       .map((item) => {
+        const itemId = _normalizeDataId(item?.id);
+        if (!itemId) return null;
+
         const fallbackIso =
           item.lastActivityAt ||
           item.updatedAt ||
@@ -3377,13 +3381,13 @@ const ApiClient = (() => {
 
         const lastDate = _isHttp()
           ? new Date(fallbackIso)
-          : (lastActivityMap.get(item.id) || new Date(fallbackIso));
+          : (lastActivityMap.get(itemId) || new Date(fallbackIso));
 
         const diffMs = now - lastDate;
         const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
         return {
-          id: item.id,
+          id: itemId,
           type: item.type,
           title: item.title,
           daysSinceLast: days,
@@ -3392,6 +3396,7 @@ const ApiClient = (() => {
           cover: item.cover || ""
         };
       })
+      .filter(Boolean)
       .filter((row) => row.daysSinceLast >= minDaysForType(row.type));
 
     candidates.sort((a, b) => b.daysSinceLast - a.daysSinceLast);
@@ -3410,18 +3415,26 @@ const ApiClient = (() => {
     if (!library.length) return [];
 
     // Por ahora: coger los 3 primeros como “sugerencias”
-    return library.slice(0, 3).map((item) => ({
-      id: item.id,
-      title: item.title,
-      note:
-        item.status === "watching"
-          ? "Serie en progreso."
-          : item.status === "reading"
-          ? "Lectura en curso."
-          : item.status === "playing"
-          ? "Partida abierta."
-          : "En tu biblioteca."
-    }));
+    return library
+      .slice(0, 3)
+      .map((item) => {
+        const itemId = _normalizeDataId(item?.id);
+        if (!itemId) return null;
+
+        return {
+          id: itemId,
+          title: item.title,
+          note:
+            item.status === "watching"
+              ? "Serie en progreso."
+              : item.status === "reading"
+              ? "Lectura en curso."
+              : item.status === "playing"
+              ? "Partida abierta."
+              : "En tu biblioteca."
+        };
+      })
+      .filter(Boolean);
   }
 
   // === NOTIFICACIONES (dashboard) ===
@@ -3523,6 +3536,7 @@ const ApiClient = (() => {
     }
 
     return library.map((item) => {
+      const itemId = _normalizeDataId(item?.id);
       const pct = Number(item.progress ?? 0);
 
       const status =
@@ -3532,8 +3546,10 @@ const ApiClient = (() => {
             ? "not_started"
             : "in_progress";
 
+      if (!itemId) return null;
+
       return {
-        id: item.id,
+        id: itemId,
         type: item.type,
         title: item.title,
         status,
@@ -3543,7 +3559,7 @@ const ApiClient = (() => {
         platform: item.meta?.platform || null,
         cover: item.cover || null
       };
-    });
+    }).filter(Boolean);
   }
 
   async function applyQuickProgress(itemId) {
