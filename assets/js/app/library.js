@@ -67,6 +67,10 @@ function _normalizeLibraryItemId(value) {
   return String(value ?? "").trim();
 }
 
+function _normalizeLibraryListId(value) {
+  return String(value ?? "").trim();
+}
+
 function _getLibrarySafeItemId(itemId) {
   const normalizedItemId = _normalizeLibraryItemId(itemId);
   if (!normalizedItemId) return "";
@@ -325,7 +329,7 @@ async function openAddToListModal(itemId) {
     console.error(e);
     alreadyIn = [];
   }
-  const alreadyIds = new Set((alreadyIn || []).map((l) => String(l.id || "").trim()));
+  const alreadyIds = new Set((alreadyIn || []).map((l) => _normalizeLibraryListId(l?.id)));
 
   optionsEl.innerHTML = "";
   optionsEl.onchange = null;
@@ -423,7 +427,7 @@ async function openAddToListModal(itemId) {
     });
   } else {
     lists.forEach((l) => {
-      const id = String(l.id || "").trim();
+      const id = _normalizeLibraryListId(l?.id);
       const name = l.name || t("lists_untitled");
       const isAlready = alreadyIds.has(id);
 
@@ -1422,7 +1426,7 @@ const LibraryUI = (() => {
           const arr = Array.isArray(l.items) ? l.items : [];
           arr.forEach((entry) => {
             const id = typeof entry === "string" ? entry : entry?.id;
-            const normalizedId = String(id || "").trim();
+            const normalizedId = _normalizeLibraryItemId(id);
             if (normalizedId) itemsInAnyList.add(normalizedId);
           });
         });
@@ -2275,7 +2279,7 @@ const LibraryUI = (() => {
               const restoredItemId = _normalizeLibraryItemId(restored.id);
 
               for (const list of listsToRestore || []) {
-                const listId = String(list?.id || "").trim();
+                const listId = _normalizeLibraryListId(list?.id);
                 if (!listId || !restoredItemId) continue;
                 assertLibraryMutationOk(
                   await ApiClient.addLibraryItemToList(listId, restoredItemId),
