@@ -305,6 +305,19 @@ const ApiClient = (() => {
     return sanitizedMeta;
   }
 
+  function _normalizeExploreDismissedIds(items) {
+    const seen = new Set();
+
+    return (Array.isArray(items) ? items : [])
+      .map((entry) => String(entry || "").trim())
+      .filter((entry) => {
+        if (!entry || seen.has(entry)) return false;
+        seen.add(entry);
+        return true;
+      })
+      .slice(0, 500);
+  }
+
   function _invalidateLibraryCache() {
     _libraryCache = {
       transport: "",
@@ -2550,9 +2563,9 @@ const ApiClient = (() => {
   function _ensureExploreUserState(state) {
     state.user = state.user || {};
     state.user.explore = state.user.explore || {};
-    state.user.explore.dismissed = Array.isArray(state.user.explore.dismissed)
-      ? state.user.explore.dismissed
-      : [];
+    state.user.explore.dismissed = _normalizeExploreDismissedIds(
+      state.user.explore.dismissed
+    );
     return state.user.explore;
   }
 
@@ -2637,23 +2650,17 @@ const ApiClient = (() => {
   async function getExploreDismissed() {
     const state = _safeState();
     const explore = _ensureExploreUserState(state);
-    return explore.dismissed;
+    return [...explore.dismissed];
   }
 
   async function dismissExploreItem(eid) {
-    if (!eid) return { ok: false };
+    const key = String(eid || "").trim();
+    if (!key) return { ok: false };
 
     const state = _safeState();
     const explore = _ensureExploreUserState(state);
 
-    const key = String(eid);
-    if (!explore.dismissed.includes(key)) {
-      explore.dismissed.unshift(key);
-      // límite razonable para no crecer infinito
-      if (explore.dismissed.length > 500) {
-        explore.dismissed = explore.dismissed.slice(0, 500);
-      }
-    }
+    explore.dismissed = _normalizeExploreDismissedIds([key, ...explore.dismissed]);
 
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
