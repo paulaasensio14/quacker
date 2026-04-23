@@ -1672,8 +1672,9 @@ async function __renderActivityModal({ preserveScroll = false, soft = false } = 
     activityList.innerHTML = items
       .map((a) => {
         const meta = [a.label, a.itemMeta].filter(Boolean).join(" · ");
+        const itemId = _normalizeHomeItemId(a.targetId);
         return `
-          <div class="activity-row" role="button" tabindex="0" data-item-id="${escapeHtml(a.targetId || "")}">
+          <div class="activity-row" role="button" tabindex="0" data-item-id="${escapeHtml(itemId)}">
             <div class="activity-ico">${__activityIconSvg(a.type)}</div>
             <div class="activity-main">
               <p class="activity-title">${escapeHtml(a.itemTitle || window.I18n.t("lists_type_content"))}</p>
@@ -1904,7 +1905,7 @@ window.HomeUI = {
         const row = e.target.closest(".activity-row");
         if (!row) return;
 
-        const itemId = row.dataset.itemId;
+        const itemId = _normalizeHomeItemId(row.dataset.itemId);
         if (!itemId) return;
 
         const titleEl = row.querySelector(".activity-title");
