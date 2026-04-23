@@ -849,8 +849,11 @@ const ListsModule = (() => {
         );
 
         if (__returnToAddToListItemId) {
+          const createdListId = _normalizeId(created.id);
+          const returnItemId = _normalizeId(__returnToAddToListItemId);
+
           document.dispatchEvent(new CustomEvent("quacker:lists-created", {
-            detail: { listId: created.id, returnToAddToListItemId: __returnToAddToListItemId }
+            detail: { listId: createdListId, returnToAddToListItemId: returnItemId }
           }));
           __returnToAddToListItemId = null;
         }
@@ -956,8 +959,8 @@ const ListsModule = (() => {
 
     // Volver desde Explore a un detalle de lista concreto
     document.addEventListener("quacker:lists-open-detail", async (e) => {
-      const listId = e?.detail?.listId ? String(e.detail.listId) : null;
-      const highlightItemId = e?.detail?.highlightItemId ? String(e.detail.highlightItemId) : null;
+      const listId = _normalizeId(e?.detail?.listId);
+      const highlightItemId = _normalizeId(e?.detail?.highlightItemId);
       if (!listId) return;
 
       // Aseguramos vista + datos antes de abrir detalle
@@ -1075,13 +1078,15 @@ const ListsModule = (() => {
 
     // Desde el detalle: ir a Explorar en modo "añadir a esta lista"
     document.getElementById("btnAddContentToList")?.addEventListener("click", () => {
-      if (!activeListId) return;
-      const current = (allLists || []).find(l => String(l.id) === String(activeListId));
+      const listId = _normalizeId(activeListId);
+      if (!listId) return;
+
+      const current = (allLists || []).find(l => _normalizeId(l.id) === listId);
       const listName = current?.name ? String(current.name) : null;
 
       // Emitimos el modo para Explore (incluimos nombre para UI inmediata)
       document.dispatchEvent(new CustomEvent("quacker:lists-add-mode", {
-        detail: { listId: String(activeListId), listName }
+        detail: { listId, listName }
       }));
 
       // Navegamos a Explorar
@@ -1236,7 +1241,7 @@ const ListsModule = (() => {
 
     // Abrir "Nueva lista" desde otros módulos (ej: modal "Añadir a listas" de Biblioteca)
     document.addEventListener("quacker:lists-create-request", (e) => {
-      __returnToAddToListItemId = e?.detail?.returnToAddToListItemId ? String(e.detail.returnToAddToListItemId) : null;
+      __returnToAddToListItemId = _normalizeId(e?.detail?.returnToAddToListItemId) || null;
 
       try {
         openListModal(null); // modo crear
