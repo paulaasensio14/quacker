@@ -473,7 +473,9 @@ const ListsModule = (() => {
       return;
     }
 
-    const ids = Array.isArray(list.items) ? list.items.map(x => String(typeof x === "string" ? x : x?.id)).filter(Boolean) : [];
+    const ids = Array.isArray(list.items)
+      ? list.items.map((x) => _getListItemEntryId(x)).filter(Boolean)
+      : [];
 
     if (!ids.length){
       grid.innerHTML = "";
@@ -495,7 +497,7 @@ const ListsModule = (() => {
       library = [];
     }
 
-    const byId = new Map((library || []).map(it => [String(it.id), it]));
+    const byId = new Map((library || []).map((it) => [_normalizeId(it.id), it]));
     const items = ids.map(id => byId.get(id)).filter(Boolean);
 
     // Aplicar filtros (búsqueda / tipo / estado)
