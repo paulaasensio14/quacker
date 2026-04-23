@@ -4,6 +4,11 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const $all = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
+function _normalizeAppEventId(value) {
+  const normalizedId = String(value ?? "").trim();
+  return normalizedId || null;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   await UITheme.init();
   window.I18n?.init?.();
@@ -92,8 +97,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const detail = e?.detail || {};
     const kind = String(detail.kind || "").trim();
     const action = String(detail.action || "").trim();
-    const itemId = detail.itemId != null ? String(detail.itemId).trim() : null;
-    const listId = detail.listId != null ? String(detail.listId).trim() : null;
+    const itemId = _normalizeAppEventId(detail.itemId);
+    const listId = _normalizeAppEventId(detail.listId);
 
     // 1) Home + notificaciones solo cuando cambia contenido real (no para ajustes de usuario)
     const affectsHome =
