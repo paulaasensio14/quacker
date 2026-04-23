@@ -26,6 +26,16 @@ function assertHomeMutationOk(result, fallbackReason = "mutation_failed") {
   throw new Error(result?.reason || result?.error || fallbackReason);
 }
 
+function _normalizeHomeItemId(value) {
+  return String(value ?? "").trim();
+}
+
+function _getHomeSafeItemId(value) {
+  const normalizedItemId = _normalizeHomeItemId(value);
+  if (!normalizedItemId) return "";
+  return (window.CSS && CSS.escape) ? CSS.escape(normalizedItemId) : normalizedItemId;
+}
+
 // Meta visible (serie/libro/otros) para cards del Home
 function formatMetaLine(item) {
   const type = item?.type || "";
@@ -351,14 +361,15 @@ async function renderHomeDashboard() {
         card.dataset.itemId = "";
 
         if (hasLast) {
+          const lastActivityItemId = _normalizeHomeItemId(lastActivity.id);
           card.classList.add("is-clickable");
           card.setAttribute("role", "button");
           card.setAttribute("tabindex", "0");
           card.setAttribute("aria-label", window.I18n.t("home_last_activity_open_library"));
-          card.dataset.itemId = String(lastActivity.id);
+          card.dataset.itemId = lastActivityItemId;
 
           const goToLibrary = () => {
-            const itemId = card.dataset.itemId;
+            const itemId = _normalizeHomeItemId(card.dataset.itemId);
             if (!itemId) return;
 
             // 1) Cambiar vista
@@ -382,7 +393,10 @@ async function renderHomeDashboard() {
               }
 
               // 3) Scroll + highlight por id real (si la card existe)
-              const target = document.querySelector(`.lib-card[data-id="${CSS.escape(String(itemId))}"]`);
+              const safeItemId = _getHomeSafeItemId(itemId);
+              const target = safeItemId
+                ? document.querySelector(`.lib-card[data-id="${safeItemId}"]`)
+                : null;
               if (target) {
                 target.scrollIntoView({ behavior: "smooth", block: "center" });
                 target.classList.add("is-highlight");
@@ -480,7 +494,7 @@ async function renderHomeDashboard() {
     if (markBtn) {
       // Guardamos el id para usarlo en el listener global
       if (lastActivity && lastActivity.id) {
-        markBtn.dataset.itemId = lastActivity.id;
+        markBtn.dataset.itemId = _normalizeHomeItemId(lastActivity.id);
       } else {
         markBtn.dataset.itemId = "";
       }
@@ -974,9 +988,13 @@ async function renderHomeDashboard() {
   }
 
   function playCompleteFx(itemId) {
+    const normalizedItemId = _normalizeHomeItemId(itemId);
+    if (!normalizedItemId) return;
+    const safeItemId = _getHomeSafeItemId(normalizedItemId);
+
     // 1) Botón de última actividad (si coincide)
     const lastBtn = document.querySelector("#btnMarkLastActivity");
-    if (lastBtn && String(lastBtn.dataset.itemId) === String(itemId)) {
+    if (lastBtn && _normalizeHomeItemId(lastBtn.dataset.itemId) === normalizedItemId) {
       lastBtn.classList.remove("btn-complete-fx");
       void lastBtn.offsetWidth;
       lastBtn.classList.add("btn-complete-fx");
@@ -990,7 +1008,9 @@ async function renderHomeDashboard() {
     }
 
     // 2) Card del grid “Continúa donde lo dejaste”
-    const cwCard = document.querySelector(`.cw-card[data-id="${itemId}"]`);
+    const cwCard = safeItemId
+      ? document.querySelector(`.cw-card[data-id="${safeItemId}"]`)
+      : null;
     if (cwCard) {
       cwCard.classList.remove("complete-fx");
       void cwCard.offsetWidth;
@@ -998,7 +1018,9 @@ async function renderHomeDashboard() {
     }
 
     // 3) Botón “Progreso hecho” del grid
-    const cwBtn = document.querySelector(`.cw-tick-btn[data-id="${itemId}"]`);
+    const cwBtn = safeItemId
+      ? document.querySelector(`.cw-tick-btn[data-id="${safeItemId}"]`)
+      : null;
     if (cwBtn) {
       cwBtn.classList.remove("btn-complete-fx");
       void cwBtn.offsetWidth;
@@ -1770,7 +1792,7 @@ window.HomeUI = {
         if (markLastActivityBtn.disabled) return;
         if (markLastActivityBtn.dataset.busy === "1") return;
 
-        const itemId = markLastActivityBtn.dataset.itemId;
+        const itemId = _normalizeHomeItemId(markLastActivityBtn.dataset.itemId);
         if (!itemId) return;
 
         // Micro-FX solo si realmente vamos a ejecutar la acción
@@ -1783,7 +1805,8 @@ window.HomeUI = {
     }
 
     function __jumpToLibraryFromActivity({ itemId, searchText }) {
-      if (!itemId) return;
+      const normalizedItemId = _normalizeHomeItemId(itemId);
+      if (!normalizedItemId) return;
 
       // 1) Ir a Biblioteca
       if (window.Router?.showView) window.Router.showView("library");
@@ -1808,7 +1831,7 @@ window.HomeUI = {
         }
 
         // 3) Scroll + highlight del card (con reintentos suaves por si aún no se pintó)
-        const safeId = (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+        const safeId = _getHomeSafeItemId(normalizedItemId);
 
         let tries = 0;
         const maxTries = 10;
