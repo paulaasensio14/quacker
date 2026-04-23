@@ -812,17 +812,22 @@ const ApiClient = (() => {
     const state = _safeState();
     const library = Array.isArray(state.library) ? state.library : [];
 
-    let items = library.map((item) => ({
-      eid: item?.id ? `library:${String(item.id)}` : String(Date.now()),
-      source: "library",
-      externalId: item?.id ? String(item.id) : "",
-      type: String(item?.type || "").trim(),
-      title: String(item?.title || "").trim(),
-      year: item?.meta?.year || null,
-      cover: String(item?.cover || "").trim(),
-      description: "",
-      meta: item?.meta || {}
-    }));
+    let items = library.map((item, index) => {
+      const libraryItemId = _normalizeDataId(item?.id);
+      const fallbackEid = `library:${Date.now()}_${index}`;
+
+      return {
+        eid: libraryItemId ? `library:${libraryItemId}` : fallbackEid,
+        source: "library",
+        externalId: libraryItemId,
+        type: String(item?.type || "").trim(),
+        title: String(item?.title || "").trim(),
+        year: item?.meta?.year || null,
+        cover: String(item?.cover || "").trim(),
+        description: "",
+        meta: item?.meta || {}
+      };
+    });
 
     if (type) {
       items = items.filter((item) => item.type === type);
