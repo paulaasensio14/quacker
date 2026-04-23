@@ -487,6 +487,8 @@ const FakeBackend = (() => {
 
   function removeActivitiesForItemSince(itemId, sinceIso, types = ["resume", "progress", "completed"]) {
     if (!itemId || !sinceIso) return { ok: false, removed: 0, reason: "missing_params" };
+    const normalizedItemId = normalizeMockId(itemId);
+    if (!normalizedItemId) return { ok: false, removed: 0, reason: "missing_params" };
 
     const since = new Date(sinceIso);
     if (Number.isNaN(+since)) return { ok: false, removed: 0, reason: "invalid_since" };
@@ -502,7 +504,7 @@ const FakeBackend = (() => {
       if (!act) return false;
 
       // Solo del item
-      if (String(act.targetId) !== String(itemId)) return true;
+      if (normalizeMockId(act.targetId) !== normalizedItemId) return true;
 
       // Solo de los tipos indicados
       if (!typeSet.has(String(act.type || ""))) return true;
