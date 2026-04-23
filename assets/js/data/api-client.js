@@ -1699,7 +1699,7 @@ const ApiClient = (() => {
 
   async function resumeLibraryItem(itemId) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
-    const targetId = String(itemId).trim();
+    const targetId = _normalizeDataId(itemId);
     if (!targetId) return { ok: false, reason: "missing_id" };
 
     // =========================
@@ -1859,14 +1859,14 @@ const ApiClient = (() => {
     state.library = state.library || [];
     state.activities = state.activities || [];
 
-    const item = state.library.find((i) => String(i.id).trim() === targetId);
+    const item = state.library.find((i) => _normalizeDataId(i?.id) === targetId);
     if (!item) return { ok: false, reason: "not_found" };
 
     const now = new Date();
     let lastDate = null;
 
     (state.activities || []).forEach((act) => {
-      if (String(act.targetId).trim() !== targetId) return;
+      if (_normalizeDataId(act?.targetId) !== targetId) return;
       if (!act.createdAt) return;
       const d = new Date(act.createdAt);
       if (!lastDate || d > lastDate) lastDate = d;
@@ -1997,7 +1997,7 @@ const ApiClient = (() => {
   // Completar contenido (desde Biblioteca / Home)
   async function completeLibraryItem(itemId) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
-    const targetId = String(itemId).trim();
+    const targetId = _normalizeDataId(itemId);
     if (!targetId) return { ok: false, reason: "missing_id" };
 
     // =========================
@@ -2030,7 +2030,7 @@ const ApiClient = (() => {
     state.library = state.library || [];
     state.activities = state.activities || [];
 
-    const item = state.library.find(i => String(i.id).trim() === targetId);
+    const item = state.library.find((i) => _normalizeDataId(i?.id) === targetId);
     if (!item) return { ok: false, reason: "not_found" };
 
     // Si ya estaba completado, no hacemos nada
@@ -2073,7 +2073,7 @@ const ApiClient = (() => {
   async function progressLibraryItem(itemId, delta = 5) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
 
-    const targetId = String(itemId).trim();
+    const targetId = _normalizeDataId(itemId);
     if (!targetId) return { ok: false, reason: "missing_id" };
     const current = await getLibraryItemById(targetId);
     if (!current) return { ok: false, reason: "not_found" };
@@ -3510,7 +3510,7 @@ const ApiClient = (() => {
       return { ok: false, reason: "missing_id" };
     }
 
-    const targetId = String(itemId).trim();
+    const targetId = _normalizeDataId(itemId);
     if (!targetId) {
       return { ok: false, reason: "missing_id" };
     }
