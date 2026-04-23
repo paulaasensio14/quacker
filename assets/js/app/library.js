@@ -289,7 +289,7 @@ function _showAddToListError(msg = "") {
 }
 
 async function openAddToListModal(itemId) {
-  const normalizedItemId = String(itemId || "").trim();
+  const normalizedItemId = _normalizeLibraryItemId(itemId);
   const modal = document.getElementById("addToListModal");
   if (modal) {
     modal.dataset.itemId = normalizedItemId;
@@ -525,7 +525,7 @@ function assertLibraryItemWithId(result, fallbackReason = "missing_item_id") {
   const item = mutation?.item && typeof mutation.item === "object"
     ? mutation.item
     : mutation;
-  const itemId = item?.id != null ? String(item.id).trim() : "";
+  const itemId = _normalizeLibraryItemId(item?.id);
 
   if (!itemId) {
     throw createLibraryMutationError({ ok: false, reason: fallbackReason }, fallbackReason);
@@ -661,7 +661,7 @@ const LibraryUI = (() => {
 
   function normalizeLibraryItemForView(item) {
     if (!item || typeof item !== "object" || item.id == null) return null;
-    const normalizedItemId = String(item.id).trim();
+    const normalizedItemId = _normalizeLibraryItemId(item.id);
     if (!normalizedItemId) return null;
 
     const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
@@ -1272,7 +1272,7 @@ const LibraryUI = (() => {
       const statusLabel = statusToLabel(item);
       const pText = progressText(item);
       const btnLabel = primaryButtonLabel(item);
-      const itemId = String(item.id || "").trim();
+      const itemId = _normalizeLibraryItemId(item.id);
       const safeItemId = escapeHtml(itemId);
       const safeTitle = escapeHtml(item.title || t("common_untitled"));
       const safeTypeName = escapeHtml(typeName);
