@@ -1798,10 +1798,10 @@ const LibraryUI = (() => {
     // Confirmar añadir a lista
     document.getElementById("confirmAddToListModal")?.addEventListener("click", async () => {
       const modal = document.getElementById("addToListModal");
-      const itemId = modal?.dataset.itemId;
+      const itemId = String(modal?.dataset.itemId || "").trim();
       const optionsEl = document.getElementById("atl_listOptions");
       const selected = Array.from(optionsEl?.querySelectorAll('input[type="checkbox"]:checked') || [])
-        .map((el) => el.value)
+        .map((el) => String(el.value || "").trim())
         .filter(Boolean);
 
       if (!itemId) return;
@@ -1827,7 +1827,7 @@ const LibraryUI = (() => {
       if (cancelBtn) cancelBtn.disabled = true;
       if (closeBtn) closeBtn.disabled = true;
 
-      const wasInAnyList = itemsInAnyList.has(String(itemId));
+      const wasInAnyList = itemsInAnyList.has(itemId);
 
       // Snapshot de listas para Undo (antes de mutar)
       let listsSnapshot = null;
@@ -1868,9 +1868,9 @@ const LibraryUI = (() => {
           }
 
           if (wasInAnyList) {
-            itemsInAnyList.add(String(itemId));
+            itemsInAnyList.add(itemId);
           } else {
-            itemsInAnyList.delete(String(itemId));
+            itemsInAnyList.delete(itemId);
           }
           setListButtonState(itemId, wasInAnyList);
 
@@ -1880,7 +1880,7 @@ const LibraryUI = (() => {
 
         // Mensaje de feedback (sin emojis)
         if (addedCount === 0 && alreadyCount > 0) {
-          itemsInAnyList.add(String(itemId));
+          itemsInAnyList.add(itemId);
           setListButtonState(itemId, true);
 
           window.toast?.({
@@ -1896,7 +1896,7 @@ const LibraryUI = (() => {
         const nextIsInAnyList = wasInAnyList || addedCount > 0;
 
         if (nextIsInAnyList) {
-          itemsInAnyList.add(String(itemId));
+          itemsInAnyList.add(itemId);
           setListButtonState(itemId, true, { pulse: addedCount > 0 });
         }
 
@@ -1918,7 +1918,7 @@ const LibraryUI = (() => {
               );
 
               if (!wasInAnyList) {
-                itemsInAnyList.delete(String(itemId));
+                itemsInAnyList.delete(itemId);
                 setListButtonState(itemId, false, { pulse: true });
               }
 
