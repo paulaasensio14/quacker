@@ -486,7 +486,9 @@
 
       modal_delete_list_title: "Eliminar lista",
       modal_delete_list_text: "¿Seguro que quieres eliminar esta lista?",
+      modal_delete_list_text_named: "¿Seguro que quieres eliminar \"{name}\"?",
       modal_delete_list_note: "Podrás deshacerlo desde el toast.",
+      lists_delete_loading: "Eliminando…",
 
       common_cancel: "Cancelar",
       common_untitled: "Sin título",
@@ -1065,7 +1067,9 @@
 
       modal_delete_list_title: "Delete list",
       modal_delete_list_text: "Are you sure you want to delete this list?",
+      modal_delete_list_text_named: "Are you sure you want to delete \"{name}\"?",
       modal_delete_list_note: "You’ll be able to undo it from the toast.",
+      lists_delete_loading: "Deleting…",
 
       common_cancel: "Cancel",
       common_untitled: "Untitled",

@@ -1010,14 +1010,16 @@ const ListsModule = (() => {
           e.stopPropagation();
 
           const id = _normalizeId(delBtn.dataset.id);
-          const name = delBtn.dataset.name || "esta lista";
+          const name = String(delBtn.dataset.name || "").trim();
           if (!id) return;
 
           pendingDeleteListId = id;
 
           const text = document.getElementById("confirmDeleteListText");
           if (text) {
-            text.textContent = `¿Seguro que quieres eliminar "${name}"?`;
+            text.textContent = name
+              ? t("modal_delete_list_text_named").replace("{name}", name)
+              : t("modal_delete_list_text");
           }
 
           openConfirmDeleteListModal();
@@ -1122,7 +1124,7 @@ const ListsModule = (() => {
       const cancelBtn = document.getElementById("cancelDeleteList");
       const closeBtn = document.getElementById("closeConfirmDeleteList");
 
-      const prevHtml = btn?.innerHTML || "Eliminar";
+      const prevHtml = btn?.innerHTML || t("common_delete");
 
       if (btn) {
         if (btn.dataset.busy === "1") return; // evitar doble click
@@ -1130,7 +1132,7 @@ const ListsModule = (() => {
         btn.dataset.busy = "1";
         btn.innerHTML = `
           <span class="btn-spinner" aria-hidden="true"></span>
-          <span>Eliminando…</span>
+          <span>${t("lists_delete_loading")}</span>
         `;
       }
 
@@ -1142,7 +1144,7 @@ const ListsModule = (() => {
         deletedId: targetListId,
         deletedName: (() => {
           const found = allLists.find(l => _normalizeId(l.id) === targetListId);
-          return found?.name ? String(found.name) : "Lista";
+          return found?.name ? String(found.name) : t("lists_detail_title");
         })(),
         lists: JSON.parse(JSON.stringify(allLists || []))
       };
