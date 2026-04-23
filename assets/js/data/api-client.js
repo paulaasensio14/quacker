@@ -411,10 +411,27 @@ const ApiClient = (() => {
     };
   }
 
+  function _normalizeListItemEntry(entry) {
+    const rawId = typeof entry === "string" ? entry : entry?.id;
+    const itemId = _normalizeDataId(rawId);
+    if (!itemId) return null;
+
+    if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+      return {
+        ...entry,
+        id: itemId
+      };
+    }
+
+    return itemId;
+  }
+
   function _normalizeListRecord(list) {
     if (!list || typeof list !== "object") return null;
 
-    const items = Array.isArray(list.items) ? list.items.slice() : [];
+    const items = (Array.isArray(list.items) ? list.items : [])
+      .map((entry) => _normalizeListItemEntry(entry))
+      .filter(Boolean);
     const safeVisibility = String(list.visibility || "").trim().toLowerCase();
     const listId = _normalizeDataId(list.id);
 
