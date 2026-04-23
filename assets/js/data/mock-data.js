@@ -10,6 +10,25 @@ const FakeBackend = (() => {
 
   const normalizeMockId = (value) => String(value ?? "").trim();
 
+  const normalizeMockActivityEntry = (activity, index = 0) => {
+    if (!activity || typeof activity !== "object") return null;
+
+    const activityId =
+      normalizeMockId(activity.id) ||
+      `${normalizeMockId(activity.type) || "activity"}_${index + 1}`;
+
+    return {
+      ...activity,
+      id: activityId,
+      targetId: normalizeMockId(activity.targetId) || null
+    };
+  };
+
+  const normalizeMockActivities = (activities) =>
+    (Array.isArray(activities) ? activities : [])
+      .map((activity, index) => normalizeMockActivityEntry(activity, index))
+      .filter(Boolean);
+
   const DEFAULT_STATE = {
     user: {
       id: "demo-user",
@@ -417,7 +436,7 @@ const FakeBackend = (() => {
         user: { ...DEFAULT_STATE.user, ...(parsed.user || {}) },
         lists: parsed.lists || DEFAULT_STATE.lists.slice(),
         library: parsed.library || DEFAULT_STATE.library.slice(),
-        activities: parsed.activities || DEFAULT_STATE.activities.slice(),
+        activities: normalizeMockActivities(parsed.activities || DEFAULT_STATE.activities.slice()),
         goals: parsed.goals || DEFAULT_STATE.goals.slice(),
         notifications: parsed.notifications || DEFAULT_STATE.notifications.slice()
       };
