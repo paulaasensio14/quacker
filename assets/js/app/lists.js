@@ -91,7 +91,7 @@ const ListsModule = (() => {
 
   function assertListWithId(result, fallbackReason = "missing_list_id") {
     const list = assertListMutationOk(result, fallbackReason);
-    const listId = list?.id != null ? String(list.id).trim() : "";
+    const listId = _normalizeId(list?.id);
 
     if (!listId) {
       throw createListMutationError({ ok: false, reason: fallbackReason }, fallbackReason);
@@ -104,18 +104,18 @@ const ListsModule = (() => {
   }
 
   function _getListItemEntryId(entry) {
-    return String(typeof entry === "string" ? entry : entry?.id || "");
+    return _normalizeId(typeof entry === "string" ? entry : entry?.id);
   }
 
   function _patchListMembership(listId, itemId, action) {
-    const normalizedListId = String(listId || "").trim();
-    const normalizedItemId = String(itemId || "").trim();
+    const normalizedListId = _normalizeId(listId);
+    const normalizedItemId = _normalizeId(itemId);
     const normalizedAction = String(action || "").trim();
 
     if (!normalizedListId || !normalizedItemId) return false;
     if (normalizedAction !== "list_item_added" && normalizedAction !== "list_item_removed") return false;
 
-    const list = (allLists || []).find((entry) => String(entry?.id) === normalizedListId);
+    const list = (allLists || []).find((entry) => _normalizeId(entry?.id) === normalizedListId);
     if (!list) return false;
 
     if (!Array.isArray(list.items)) {
@@ -151,8 +151,8 @@ const ListsModule = (() => {
     if (detail.kind !== "item_state") return;
 
     const action = String(detail.action || "").trim();
-    const listId = String(detail.listId || "").trim();
-    const itemId = String(detail.itemId || "").trim();
+    const listId = _normalizeId(detail.listId);
+    const itemId = _normalizeId(detail.itemId);
 
     const didChange = _patchListMembership(listId, itemId, action);
     if (!didChange) return;
