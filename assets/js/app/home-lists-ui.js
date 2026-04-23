@@ -949,10 +949,13 @@ async function renderHomeDashboard() {
                   );
                 }
 
-                const pending = document.querySelector(`.cw-card.is-pending[data-id="${CSS.escape(String(itemId))}"]`);
+                const safeItemId = _getHomeSafeItemId(itemId);
+                const pending = safeItemId
+                  ? document.querySelector(`.cw-card.is-pending[data-id="${safeItemId}"]`)
+                  : null;
                 if (pending) pending.remove();
 
-                if (lastResumedItemId === itemId) lastResumedItemId = null;
+                if (_normalizeHomeItemId(lastResumedItemId) === itemId) lastResumedItemId = null;
 
                 window.toast?.({
                   title: window.I18n.t("home_quick_progress_undo_success_title"),
@@ -1130,7 +1133,7 @@ async function renderHomeDashboard() {
             );
 
             try {
-              const safeId = (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+              const safeId = _getHomeSafeItemId(itemId);
               const pending = document.querySelector(`#continueGrid .cw-card.is-pending[data-id="${safeId}"]`);
               if (pending && pending.parentElement) pending.remove();
             } catch (_) {
@@ -1163,7 +1166,7 @@ async function renderHomeDashboard() {
         } : null
       });
 
-      lastResumedItemId = itemId;
+      lastResumedItemId = _normalizeHomeItemId(itemId);
 
     } catch (err) {
 
@@ -1345,6 +1348,8 @@ async function renderHomeDashboard() {
 
     continueGrid.innerHTML = visibleItems
     .map((item) => {
+      const itemId = _normalizeHomeItemId(item.id);
+      if (!itemId) return "";
       const pct = Math.max(0, Math.min(100, item.progressPercent || 0));
       const disabled = pct >= 100 ? "disabled" : "";
       const completedClass = pct >= 100 ? " cw-card--completed" : "";
@@ -1360,7 +1365,7 @@ async function renderHomeDashboard() {
         : `  ${window.I18n.t("home_continue_progress_done")} `;;
 
       return `
-      <article class="cw-card${completedClass}" data-id="${item.id}">
+      <article class="cw-card${completedClass}" data-id="${itemId}">
         <div class="cw-cover" style="background-image:url('${item.cover || ""}');"></div>
         <div class="cw-body">
           <div class="${typeChipClass}">
@@ -1380,7 +1385,7 @@ async function renderHomeDashboard() {
           </div>
           <div class="cw-footer-row">
             <span>${footerLabel}</span>
-            <button class="cw-tick-btn" data-id="${item.id}" ${disabled}>
+            <button class="cw-tick-btn" data-id="${itemId}" ${disabled}>
               ${buttonInnerHtml}
             </button>
           </div>
@@ -1392,7 +1397,10 @@ async function renderHomeDashboard() {
 
     // Micro-feedback: resaltar el item retomado cuando aparece en "Continúa..."
     if (lastResumedItemId) {
-      const el = continueGrid.querySelector(`.cw-card[data-id="${lastResumedItemId}"]`);
+      const safeLastResumedItemId = _getHomeSafeItemId(lastResumedItemId);
+      const el = safeLastResumedItemId
+        ? continueGrid.querySelector(`.cw-card[data-id="${safeLastResumedItemId}"]`)
+        : null;
 
       if (el) {
         el.classList.remove("is-highlight");
@@ -1413,7 +1421,7 @@ async function renderHomeDashboard() {
     // Listeners de los ticks
     continueGrid.querySelectorAll(".cw-tick-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const id = btn.dataset.id;
+        const id = _normalizeHomeItemId(btn.dataset.id);
         if (!id) return;
         if (btn.disabled) return;
         if (btn.dataset.busy === "1") return;
