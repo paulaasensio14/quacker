@@ -772,7 +772,7 @@ const LibraryUI = (() => {
     if (detail.kind !== "item_state") return;
 
     const action = String(detail.action || "").trim();
-    const libraryItemId = String(detail.itemId || "").trim();
+    const libraryItemId = _normalizeLibraryItemId(detail.itemId);
     if (!libraryItemId) return;
 
     let didChange = false;
@@ -1813,7 +1813,7 @@ const LibraryUI = (() => {
     // Confirmar añadir a lista
     document.getElementById("confirmAddToListModal")?.addEventListener("click", async () => {
       const modal = document.getElementById("addToListModal");
-      const itemId = String(modal?.dataset.itemId || "").trim();
+      const itemId = _normalizeLibraryItemId(modal?.dataset.itemId);
       const optionsEl = document.getElementById("atl_listOptions");
       const selected = Array.from(optionsEl?.querySelectorAll('input[type="checkbox"]:checked') || [])
         .map((el) => String(el.value || "").trim())
@@ -2377,7 +2377,7 @@ const LibraryUI = (() => {
     // volvemos a Biblioteca y reabrimos el modal preseleccionando la lista creada.
     document.addEventListener("quacker:lists-created", (e) => {
       const detail = e?.detail || {};
-      const itemId = String(detail.returnToAddToListItemId || "").trim();
+      const itemId = _normalizeLibraryItemId(detail.returnToAddToListItemId);
       const listId = detail.listId != null ? String(detail.listId).trim() : null;
 
       if (!itemId) return;
