@@ -1044,7 +1044,7 @@ const ApiClient = (() => {
         visibility
       });
       const created = _buildListMutationList("create", res);
-      const createdId = created?.id ? String(created.id).trim() : "";
+      const createdId = _normalizeDataId(created?.id);
 
       if (!createdId) {
         throw _makeApiError("invalid_list_response", 502);
@@ -1092,7 +1092,7 @@ const ApiClient = (() => {
     if (!listId) {
       throw _makeApiError("not_found", 404);
     }
-    const targetId = String(listId).trim();
+    const targetId = _normalizeDataId(listId);
     if (!targetId) {
       throw _makeApiError("not_found", 404);
     }
@@ -1118,7 +1118,7 @@ const ApiClient = (() => {
         safePatch
       );
       const updated = _buildListMutationList("update", res);
-      const updatedId = updated?.id ? String(updated.id).trim() : "";
+      const updatedId = _normalizeDataId(updated?.id);
 
       if (!updatedId || updatedId !== targetId) {
         throw _makeApiError("invalid_list_response", 502);
@@ -1137,7 +1137,7 @@ const ApiClient = (() => {
     state.lists = state.lists || [];
     const lists = state.lists;
 
-    const idx = lists.findIndex((l) => String(l.id || "").trim() === targetId);
+    const idx = lists.findIndex((l) => _normalizeDataId(l?.id) === targetId);
     if (idx === -1) {
       throw _makeApiError("not_found", 404);
     }
@@ -1167,7 +1167,7 @@ const ApiClient = (() => {
     if (!listId) {
       throw _makeApiError("not_found", 404);
     }
-    const targetId = String(listId).trim();
+    const targetId = _normalizeDataId(listId);
     if (!targetId) {
       throw _makeApiError("not_found", 404);
     }
@@ -1199,7 +1199,7 @@ const ApiClient = (() => {
     const before = (state.lists || []).length;
 
     state.lists = (state.lists || []).filter(
-      (l) => String(l.id || "").trim() !== targetId
+      (l) => _normalizeDataId(l?.id) !== targetId
     );
 
     const deleted = before - state.lists.length;
