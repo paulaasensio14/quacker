@@ -161,9 +161,10 @@ const ListsModule = (() => {
     if (!isListsActive) return;
 
     const detailOpen = !_getEl("listDetail")?.hidden && !!activeListId;
+    const normalizedActiveListId = _normalizeId(activeListId);
 
-    if (detailOpen && String(activeListId) === listId) {
-      const activeList = allLists.find((entry) => String(entry.id) === String(activeListId));
+    if (detailOpen && normalizedActiveListId === listId) {
+      const activeList = allLists.find((entry) => _normalizeId(entry.id) === normalizedActiveListId);
       if (activeList) {
         _renderActiveListDetailHeader(activeList);
         await renderActiveListItems();
@@ -175,9 +176,10 @@ const ListsModule = (() => {
   }
 
   function flashListItemCard(itemId) {
-    if (!itemId) return;
+    const normalizedItemId = _normalizeId(itemId);
+    if (!normalizedItemId) return;
 
-    const safe = (window.CSS && CSS.escape) ? CSS.escape(String(itemId)) : String(itemId);
+    const safe = (window.CSS && CSS.escape) ? CSS.escape(normalizedItemId) : normalizedItemId;
     const el = document.querySelector(`.list-item-card[data-item-id="${safe}"]`);
     if (!el) return;
 
@@ -234,9 +236,10 @@ const ListsModule = (() => {
       applyFilters();
 
       const detailOpen = !_getEl("listDetail")?.hidden && !!activeListId;
+      const normalizedActiveListId = _normalizeId(activeListId);
 
       if (detailOpen) {
-        const activeList = allLists.find(l => String(l.id) === String(activeListId));
+        const activeList = allLists.find((l) => _normalizeId(l.id) === normalizedActiveListId);
 
         if (!activeList) {
           closeListDetail();
@@ -947,7 +950,8 @@ const ListsModule = (() => {
 
       const detailOpen = !_getEl("listDetail")?.hidden && !!activeListId;
       if (detailOpen) {
-        const activeList = allLists.find((l) => String(l.id) === String(activeListId));
+        const normalizedActiveListId = _normalizeId(activeListId);
+        const activeList = allLists.find((l) => _normalizeId(l.id) === normalizedActiveListId);
         if (activeList) {
           _renderActiveListDetailHeader(activeList);
           await renderActiveListItems();
@@ -971,7 +975,7 @@ const ListsModule = (() => {
       if (highlightItemId) {
         // Esperar un frame para asegurar DOM pintado
         requestAnimationFrame(() => {
-          const safe = (window.CSS && CSS.escape) ? CSS.escape(String(highlightItemId)) : String(highlightItemId);
+          const safe = (window.CSS && CSS.escape) ? CSS.escape(highlightItemId) : highlightItemId;
           const el = document.querySelector(`.list-item-card[data-item-id="${safe}"]`);
           if (el) {
             el.scrollIntoView({ behavior: "smooth", block: "center" });
