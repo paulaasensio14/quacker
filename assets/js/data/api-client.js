@@ -1035,7 +1035,7 @@ const ApiClient = (() => {
     _emitDataChanged({
       kind: "lists",
       action: "create",
-      listId: String(newList.id)
+      listId: String(newList.id || "").trim()
     });
 
     return _buildListMutationList("create", newList);
@@ -1043,6 +1043,10 @@ const ApiClient = (() => {
 
   async function updateList(listId, patch = {}) {
     if (!listId) {
+      throw _makeApiError("not_found", 404);
+    }
+    const targetId = String(listId).trim();
+    if (!targetId) {
       throw _makeApiError("not_found", 404);
     }
 
@@ -1063,12 +1067,11 @@ const ApiClient = (() => {
     if (_isHttp()) {
       const res = await _httpJson(
         "PATCH",
-        `/lists/${encodeURIComponent(listId)}`,
+        `/lists/${encodeURIComponent(targetId)}`,
         safePatch
       );
       const updated = _buildListMutationList("update", res);
       const updatedId = updated?.id ? String(updated.id).trim() : "";
-      const targetId = String(listId).trim();
 
       if (!updatedId || updatedId !== targetId) {
         throw _makeApiError("invalid_list_response", 502);
@@ -1087,7 +1090,7 @@ const ApiClient = (() => {
     state.lists = state.lists || [];
     const lists = state.lists;
 
-    const idx = lists.findIndex(l => String(l.id) === String(listId));
+    const idx = lists.findIndex((l) => String(l.id || "").trim() === targetId);
     if (idx === -1) {
       throw _makeApiError("not_found", 404);
     }
@@ -1107,7 +1110,7 @@ const ApiClient = (() => {
     _emitDataChanged({
       kind: "lists",
       action: "update",
-      listId: String(listId)
+      listId: targetId
     });
 
     return _buildListMutationList("update", next);
@@ -1117,15 +1120,19 @@ const ApiClient = (() => {
     if (!listId) {
       throw _makeApiError("not_found", 404);
     }
+    const targetId = String(listId).trim();
+    if (!targetId) {
+      throw _makeApiError("not_found", 404);
+    }
 
     if (_isHttp()) {
       const res = await _httpJson(
         "DELETE",
-        `/lists/${encodeURIComponent(listId)}`
+        `/lists/${encodeURIComponent(targetId)}`
       );
       const result = _buildListMutationResult("delete", {
         ...res,
-        listId: String(listId)
+        listId: targetId
       });
 
       if (Number(result.deleted || 0) <= 0) {
@@ -1135,7 +1142,7 @@ const ApiClient = (() => {
       _emitDataChanged({
         kind: "lists",
         action: "delete",
-        listId: String(listId)
+        listId: targetId
       });
 
       return result;
@@ -1145,7 +1152,7 @@ const ApiClient = (() => {
     const before = (state.lists || []).length;
 
     state.lists = (state.lists || []).filter(
-      l => String(l.id) !== String(listId)
+      (l) => String(l.id || "").trim() !== targetId
     );
 
     const deleted = before - state.lists.length;
@@ -1160,12 +1167,12 @@ const ApiClient = (() => {
     _emitDataChanged({
       kind: "lists",
       action: "delete",
-      listId: String(listId)
+      listId: targetId
     });
 
     return _buildListMutationResult("delete", {
       ok: true,
-      listId: String(listId),
+      listId: targetId,
       deleted
     });
   }
