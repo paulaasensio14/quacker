@@ -2979,13 +2979,14 @@ const ApiClient = (() => {
       const MEANINGFUL = new Set(["progress", "completed"]);
 
       const last = [...activities]
-        .filter((a) => a && MEANINGFUL.has(a.type) && a.targetId && a.createdAt)
+        .filter((a) => a && MEANINGFUL.has(a.type) && _normalizeDataId(a.targetId) && a.createdAt)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
 
       if (!last) return null;
 
       const library = state.library || [];
-      item = library.find((i) => i.id === last.targetId) || null;
+      const lastTargetId = _normalizeDataId(last.targetId);
+      item = library.find((i) => _normalizeDataId(i?.id) === lastTargetId) || null;
       activityDate = last.createdAt;
 
       if (!item) {
@@ -3033,7 +3034,7 @@ const ApiClient = (() => {
     const progressLabel = `${Math.round(progressPercent)}%`;
 
     return {
-      id: item.id,
+      id: _normalizeDataId(item.id),
       type: item.type,
       title: item.title,
       meta,
@@ -3093,6 +3094,7 @@ const ApiClient = (() => {
 
       const filtered = (library || [])
         .map((item) => {
+          const itemId = _normalizeDataId(item?.id);
           const pct = Math.max(0, Math.min(100, Number(item?.progress ?? 0)));
           const type =
             pct >= 100 || item?.status === "completed"
@@ -3101,13 +3103,13 @@ const ApiClient = (() => {
                 ? "progress"
                 : null;
 
-          if (!type) return null;
+          if (!type || !itemId) return null;
 
           return {
-            id: item?.id ? `library:${String(item.id)}` : "",
+            id: `library:${itemId}`,
             type,
             label: typeLabel(type),
-            targetId: item?.id ? String(item.id) : "",
+            targetId: itemId,
             itemTitle: item?.title || _t("library_item_fallback_title", null, "Contenido"),
             itemMeta: metaForItem(item),
             timeAgo: formatTimeAgo(item?.updatedAt || item?.createdAt || ""),
@@ -3139,13 +3141,14 @@ const ApiClient = (() => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, limit)
       .map((act) => {
-        const item = library.find((i) => i.id === act.targetId) || null;
+        const targetId = _normalizeDataId(act?.targetId);
+        const item = library.find((i) => _normalizeDataId(i?.id) === targetId) || null;
 
         return {
-          id: act.id || `${String(act.type || "activity")}:${String(act.targetId || "")}:${String(act.createdAt || "")}`,
+          id: _normalizeDataId(act.id) || `${String(act.type || "activity")}:${targetId}:${String(act.createdAt || "")}`,
           type: act.type,
           label: typeLabel(act.type),
-          targetId: act.targetId || null,
+          targetId: targetId || null,
           itemTitle: item?.title || _t("library_item_fallback_title", null, "Contenido"),
           itemMeta: metaForItem(item),
           timeAgo: _formatTimeAgo(act.createdAt)
