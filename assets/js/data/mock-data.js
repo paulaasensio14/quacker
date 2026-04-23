@@ -8,6 +8,8 @@ const FakeBackend = (() => {
   const daysAgoISO = (days) =>
   new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
+  const normalizeMockId = (value) => String(value ?? "").trim();
+
   const DEFAULT_STATE = {
     user: {
       id: "demo-user",
@@ -344,9 +346,10 @@ const FakeBackend = (() => {
                 const items = rawItems
                   .map((x) => {
                     const id = (typeof x === "string") ? x : x?.id;
-                    if (!id) return null;
+                    const normalizedId = normalizeMockId(id);
+                    if (!normalizedId) return null;
                     return {
-                      id: String(id),
+                      id: normalizedId,
                       addedAt: (typeof x === "object" && x?.addedAt)
                         ? x.addedAt
                         : new Date().toISOString()
@@ -355,9 +358,10 @@ const FakeBackend = (() => {
                   .filter(Boolean);
 
                 const nowIso = new Date().toISOString();
+                const listId = normalizeMockId(l?.id) || `${Date.now()}_${idx}`;
 
                 return {
-                  id: String(l?.id ?? `${Date.now()}_${idx}`),
+                  id: listId,
                   name: (l?.name ?? "Sin nombre").toString(),
                   description: (l?.description ?? "").toString(),
                   visibility: (l?.visibility === "public" || l?.visibility === "collab")
@@ -448,12 +452,14 @@ const FakeBackend = (() => {
   // ===== actividades =====
   function addActivity(activityData) {
     const state = _load();
+    const activityId = normalizeMockId(activityData.id) || String(Date.now());
+    const targetId = normalizeMockId(activityData.targetId) || null;
     const newActivity = {
-      id: activityData.id || String(Date.now()),
+      id: activityId,
       userId: activityData.userId || state.user.id,
       type: activityData.type || "progress",
       targetType: activityData.targetType || "library_item",
-      targetId: activityData.targetId,
+      targetId,
       minutes: activityData.minutes ?? null,
       payload: activityData.payload || null,
       createdAt: activityData.createdAt || new Date().toISOString()
