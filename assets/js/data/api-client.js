@@ -545,7 +545,7 @@ const ApiClient = (() => {
       ...normalized,
       ok: true,
       action: String(action || "").trim(),
-      listId: String(normalized.id || "").trim()
+      listId: _normalizeDataId(normalized.id)
     };
   }
 
@@ -1082,7 +1082,7 @@ const ApiClient = (() => {
     _emitDataChanged({
       kind: "lists",
       action: "create",
-      listId: String(newList.id || "").trim()
+      listId: _normalizeDataId(newList.id)
     });
 
     return _buildListMutationList("create", newList);
