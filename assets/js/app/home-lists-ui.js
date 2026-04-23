@@ -548,9 +548,10 @@ async function renderHomeDashboard() {
         if (!it) return false;
 
         // 1) Dedupe por ID (si viene duplicado desde datos)
-        if (it.id) {
-          if (seenIds.has(String(it.id))) return false;
-          seenIds.add(String(it.id));
+        const itemId = _normalizeHomeItemId(it.id);
+        if (itemId) {
+          if (seenIds.has(itemId)) return false;
+          seenIds.add(itemId);
         }
 
         // 2) Dedupe por identidad compartida, con fallback legacy
@@ -617,6 +618,8 @@ async function renderHomeDashboard() {
       } else {
         backlogContainer.innerHTML = backlogUnique
           .map((item) => {
+            const itemId = _normalizeHomeItemId(item.id);
+            if (!itemId) return "";
             const typeName = item.type
               ? (window.typeLabel(item.type) || window.I18n.t("lists_type_content"))
               : window.I18n.t("lists_type_content");
@@ -648,7 +651,7 @@ async function renderHomeDashboard() {
               : "";
 
             return `
-              <article class="backlog-card" data-id="${item.id}" data-type="${item.type || ""}">
+              <article class="backlog-card" data-id="${itemId}" data-type="${item.type || ""}">
                 <div class="backlog-card-cover" ${coverStyle}></div>
                   <div class="backlog-card-body">
                     <div class="backlog-card-type-row">
@@ -666,7 +669,7 @@ async function renderHomeDashboard() {
                       <div class="backlog-card-progress-fill" style="width:${pct}%;"></div>
                     </div>
         
-                    <button class="btn-retomar" data-id="${item.id}">
+                    <button class="btn-retomar" data-id="${itemId}">
                       <span class="btn-retomar-icon">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                           stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -685,7 +688,7 @@ async function renderHomeDashboard() {
           // Listeners Retomar (Backlog)
           backlogContainer.querySelectorAll(".btn-retomar").forEach((btn) => {
             btn.addEventListener("click", () => {
-              const id = btn.dataset.id;
+              const id = _normalizeHomeItemId(btn.dataset.id);
               if (!id) return;
 
               const card = btn.closest(".backlog-card");
