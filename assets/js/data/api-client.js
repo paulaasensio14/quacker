@@ -597,6 +597,37 @@ const ApiClient = (() => {
     return String(fallbackStatus || defaultStatus).trim() || defaultStatus;
   }
 
+  function _t(key, params = null, fallback = "") {
+    try {
+      const translate = window.I18n?.t;
+      if (typeof translate === "function") {
+        const translated = translate(key, params || undefined);
+        if (typeof translated === "string" && translated) {
+          if (translated !== key || !fallback) return translated;
+        }
+      }
+    } catch (_) {
+      // Si i18n no está lista, seguimos con el fallback.
+    }
+
+    return fallback || key;
+  }
+
+  function _completedLabelForType(type) {
+    switch (String(type || "").trim()) {
+      case "book":
+        return _t("library_progress_book_completed", null, "Libro completado");
+      case "serie":
+        return _t("library_progress_series_completed", null, "Serie completada");
+      case "game":
+        return _t("library_progress_game_completed", null, "Juego completado");
+      case "pelicula":
+        return _t("library_progress_movie_completed", null, "Película completada");
+      default:
+        return _t("library_status_completed", null, "Completado");
+    }
+  }
+
   function _emitDataChanged(detail = {}) {
     try {
       if (detail?.kind === "library") {
@@ -1759,7 +1790,7 @@ const ApiClient = (() => {
           title: item.title,
           justCompleted,
           deltaLabel: justCompleted
-            ? "Serie completada"
+            ? _completedLabelForType("serie")
             : `T${updated.meta.season} · E${updated.meta.episode}`
         };
       }
@@ -1995,7 +2026,7 @@ const ApiClient = (() => {
 
     // Notificación automática
     await addNotification({
-      title: "Completado",
+      title: _t("library_status_completed", null, "Completado"),
       text: item.title,
       color: "#16a34a",
       icon: "check"
@@ -2045,14 +2076,14 @@ const ApiClient = (() => {
 
     let deltaLabel = `${Math.round(next)}%`;
     if (current.type === "book" && Number(nextItem.meta?.totalPages || 0) > 0) {
-      deltaLabel = `${Number(nextItem.meta.pagesRead || 0)}/${Number(nextItem.meta.totalPages || 0)} páginas`;
+      deltaLabel = `${Number(nextItem.meta.pagesRead || 0)}/${Number(nextItem.meta.totalPages || 0)} ${_t("library_pages", null, "páginas")}`;
     }
 
     return {
       ok: true,
       justCompleted,
       itemId: targetId,
-      deltaLabel: justCompleted ? "Completado" : deltaLabel
+      deltaLabel: justCompleted ? _t("library_status_completed", null, "Completado") : deltaLabel
     };
   }
 
@@ -2927,7 +2958,7 @@ const ApiClient = (() => {
       const tp = Number(item.meta?.totalPages);
 
       if (Number.isFinite(pr) && pr > 0 && Number.isFinite(tp) && tp > 0) {
-        meta = `${pr} / ${tp} páginas`;
+        meta = `${pr} / ${tp} ${_t("home_pages", null, "páginas")}`;
       } else {
         meta = "";
       }
@@ -2958,8 +2989,8 @@ const ApiClient = (() => {
     const MEANINGFUL = new Set(["progress", "completed"]); // resume NO cuenta
 
     function typeLabel(t) {
-      if (t === "progress") return "Progreso";
-      if (t === "completed") return "Completado";
+      if (t === "progress") return _t("home_activity_filter_progress", null, "Progreso");
+      if (t === "completed") return _t("home_last_activity_button_completed", null, "Completado");
       return "Actividad";
     }
 
@@ -2982,7 +3013,9 @@ const ApiClient = (() => {
       if (item.type === "book") {
         const pr = Number(item.meta?.pagesRead);
         const tp = Number(item.meta?.totalPages);
-        if (Number.isFinite(pr) && pr > 0 && Number.isFinite(tp) && tp > 0) return `${pr} / ${tp} páginas`;
+        if (Number.isFinite(pr) && pr > 0 && Number.isFinite(tp) && tp > 0) {
+          return `${pr} / ${tp} ${_t("home_pages", null, "páginas")}`;
+        }
         return "";
       }
 
@@ -3015,7 +3048,7 @@ const ApiClient = (() => {
             type,
             label: typeLabel(type),
             targetId: item?.id ? String(item.id) : "",
-            itemTitle: item?.title || "Contenido",
+            itemTitle: item?.title || _t("library_item_fallback_title", null, "Contenido"),
             itemMeta: metaForItem(item),
             timeAgo: formatTimeAgo(item?.updatedAt || item?.createdAt || ""),
             createdAt: item?.updatedAt || item?.createdAt || ""
@@ -3053,7 +3086,7 @@ const ApiClient = (() => {
           type: act.type,
           label: typeLabel(act.type),
           targetId: act.targetId || null,
-          itemTitle: item?.title || "Contenido",
+          itemTitle: item?.title || _t("library_item_fallback_title", null, "Contenido"),
           itemMeta: metaForItem(item),
           timeAgo: _formatTimeAgo(act.createdAt)
         };
@@ -3257,14 +3290,14 @@ const ApiClient = (() => {
       }
 
       if (item.type === "book" && item.meta?.pagesRead && item.meta?.totalPages) {
-        return `${item.meta.pagesRead}/${item.meta.totalPages} páginas`;
+        return `${item.meta.pagesRead}/${item.meta.totalPages} ${_t("home_pages", null, "páginas")}`;
       }
 
       if (item.type === "game") {
-        return `${pct}% completado`;
+        return `${pct}% ${_t("library_progress_completed_suffix", null, "completado")}`;
       }
 
-      return `${pct}% completado`;
+      return `${pct}% ${_t("library_progress_completed_suffix", null, "completado")}`;
     }
 
     const candidates = library
@@ -3396,10 +3429,7 @@ const ApiClient = (() => {
       const pct = item.progress ?? 0;
 
       if (pct >= 100) {
-        if (item.type === "book") return "Libro completado";
-        if (item.type === "serie") return "Serie completada";
-        if (item.type === "game") return "Juego completado";
-        return "Completado";
+        return _completedLabelForType(item.type);
       }
 
       if (item.type === "serie" && item.meta) {
@@ -3409,14 +3439,14 @@ const ApiClient = (() => {
       }
 
       if (item.type === "book" && item.meta?.pagesRead && item.meta?.totalPages) {
-        return `${item.meta.pagesRead}/${item.meta.totalPages} páginas`;
+        return `${item.meta.pagesRead}/${item.meta.totalPages} ${_t("home_pages", null, "páginas")}`;
       }
 
       if (item.type === "game") {
-        return `${pct}% completado`;
+        return `${pct}% ${_t("library_progress_completed_suffix", null, "completado")}`;
       }
 
-      return `${pct}% completado`;
+      return `${pct}% ${_t("library_progress_completed_suffix", null, "completado")}`;
     }
 
     return library.map((item) => {
@@ -3486,7 +3516,7 @@ const ApiClient = (() => {
           const nextPages = Math.min(total, prevPages + 20);
           meta.pagesRead = nextPages;
           nextProgress = Math.round((nextPages / total) * 100);
-          deltaLabel = `${nextPages}/${total} páginas`;
+          deltaLabel = `${nextPages}/${total} ${_t("library_pages", null, "páginas")}`;
         } else {
           nextProgress = Math.min(100, prevProgress + 5);
           deltaLabel = `${Math.round(nextProgress)}%`;
@@ -3523,7 +3553,7 @@ const ApiClient = (() => {
       prevProgress,
       nextProgress,
       justCompleted,
-      deltaLabel: justCompleted ? "Completado" : deltaLabel
+      deltaLabel: justCompleted ? _t("library_status_completed", null, "Completado") : deltaLabel
     };
 
   }
