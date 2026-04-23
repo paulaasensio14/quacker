@@ -231,6 +231,10 @@ const ApiClient = (() => {
     return String(value || "").replace(/\s+/g, " ").trim();
   }
 
+  function _normalizeDataId(value) {
+    return String(value || "").trim();
+  }
+
   function _normalizeCanonicalIdentity(source, externalId) {
     const safeSource = String(source || "").trim().toLowerCase();
     const safeExternalId = String(externalId || "").trim();
@@ -347,7 +351,7 @@ const ApiClient = (() => {
   }
 
   function _getCachedLibraryItemById(itemId) {
-    const safeItemId = String(itemId || "").trim();
+    const safeItemId = _normalizeDataId(itemId);
     if (
       !safeItemId ||
       _libraryCache.transport !== __cfg.transport ||
@@ -356,7 +360,7 @@ const ApiClient = (() => {
       return null;
     }
 
-    const item = _libraryCache.items.find((entry) => String(entry?.id) === safeItemId) || null;
+    const item = _libraryCache.items.find((entry) => _normalizeDataId(entry?.id) === safeItemId) || null;
     return _cloneData(item);
   }
 
@@ -930,11 +934,12 @@ const ApiClient = (() => {
     const lists = await getLists();
     const library = await getLibrary();
 
-    const libId =
+    const libId = _normalizeDataId(
       window.ItemIdentity?.resolveLibraryItemIdFromCache?.(
         { title, type, source, externalId },
         library || []
-      ) || "";
+      )
+    );
 
     if (!libId) return 0;
 
@@ -944,7 +949,7 @@ const ApiClient = (() => {
       const arr = Array.isArray(list?.items) ? list.items : [];
       const has = arr.some((entry) => {
         const id = typeof entry === "string" ? entry : entry?.id;
-        return String(id) === libId;
+        return _normalizeDataId(id) === libId;
       });
 
       if (has) count++;
@@ -963,7 +968,8 @@ const ApiClient = (() => {
     const idToKeys = new Map();
 
     for (const item of library || []) {
-      if (!item?.id) continue;
+      const itemId = _normalizeDataId(item?.id);
+      if (!itemId) continue;
 
       const keys = new Set();
       const canonicalKey = window.ItemIdentity?.getCanonicalContentKey?.(item) || "";
@@ -973,7 +979,7 @@ const ApiClient = (() => {
       if (normalizedKey) keys.add(normalizedKey);
 
       if (keys.size > 0) {
-        idToKeys.set(String(item.id), [...keys]);
+        idToKeys.set(itemId, [...keys]);
       }
     }
 
@@ -984,9 +990,10 @@ const ApiClient = (() => {
 
       for (const entry of items) {
         const id = typeof entry === "string" ? entry : entry?.id;
-        if (!id) continue;
+        const itemId = _normalizeDataId(id);
+        if (!itemId) continue;
 
-        const keys = idToKeys.get(String(id));
+        const keys = idToKeys.get(itemId);
         if (!Array.isArray(keys) || keys.length === 0) continue;
 
         for (const key of keys) {
