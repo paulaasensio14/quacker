@@ -1212,12 +1212,12 @@ const ApiClient = (() => {
       const result = _buildListMutationResult("add_item", {
         ...res,
         listId: safeListId,
-        itemId: String(res?.itemId || safeItemId)
+        itemId: String(res?.itemId || safeItemId).trim()
       });
       const listItems = Array.isArray(result.list?.items) ? result.list.items : [];
       const itemInList = listItems.some((entry) => {
         const id = typeof entry === "string" ? entry : entry?.id;
-        return String(id) === safeItemId;
+        return String(id || "").trim() === safeItemId;
       });
 
       if (!result.ok || result.listId !== safeListId || result.itemId !== safeItemId || !itemInList) {
@@ -1247,13 +1247,13 @@ const ApiClient = (() => {
 
     const state = _safeState();
     state.lists = state.lists || [];
-    const list = state.lists.find(l => String(l.id) === safeListId);
+    const list = state.lists.find((l) => String(l.id || "").trim() === safeListId);
     if (!list) {
       throw _makeApiError("list_not_found", 404);
     }
 
     const library = _isHttp() ? await getLibrary() : (state.library || []);
-    const itemExists = library.some(i => String(i.id) === safeItemId);
+    const itemExists = library.some((i) => String(i.id || "").trim() === safeItemId);
     if (!itemExists) {
       throw _makeApiError("item_not_found", 404);
     }
@@ -1262,7 +1262,7 @@ const ApiClient = (() => {
 
     const already = list.items.some(x => {
       const id = (typeof x === "string") ? x : x?.id;
-      return String(id) === safeItemId;
+      return String(id || "").trim() === safeItemId;
     });
 
     if (already) {
@@ -1360,7 +1360,7 @@ const ApiClient = (() => {
 
     const state = _safeState();
     state.lists = state.lists || [];
-    const list = state.lists.find(l => String(l.id) === safeListId);
+    const list = state.lists.find((l) => String(l.id || "").trim() === safeListId);
     if (!list) {
       throw _makeApiError("list_not_found", 404);
     }
@@ -1370,7 +1370,7 @@ const ApiClient = (() => {
 
     list.items = list.items.filter(x => {
       const id = (typeof x === "string") ? x : x?.id;
-      return String(id) !== safeItemId;
+      return String(id || "").trim() !== safeItemId;
     });
 
     const removed = before - list.items.length;
