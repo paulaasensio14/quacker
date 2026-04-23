@@ -1,12 +1,16 @@
+function normalizeIdentityId(value) {
+  return String(value ?? "").trim();
+}
+
 function getLibraryItemId(item) {
   if (!item) return "";
 
   if (item.__libraryItemId) {
-    return String(item.__libraryItemId);
+    return normalizeIdentityId(item.__libraryItemId);
   }
 
   if (item.id && item.__fromLibrary) {
-    return String(item.id);
+    return normalizeIdentityId(item.id);
   }
 
   return "";
@@ -63,7 +67,7 @@ function resolveLibraryItemIdFromCache(item, libraryCache = []) {
     );
 
     if (canonicalMatch?.id) {
-      return String(canonicalMatch.id);
+      return normalizeIdentityId(canonicalMatch.id);
     }
   }
 
@@ -74,7 +78,7 @@ function resolveLibraryItemIdFromCache(item, libraryCache = []) {
     (entry) => getNormalizedContentKey(entry) === key
   );
 
-  return match?.id ? String(match.id) : "";
+  return match?.id ? normalizeIdentityId(match.id) : "";
 }
 
 window.ItemIdentity = {
