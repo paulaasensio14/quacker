@@ -651,11 +651,14 @@ const ApiClient = (() => {
     sourceView = "api-client",
     extra = {}
   } = {}) {
+    const normalizedItemId = String(itemId || "").trim();
+    const normalizedListId = String(listId || "").trim();
+
     _emitDataChanged({
       kind: "item_state",
       action: String(action || "").trim(),
-      itemId: itemId ? String(itemId) : "",
-      listId: listId ? String(listId) : "",
+      itemId: normalizedItemId,
+      listId: normalizedListId,
       sourceView: String(sourceView || "api-client"),
       ...extra
     });
