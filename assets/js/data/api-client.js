@@ -466,6 +466,7 @@ const ApiClient = (() => {
     return nextLists.map((list, index) => {
       const items = Array.isArray(list?.items) ? list.items : [];
       const safeVisibility = String(list?.visibility || "").trim().toLowerCase();
+      const fallbackListId = _normalizeDataId(`local_list_${Date.now()}_${index}`);
       const safeItems = items
         .map((entry) => {
           const rawId = typeof entry === "string" ? entry : entry?.id;
@@ -480,7 +481,7 @@ const ApiClient = (() => {
         .filter(Boolean);
 
       return {
-        id: _normalizeDataId(list?.id) || `local_list_${Date.now()}_${index}`,
+        id: _normalizeDataId(list?.id) || fallbackListId,
         name: _normalizeContentText(list?.name) || "Sin nombre",
         description: String(list?.description || "").trim(),
         visibility: ["private", "public", "collab"].includes(safeVisibility)
@@ -1621,9 +1622,10 @@ const ApiClient = (() => {
     state.notifications = _normalizeNotificationsList(state.notifications);
 
     const nowIso = new Date().toISOString();
+    const notificationId = _normalizeNotificationId(`notif-${Date.now()}`);
 
     const notif = {
-      id: `notif-${Date.now()}`,
+      id: notificationId,
       title: title || "Notificación",
       text,
       color,
