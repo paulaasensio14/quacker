@@ -325,6 +325,20 @@ const FakeBackend = (() => {
 
   };
 
+  const normalizeMockState = (state = {}) => ({
+    ...DEFAULT_STATE,
+    ...state,
+    user: {
+      ...DEFAULT_STATE.user,
+      ...(state?.user && typeof state.user === "object" ? state.user : {})
+    },
+    lists: normalizeMockLists(state?.lists || DEFAULT_STATE.lists.slice()),
+    library: normalizeMockLibrary(state?.library || DEFAULT_STATE.library.slice()),
+    activities: normalizeMockActivities(state?.activities || DEFAULT_STATE.activities.slice()),
+    goals: Array.isArray(state?.goals) ? state.goals : DEFAULT_STATE.goals.slice(),
+    notifications: normalizeMockNotifications(state?.notifications || DEFAULT_STATE.notifications.slice())
+  });
+
   // ===== migración legacy (dashboard antiguos) =====
   // Importante:
   // - FakeBackend es el único que toca localStorage.
@@ -525,7 +539,8 @@ const FakeBackend = (() => {
   }
 
   function _save(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const normalizedState = normalizeMockState(data);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedState));
   }
 
   // ===== helpers genéricos =====
