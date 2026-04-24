@@ -2247,6 +2247,13 @@ const ExploreModule = (() => {
       .toUpperCase();
     const watchProvidersLink = _safeText(item?.meta?.watchProviders?.link).trim();
     const trailerUrl = _safeText(item?.meta?.trailerUrl).trim();
+    const creator = _safeText(item?.meta?.creator).trim();
+    const network = _safeText(item?.meta?.network).trim();
+    const durationValue =
+      runtimeNumber > 0
+        ? `${runtimeNumber} ${window.I18n.t("time_minutes")}`
+        : "";
+    let seriesOverviewValue = "";
 
     let primaryLabel = window.I18n.t("explore_detail_label_meta");
     let primaryValue = window.I18n.t("explore_detail_no_meta");
@@ -2255,18 +2262,20 @@ const ExploreModule = (() => {
     let tertiaryLabel = window.I18n.t("explore_detail_label_meta");
     let tertiaryValue = window.I18n.t("explore_detail_no_meta");
 
-    if (author) {
-      primaryLabel = window.I18n.t("explore_detail_label_author");
-      primaryValue = author;
-    } else if (runtimeNumber > 0) {
-      primaryLabel = window.I18n.t("explore_detail_label_duration");
-      primaryValue = `${runtimeNumber} ${window.I18n.t("time_minutes")}`;
-    } else if (platforms) {
-      primaryLabel = window.I18n.t("explore_detail_label_platforms");
-      primaryValue = platforms;
-    } else if (totalPagesNumber > 0) {
-      primaryLabel = window.I18n.t("explore_detail_label_pages");
-      primaryValue = `${totalPagesNumber} ${window.I18n.t("library_pages")}`;
+    if (_norm(item?.type) !== "serie") {
+      if (author) {
+        primaryLabel = window.I18n.t("explore_detail_label_author");
+        primaryValue = author;
+      } else if (durationValue) {
+        primaryLabel = window.I18n.t("explore_detail_label_duration");
+        primaryValue = durationValue;
+      } else if (platforms) {
+        primaryLabel = window.I18n.t("explore_detail_label_platforms");
+        primaryValue = platforms;
+      } else if (totalPagesNumber > 0) {
+        primaryLabel = window.I18n.t("explore_detail_label_pages");
+        primaryValue = `${totalPagesNumber} ${window.I18n.t("library_pages")}`;
+      }
     }
 
     if (_norm(item?.type) === "serie") {
@@ -2292,9 +2301,18 @@ const ExploreModule = (() => {
         );
       }
 
-      secondaryLabel = window.I18n.t("explore_detail_label_series_overview");
-      secondaryValue =
+      seriesOverviewValue =
         seasonParts.join(" · ") || window.I18n.t("explore_detail_no_seasons");
+
+      if (creator) {
+        primaryLabel = window.I18n.t("explore_detail_label_creator");
+        primaryValue = creator;
+      }
+
+      if (network) {
+        secondaryLabel = window.I18n.t("explore_detail_label_network");
+        secondaryValue = network;
+      }
 
       tertiaryLabel = window.I18n.t("explore_detail_label_status");
       tertiaryValue = statusLabel || window.I18n.t("explore_detail_no_meta");
@@ -2330,26 +2348,25 @@ const ExploreModule = (() => {
         : "";
 
     if (_norm(item?.type) === "serie") {
-      if (secondaryValue && secondaryValue !== noMetaValue) {
-        heroFacts.push({
-          key: "secondary",
-          label: secondaryLabel,
-          value: secondaryValue
-        });
-        heroFactKeys.add("secondary");
-      }
-
       if (
-        primaryLabel === window.I18n.t("explore_detail_label_duration") &&
-        primaryValue &&
-        primaryValue !== noMetaValue
+        seriesOverviewValue &&
+        seriesOverviewValue !== window.I18n.t("explore_detail_no_seasons")
       ) {
         heroFacts.push({
-          key: "primary",
-          label: primaryLabel,
-          value: primaryValue
+          key: "series_overview",
+          label: window.I18n.t("explore_detail_label_series_overview"),
+          value: seriesOverviewValue
         });
-        heroFactKeys.add("primary");
+        heroFactKeys.add("series_overview");
+      }
+
+      if (durationValue) {
+        heroFacts.push({
+          key: "series_duration",
+          label: window.I18n.t("explore_detail_label_duration"),
+          value: durationValue
+        });
+        heroFactKeys.add("series_duration");
       }
     } else {
       if (

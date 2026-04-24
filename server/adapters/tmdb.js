@@ -117,6 +117,14 @@ function _mapTmdbCast(castEntries = [], limit = 8) {
     .slice(0, limit);
 }
 
+function _joinTmdbNamedEntries(entries = [], limit = 2) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => String(entry?.name || "").trim())
+    .filter(Boolean)
+    .slice(0, limit)
+    .join(", ");
+}
+
 function _mapTmdbSeasonEpisodes(episodes = []) {
   return (Array.isArray(episodes) ? episodes : [])
     .map((episode) => ({
@@ -630,6 +638,8 @@ const seasonBreakdown = Array.isArray(data.seasons)
     episodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
     meta: {
       year: _yearFromDate(data.first_air_date),
+      creator: _joinTmdbNamedEntries(data?.created_by, 2),
+      network: _joinTmdbNamedEntries(data?.networks, 2),
       totalSeasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
       totalEpisodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
       seasonBreakdown,
