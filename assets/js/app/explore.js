@@ -1119,7 +1119,7 @@ const ExploreModule = (() => {
     if (!highlightsEl) return;
 
     const safeFacts = (Array.isArray(facts) ? facts : [])
-      .filter((fact) => _safeText(fact?.label).trim() && _safeText(fact?.value).trim())
+      .filter((fact) => _safeText(fact?.label).trim())
       .slice(0, 3);
 
     if (safeFacts.length === 0) {
@@ -1306,6 +1306,7 @@ const ExploreModule = (() => {
     const highlightsEl = document.getElementById("contentDetailHighlights");
     const quickGridEl = document.getElementById("contentDetailQuickGrid");
     const supportGridEl = document.getElementById("contentDetailSupportGrid");
+    const metaFooterGridEl = document.getElementById("contentDetailMetaFooterGrid");
     const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
     const metaPrimaryCardEl = document.getElementById("contentDetailMetaPrimaryCard");
@@ -1345,7 +1346,6 @@ const ExploreModule = (() => {
     if (metaTertiaryCardEl) metaTertiaryCardEl.hidden = !metaVm.showTertiaryCard;
     if (quickGridEl) {
       quickGridEl.hidden = !(
-        (ratingCardEl && !ratingCardEl.hidden) ||
         (metaPrimaryCardEl && !metaPrimaryCardEl.hidden) ||
         (metaSecondaryCardEl && !metaSecondaryCardEl.hidden)
       );
@@ -1358,6 +1358,12 @@ const ExploreModule = (() => {
       );
     }
     if (listsCardEl) listsCardEl.hidden = false;
+    if (metaFooterGridEl) {
+      metaFooterGridEl.hidden = !(
+        (ratingCardEl && !ratingCardEl.hidden) ||
+        (listsCardEl && !listsCardEl.hidden)
+      );
+    }
 
     _renderExploreRating(ratingEl, item);
     _renderContentDetailHighlights(highlightsEl, metaVm.heroFacts, item);
@@ -2131,16 +2137,6 @@ const ExploreModule = (() => {
         ? ratingNumber.toFixed(1)
         : "";
 
-    if (safeRatingValue) {
-      heroFacts.push({
-        key: "rating",
-        label: window.I18n.t("explore_detail_label_rating"),
-        value: safeRatingValue,
-        kind: "rating"
-      });
-      heroFactKeys.add("rating");
-    }
-
     if (_norm(item?.type) === "serie") {
       if (secondaryValue && secondaryValue !== noMetaValue) {
         heroFacts.push({
@@ -2190,7 +2186,7 @@ const ExploreModule = (() => {
       tertiaryLabel,
       tertiaryValue,
       heroFacts,
-      showRatingCard: safeRatingValue && !heroFactKeys.has("rating"),
+      showRatingCard: !!safeRatingValue,
       showPrimaryCard: primaryValue !== noMetaValue && !heroFactKeys.has("primary"),
       showSecondaryCard: secondaryValue !== noMetaValue && !heroFactKeys.has("secondary"),
       showTertiaryCard: tertiaryValue !== noMetaValue && !heroFactKeys.has("tertiary"),

@@ -6531,11 +6531,21 @@ body.modal-open{
   gap: 12px;
 }
 
+.content-detail-meta-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .content-detail-genres-card {
   padding: 12px 14px;
 }
 
 .content-detail-lists-card {
+  padding: 12px 14px;
+}
+
+.content-detail-rating-card {
   padding: 12px 14px;
 }
 
@@ -6830,6 +6840,7 @@ body.modal-open{
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .content-detail-meta-footer-grid,
   .content-detail-support-grid,
   .content-detail-feature-grid {
     grid-template-columns: 1fr;
@@ -6886,6 +6897,7 @@ body.modal-open{
     grid-template-columns: 1fr;
   }
 
+  .content-detail-meta-footer-grid,
   .content-detail-support-grid {
     grid-template-columns: 1fr;
   }
