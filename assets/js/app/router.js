@@ -61,6 +61,7 @@ const Router = (() => {
     const titles = {
       home: "nav_home",
       explore: "nav_explore",
+      detail: "nav_detail",
       library: "nav_library",
       lists: "nav_lists",
       profile: "nav_profile"
@@ -74,6 +75,7 @@ const Router = (() => {
     const subtitles = {
       home: "home_summary",
       explore: "explore_summary",
+      detail: "detail_summary",
       library: "library_summary",
       lists: "lists_subtitle",
       profile: "profile_summary"
@@ -181,7 +183,8 @@ const Router = (() => {
     currentView = id;
 
     try {
-      window.sessionStorage.setItem("quacker:last-view", id);
+      const persistedView = id === "detail" ? "explore" : id;
+      window.sessionStorage.setItem("quacker:last-view", persistedView);
     } catch (_) {}
 
     if (window.location.hash !== `#${id}`) {
@@ -302,6 +305,7 @@ const Router = (() => {
 
     // Vista inicial: hash > sessionStorage > HTML
     const hashView = String(window.location.hash || "").replace(/^#/, "").trim();
+    const resolvedHashView = hashView === "detail" ? "explore" : hashView;
     const storedView = (() => {
       try {
         return String(window.sessionStorage.getItem(LAST_VIEW_STORAGE_KEY) || "").trim();
@@ -317,7 +321,7 @@ const Router = (() => {
     }
 
     const initial =
-      (hashView && views[hashView] && hashView) ||
+      (resolvedHashView && views[resolvedHashView] && resolvedHashView) ||
       (storedView && views[storedView] && storedView) ||
       htmlInitial;
 

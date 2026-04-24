@@ -708,6 +708,15 @@
                 <div class="explore-drawer-actions">
                   <button
                     type="button"
+                    class="btn btn-ghost"
+                    id="exploreDrawerOpenPage"
+                    data-i18n="detail_open_page"
+                  >
+                    Abrir página completa
+                  </button>
+
+                  <button
+                    type="button"
                     class="btn btn-primary"
                     id="exploreDrawerAddLibrary"
                   >
@@ -768,6 +777,143 @@
           </div>
         </div>
 
+      </section>
+
+      <section class="view" id="view-detail" data-view-id="detail">
+        <div class="content-detail-view">
+          <div class="content-detail-top">
+            <button
+              type="button"
+              class="btn-secondary content-detail-back"
+              id="contentDetailBack"
+              data-i18n="detail_back_to_explore"
+            >
+              Volver a Explorar
+            </button>
+          </div>
+
+          <section class="content-detail-hero" id="contentDetailCover" aria-hidden="true">
+            <div class="content-detail-head">
+              <div class="content-detail-title-wrap">
+                <span class="content-detail-kicker" data-i18n="nav_explore">Explorar</span>
+                <h2 class="content-detail-title" id="contentDetailTitle">—</h2>
+                <p class="content-detail-meta" id="contentDetailMeta">—</p>
+              </div>
+
+              <span class="content-detail-badge" id="contentDetailBadge" hidden></span>
+            </div>
+          </section>
+
+          <section class="content-detail-body">
+            <div
+              class="content-detail-feedback"
+              id="contentDetailLoading"
+              hidden
+              data-i18n="detail_page_loading"
+            >
+              Cargando detalle completo…
+            </div>
+
+            <div
+              class="content-detail-feedback content-detail-feedback--error"
+              id="contentDetailError"
+              hidden
+              data-i18n="detail_page_error"
+            >
+              No se pudo cargar el detalle completo.
+            </div>
+
+            <div class="content-detail-actions">
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="contentDetailAddLibrary"
+                data-i18n="explore_drawer_add_library"
+              >
+                Añadir a biblioteca
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="contentDetailAddLists"
+                data-i18n="explore_drawer_add_lists"
+              >
+                Añadir a una lista
+              </button>
+            </div>
+
+            <div class="content-detail-list-picker" id="contentDetailListPicker" hidden>
+              <label class="content-detail-list-label" for="contentDetailListSelect" data-i18n="explore_drawer_list_label">
+                Elegir lista
+              </label>
+
+              <select id="contentDetailListSelect" class="content-detail-list-select"></select>
+
+              <div class="content-detail-list-actions">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="contentDetailConfirmList"
+                  data-i18n="explore_drawer_list_confirm"
+                >
+                  Guardar en lista
+                </button>
+
+                <button
+                  type="button"
+                  class="btn btn-ghost"
+                  id="contentDetailCancelList"
+                  data-i18n="common_cancel"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+
+            <div class="content-detail-grid">
+              <article class="explore-detail-card">
+                <span class="explore-detail-label" data-i18n="explore_drawer_label_type">Tipo</span>
+                <strong class="explore-detail-value" id="contentDetailType">—</strong>
+              </article>
+
+              <article class="explore-detail-card">
+                <span class="explore-detail-label" data-i18n="explore_drawer_label_release_date">Fecha de lanzamiento</span>
+                <strong class="explore-detail-value" id="contentDetailReleaseDate">—</strong>
+              </article>
+
+              <article class="explore-detail-card">
+                <span class="explore-detail-label" data-i18n="explore_detail_label_rating">Puntuación</span>
+                <strong class="explore-detail-value" id="contentDetailRating">—</strong>
+              </article>
+
+              <article class="explore-detail-card">
+                <span class="explore-detail-label" id="contentDetailMetaPrimaryLabel">Detalle</span>
+                <strong class="explore-detail-value" id="contentDetailMetaPrimaryValue">—</strong>
+              </article>
+
+              <article class="explore-detail-card">
+                <span class="explore-detail-label" data-i18n="explore_drawer_label_library_state">Estado en biblioteca</span>
+                <strong class="explore-detail-value" id="contentDetailLibraryState">—</strong>
+              </article>
+
+              <article class="explore-detail-card">
+                <span class="explore-detail-label" data-i18n="explore_drawer_label_lists">Listas</span>
+                <strong class="explore-detail-value" id="contentDetailListsCount">—</strong>
+              </article>
+
+              <article class="explore-detail-card explore-detail-card--full">
+                <span class="explore-detail-label" data-i18n="explore_detail_label_genres">Géneros</span>
+                <p class="explore-detail-text" id="contentDetailGenres">—</p>
+              </article>
+
+              <article class="explore-detail-card explore-detail-card--full">
+                <span class="explore-detail-label" data-i18n="explore_detail_label_summary">Resumen</span>
+                <p class="explore-detail-text" id="contentDetailSummary">—</p>
+              </article>
+            </div>
+          </section>
+        </div>
       </section>
 
 

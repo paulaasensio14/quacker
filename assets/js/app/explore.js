@@ -32,6 +32,13 @@ const ExploreModule = (() => {
   let __drawerDetailReqSeq = 0;
   const __drawerDetailCache = new Map();
   let __libraryStateSyncPromise = null;
+  let __detailViewItem = null;
+  let __detailViewLoading = false;
+  let __detailViewError = false;
+  let __detailViewReqSeq = 0;
+  let __detailViewLastFocusEl = null;
+  let __detailListsPickerOpen = false;
+  let __detailOriginView = "explore";
 
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
@@ -73,6 +80,12 @@ const ExploreModule = (() => {
 
   function _normalizeId(value) {
     return _safeText(value).trim();
+  }
+
+  function _getActiveViewId() {
+    return (
+      document.querySelector(".view.is-active")?.getAttribute("data-view-id") || ""
+    );
   }
 
   function _normalizeExploreItem(rawItem, index = 0) {
@@ -532,7 +545,6 @@ const ExploreModule = (() => {
 
     if (!wasOpen) __drawerLastFocusEl = triggerEl || document.activeElement;
 
-    // Mostrar overlay + abrir panel
     backdrop.hidden = false;
     drawer.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
@@ -543,11 +555,8 @@ const ExploreModule = (() => {
     }
 
     _syncExploreDrawerViewport();
-
-    // Bloquear scroll (reutilizamos tu patrón existente)
     document.body.classList.add("modal-open");
 
-    // Foco inicial (solo si abrimos desde cerrado)
     if (!wasOpen) {
       requestAnimationFrame(() => {
         (closeBtn || drawer).focus?.();
@@ -577,32 +586,28 @@ const ExploreModule = (() => {
     }
   }
 
-  function _closeExploreDrawer() {
+  function _closeExploreDrawer({ restoreFocus = true, clearActiveEid = true } = {}) {
     const drawer = document.getElementById("exploreDrawer");
     const backdrop = document.getElementById("exploreDrawerBackdrop");
     if (!drawer || !backdrop) return;
 
     __drawerOpen = false;
     __drawerDetailReqSeq += 1;
-    activeEid = null;
+    if (clearActiveEid) activeEid = null;
     __drawerDetailLoading = false;
     __drawerDetailError = false;
     __drawerListsPickerOpen = false;
     _syncExploreDrawerDetailFeedback();
     _syncExploreDrawerListPicker();
-    _renderDrawerAddCtaLabel(null);
+    _renderDrawerAddCtaLabel();
 
     drawer.classList.remove("is-open");
     drawer.setAttribute("aria-hidden", "true");
     backdrop.hidden = true;
     document.body.classList.remove("modal-open");
 
-    const note = document.getElementById("exploreDrawerInlineNote");
-    if (note) {
-      note.classList.remove("is-visible");
-      note.hidden = true;
-      note.textContent = "";
-    }
+    _clearDrawerInlineNote();
+
     const coverEl = document.getElementById("exploreDrawerCover");
     if (coverEl) {
       coverEl.classList.remove("is-fallback");
@@ -611,25 +616,21 @@ const ExploreModule = (() => {
       coverEl.style.backgroundPosition = "";
       coverEl.style.backgroundRepeat = "";
     }
+
     _setExploreDrawerExpanded(false);
 
     document.documentElement.style.removeProperty("--explore-expanded-left");
-
     document.documentElement.style.removeProperty("--explore-expanded-top");
-
     document.documentElement.style.removeProperty("--explore-expanded-right");
-
     document.documentElement.style.removeProperty("--explore-expanded-bottom");
 
-    const listPicker = document.getElementById("exploreDrawerListPicker");
-    const listSelect = document.getElementById("exploreDrawerListSelect");
-
-    if (listPicker) listPicker.hidden = true;
-    if (listSelect) listSelect.value = "";
+    const { picker, select } = _getExploreListPickerRefs("drawer");
+    if (picker) picker.hidden = true;
+    if (select) select.value = "";
 
     const back = __drawerLastFocusEl;
     __drawerLastFocusEl = null;
-    if (back && typeof back.focus === "function") {
+    if (restoreFocus && back && typeof back.focus === "function") {
       requestAnimationFrame(() => back.focus());
     }
   }
@@ -649,38 +650,13 @@ const ExploreModule = (() => {
     return _getExploreItemByEid(activeEid);
   }
 
-  function _syncExploreDrawerListPicker() {
-    const picker = document.getElementById("exploreDrawerListPicker");
-    const addListsBtn = document.getElementById("exploreDrawerAddLists");
-
-    if (picker) {
-      picker.hidden = !__drawerListsPickerOpen;
-    }
-
-    if (addListsBtn) {
-      addListsBtn.setAttribute(
-        "aria-expanded",
-        __drawerListsPickerOpen ? "true" : "false"
-      );
-
-      if (__drawerListsPickerOpen) {
-        addListsBtn.classList.add("is-active");
-      } else {
-        addListsBtn.classList.remove("is-active");
-      }
-    }
+  function _isDetailViewActive() {
+    return _getActiveViewId() === "detail";
   }
 
-  async function _handleExploreDrawerAddToListClick() {
-    const activeItem = _getActiveExploreItem();
-    if (!activeItem) return;
-
-    if (__drawerListsPickerOpen) {
-      _closeExploreListPicker();
-      return;
-    }
-
-    await _openExploreListPicker();
+  function _getActiveDetailItem() {
+    const detailEid = _normalizeId(__detailViewItem?.eid || activeEid);
+    return _getExploreItemByEid(detailEid) || __detailViewItem || null;
   }
 
   function _syncExploreDrawerDetailFeedback() {
@@ -693,6 +669,19 @@ const ExploreModule = (() => {
 
     if (errorEl) {
       errorEl.hidden = !__drawerDetailError;
+    }
+  }
+
+  function _syncContentDetailFeedback() {
+    const loadingEl = document.getElementById("contentDetailLoading");
+    const errorEl = document.getElementById("contentDetailError");
+
+    if (loadingEl) {
+      loadingEl.hidden = !__detailViewLoading;
+    }
+
+    if (errorEl) {
+      errorEl.hidden = !__detailViewError;
     }
   }
 
@@ -743,6 +732,666 @@ const ExploreModule = (() => {
     return _replaceExploreItemByEid(updatedItem) || updatedItem;
   }
 
+  async function _fetchHydratedExploreItemDetail(item) {
+    if (!item) return null;
+
+    const source = _safeText(item?.source).trim();
+    const type = _safeText(item?.type).trim();
+    const externalId = _safeText(item?.externalId).trim();
+    const eid = _normalizeId(item?.eid);
+
+    if (!eid) return null;
+    if (!source || !type || !externalId) return item;
+    if (source !== "tmdb") return item;
+
+    const cacheKey = `${source}:${type}:${externalId}`;
+    const cachedDetail = __drawerDetailCache.get(cacheKey);
+
+    let detail = cachedDetail;
+    if (!detail) {
+      detail = await ApiClient.getExploreItemDetail({ source, type, externalId });
+      if (!detail || typeof detail !== "object") return null;
+      __drawerDetailCache.set(cacheKey, detail);
+    }
+
+    const mergedItem = {
+      ...item,
+      ...detail,
+      eid,
+      __saving: item.__saving,
+      __inLibrary: item.__inLibrary,
+      __libraryItemId: item.__libraryItemId,
+      __listsCount: item.__listsCount
+    };
+
+    return _replaceExploreItemByEid(mergedItem) || mergedItem;
+  }
+
+  async function _hydrateExploreDrawerDetail(item) {
+    if (!item) return;
+
+    const eid = _normalizeId(item?.eid);
+    if (!eid) return;
+
+    const reqSeq = ++__drawerDetailReqSeq;
+
+    __drawerDetailLoading = true;
+    __drawerDetailError = false;
+    _syncExploreDrawerDetailFeedback();
+
+    try {
+      const persistedItem = await _fetchHydratedExploreItemDetail(item);
+
+      if (reqSeq !== __drawerDetailReqSeq) return;
+      if (activeEid !== eid) return;
+
+      __drawerDetailLoading = false;
+      __drawerDetailError = !persistedItem;
+      _syncExploreDrawerDetailFeedback();
+
+      if (!persistedItem) return;
+
+      _syncExploreDrawerFromItem(persistedItem);
+      _renderExploreDrawerDetails(persistedItem);
+    } catch (err) {
+      if (reqSeq !== __drawerDetailReqSeq) return;
+      if (activeEid !== eid) return;
+
+      __drawerDetailLoading = false;
+      __drawerDetailError = true;
+      _syncExploreDrawerDetailFeedback();
+      console.error("[Explore] drawer detail hydration failed", err);
+    }
+  }
+
+  async function _hydrateContentDetailView(item) {
+    if (!item) return;
+
+    const eid = _normalizeId(item?.eid);
+    if (!eid) return;
+
+    const reqSeq = ++__detailViewReqSeq;
+
+    __detailViewLoading = true;
+    __detailViewError = false;
+    _syncContentDetailFeedback();
+
+    try {
+      const persistedItem = await _fetchHydratedExploreItemDetail(item);
+
+      if (reqSeq !== __detailViewReqSeq) return;
+      if (!_isDetailViewActive()) return;
+      if (_normalizeId(__detailViewItem?.eid) !== eid) return;
+
+      __detailViewLoading = false;
+      __detailViewError = !persistedItem;
+      _syncContentDetailFeedback();
+
+      if (!persistedItem) return;
+
+      __detailViewItem = persistedItem;
+      _renderContentDetailView(persistedItem);
+    } catch (err) {
+      if (reqSeq !== __detailViewReqSeq) return;
+      if (!_isDetailViewActive()) return;
+      if (_normalizeId(__detailViewItem?.eid) !== eid) return;
+
+      __detailViewLoading = false;
+      __detailViewError = true;
+      _syncContentDetailFeedback();
+      console.error("[Explore] detail page hydration failed", err);
+    }
+  }
+
+  function _applyExploreVisualCover(coverEl, item) {
+    if (!coverEl) return;
+
+    const backdrop = _safeText(item?.backdrop).trim();
+    const cover = _safeText(item?.cover).trim();
+    const heroImage = backdrop || cover;
+
+    if (heroImage) {
+      coverEl.style.backgroundImage = `url("${heroImage}")`;
+      coverEl.style.backgroundSize = "cover";
+      coverEl.style.backgroundPosition = "center";
+      coverEl.style.backgroundRepeat = "no-repeat";
+      coverEl.classList.remove("is-fallback");
+    } else {
+      coverEl.style.backgroundImage = "none";
+      coverEl.style.backgroundSize = "";
+      coverEl.style.backgroundPosition = "";
+      coverEl.style.backgroundRepeat = "";
+      coverEl.classList.add("is-fallback");
+    }
+  }
+
+  function _renderExploreRating(ratingEl, item) {
+    if (!ratingEl) return;
+
+    const rawRating = Number(item?.rating || 0);
+    const safeRating = Number.isFinite(rawRating) ? Math.max(0, Math.min(10, rawRating)) : 0;
+
+    const duckCount = Math.round(safeRating / 2);
+    const maxDucks = 5;
+
+    const ducks = Array.from({ length: maxDucks }, (_, i) => {
+      const filled = i < duckCount;
+
+      return `
+        <img
+          src="assets/img/quacker-rating.png"
+          class="explore-rating-duck${filled ? " is-filled" : ""}"
+          alt=""
+          aria-hidden="true"
+        />
+      `;
+    }).join("");
+
+    ratingEl.innerHTML = `
+      <span class="explore-rating-ducks" aria-label="${safeRating.toFixed(1)} sobre 10">
+        ${ducks}
+      </span>
+      <span class="explore-rating-number">${safeRating.toFixed(1)}</span>
+    `;
+  }
+
+  function _syncExploreDrawerFromItem(item) {
+    if (!item) return null;
+    const drawerEid = _normalizeId(item.eid);
+    if (!drawerEid) return item;
+
+    activeEid = drawerEid;
+
+    const vm = _buildExploreDrawerTextModel(item);
+    const titleEl = document.getElementById("exploreDrawerTitle");
+    const metaEl = document.getElementById("exploreDrawerMeta");
+    const coverEl = document.getElementById("exploreDrawerCover");
+    const badgeEl = document.getElementById("exploreDrawerBadge");
+    const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
+    const addListsBtn = document.getElementById("exploreDrawerAddLists");
+
+    if (titleEl) titleEl.textContent = vm.title;
+    if (metaEl) metaEl.textContent = vm.meta;
+
+    _applyExploreVisualCover(coverEl, item);
+
+    if (badgeEl) {
+      badgeEl.textContent = vm.badge;
+      badgeEl.hidden = !vm.hasBadge;
+    }
+
+    if (addLibraryBtn) {
+      addLibraryBtn.dataset.eid = drawerEid;
+      addLibraryBtn.disabled = !!item.__saving;
+    }
+
+    if (addListsBtn) {
+      addListsBtn.dataset.eid = drawerEid;
+      addListsBtn.disabled = !!item.__saving;
+    }
+
+    _clearDrawerInlineNote();
+    _renderDrawerAddCtaLabel();
+
+    return item;
+  }
+
+  function _renderContentDetailView(item) {
+    if (!item) return null;
+
+    const detailEid = _normalizeId(item?.eid);
+    if (!detailEid) return item;
+
+    activeEid = detailEid;
+    __detailViewItem = item;
+
+    const vm = _buildExploreDrawerTextModel(item);
+    const metaVm = _buildExploreDrawerDetailMeta(item);
+
+    const titleEl = document.getElementById("contentDetailTitle");
+    const metaEl = document.getElementById("contentDetailMeta");
+    const coverEl = document.getElementById("contentDetailCover");
+    const badgeEl = document.getElementById("contentDetailBadge");
+    const typeEl = document.getElementById("contentDetailType");
+    const releaseEl = document.getElementById("contentDetailReleaseDate");
+    const ratingEl = document.getElementById("contentDetailRating");
+    const metaPrimaryLabelEl = document.getElementById("contentDetailMetaPrimaryLabel");
+    const metaPrimaryValueEl = document.getElementById("contentDetailMetaPrimaryValue");
+    const libraryEl = document.getElementById("contentDetailLibraryState");
+    const listsEl = document.getElementById("contentDetailListsCount");
+    const genresEl = document.getElementById("contentDetailGenres");
+    const summaryEl = document.getElementById("contentDetailSummary");
+    const addLibraryBtn = document.getElementById("contentDetailAddLibrary");
+    const addListsBtn = document.getElementById("contentDetailAddLists");
+
+    if (titleEl) titleEl.textContent = vm.title;
+    if (metaEl) metaEl.textContent = vm.meta;
+
+    _applyExploreVisualCover(coverEl, item);
+
+    if (badgeEl) {
+      badgeEl.textContent = vm.badge;
+      badgeEl.hidden = !vm.hasBadge;
+    }
+
+    if (typeEl) typeEl.textContent = vm.detailType;
+    if (releaseEl) releaseEl.textContent = vm.detailReleaseDate;
+    if (libraryEl) libraryEl.textContent = vm.detailLibraryState;
+    if (listsEl) listsEl.textContent = vm.detailListsCount;
+    if (genresEl) genresEl.textContent = metaVm.genres;
+    if (metaPrimaryLabelEl) metaPrimaryLabelEl.textContent = metaVm.primaryLabel;
+    if (metaPrimaryValueEl) metaPrimaryValueEl.textContent = metaVm.primaryValue;
+
+    _renderExploreRating(ratingEl, item);
+
+    if (summaryEl) {
+      summaryEl.textContent = vm.summary;
+    }
+
+    if (addLibraryBtn) {
+      addLibraryBtn.dataset.eid = detailEid;
+      addLibraryBtn.disabled = !!item.__saving;
+    }
+
+    if (addListsBtn) {
+      addListsBtn.dataset.eid = detailEid;
+      addListsBtn.disabled = !!item.__saving;
+    }
+
+    _syncContentDetailFeedback();
+    _syncContentDetailListPicker();
+
+    return item;
+  }
+
+  function _syncActiveExploreSurfaces(targetEid = "") {
+    const normalizedTargetEid = _normalizeId(targetEid);
+
+    const activeItem = _getActiveExploreItem();
+    if (
+      __drawerOpen &&
+      activeItem &&
+      (!normalizedTargetEid || _normalizeId(activeItem.eid) === normalizedTargetEid)
+    ) {
+      _syncExploreDrawerFromItem(activeItem);
+      _renderExploreDrawerDetails(activeItem);
+    }
+
+    const detailItem = _getActiveDetailItem();
+    if (
+      _isDetailViewActive() &&
+      detailItem &&
+      (!normalizedTargetEid || _normalizeId(detailItem.eid) === normalizedTargetEid)
+    ) {
+      __detailViewItem = detailItem;
+      _renderContentDetailView(detailItem);
+    }
+  }
+
+  function _openContentDetailView(item, { originView = "explore", triggerEl = null } = {}) {
+    const detailItem = _replaceExploreItemByEid(item) || item;
+    const detailEid = _normalizeId(detailItem?.eid);
+    if (!detailEid) return;
+
+    const fallbackFocusEl = __drawerOpen
+      ? (__drawerLastFocusEl || triggerEl || document.activeElement)
+      : (triggerEl || document.activeElement);
+
+    __detailOriginView = originView || "explore";
+    __detailViewLastFocusEl = fallbackFocusEl;
+    __detailViewItem = detailItem;
+    __detailViewLoading = false;
+    __detailViewError = false;
+    __detailListsPickerOpen = false;
+    __detailViewReqSeq += 1;
+    activeEid = detailEid;
+
+    if (__drawerOpen) {
+      _closeExploreDrawer({ restoreFocus: false, clearActiveEid: false });
+    }
+
+    _renderContentDetailView(detailItem);
+    window.Router?.showView?.("detail");
+
+    requestAnimationFrame(() => {
+      document.getElementById("contentDetailBack")?.focus?.();
+    });
+
+    _refreshExploreDrawerLibraryState(detailItem)
+      .then((freshItem) => {
+        const nextItem = freshItem || detailItem;
+        if (!_isDetailViewActive()) return;
+        __detailViewItem = nextItem;
+        _renderContentDetailView(nextItem);
+        return _hydrateContentDetailView(nextItem);
+      })
+      .catch((error) => {
+        console.error("[Explore] failed to refresh detail page state", error);
+        void _hydrateContentDetailView(detailItem);
+      });
+  }
+
+  function _closeContentDetailView({ restoreFocus = true } = {}) {
+    __detailViewReqSeq += 1;
+    __detailViewLoading = false;
+    __detailViewError = false;
+    __detailListsPickerOpen = false;
+    _syncContentDetailFeedback();
+    _syncContentDetailListPicker();
+
+    const back = __detailViewLastFocusEl;
+    const originView = __detailOriginView || "explore";
+
+    __detailViewLastFocusEl = null;
+    __detailViewItem = null;
+    __detailOriginView = "explore";
+    activeEid = null;
+
+    window.Router?.showView?.(originView);
+
+    if (restoreFocus && back && typeof back.focus === "function") {
+      requestAnimationFrame(() => back.focus());
+    }
+  }
+
+  function _getExploreListPickerRefs(scope = "drawer") {
+    if (scope === "detail") {
+      return {
+        picker: document.getElementById("contentDetailListPicker"),
+        select: document.getElementById("contentDetailListSelect"),
+        confirmBtn: document.getElementById("contentDetailConfirmList"),
+        addBtn: document.getElementById("contentDetailAddLists")
+      };
+    }
+
+    return {
+      picker: document.getElementById("exploreDrawerListPicker"),
+      select: document.getElementById("exploreDrawerListSelect"),
+      confirmBtn: document.getElementById("exploreDrawerConfirmList"),
+      addBtn: document.getElementById("exploreDrawerAddLists")
+    };
+  }
+
+  function _isExploreListPickerOpen(scope = "drawer") {
+    return scope === "detail" ? __detailListsPickerOpen : __drawerListsPickerOpen;
+  }
+
+  function _setExploreListPickerOpen(scope = "drawer", isOpen = false) {
+    if (scope === "detail") {
+      __detailListsPickerOpen = !!isOpen;
+      return;
+    }
+
+    __drawerListsPickerOpen = !!isOpen;
+  }
+
+  function _syncExploreListPickerVisibility(scope = "drawer") {
+    const { picker, addBtn } = _getExploreListPickerRefs(scope);
+    const isOpen = _isExploreListPickerOpen(scope);
+
+    if (picker) {
+      picker.hidden = !isOpen;
+    }
+
+    if (addBtn) {
+      addBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      addBtn.classList.toggle("is-active", isOpen);
+    }
+  }
+
+  function _syncExploreDrawerListPicker() {
+    _syncExploreListPickerVisibility("drawer");
+  }
+
+  function _syncContentDetailListPicker() {
+    _syncExploreListPickerVisibility("detail");
+  }
+
+  async function _handleExploreDrawerAddToListClick() {
+    const activeItem = _getActiveExploreItem();
+    if (!activeItem) return;
+
+    if (_isExploreListPickerOpen("drawer")) {
+      _closeExploreListPicker("drawer");
+      return;
+    }
+
+    await _openExploreListPicker(null, "drawer");
+  }
+
+  async function _handleContentDetailAddToListClick() {
+    const activeItem = _getActiveDetailItem();
+    if (!activeItem) return;
+
+    if (_isExploreListPickerOpen("detail")) {
+      _closeExploreListPicker("detail");
+      return;
+    }
+
+    await _openExploreListPicker(null, "detail");
+  }
+
+  async function _populateExploreListPicker(preselectedListId = null, scope = "drawer") {
+    const { select, confirmBtn } = _getExploreListPickerRefs(scope);
+    if (!select) return;
+    const normalizedPreselectedListId = _normalizeId(preselectedListId);
+
+    let lists = [];
+    try {
+      lists = await ApiClient.getLists();
+    } catch (e) {
+      console.error("Explore: no se pudieron cargar las listas", e);
+      lists = [];
+    }
+
+    const safeLists = Array.isArray(lists) ? lists : [];
+
+    select.innerHTML = "";
+
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent =
+      window.I18n.t("explore_drawer_list_placeholder");
+    select.appendChild(placeholderOption);
+
+    for (const list of safeLists) {
+      const listId = _normalizeId(list?.id);
+      if (!listId) continue;
+
+      const option = document.createElement("option");
+      option.value = listId;
+      option.textContent =
+        _safeText(list.name) ||
+        window.I18n.t("explore_drawer_list_untitled");
+      select.appendChild(option);
+    }
+
+    const hasLists = safeLists.length > 0;
+
+    if (!hasLists) {
+      select.innerHTML = "";
+
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent =
+        window.I18n.t("explore_drawer_list_empty");
+      select.appendChild(emptyOption);
+    }
+
+    if (normalizedPreselectedListId && hasLists) {
+      select.value = normalizedPreselectedListId;
+    }
+
+    select.disabled = !hasLists;
+
+    if (confirmBtn) {
+      confirmBtn.disabled = !hasLists;
+    }
+  }
+
+  async function _openExploreListPicker(preselectedListId = null, scope = "drawer") {
+    const { picker, select, confirmBtn } = _getExploreListPickerRefs(scope);
+
+    if (!picker) return;
+
+    _setExploreListPickerOpen(scope, true);
+    picker.hidden = false;
+
+    if (select) {
+      select.innerHTML = "";
+      const loadingOption = document.createElement("option");
+      loadingOption.value = "";
+      loadingOption.textContent =
+        window.I18n.t("explore_drawer_list_loading");
+      select.appendChild(loadingOption);
+      select.disabled = true;
+    }
+
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+    }
+
+    try {
+      await _populateExploreListPicker(preselectedListId, scope);
+    } catch (e) {
+      console.error("Explore: no se pudo preparar el picker de listas", e);
+    }
+
+    _syncExploreListConfirmState(scope);
+    _syncExploreListPickerVisibility(scope);
+
+    requestAnimationFrame(() => select?.focus?.());
+  }
+
+  function _closeExploreListPicker(scope = "drawer") {
+    const { picker, select, confirmBtn } = _getExploreListPickerRefs(scope);
+
+    _setExploreListPickerOpen(scope, false);
+
+    if (picker) picker.hidden = true;
+    if (select) select.value = "";
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    _syncExploreListPickerVisibility(scope);
+  }
+
+  function _syncExploreListConfirmState(scope = "drawer") {
+    const { select, confirmBtn } = _getExploreListPickerRefs(scope);
+    if (!confirmBtn) return;
+    confirmBtn.disabled = !_normalizeId(select?.value);
+  }
+
+  async function _saveActiveExploreItemToList(listId, { item = null, scope = "drawer" } = {}) {
+    const normalizedListId = _normalizeId(listId);
+    const activeItem = item || (scope === "detail" ? _getActiveDetailItem() : _getActiveExploreItem());
+    if (!activeItem || !normalizedListId) return;
+
+    const { confirmBtn } = _getExploreListPickerRefs(scope);
+    _setDrawerButtonLoading(confirmBtn, true);
+
+    try {
+      const ensured = await _ensureInLibrary(activeItem);
+      if (!ensured?.ok) return;
+
+      const freshItem = _getExploreItemByEid(activeItem.eid) || activeItem;
+      const libraryItemId = _normalizeId(
+        ensured.createdId ||
+        freshItem?.__libraryItemId
+      );
+
+      if (!libraryItemId) {
+        if (scope === "detail") {
+          window.toast?.({
+            title: window.I18n.t("explore_library_add_error"),
+            message: window.I18n.t("explore_drawer_list_resolve_error"),
+            type: "error",
+            duration: 3000
+          });
+        } else {
+          _showDrawerInlineNotePersistent(
+            window.I18n.t("explore_drawer_list_resolve_error")
+          );
+        }
+        return;
+      }
+
+      const result = await ApiClient.addLibraryItemToList(
+        normalizedListId,
+        libraryItemId
+      );
+
+      let feedbackMessage = "";
+      let feedbackType = "success";
+      let drawerNotePersistent = false;
+
+      if (result?.ok && !result?.already) {
+        feedbackMessage = window.I18n.t("explore_drawer_list_added");
+      } else if (result?.already) {
+        feedbackMessage = window.I18n.t("explore_drawer_list_already_added");
+        feedbackType = "info";
+        drawerNotePersistent = true;
+      } else {
+        if (scope === "detail") {
+          window.toast?.({
+            title: window.I18n.t("explore_library_add_error"),
+            message: window.I18n.t("explore_drawer_list_add_error"),
+            type: "error",
+            duration: 3000
+          });
+        } else {
+          _showDrawerInlineNotePersistent(
+            window.I18n.t("explore_drawer_list_add_error")
+          );
+        }
+        return;
+      }
+
+      await _syncInLibraryFlags();
+
+      const fresh = _getExploreItemByEid(activeItem.eid) || activeItem;
+      _render();
+      _syncActiveExploreSurfaces(activeItem.eid);
+      _closeExploreListPicker(scope);
+
+      if (feedbackMessage) {
+        if (scope === "detail") {
+          window.toast?.({
+            title: window.I18n.t("nav_detail"),
+            message: feedbackMessage,
+            type: feedbackType,
+            duration: 2400
+          });
+        } else if (drawerNotePersistent) {
+          _showDrawerInlineNotePersistent(feedbackMessage);
+        } else {
+          _showDrawerInlineNote(feedbackMessage);
+        }
+      }
+
+      if (scope === "detail" && fresh) {
+        __detailViewItem = fresh;
+        _renderContentDetailView(fresh);
+      }
+    } catch (err) {
+      console.error("[Explore] add item to list failed", err);
+
+      if (scope === "detail") {
+        window.toast?.({
+          title: window.I18n.t("explore_library_add_error"),
+          message: window.I18n.t("explore_drawer_list_add_error"),
+          type: "error",
+          duration: 3000
+        });
+      } else {
+        _showDrawerInlineNotePersistent(
+          window.I18n.t("explore_drawer_list_add_error")
+        );
+      }
+    } finally {
+      _setDrawerButtonLoading(confirmBtn, false);
+    }
+  }
+
   function _patchExploreItemsByLibraryItemId(libraryItemId, patcher) {
     const targetLibraryItemId = _normalizeId(libraryItemId);
     if (!targetLibraryItemId || typeof patcher !== "function") return false;
@@ -753,7 +1402,7 @@ const ExploreModule = (() => {
       const entryLibraryItemId = _normalizeId(
         window.ItemIdentity.resolveLibraryItemIdFromCache(entry, _libraryCache)
       );
-        
+
       if (entryLibraryItemId !== targetLibraryItemId) return entry;
 
       didChange = true;
@@ -800,14 +1449,7 @@ const ExploreModule = (() => {
       .then(() => _syncInLibraryFlags())
       .then(() => {
         _applyFilters();
-
-        if (!__drawerOpen) return;
-
-        const activeItem = _getActiveExploreItem();
-        if (!activeItem) return;
-
-        _syncExploreDrawerFromItem(activeItem);
-        _renderExploreDrawerDetails(activeItem);
+        _syncActiveExploreSurfaces();
       })
       .catch((error) => {
         console.error("[Explore] failed to sync library state", error);
@@ -876,13 +1518,7 @@ const ExploreModule = (() => {
     if (!didChange) return;
 
     _render();
-
-    const activeItem = _getActiveExploreItem();
-    const activeLibraryItemId = _normalizeId(activeItem?.__libraryItemId);
-
-    if (activeItem && activeLibraryItemId === libraryItemId) {
-      _syncExploreDrawerFromItem(activeItem);
-    }
+    _syncActiveExploreSurfaces();
   }
 
   document.addEventListener("quacker:data-changed", _handleExploreDataChanged);
@@ -1049,33 +1685,7 @@ const ExploreModule = (() => {
     if (libraryEl) libraryEl.textContent = vm.detailLibraryState;
     if (listsEl) listsEl.textContent = vm.detailListsCount;
 
-    if (ratingEl) {
-      const rawRating = Number(item?.rating || 0);
-      const safeRating = Number.isFinite(rawRating) ? Math.max(0, Math.min(10, rawRating)) : 0;
-
-      const duckCount = Math.round(safeRating / 2);
-      const maxDucks = 5;
-
-      const ducks = Array.from({ length: maxDucks }, (_, i) => {
-        const filled = i < duckCount;
-
-        return `
-          <img
-            src="assets/img/quacker-rating.png"
-            class="explore-rating-duck${filled ? " is-filled" : ""}"
-            alt=""
-            aria-hidden="true"
-          />
-        `;
-      }).join("");
-
-      ratingEl.innerHTML = `
-        <span class="explore-rating-ducks" aria-label="${safeRating.toFixed(1)} sobre 10">
-          ${ducks}
-        </span>
-        <span class="explore-rating-number">${safeRating.toFixed(1)}</span>
-      `;
-    }
+    _renderExploreRating(ratingEl, item);
 
     if (genresEl) genresEl.textContent = metaVm.genres;
     if (metaPrimaryLabelEl) metaPrimaryLabelEl.textContent = metaVm.primaryLabel;
@@ -1111,343 +1721,6 @@ const ExploreModule = (() => {
 
     if (__drawerExpanded) {
       _syncExploreDrawerViewport();
-    }
-  }
-
-  function _getActiveExploreItem() {
-    return _getExploreItemByEid(activeEid);
-  }
-
-  async function _hydrateExploreDrawerDetail(item) {
-    if (!item) return;
-
-    const source = _safeText(item?.source).trim();
-    const type = _safeText(item?.type).trim();
-    const externalId = _safeText(item?.externalId).trim();
-    const eid = _normalizeId(item?.eid);
-
-    if (!source || !type || !externalId || !eid) return;
-
-    const cacheKey = `${source}:${type}:${externalId}`;
-    const reqSeq = ++__drawerDetailReqSeq;
-
-    __drawerDetailLoading = true;
-    __drawerDetailError = false;
-    _syncExploreDrawerDetailFeedback();
-
-    if (__drawerDetailCache.has(cacheKey)) {
-      if (reqSeq !== __drawerDetailReqSeq) return;
-      if (activeEid !== eid) return;
-
-      __drawerDetailLoading = false;
-      __drawerDetailError = false;
-      _syncExploreDrawerDetailFeedback();
-
-      const cachedDetail = __drawerDetailCache.get(cacheKey);
-      const mergedItem = {
-        ...item,
-        ...cachedDetail,
-        eid,
-        __saving: item.__saving
-      };
-
-      const persistedItem = _replaceExploreItemByEid(mergedItem) || mergedItem;
-
-      _syncExploreDrawerFromItem(persistedItem);
-      _renderExploreDrawerDetails(persistedItem);
-      return;
-    }
-
-    try {
-      const detail = await ApiClient.getExploreItemDetail({ source, type, externalId });
-
-      if (!detail) {
-        if (reqSeq !== __drawerDetailReqSeq) return;
-        if (activeEid !== eid) return;
-
-        __drawerDetailLoading = false;
-        __drawerDetailError = true;
-        _syncExploreDrawerDetailFeedback();
-        return;
-      }
-
-      if (reqSeq !== __drawerDetailReqSeq) return;
-      if (activeEid !== eid) return;
-
-      __drawerDetailCache.set(cacheKey, detail);
-
-      const mergedItem = {
-        ...item,
-        ...detail,
-        eid,
-        __saving: item.__saving
-      };
-
-      const persistedItem = _replaceExploreItemByEid(mergedItem) || mergedItem;
-
-      __drawerDetailLoading = false;
-      __drawerDetailError = false;
-      _syncExploreDrawerDetailFeedback();
-
-      _syncExploreDrawerFromItem(persistedItem);
-      _renderExploreDrawerDetails(persistedItem);
-    } catch (err) {
-      if (reqSeq !== __drawerDetailReqSeq) return;
-      if (activeEid !== eid) return;
-
-      __drawerDetailLoading = false;
-      __drawerDetailError = true;
-      _syncExploreDrawerDetailFeedback();
-      console.error("[Explore] drawer detail hydration failed", err);
-    }
-  }
-
-  function _syncExploreDrawerFromItem(item) {
-    if (!item) return null;
-    const drawerEid = _normalizeId(item.eid);
-    if (!drawerEid) return item;
-
-    activeEid = drawerEid;
-
-    const vm = _buildExploreDrawerTextModel(item);
-    const titleEl = document.getElementById("exploreDrawerTitle");
-    const metaEl = document.getElementById("exploreDrawerMeta");
-    const coverEl = document.getElementById("exploreDrawerCover");
-    const badgeEl = document.getElementById("exploreDrawerBadge");
-    const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
-    const addListsBtn = document.getElementById("exploreDrawerAddLists");
-
-    if (titleEl) titleEl.textContent = vm.title;
-    if (metaEl) metaEl.textContent = vm.meta;
-
-    if (coverEl) {
-      const backdrop = _safeText(item?.backdrop).trim();
-      const cover = _safeText(item?.cover).trim();
-      const heroImage = backdrop || cover;
-
-      if (heroImage) {
-        coverEl.style.backgroundImage = `url("${heroImage}")`;
-        coverEl.style.backgroundSize = "cover";
-        coverEl.style.backgroundPosition = "center";
-        coverEl.style.backgroundRepeat = "no-repeat";
-        coverEl.classList.remove("is-fallback");
-      } else {
-        coverEl.style.backgroundImage = "none";
-        coverEl.style.backgroundSize = "";
-        coverEl.style.backgroundPosition = "";
-        coverEl.style.backgroundRepeat = "";
-        coverEl.classList.add("is-fallback");
-      }
-    }
-
-    if (badgeEl) {
-      badgeEl.textContent = vm.badge;
-      badgeEl.hidden = !vm.hasBadge;
-    }
-
-    if (addLibraryBtn) {
-      addLibraryBtn.dataset.eid = drawerEid;
-      addLibraryBtn.disabled = !!item.__saving;
-    }
-
-    if (addListsBtn) {
-      addListsBtn.dataset.eid = drawerEid;
-      addListsBtn.disabled = !!item.__saving;
-    }
-
-    _clearDrawerInlineNote();
-    _renderDrawerAddCtaLabel();
-
-    return item;
-  }
-
-  async function _populateExploreListPicker(preselectedListId = null) {
-    const select = document.getElementById("exploreDrawerListSelect");
-    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
-    if (!select) return;
-    const normalizedPreselectedListId = _normalizeId(preselectedListId);
-
-    let lists = [];
-    try {
-      lists = await ApiClient.getLists();
-    } catch (e) {
-      console.error("Explore: no se pudieron cargar las listas", e);
-      lists = [];
-    }
-
-    const safeLists = Array.isArray(lists) ? lists : [];
-
-    select.innerHTML = "";
-
-    const placeholderOption = document.createElement("option");
-    placeholderOption.value = "";
-    placeholderOption.textContent =
-      window.I18n.t("explore_drawer_list_placeholder");
-    select.appendChild(placeholderOption);
-
-    for (const list of safeLists) {
-      const listId = _normalizeId(list?.id);
-      if (!listId) continue;
-
-      const option = document.createElement("option");
-      option.value = listId;
-      option.textContent =
-        _safeText(list.name) ||
-        window.I18n.t("explore_drawer_list_untitled");
-      select.appendChild(option);
-    }
-
-    const hasLists = safeLists.length > 0;
-
-    if (!hasLists) {
-      select.innerHTML = "";
-
-      const emptyOption = document.createElement("option");
-      emptyOption.value = "";
-      emptyOption.textContent =
-        window.I18n.t("explore_drawer_list_empty");
-      select.appendChild(emptyOption);
-    }
-
-    if (normalizedPreselectedListId && hasLists) {
-      select.value = normalizedPreselectedListId;
-    }
-
-    select.disabled = !hasLists;
-
-    if (confirmBtn) {
-      confirmBtn.disabled = !hasLists;
-    }
-  }
-
-  async function _openExploreListPicker(preselectedListId = null) {
-    const picker = document.getElementById("exploreDrawerListPicker");
-    const select = document.getElementById("exploreDrawerListSelect");
-    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
-
-    if (!picker) return;
-
-    __drawerListsPickerOpen = true;
-    picker.hidden = false;
-
-    if (select) {
-      select.innerHTML = "";
-      const loadingOption = document.createElement("option");
-      loadingOption.value = "";
-      loadingOption.textContent =
-        window.I18n.t("explore_drawer_list_loading");
-      select.appendChild(loadingOption);
-      select.disabled = true;
-    }
-
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-    }
-
-    try {
-      await _populateExploreListPicker(preselectedListId);
-    } catch (e) {
-      console.error("Explore: no se pudo preparar el picker de listas", e);
-    }
-
-    _syncExploreListConfirmState();
-
-    requestAnimationFrame(() => select?.focus?.());
-  }
-
-  function _closeExploreListPicker() {
-    const picker = document.getElementById("exploreDrawerListPicker");
-    const select = document.getElementById("exploreDrawerListSelect");
-    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
-
-    __drawerListsPickerOpen = false;
-
-    if (picker) picker.hidden = true;
-    if (select) select.value = "";
-    if (confirmBtn) confirmBtn.disabled = true;
-  }
-
-  function _syncExploreListConfirmState() {
-    const select = document.getElementById("exploreDrawerListSelect");
-    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
-    if (!confirmBtn) return;
-    confirmBtn.disabled = !_normalizeId(select?.value);
-  }
-
-  async function _saveActiveExploreItemToList(listId) {
-    const normalizedListId = _normalizeId(listId);
-    const item = _getActiveExploreItem();
-    if (!item || !normalizedListId) return;
-
-    const confirmBtn = document.getElementById("exploreDrawerConfirmList");
-    _setDrawerButtonLoading(confirmBtn, true);
-
-    try {
-      const ensured = await _ensureInLibrary(item);
-      if (!ensured?.ok) return;
-
-      const freshItem = _getExploreItemByEid(item.eid);
-
-      const libraryItemId = _normalizeId(
-        ensured.createdId ||
-        freshItem?.__libraryItemId
-      );
-
-      if (!libraryItemId) {
-        _showDrawerInlineNotePersistent(
-          window.I18n.t("explore_drawer_list_resolve_error")
-        );
-        return;
-      }
-
-      const result = await ApiClient.addLibraryItemToList(
-        normalizedListId,
-        libraryItemId
-      );
-
-      let drawerNoteMessage = "";
-      let drawerNotePersistent = false;
-
-      if (result?.ok && !result?.already) {
-        drawerNoteMessage = window.I18n.t("explore_drawer_list_added");
-        drawerNotePersistent = false;
-      } else if (result?.already) {
-        drawerNoteMessage = window.I18n.t("explore_drawer_list_already_added");
-        drawerNotePersistent = true;
-      } else {
-        _showDrawerInlineNotePersistent(
-          window.I18n.t("explore_drawer_list_add_error")
-        );
-        return;
-      }
-
-      await _syncInLibraryFlags();
-
-      const fresh = _getExploreItemByEid(item.eid);
-
-      if (fresh) {
-        _syncExploreDrawerFromItem(fresh);
-        _renderExploreDrawerDetails(fresh);
-      }
-
-      _render();
-
-      _closeExploreListPicker();
-
-      if (drawerNoteMessage) {
-        if (drawerNotePersistent) {
-          _showDrawerInlineNotePersistent(drawerNoteMessage);
-        } else {
-          _showDrawerInlineNote(drawerNoteMessage);
-        }
-      }
-    } catch (err) {
-      console.error("[Explore] add item to list failed", err);
-      _showDrawerInlineNotePersistent(
-        window.I18n.t("explore_drawer_list_add_error")
-      );
-    } finally {
-      _setDrawerButtonLoading(confirmBtn, false);
     }
   }
 
@@ -1626,6 +1899,7 @@ const ExploreModule = (() => {
     const run = (async () => {
 
     _patchExploreItemsByEid(eid, () => ({ __saving: true }));
+    _syncActiveExploreSurfaces(eid);
 
       _applyFilters();
 
@@ -1738,6 +2012,7 @@ const ExploreModule = (() => {
           __inLibrary: true,
           __libraryItemId: createdId
         }));
+        _syncActiveExploreSurfaces(eid);
 
         await _syncInLibraryFlags();
 
@@ -1779,9 +2054,10 @@ const ExploreModule = (() => {
           if (!resolvedLibraryItemId) {
             console.error(err);
 
-            _patchExploreItemsByEid(eid, () => ({ __saving: false }));
+          _patchExploreItemsByEid(eid, () => ({ __saving: false }));
+          _syncActiveExploreSurfaces(eid);
 
-            _applyFilters();
+          _applyFilters();
 
             window.toast?.({
               title: window.I18n.t("explore_library_add_error"),
@@ -1798,6 +2074,7 @@ const ExploreModule = (() => {
             __inLibrary: true,
             __libraryItemId: resolvedLibraryItemId
           }));
+          _syncActiveExploreSurfaces(eid);
 
           _applyFilters();
 
@@ -1810,6 +2087,7 @@ const ExploreModule = (() => {
         console.error(err);
 
         _patchExploreItemsByEid(eid, () => ({ __saving: false }));
+        _syncActiveExploreSurfaces(eid);
 
         _applyFilters();
 
@@ -1989,39 +2267,6 @@ const ExploreModule = (() => {
     note.textContent = "";
   }
 
-  async function _hydrateExploreItemDetail(item) {
-    if (!item?.source || !item?.type || !item?.externalId) return item;
-    if (item.source !== "tmdb") return item;
-
-    try {
-      const detail = await ApiClient.getExploreItemDetail({
-        source: item.source,
-        type: item.type,
-        externalId: item.externalId
-      });
-
-      if (!detail || typeof detail !== "object") return item;
-
-      const merged = {
-        ...item,
-        ...detail,
-        eid: item.eid || detail.eid || item.eid
-      };
-
-      feed = feed.map((x) => (x.eid === item.eid ? merged : x));
-
-      if (activeEid === item.eid) {
-        _syncExploreDrawerFromItem(merged);
-        _renderExploreDrawerDetails(merged);
-      }
-
-      return merged;
-    } catch (e) {
-      console.error("Explore detail hydrate failed", e);
-      return item;
-    }
-  }
-
   function bind() {
 
     const globalSearch = document.getElementById("globalSearch");
@@ -2141,7 +2386,14 @@ const ExploreModule = (() => {
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
-        _closeExploreDrawer();
+        if (__drawerOpen) {
+          _closeExploreDrawer();
+          return;
+        }
+
+        if (_isDetailViewActive()) {
+          _closeContentDetailView();
+        }
       }
     });
 
@@ -2157,6 +2409,25 @@ const ExploreModule = (() => {
         e.stopPropagation();
 
         _setExploreDrawerExpanded(!__drawerExpanded);
+      });
+    }
+
+    const openDetailPageBtn = document.getElementById("exploreDrawerOpenPage");
+
+    if (openDetailPageBtn && !openDetailPageBtn.dataset.bound) {
+      openDetailPageBtn.dataset.bound = "1";
+
+      openDetailPageBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const item = _getActiveExploreItem();
+        if (!item) return;
+
+        _openContentDetailView(item, {
+          originView: "explore",
+          triggerEl: openDetailPageBtn
+        });
       });
     }
 
@@ -2217,7 +2488,7 @@ const ExploreModule = (() => {
           return;
         }
 
-        await _saveActiveExploreItemToList(listId);
+        await _saveActiveExploreItemToList(listId, { scope: "drawer" });
       });
     }
 
@@ -2229,7 +2500,7 @@ const ExploreModule = (() => {
       listSelect.dataset.bound = "1";
 
       listSelect.addEventListener("change", () => {
-        _syncExploreListConfirmState();
+        _syncExploreListConfirmState("drawer");
       });
     }
 
@@ -2240,7 +2511,111 @@ const ExploreModule = (() => {
         e.preventDefault();
         e.stopPropagation();
 
-        _closeExploreListPicker();
+        _closeExploreListPicker("drawer");
+      });
+    }
+
+    const detailBackBtn = document.getElementById("contentDetailBack");
+    if (detailBackBtn && !detailBackBtn.dataset.bound) {
+      detailBackBtn.dataset.bound = "1";
+
+      detailBackBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        _closeContentDetailView();
+      });
+    }
+
+    const detailAddLibraryBtn = document.getElementById("contentDetailAddLibrary");
+    if (detailAddLibraryBtn && !detailAddLibraryBtn.dataset.bound) {
+      detailAddLibraryBtn.dataset.bound = "1";
+
+      detailAddLibraryBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const item = _getActiveDetailItem();
+        if (!item) return;
+
+        _setDrawerButtonLoading(detailAddLibraryBtn, true);
+
+        try {
+          const ensured = await _ensureInLibrary(item);
+          if (!ensured?.ok) return;
+
+          await _syncInLibraryFlags();
+
+          const fresh = _getActiveDetailItem();
+          if (fresh) {
+            __detailViewItem = fresh;
+            _renderContentDetailView(fresh);
+          }
+
+          _render();
+        } finally {
+          _setDrawerButtonLoading(detailAddLibraryBtn, false);
+
+          const fresh = _getActiveDetailItem();
+          if (fresh) {
+            __detailViewItem = fresh;
+            _renderContentDetailView(fresh);
+          }
+        }
+      });
+    }
+
+    const detailAddListsBtn = document.getElementById("contentDetailAddLists");
+    if (detailAddListsBtn && !detailAddListsBtn.dataset.bound) {
+      detailAddListsBtn.dataset.bound = "1";
+
+      detailAddListsBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await _handleContentDetailAddToListClick();
+      });
+    }
+
+    const detailConfirmListBtn = document.getElementById("contentDetailConfirmList");
+    if (detailConfirmListBtn && !detailConfirmListBtn.dataset.bound) {
+      detailConfirmListBtn.dataset.bound = "1";
+
+      detailConfirmListBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const select = document.getElementById("contentDetailListSelect");
+        const listId = select?.value;
+
+        if (!listId) {
+          window.toast?.({
+            title: window.I18n.t("nav_detail"),
+            message: window.I18n.t("explore_list_required"),
+            type: "error",
+            duration: 2400
+          });
+          return;
+        }
+
+        await _saveActiveExploreItemToList(listId, { scope: "detail" });
+      });
+    }
+
+    const detailListSelect = document.getElementById("contentDetailListSelect");
+    if (detailListSelect && !detailListSelect.dataset.bound) {
+      detailListSelect.dataset.bound = "1";
+
+      detailListSelect.addEventListener("change", () => {
+        _syncExploreListConfirmState("detail");
+      });
+    }
+
+    const detailCancelListBtn = document.getElementById("contentDetailCancelList");
+    if (detailCancelListBtn && !detailCancelListBtn.dataset.bound) {
+      detailCancelListBtn.dataset.bound = "1";
+
+      detailCancelListBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        _closeExploreListPicker("detail");
       });
     }
 
@@ -2301,6 +2676,28 @@ const ExploreModule = (() => {
 
   document.addEventListener("quacker:lang-change", () => {
     _render();
+
+    const activeItem = _getActiveExploreItem();
+    if (__drawerOpen && activeItem) {
+      _syncExploreDrawerFromItem(activeItem);
+      _renderExploreDrawerDetails(activeItem);
+      _syncExploreDrawerDetailFeedback();
+
+      if (_isExploreListPickerOpen("drawer")) {
+        void _populateExploreListPicker(null, "drawer");
+      }
+    }
+
+    const detailItem = _getActiveDetailItem();
+    if (_isDetailViewActive() && detailItem) {
+      __detailViewItem = detailItem;
+      _renderContentDetailView(detailItem);
+      _syncContentDetailFeedback();
+
+      if (_isExploreListPickerOpen("detail")) {
+        void _populateExploreListPicker(null, "detail");
+      }
+    }
   });
 
   return { init, load };
@@ -2312,7 +2709,7 @@ function openAddToLibraryModal(eid) {
   const modal = document.getElementById("addFromExploreModal");
   if (!modal) return;
 
-  const normalizedEid = _normalizeId(eid);
+  const normalizedEid = String(eid ?? "").trim();
   if (!normalizedEid) return;
 
   modal.dataset.eid = normalizedEid;
