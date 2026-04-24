@@ -6235,12 +6235,28 @@ body.modal-open{
 .content-detail-top {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 .content-detail-back {
   min-height: 44px;
   border-radius: 999px;
+}
+
+.content-detail-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.content-detail-top-actions .btn {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-weight: 700;
 }
 
 .content-detail-hero {
@@ -6631,6 +6647,17 @@ body.modal-open{
     flex-direction: column;
   }
 
+  .content-detail-top {
+    align-items: stretch;
+  }
+
+  .content-detail-top-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .content-detail-top-actions .btn,
   .content-detail-actions .btn,
   .content-detail-list-actions .btn {
     width: 100%;
