@@ -926,6 +926,16 @@ const ApiClient = (() => {
     );
   }
 
+  async function getExploreItemSeasonDetail({ source, type, externalId, seasonNumber }) {
+    if (!_isHttp()) return null;
+    if (!source || !type || !externalId || !seasonNumber) return null;
+
+    return _httpJson(
+      "GET",
+      `/explore/item/${encodeURIComponent(source)}/${encodeURIComponent(type)}/${encodeURIComponent(externalId)}/season/${encodeURIComponent(seasonNumber)}`
+    );
+  }
+
   // === listas (por ahora simplemente devuelven lo del estado) ===
   async function getLists() {
     const cachedItems = _getListsCacheSnapshot();
@@ -3707,6 +3717,7 @@ const ApiClient = (() => {
     getExploreUIState,
     setExploreUIState,
     getExploreItemDetail,
+    getExploreItemSeasonDetail,
     getListsCountMapByLibraryKey,
     getLibraryUIState,
     setLibraryUIState,

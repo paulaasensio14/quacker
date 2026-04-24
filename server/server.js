@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import {
  searchTmdb,
  getTmdbDetail,
+ getTmdbSeasonDetail,
  getWeeklyTrendingTmdbByType
 } from "./adapters/tmdb.js";
 import {
@@ -979,6 +980,27 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
 
  }
 
+});
+
+app.get("/api/explore/item/:source/:type/:externalId/season/:seasonNumber", _requireAuth, async (req, res) => {
+  const source = String(req.params.source || "").trim().toLowerCase();
+  const type = String(req.params.type || "").trim().toLowerCase();
+  const externalId = String(req.params.externalId || "").trim();
+  const seasonNumber = Math.max(1, Number(req.params.seasonNumber || 0) || 0);
+
+  try {
+    if (source === "tmdb" && type === "serie") {
+      const season = await getTmdbSeasonDetail({ externalId, seasonNumber });
+      return res.json(season);
+    }
+
+    return res.status(400).json({ error: "unsupported_season_source" });
+  } catch (err) {
+    console.error("GET /api/explore/item season error", err);
+    return res.status(err?.status || 500).json({
+      error: err?.message || "explore_season_detail_failed"
+    });
+  }
 });
 
 app.get("/api/explore/item/:source/:type/:externalId", _requireAuth, async (req, res) => {

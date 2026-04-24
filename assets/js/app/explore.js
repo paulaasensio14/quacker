@@ -39,6 +39,8 @@ const ExploreModule = (() => {
   let __detailViewLastFocusEl = null;
   let __detailListsPickerOpen = false;
   let __detailOriginView = "explore";
+  let __detailExpandedSeasonKey = "";
+  const __detailSeasonCache = new Map();
 
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
@@ -675,6 +677,163 @@ const ExploreModule = (() => {
     return _getExploreItemByEid(detailEid) || __detailViewItem || null;
   }
 
+  function _getDetailSeasonCacheKey(item, seasonNumber) {
+    const source = _safeText(item?.source).trim();
+    const type = _safeText(item?.type).trim();
+    const externalId = _safeText(item?.externalId).trim();
+    const safeSeasonNumber = Math.max(1, Number(seasonNumber || 0) || 0);
+
+    if (!source || !type || !externalId || !safeSeasonNumber) return "";
+
+    return `${source}:${type}:${externalId}:season:${safeSeasonNumber}`;
+  }
+
+  function _canLoadDetailSeasonEpisodes(item) {
+    return (
+      _safeText(item?.source).trim() === "tmdb" &&
+      _safeText(item?.type).trim() === "serie" &&
+      !!_safeText(item?.externalId).trim()
+    );
+  }
+
+  function _renderContentDetailSeasonBody(item, seasonNumber) {
+    const cacheKey = _getDetailSeasonCacheKey(item, seasonNumber);
+    const seasonState = cacheKey ? __detailSeasonCache.get(cacheKey) : null;
+
+    if (!seasonState || seasonState.status === "loading") {
+      return `
+        <div class="content-detail-season-body">
+          <p class="content-detail-season-status">
+            ${_escapeHtml(window.I18n.t("explore_detail_season_loading"))}
+          </p>
+        </div>
+      `;
+    }
+
+    if (seasonState.status === "error") {
+      return `
+        <div class="content-detail-season-body">
+          <p class="content-detail-season-status content-detail-season-status--error">
+            ${_escapeHtml(window.I18n.t("explore_detail_season_error"))}
+          </p>
+        </div>
+      `;
+    }
+
+    const episodes = Array.isArray(seasonState.episodes) ? seasonState.episodes : [];
+
+    if (episodes.length === 0) {
+      return `
+        <div class="content-detail-season-body">
+          <p class="content-detail-season-status">
+            ${_escapeHtml(window.I18n.t("explore_detail_no_episodes"))}
+          </p>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="content-detail-season-body">
+        <ul class="content-detail-episode-list">
+          ${episodes
+            .map((episode) => {
+              const episodeNumber = Math.max(1, Number(episode?.episodeNumber || 0) || 0);
+              const episodeTitle =
+                _safeText(episode?.name).trim() ||
+                window.I18n
+                  .t("explore_detail_episode_name_fallback")
+                  .replace("{number}", String(episodeNumber));
+              const episodeMeta = [
+                _safeText(episode?.airDate).trim(),
+                Number(episode?.runtime || 0) > 0
+                  ? `${Number(episode.runtime)} ${window.I18n.t("time_minutes")}`
+                  : ""
+              ].filter(Boolean).join(" · ");
+
+              return `
+                <li class="content-detail-episode-item">
+                  <strong class="content-detail-episode-title">
+                    E${episodeNumber}. ${_escapeHtml(episodeTitle)}
+                  </strong>
+                  ${
+                    episodeMeta
+                      ? `<span class="content-detail-episode-meta">${_escapeHtml(episodeMeta)}</span>`
+                      : ""
+                  }
+                </li>
+              `;
+            })
+            .join("")}
+        </ul>
+      </div>
+    `;
+  }
+
+  async function _toggleContentDetailSeason(seasonNumber) {
+    const activeItem = _getActiveDetailItem();
+    const safeSeasonNumber = Math.max(1, Number(seasonNumber || 0) || 0);
+    const cacheKey = _getDetailSeasonCacheKey(activeItem, safeSeasonNumber);
+
+    if (!activeItem || !cacheKey) return;
+
+    if (__detailExpandedSeasonKey === cacheKey) {
+      __detailExpandedSeasonKey = "";
+      _renderContentDetailView(activeItem);
+      return;
+    }
+
+    __detailExpandedSeasonKey = cacheKey;
+    _renderContentDetailView(activeItem);
+
+    const cachedSeason = __detailSeasonCache.get(cacheKey);
+    if (cachedSeason?.status === "loaded" || cachedSeason?.status === "loading") {
+      return;
+    }
+
+    __detailSeasonCache.set(cacheKey, {
+      status: "loading",
+      episodes: []
+    });
+    _renderContentDetailView(activeItem);
+
+    try {
+      const season = await ApiClient.getExploreItemSeasonDetail({
+        source: activeItem.source,
+        type: activeItem.type,
+        externalId: activeItem.externalId,
+        seasonNumber: safeSeasonNumber
+      });
+
+      const episodes = Array.isArray(season?.episodes)
+        ? season.episodes.map((episode) => ({
+            episodeNumber: Math.max(1, Number(episode?.episodeNumber || 0) || 0),
+            name: _safeText(episode?.name).trim(),
+            airDate: _safeText(episode?.airDate).trim(),
+            runtime: Number(episode?.runtime || 0) || null
+          }))
+        : [];
+
+      __detailSeasonCache.set(cacheKey, {
+        status: "loaded",
+        episodes
+      });
+    } catch (error) {
+      console.error("[Explore] failed to load season episodes", error);
+      __detailSeasonCache.set(cacheKey, {
+        status: "error",
+        episodes: []
+      });
+    }
+
+    if (!_isDetailViewActive()) return;
+    if (__detailExpandedSeasonKey !== cacheKey) return;
+
+    const freshItem = _getActiveDetailItem();
+    if (freshItem) {
+      _renderContentDetailView(freshItem);
+    }
+  }
+
   function _syncExploreDrawerDetailFeedback() {
     const loadingEl = document.getElementById("exploreDrawerDetailLoading");
     const errorEl = document.getElementById("exploreDrawerDetailError");
@@ -954,7 +1113,7 @@ const ExploreModule = (() => {
       .join("");
   }
 
-  function _renderContentDetailSeasons(metaVm) {
+  function _renderContentDetailSeasons(item, metaVm) {
     const sectionEl = document.getElementById("contentDetailSeasonsSection");
     const metaEl = document.getElementById("contentDetailSeasonsMeta");
     const gridEl = document.getElementById("contentDetailSeasonGrid");
@@ -978,6 +1137,9 @@ const ExploreModule = (() => {
     gridEl.innerHTML = seasonBreakdown
       .map((season) => {
         const seasonNumber = Math.max(0, Number(season?.seasonNumber || 0) || 0);
+        const seasonKey = _getDetailSeasonCacheKey(item, seasonNumber);
+        const isExpandable = _canLoadDetailSeasonEpisodes(item) && !!seasonKey;
+        const isExpanded = seasonKey && __detailExpandedSeasonKey === seasonKey;
         const seasonTitle =
           _safeText(season?.name).trim() ||
           window.I18n
@@ -993,18 +1155,39 @@ const ExploreModule = (() => {
         const poster = _safeText(season?.poster).trim();
 
         return `
-          <article class="content-detail-season-card">
-            <div
-              class="content-detail-season-poster${poster ? "" : " is-fallback"}"
-              ${poster ? `style="background-image: url('${_escapeHtml(poster)}');"` : ""}
+          <article class="content-detail-season-panel${isExpanded ? " is-open" : ""}">
+            <button
+              type="button"
+              class="content-detail-season-card${isExpandable ? "" : " is-static"}"
+              data-season-number="${seasonNumber}"
+              ${isExpandable ? `aria-expanded="${isExpanded ? "true" : "false"}"` : "disabled"}
             >
-              ${poster ? "" : `<span class="content-detail-season-initial">T${seasonNumber}</span>`}
-            </div>
+              <div
+                class="content-detail-season-poster${poster ? "" : " is-fallback"}"
+                ${poster ? `style="background-image: url('${_escapeHtml(poster)}');"` : ""}
+              >
+                ${poster ? "" : `<span class="content-detail-season-initial">T${seasonNumber}</span>`}
+              </div>
 
-            <div class="content-detail-season-copy">
-              <strong class="content-detail-season-title">${_escapeHtml(seasonTitle)}</strong>
-              <span class="content-detail-season-meta">${_escapeHtml(seasonMeta)}</span>
-            </div>
+              <div class="content-detail-season-copy">
+                <strong class="content-detail-season-title">${_escapeHtml(seasonTitle)}</strong>
+                <span class="content-detail-season-meta">${_escapeHtml(seasonMeta)}</span>
+              </div>
+
+              ${
+                isExpandable
+                  ? `
+                    <span class="content-detail-season-chevron" aria-hidden="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 9l6 6 6-6"></path>
+                      </svg>
+                    </span>
+                  `
+                  : ""
+              }
+            </button>
+
+            ${isExpanded ? _renderContentDetailSeasonBody(item, seasonNumber) : ""}
           </article>
         `;
       })
@@ -1105,7 +1288,7 @@ const ExploreModule = (() => {
 
     _renderExploreRating(ratingEl, item);
     _renderContentDetailCast(castEl, metaVm.cast);
-    _renderContentDetailSeasons(metaVm);
+    _renderContentDetailSeasons(item, metaVm);
 
     if (summaryEl) {
       summaryEl.textContent = vm.summary;
@@ -1166,6 +1349,7 @@ const ExploreModule = (() => {
     __detailViewLoading = false;
     __detailViewError = false;
     __detailListsPickerOpen = false;
+    __detailExpandedSeasonKey = "";
     __detailViewReqSeq += 1;
     activeEid = detailEid;
 
@@ -1199,6 +1383,7 @@ const ExploreModule = (() => {
     __detailViewLoading = false;
     __detailViewError = false;
     __detailListsPickerOpen = false;
+    __detailExpandedSeasonKey = "";
     _syncContentDetailFeedback();
     _syncContentDetailListPicker();
 
@@ -2574,6 +2759,17 @@ const ExploreModule = (() => {
           triggerEl: detailTrigger
         });
         return;
+      }
+
+      const seasonToggle = e.target.closest(".content-detail-season-card[data-season-number]");
+      if (seasonToggle) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const seasonNumber = Math.max(1, Number(seasonToggle.dataset.seasonNumber || 0) || 0);
+        if (!seasonNumber) return;
+
+        await _toggleContentDetailSeason(seasonNumber);
       }
     });
 

@@ -78,6 +78,10 @@ function _backdropUrl(path) {
   return path ? `${TMDB_BACKDROP_BASE}${path}` : "";
 }
 
+function _stillUrl(path) {
+  return path ? `${TMDB_BACKDROP_BASE}${path}` : "";
+}
+
 function _yearFromDate(dateStr) {
   const raw = String(dateStr || "").trim();
   if (!raw) return null;
@@ -105,6 +109,21 @@ function _mapTmdbCast(castEntries = [], limit = 8) {
     })
     .filter((entry) => entry.name)
     .slice(0, limit);
+}
+
+function _mapTmdbSeasonEpisodes(episodes = []) {
+  return (Array.isArray(episodes) ? episodes : [])
+    .map((episode) => ({
+      id: String(episode?.id || "").trim(),
+      episodeNumber: Number(episode?.episode_number || 0) || 0,
+      name: String(episode?.name || "").trim(),
+      airDate: String(episode?.air_date || "").trim(),
+      runtime: Number(episode?.runtime || 0) || null,
+      summary: String(episode?.overview || "").trim(),
+      still: _stillUrl(episode?.still_path)
+    }))
+    .filter((episode) => episode.episodeNumber > 0)
+    .sort((a, b) => a.episodeNumber - b.episodeNumber);
 }
 
 function _baseSearchItemFromMovie(item) {
@@ -418,5 +437,36 @@ const seasonBreakdown = Array.isArray(data.seasons)
       totalEpisodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
       seasonBreakdown
     }
+  };
+}
+
+export async function getTmdbSeasonDetail({ externalId, seasonNumber }) {
+  const safeId = String(externalId || "").trim();
+  const safeSeasonNumber = Math.max(1, Number(seasonNumber || 0) || 0);
+
+  if (!safeId) {
+    const err = new Error("missing_tmdb_external_id");
+    err.status = 400;
+    throw err;
+  }
+
+  if (!safeSeasonNumber) {
+    const err = new Error("invalid_tmdb_season_number");
+    err.status = 400;
+    throw err;
+  }
+
+  const data = await _tmdbGet(
+    `/tv/${encodeURIComponent(safeId)}/season/${encodeURIComponent(safeSeasonNumber)}`,
+    { language: "es-ES" }
+  );
+
+  return {
+    seasonNumber: Number(data?.season_number || safeSeasonNumber) || safeSeasonNumber,
+    name: String(data?.name || "").trim(),
+    airDate: String(data?.air_date || "").trim(),
+    summary: String(data?.overview || "").trim(),
+    poster: _posterUrl(data?.poster_path),
+    episodes: _mapTmdbSeasonEpisodes(data?.episodes || [])
   };
 }
