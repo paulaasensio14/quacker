@@ -39,7 +39,7 @@ const ExploreModule = (() => {
   let __detailViewLastFocusEl = null;
   let __detailListsPickerOpen = false;
   let __detailOriginView = "explore";
-  let __detailExpandedSeasonKey = "";
+  const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
 
   function _renderDrawerAddCtaLabel() {
@@ -776,13 +776,13 @@ const ExploreModule = (() => {
 
     if (!activeItem || !cacheKey) return;
 
-    if (__detailExpandedSeasonKey === cacheKey) {
-      __detailExpandedSeasonKey = "";
+    if (__detailExpandedSeasonKeys.has(cacheKey)) {
+      __detailExpandedSeasonKeys.delete(cacheKey);
       _renderContentDetailView(activeItem);
       return;
     }
 
-    __detailExpandedSeasonKey = cacheKey;
+    __detailExpandedSeasonKeys.add(cacheKey);
     _renderContentDetailView(activeItem);
 
     const cachedSeason = __detailSeasonCache.get(cacheKey);
@@ -826,7 +826,7 @@ const ExploreModule = (() => {
     }
 
     if (!_isDetailViewActive()) return;
-    if (__detailExpandedSeasonKey !== cacheKey) return;
+    if (!__detailExpandedSeasonKeys.has(cacheKey)) return;
 
     const freshItem = _getActiveDetailItem();
     if (freshItem) {
@@ -1139,7 +1139,7 @@ const ExploreModule = (() => {
         const seasonNumber = Math.max(0, Number(season?.seasonNumber || 0) || 0);
         const seasonKey = _getDetailSeasonCacheKey(item, seasonNumber);
         const isExpandable = _canLoadDetailSeasonEpisodes(item) && !!seasonKey;
-        const isExpanded = seasonKey && __detailExpandedSeasonKey === seasonKey;
+        const isExpanded = !!seasonKey && __detailExpandedSeasonKeys.has(seasonKey);
         const seasonTitle =
           _safeText(season?.name).trim() ||
           window.I18n
@@ -1349,7 +1349,7 @@ const ExploreModule = (() => {
     __detailViewLoading = false;
     __detailViewError = false;
     __detailListsPickerOpen = false;
-    __detailExpandedSeasonKey = "";
+    __detailExpandedSeasonKeys.clear();
     __detailViewReqSeq += 1;
     activeEid = detailEid;
 
@@ -1383,7 +1383,7 @@ const ExploreModule = (() => {
     __detailViewLoading = false;
     __detailViewError = false;
     __detailListsPickerOpen = false;
-    __detailExpandedSeasonKey = "";
+    __detailExpandedSeasonKeys.clear();
     _syncContentDetailFeedback();
     _syncContentDetailListPicker();
 
