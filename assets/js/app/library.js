@@ -1042,7 +1042,10 @@ const LibraryUI = (() => {
       const byTitle = titleText(a).localeCompare(titleText(b), "es");
       if (byTitle !== 0) return byTitle;
 
-      return String(a.id || "").localeCompare(String(b.id || ""), "es");
+      return _normalizeLibraryItemId(a?.id).localeCompare(
+        _normalizeLibraryItemId(b?.id),
+        "es"
+      );
     }
 
     if (sortMode === "az") {
