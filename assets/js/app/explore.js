@@ -100,6 +100,24 @@ const ExploreModule = (() => {
     );
   }
 
+  function _scrollAppMainToTop() {
+    const mainEl = document.querySelector("main.app-main");
+
+    if (mainEl && typeof mainEl.scrollTo === "function") {
+      try {
+        mainEl.scrollTo({ top: 0, behavior: "auto" });
+        return;
+      } catch (_) {
+        mainEl.scrollTop = 0;
+        return;
+      }
+    }
+
+    if (typeof window.scrollTo === "function") {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }
+
   function _formatExploreCountLabel(count, singularKey, pluralKey) {
     const safeCount = Math.max(0, Number(count || 0));
     return window.I18n
@@ -1679,10 +1697,12 @@ const ExploreModule = (() => {
     const detailItem = _replaceExploreItemByEid(item) || item;
     const detailEid = _normalizeId(detailItem?.eid);
     if (!detailEid) return;
-
-    const fallbackFocusEl = __drawerOpen
-      ? (__drawerLastFocusEl || triggerEl || document.activeElement)
-      : (triggerEl || document.activeElement);
+    const openingFromDetail = _isDetailViewActive();
+    const fallbackFocusEl = openingFromDetail
+      ? (__detailViewLastFocusEl || document.getElementById("contentDetailBack") || triggerEl || document.activeElement)
+      : __drawerOpen
+        ? (__drawerLastFocusEl || triggerEl || document.activeElement)
+        : (triggerEl || document.activeElement);
 
     __detailOriginView = originView || "explore";
     __detailViewLastFocusEl = fallbackFocusEl;
@@ -1703,6 +1723,7 @@ const ExploreModule = (() => {
     window.Router?.showView?.("detail");
 
     requestAnimationFrame(() => {
+      _scrollAppMainToTop();
       document.getElementById("contentDetailBack")?.focus?.();
     });
 
