@@ -505,24 +505,14 @@ const FakeBackend = (() => {
       const raw = localStorage.getItem(STORAGE_KEY);
 
       if (!raw) {
-        const first = { ...DEFAULT_STATE, lists: [] };
+        const first = normalizeMockState({ ...DEFAULT_STATE, lists: [] });
         _save(first);
         return first;
       }
 
       const parsed = JSON.parse(raw);
 
-      // Mezclamos por si ya había datos antiguos sin activities/goals
-      const merged = {
-        ...DEFAULT_STATE,
-        ...parsed,
-        user: { ...DEFAULT_STATE.user, ...(parsed.user || {}) },
-        lists: normalizeMockLists(parsed.lists || DEFAULT_STATE.lists.slice()),
-        library: normalizeMockLibrary(parsed.library || DEFAULT_STATE.library.slice()),
-        activities: normalizeMockActivities(parsed.activities || DEFAULT_STATE.activities.slice()),
-        goals: parsed.goals || DEFAULT_STATE.goals.slice(),
-        notifications: normalizeMockNotifications(parsed.notifications || DEFAULT_STATE.notifications.slice())
-      };
+      const merged = normalizeMockState(parsed);
 
       // Migración legacy (si aplica) y persistencia en el state único
       const migrated = _migrateLegacyKeys(merged);
@@ -534,7 +524,7 @@ const FakeBackend = (() => {
 
     } catch (e) {
       console.warn("FakeBackend._load error", e);
-      return { ...DEFAULT_STATE };
+      return normalizeMockState(DEFAULT_STATE);
     }
   }
 
