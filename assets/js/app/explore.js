@@ -1257,6 +1257,24 @@ const ExploreModule = (() => {
       .join("");
   }
 
+  function _syncContentDetailTrailerLink(linkEl, wrapperEl, trailerUrl = "") {
+    if (!linkEl || !wrapperEl) return;
+
+    const safeHref = _safeText(trailerUrl).trim();
+    const hasSafeHref = /^https?:\/\//i.test(safeHref);
+
+    if (!hasSafeHref) {
+      wrapperEl.hidden = true;
+      linkEl.hidden = true;
+      linkEl.removeAttribute("href");
+      return;
+    }
+
+    wrapperEl.hidden = false;
+    linkEl.hidden = false;
+    linkEl.href = safeHref;
+  }
+
   function _renderContentDetailHighlights(highlightsEl, facts = [], item = null) {
     if (!highlightsEl) return;
 
@@ -1446,6 +1464,8 @@ const ExploreModule = (() => {
     const metaEl = document.getElementById("contentDetailMeta");
     const coverEl = document.getElementById("contentDetailCover");
     const highlightsEl = document.getElementById("contentDetailHighlights");
+    const heroActionsEl = document.getElementById("contentDetailHeroActions");
+    const trailerLinkEl = document.getElementById("contentDetailTrailerLink");
     const quickGridEl = document.getElementById("contentDetailQuickGrid");
     const supportGridEl = document.getElementById("contentDetailSupportGrid");
     const metaFooterGridEl = document.getElementById("contentDetailMetaFooterGrid");
@@ -1477,6 +1497,7 @@ const ExploreModule = (() => {
     if (metaEl) metaEl.textContent = vm.meta;
 
     _applyExploreVisualCover(coverEl, item);
+    _syncContentDetailTrailerLink(trailerLinkEl, heroActionsEl, metaVm.trailerUrl);
 
     if (listsEl) listsEl.textContent = vm.detailListsCount;
     if (genresEl) genresEl.textContent = metaVm.genres;
@@ -2225,6 +2246,7 @@ const ExploreModule = (() => {
       .trim()
       .toUpperCase();
     const watchProvidersLink = _safeText(item?.meta?.watchProviders?.link).trim();
+    const trailerUrl = _safeText(item?.meta?.trailerUrl).trim();
 
     let primaryLabel = window.I18n.t("explore_detail_label_meta");
     let primaryValue = window.I18n.t("explore_detail_no_meta");
@@ -2364,6 +2386,7 @@ const ExploreModule = (() => {
       watchProviders,
       watchProvidersRegion,
       watchProvidersLink,
+      trailerUrl,
       seasonBreakdown,
       seasonsSummary:
         totalSeasonsNumber > 0 || totalEpisodesNumber > 0

@@ -249,6 +249,50 @@ function _extractTmdbWatchProviders(results, preferredRegions = ["ES", "US"]) {
   };
 }
 
+function _pickTmdbVideoUrl(results = [], preferredLocales = ["es", "", "en"]) {
+  const safeResults = Array.isArray(results) ? results : [];
+
+  const candidates = safeResults
+    .map((entry) => ({
+      key: String(entry?.key || "").trim(),
+      site: String(entry?.site || "").trim().toLowerCase(),
+      type: String(entry?.type || "").trim().toLowerCase(),
+      official: !!entry?.official,
+      locale: String(entry?.iso_639_1 || "").trim().toLowerCase(),
+      publishedAt: String(entry?.published_at || "").trim()
+    }))
+    .filter((entry) => entry.key && entry.site === "youtube");
+
+  if (candidates.length === 0) return "";
+
+  const typeScore = (type) => {
+    if (type === "trailer") return 4;
+    if (type === "teaser") return 3;
+    if (type === "clip") return 2;
+    return 1;
+  };
+
+  const localeScore = (locale) => {
+    const index = preferredLocales.indexOf(locale);
+    return index === -1 ? 0 : preferredLocales.length - index;
+  };
+
+  candidates.sort((a, b) => {
+    const officialDiff = Number(b.official) - Number(a.official);
+    if (officialDiff !== 0) return officialDiff;
+
+    const typeDiff = typeScore(b.type) - typeScore(a.type);
+    if (typeDiff !== 0) return typeDiff;
+
+    const localeDiff = localeScore(b.locale) - localeScore(a.locale);
+    if (localeDiff !== 0) return localeDiff;
+
+    return String(b.publishedAt).localeCompare(String(a.publishedAt));
+  });
+
+  return `https://www.youtube.com/watch?v=${encodeURIComponent(candidates[0].key)}`;
+}
+
 function _baseSearchItemFromMovie(item) {
     return {
     eid: `tmdb:movie:${String(item.id)}`,
@@ -483,7 +527,7 @@ export async function getTmdbDetail({ type, externalId }) {
     const [detailData, watchProvidersData] = await Promise.allSettled([
       _tmdbGet(`/movie/${encodeURIComponent(safeId)}`, {
         language: "es-ES",
-        append_to_response: "credits,images",
+        append_to_response: "credits,images,videos",
         include_image_language: "es,en,null"
       }),
       _tmdbGet(`/movie/${encodeURIComponent(safeId)}/watch/providers`)
@@ -519,7 +563,8 @@ export async function getTmdbDetail({ type, externalId }) {
       cast: _mapTmdbCast(data?.credits?.cast || []),
       meta: {
         year: _yearFromDate(data.release_date),
-        watchProviders
+        watchProviders,
+        trailerUrl: _pickTmdbVideoUrl(data?.videos?.results)
       }
     };
   }
@@ -527,7 +572,7 @@ export async function getTmdbDetail({ type, externalId }) {
   const [detailData, watchProvidersData] = await Promise.allSettled([
     _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
       language: "es-ES",
-      append_to_response: "aggregate_credits,images",
+      append_to_response: "aggregate_credits,images,videos",
       include_image_language: "es,en,null"
     }),
     _tmdbGet(`/tv/${encodeURIComponent(safeId)}/watch/providers`)
@@ -588,7 +633,8 @@ const seasonBreakdown = Array.isArray(data.seasons)
       totalSeasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
       totalEpisodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
       seasonBreakdown,
-      watchProviders
+      watchProviders,
+      trailerUrl: _pickTmdbVideoUrl(data?.videos?.results)
     }
   };
 }
