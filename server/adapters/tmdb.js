@@ -2,6 +2,7 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 const TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w1280";
 const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/w780";
+const TMDB_LOGO_BASE = "https://image.tmdb.org/t/p/w154";
 
 import { ENV } from "../config/env.js";
 
@@ -81,6 +82,10 @@ function _backdropUrl(path) {
 
 function _stillUrl(path) {
   return path ? `${TMDB_STILL_BASE}${path}` : "";
+}
+
+function _logoUrl(path) {
+  return path ? `${TMDB_LOGO_BASE}${path}` : "";
 }
 
 function _yearFromDate(dateStr) {
@@ -169,6 +174,79 @@ function _pickTmdbBackdrop(data) {
   });
 
   return _backdropUrl(normalizedCandidates[0]?.path || primaryPath);
+}
+
+function _extractTmdbWatchProviders(results, preferredRegions = ["ES", "US"]) {
+  const safeResults = results && typeof results === "object" ? results : {};
+  const bucketOrder = ["flatrate", "free", "ads", "rent", "buy"];
+
+  const regions = Object.entries(safeResults)
+    .map(([region, payload]) => ({
+      region: String(region || "").trim().toUpperCase(),
+      link: String(payload?.link || "").trim(),
+      entries: bucketOrder.reduce((acc, bucket) => {
+        acc[bucket] = Array.isArray(payload?.[bucket]) ? payload[bucket] : [];
+        return acc;
+      }, {})
+    }))
+    .filter((entry) =>
+      bucketOrder.some((bucket) => Array.isArray(entry.entries[bucket]) && entry.entries[bucket].length > 0)
+    );
+
+  if (regions.length === 0) {
+    return {
+      region: "",
+      link: "",
+      services: []
+    };
+  }
+
+  const preferredRegion = preferredRegions
+    .map((region) => String(region || "").trim().toUpperCase())
+    .map((region) => regions.find((entry) => entry.region === region))
+    .find(Boolean);
+
+  const selectedRegion =
+    preferredRegion ||
+    regions.find((entry) => Array.isArray(entry.entries.flatrate) && entry.entries.flatrate.length > 0) ||
+    regions[0];
+
+  const seenProviders = new Set();
+  const services = [];
+
+  for (const bucket of bucketOrder) {
+    const bucketEntries = Array.isArray(selectedRegion.entries[bucket])
+      ? [...selectedRegion.entries[bucket]]
+      : [];
+
+    bucketEntries
+      .sort(
+        (a, b) =>
+          (Number(a?.display_priority || Number.MAX_SAFE_INTEGER) || Number.MAX_SAFE_INTEGER) -
+          (Number(b?.display_priority || Number.MAX_SAFE_INTEGER) || Number.MAX_SAFE_INTEGER)
+      )
+      .forEach((entry) => {
+        const providerId = String(entry?.provider_id || "").trim();
+        const providerName = String(entry?.provider_name || "").trim();
+        const dedupeKey = providerId || `${bucket}:${providerName}`;
+
+        if (!providerName || !dedupeKey || seenProviders.has(dedupeKey)) return;
+
+        seenProviders.add(dedupeKey);
+        services.push({
+          id: dedupeKey,
+          name: providerName,
+          logo: _logoUrl(entry?.logo_path),
+          accessType: bucket
+        });
+      });
+  }
+
+  return {
+    region: selectedRegion.region,
+    link: selectedRegion.link,
+    services: services.slice(0, 10)
+  };
 }
 
 function _baseSearchItemFromMovie(item) {
@@ -402,11 +480,24 @@ export async function getTmdbDetail({ type, externalId }) {
   }
 
   if (safeType === "pelicula") {
-    const data = await _tmdbGet(`/movie/${encodeURIComponent(safeId)}`, {
-      language: "es-ES",
-      append_to_response: "credits,images",
-      include_image_language: "es,en,null"
-    });
+    const [detailData, watchProvidersData] = await Promise.allSettled([
+      _tmdbGet(`/movie/${encodeURIComponent(safeId)}`, {
+        language: "es-ES",
+        append_to_response: "credits,images",
+        include_image_language: "es,en,null"
+      }),
+      _tmdbGet(`/movie/${encodeURIComponent(safeId)}/watch/providers`)
+    ]);
+
+    if (detailData.status !== "fulfilled") {
+      throw detailData.reason;
+    }
+
+    const data = detailData.value;
+    const watchProviders =
+      watchProvidersData.status === "fulfilled"
+        ? _extractTmdbWatchProviders(watchProvidersData.value?.results)
+        : { region: "", link: "", services: [] };
 
     return {
       eid: `tmdb:movie:${safeId}`,
@@ -427,16 +518,30 @@ export async function getTmdbDetail({ type, externalId }) {
       statusLabel: String(data.status || "").trim(),
       cast: _mapTmdbCast(data?.credits?.cast || []),
       meta: {
-        year: _yearFromDate(data.release_date)
+        year: _yearFromDate(data.release_date),
+        watchProviders
       }
     };
   }
 
-  const data = await _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
-    language: "es-ES",
-    append_to_response: "aggregate_credits,images",
-    include_image_language: "es,en,null"
-  });
+  const [detailData, watchProvidersData] = await Promise.allSettled([
+    _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
+      language: "es-ES",
+      append_to_response: "aggregate_credits,images",
+      include_image_language: "es,en,null"
+    }),
+    _tmdbGet(`/tv/${encodeURIComponent(safeId)}/watch/providers`)
+  ]);
+
+  if (detailData.status !== "fulfilled") {
+    throw detailData.reason;
+  }
+
+  const data = detailData.value;
+  const watchProviders =
+    watchProvidersData.status === "fulfilled"
+      ? _extractTmdbWatchProviders(watchProvidersData.value?.results)
+      : { region: "", link: "", services: [] };
 
 const seasonBreakdown = Array.isArray(data.seasons)
   ? data.seasons
@@ -482,7 +587,8 @@ const seasonBreakdown = Array.isArray(data.seasons)
       year: _yearFromDate(data.first_air_date),
       totalSeasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
       totalEpisodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
-      seasonBreakdown
+      seasonBreakdown,
+      watchProviders
     }
   };
 }

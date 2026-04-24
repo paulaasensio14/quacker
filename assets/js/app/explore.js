@@ -1115,6 +1115,101 @@ const ExploreModule = (() => {
     .join("");
   }
 
+  function _formatExploreRegionName(regionCode) {
+    const safeRegion = _safeText(regionCode).trim().toUpperCase();
+    if (!safeRegion) return "";
+
+    try {
+      const locale =
+        document?.documentElement?.lang ||
+        (navigator.languages && navigator.languages[0]) ||
+        navigator.language ||
+        "es";
+
+      const formatter = new Intl.DisplayNames([locale], { type: "region" });
+      return formatter.of(safeRegion) || safeRegion;
+    } catch (_) {
+      return safeRegion;
+    }
+  }
+
+  function _translateExploreProviderAccessType(accessType) {
+    const safeType = _safeText(accessType).trim().toLowerCase();
+
+    const keyMap = {
+      flatrate: "explore_detail_provider_flatrate",
+      free: "explore_detail_provider_free",
+      ads: "explore_detail_provider_ads",
+      rent: "explore_detail_provider_rent",
+      buy: "explore_detail_provider_buy"
+    };
+
+    const key = keyMap[safeType];
+    return key ? window.I18n.t(key) : "";
+  }
+
+  function _renderContentDetailProviders(cardEl, listEl, metaEl, providers = [], region = "") {
+    if (!cardEl || !listEl) return;
+
+    const safeProviders = (Array.isArray(providers) ? providers : [])
+      .map((provider) => ({
+        name: _safeText(provider?.name).trim(),
+        logo: _safeText(provider?.logo).trim(),
+        accessType: _safeText(provider?.accessType).trim()
+      }))
+      .filter((provider) => provider.name);
+
+    if (safeProviders.length === 0) {
+      cardEl.hidden = true;
+      listEl.innerHTML = "";
+      if (metaEl) {
+        metaEl.hidden = true;
+        metaEl.textContent = "";
+      }
+      return;
+    }
+
+    cardEl.hidden = false;
+
+    if (metaEl) {
+      const regionName = _formatExploreRegionName(region);
+      const metaText = regionName
+        ? window.I18n.t("explore_detail_watch_region").replace("{region}", regionName)
+        : "";
+
+      metaEl.textContent = metaText;
+      metaEl.hidden = !metaText;
+    }
+
+    listEl.innerHTML = safeProviders
+      .map((provider) => {
+        const accessTypeLabel = _translateExploreProviderAccessType(provider.accessType);
+        const initial = _escapeHtml(provider.name.charAt(0).toUpperCase() || "?");
+
+        return `
+          <article class="content-detail-provider-chip">
+            <div
+              class="content-detail-provider-logo${provider.logo ? "" : " is-fallback"}"
+              ${provider.logo ? `style="background-image: url('${_escapeHtml(provider.logo)}');"` : ""}
+              aria-hidden="true"
+            >
+              ${provider.logo ? "" : `<span class="content-detail-provider-initial">${initial}</span>`}
+            </div>
+
+            <div class="content-detail-provider-copy">
+              <strong class="content-detail-provider-name">${_escapeHtml(provider.name)}</strong>
+              ${
+                accessTypeLabel
+                  ? `<span class="content-detail-provider-type">${_escapeHtml(accessTypeLabel)}</span>`
+                  : ""
+              }
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
   function _renderContentDetailHighlights(highlightsEl, facts = [], item = null) {
     if (!highlightsEl) return;
 
@@ -1307,6 +1402,9 @@ const ExploreModule = (() => {
     const quickGridEl = document.getElementById("contentDetailQuickGrid");
     const supportGridEl = document.getElementById("contentDetailSupportGrid");
     const metaFooterGridEl = document.getElementById("contentDetailMetaFooterGrid");
+    const providersCardEl = document.getElementById("contentDetailProvidersCard");
+    const providersMetaEl = document.getElementById("contentDetailProvidersMeta");
+    const providersEl = document.getElementById("contentDetailProviders");
     const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
     const metaPrimaryCardEl = document.getElementById("contentDetailMetaPrimaryCard");
@@ -1367,6 +1465,13 @@ const ExploreModule = (() => {
 
     _renderExploreRating(ratingEl, item);
     _renderContentDetailHighlights(highlightsEl, metaVm.heroFacts, item);
+    _renderContentDetailProviders(
+      providersCardEl,
+      providersEl,
+      providersMetaEl,
+      metaVm.watchProviders,
+      metaVm.watchProvidersRegion
+    );
     _renderContentDetailCast(castEl, metaVm.cast);
     _renderContentDetailSeasons(item, metaVm);
 
@@ -2056,6 +2161,20 @@ const ExploreModule = (() => {
       }))
       .filter((entry) => entry.name);
 
+    const watchProviders = (Array.isArray(item?.meta?.watchProviders?.services)
+      ? item.meta.watchProviders.services
+      : [])
+      .map((provider) => ({
+        name: _safeText(provider?.name).trim(),
+        logo: _safeText(provider?.logo).trim(),
+        accessType: _safeText(provider?.accessType).trim()
+      }))
+      .filter((provider) => provider.name);
+
+    const watchProvidersRegion = _safeText(item?.meta?.watchProviders?.region)
+      .trim()
+      .toUpperCase();
+
     let primaryLabel = window.I18n.t("explore_detail_label_meta");
     let primaryValue = window.I18n.t("explore_detail_no_meta");
     let secondaryLabel = window.I18n.t("explore_detail_label_meta");
@@ -2191,6 +2310,8 @@ const ExploreModule = (() => {
       showSecondaryCard: secondaryValue !== noMetaValue && !heroFactKeys.has("secondary"),
       showTertiaryCard: tertiaryValue !== noMetaValue && !heroFactKeys.has("tertiary"),
       cast,
+      watchProviders,
+      watchProvidersRegion,
       seasonBreakdown,
       seasonsSummary:
         totalSeasonsNumber > 0 || totalEpisodesNumber > 0
