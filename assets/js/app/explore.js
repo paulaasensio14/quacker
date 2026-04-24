@@ -2074,7 +2074,10 @@ const ExploreModule = (() => {
         e.preventDefault();
         e.stopPropagation();
 
-        const item = _getExploreItemByEid(detailTrigger.dataset.eid);
+        const eid = _normalizeId(detailTrigger.dataset.eid);
+        if (!eid) return;
+
+        const item = _getExploreItemByEid(eid);
         if (!item) return;
 
         _syncExploreDrawerFromItem(item);
@@ -2100,7 +2103,10 @@ const ExploreModule = (() => {
 
       e.preventDefault();
 
-      const item = _getExploreItemByEid(card.dataset.eid);
+      const eid = _normalizeId(card.dataset.eid);
+      if (!eid) return;
+
+      const item = _getExploreItemByEid(eid);
       if (!item) return;
 
       _syncExploreDrawerFromItem(item);
@@ -2306,7 +2312,10 @@ function openAddToLibraryModal(eid) {
   const modal = document.getElementById("addFromExploreModal");
   if (!modal) return;
 
-  modal.dataset.eid = (eid ?? "").toString().trim();
+  const normalizedEid = _normalizeId(eid);
+  if (!normalizedEid) return;
+
+  modal.dataset.eid = normalizedEid;
   modal.classList.add("open");
 }
 
