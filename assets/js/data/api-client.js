@@ -1086,9 +1086,14 @@ const ApiClient = (() => {
     const state = _safeState();
     state.lists = state.lists || [];
     const nowIso = new Date().toISOString();
+    const createdListId = _normalizeDataId(String(Date.now()));
+
+    if (!createdListId) {
+      throw _makeApiError("invalid_list_response", 500);
+    }
 
     const newList = _normalizeListRecord({
-      id: String(Date.now()),
+      id: createdListId,
       name,
       description,
       visibility,
@@ -2823,7 +2828,9 @@ const ApiClient = (() => {
       safeProgress
     );
     const nowIso = new Date().toISOString();
-    const createdId = data.id != null ? _normalizeDataId(data.id) : String(Date.now());
+    const createdId = data.id != null
+      ? _normalizeDataId(data.id)
+      : _normalizeDataId(String(Date.now()));
 
     if (!createdId) {
       throw _makeApiError("missing_id", 400);
