@@ -1,6 +1,7 @@
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
-const TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
+const TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w1280";
+const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/w780";
 
 import { ENV } from "../config/env.js";
 
@@ -79,7 +80,7 @@ function _backdropUrl(path) {
 }
 
 function _stillUrl(path) {
-  return path ? `${TMDB_BACKDROP_BASE}${path}` : "";
+  return path ? `${TMDB_STILL_BASE}${path}` : "";
 }
 
 function _yearFromDate(dateStr) {
@@ -124,6 +125,50 @@ function _mapTmdbSeasonEpisodes(episodes = []) {
     }))
     .filter((episode) => episode.episodeNumber > 0)
     .sort((a, b) => a.episodeNumber - b.episodeNumber);
+}
+
+function _pickTmdbBackdrop(data) {
+  const primaryPath = String(data?.backdrop_path || "").trim();
+  const candidates = Array.isArray(data?.images?.backdrops)
+    ? data.images.backdrops
+    : [];
+
+  const normalizedCandidates = candidates
+    .map((entry) => ({
+      path: String(entry?.file_path || "").trim(),
+      locale: String(entry?.iso_639_1 || "").trim().toLowerCase(),
+      voteAverage: Number(entry?.vote_average || 0) || 0,
+      voteCount: Number(entry?.vote_count || 0) || 0,
+      width: Number(entry?.width || 0) || 0,
+      height: Number(entry?.height || 0) || 0
+    }))
+    .filter((entry) => entry.path && entry.width >= entry.height);
+
+  if (normalizedCandidates.length === 0) {
+    return _backdropUrl(primaryPath);
+  }
+
+  const localeScore = (locale) => {
+    if (locale === "es") return 4;
+    if (!locale) return 3;
+    if (locale === "en") return 2;
+    return 1;
+  };
+
+  normalizedCandidates.sort((a, b) => {
+    const localeDiff = localeScore(b.locale) - localeScore(a.locale);
+    if (localeDiff !== 0) return localeDiff;
+
+    const voteAverageDiff = b.voteAverage - a.voteAverage;
+    if (voteAverageDiff !== 0) return voteAverageDiff;
+
+    const voteCountDiff = b.voteCount - a.voteCount;
+    if (voteCountDiff !== 0) return voteCountDiff;
+
+    return b.width - a.width;
+  });
+
+  return _backdropUrl(normalizedCandidates[0]?.path || primaryPath);
 }
 
 function _baseSearchItemFromMovie(item) {
@@ -359,7 +404,8 @@ export async function getTmdbDetail({ type, externalId }) {
   if (safeType === "pelicula") {
     const data = await _tmdbGet(`/movie/${encodeURIComponent(safeId)}`, {
       language: "es-ES",
-      append_to_response: "credits"
+      append_to_response: "credits,images",
+      include_image_language: "es,en,null"
     });
 
     return {
@@ -373,7 +419,7 @@ export async function getTmdbDetail({ type, externalId }) {
       summary: String(data.overview || "").trim(),
       description: String(data.overview || "").trim(),
       cover: _posterUrl(data.poster_path),
-      backdrop: _backdropUrl(data.backdrop_path),
+      backdrop: _pickTmdbBackdrop(data),
       genres: Array.isArray(data.genres) ? data.genres.map((g) => g.name).filter(Boolean) : [],
       runtime: Number(data.runtime || 0) || null,
       rating: Number(data.vote_average || 0) || null,
@@ -388,7 +434,8 @@ export async function getTmdbDetail({ type, externalId }) {
 
   const data = await _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
     language: "es-ES",
-    append_to_response: "aggregate_credits"
+    append_to_response: "aggregate_credits,images",
+    include_image_language: "es,en,null"
   });
 
 const seasonBreakdown = Array.isArray(data.seasons)
@@ -420,7 +467,7 @@ const seasonBreakdown = Array.isArray(data.seasons)
     summary: String(data.overview || "").trim(),
     description: String(data.overview || "").trim(),
     cover: _posterUrl(data.poster_path),
-    backdrop: _backdropUrl(data.backdrop_path),
+    backdrop: _pickTmdbBackdrop(data),
     genres: Array.isArray(data.genres) ? data.genres.map((g) => g.name).filter(Boolean) : [],
     runtime: Array.isArray(data.episode_run_time) && data.episode_run_time.length > 0
       ? Number(data.episode_run_time[0] || 0) || null
