@@ -743,6 +743,8 @@ const ExploreModule = (() => {
                 window.I18n
                   .t("explore_detail_episode_name_fallback")
                   .replace("{number}", String(episodeNumber));
+              const episodeStill = _safeText(episode?.still).trim();
+              const episodeSummary = _safeText(episode?.summary).trim();
               const episodeMeta = [
                 _safeText(episode?.airDate).trim(),
                 Number(episode?.runtime || 0) > 0
@@ -752,14 +754,33 @@ const ExploreModule = (() => {
 
               return `
                 <li class="content-detail-episode-item">
-                  <strong class="content-detail-episode-title">
-                    E${episodeNumber}. ${_escapeHtml(episodeTitle)}
-                  </strong>
-                  ${
-                    episodeMeta
-                      ? `<span class="content-detail-episode-meta">${_escapeHtml(episodeMeta)}</span>`
-                      : ""
-                  }
+                  <div
+                    class="content-detail-episode-still${episodeStill ? "" : " is-fallback"}"
+                    ${episodeStill ? `style="background-image: url('${_escapeHtml(episodeStill)}');"` : ""}
+                    aria-hidden="true"
+                  >
+                    ${
+                      episodeStill
+                        ? ""
+                        : `<span class="content-detail-episode-still-fallback">E${episodeNumber}</span>`
+                    }
+                  </div>
+
+                  <div class="content-detail-episode-copy">
+                    <strong class="content-detail-episode-title">
+                      E${episodeNumber}. ${_escapeHtml(episodeTitle)}
+                    </strong>
+                    ${
+                      episodeMeta
+                        ? `<span class="content-detail-episode-meta">${_escapeHtml(episodeMeta)}</span>`
+                        : ""
+                    }
+                    ${
+                      episodeSummary
+                        ? `<p class="content-detail-episode-summary">${_escapeHtml(episodeSummary)}</p>`
+                        : ""
+                    }
+                  </div>
                 </li>
               `;
             })
@@ -809,7 +830,9 @@ const ExploreModule = (() => {
             episodeNumber: Math.max(1, Number(episode?.episodeNumber || 0) || 0),
             name: _safeText(episode?.name).trim(),
             airDate: _safeText(episode?.airDate).trim(),
-            runtime: Number(episode?.runtime || 0) || null
+            runtime: Number(episode?.runtime || 0) || null,
+            summary: _safeText(episode?.summary).trim(),
+            still: _safeText(episode?.still).trim()
           }))
         : [];
 
