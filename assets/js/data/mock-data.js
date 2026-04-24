@@ -29,6 +29,75 @@ const FakeBackend = (() => {
       .map((activity, index) => normalizeMockActivityEntry(activity, index))
       .filter(Boolean);
 
+  const normalizeMockLibraryEntry = (item) => {
+    if (!item || typeof item !== "object") return null;
+
+    const itemId = normalizeMockId(item.id);
+    if (!itemId) return null;
+
+    return {
+      ...item,
+      id: itemId
+    };
+  };
+
+  const normalizeMockLibrary = (library) =>
+    (Array.isArray(library) ? library : [])
+      .map((item) => normalizeMockLibraryEntry(item))
+      .filter(Boolean);
+
+  const normalizeMockListEntry = (list) => {
+    if (!list || typeof list !== "object") return null;
+
+    const listId = normalizeMockId(list.id);
+    if (!listId) return null;
+
+    const items = (Array.isArray(list.items) ? list.items : [])
+      .map((entry) => {
+        const rawId = (typeof entry === "string") ? entry : entry?.id;
+        const itemId = normalizeMockId(rawId);
+        if (!itemId) return null;
+
+        if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+          return {
+            ...entry,
+            id: itemId
+          };
+        }
+
+        return itemId;
+      })
+      .filter(Boolean);
+
+    return {
+      ...list,
+      id: listId,
+      items
+    };
+  };
+
+  const normalizeMockLists = (lists) =>
+    (Array.isArray(lists) ? lists : [])
+      .map((list) => normalizeMockListEntry(list))
+      .filter(Boolean);
+
+  const normalizeMockNotificationEntry = (notification) => {
+    if (!notification || typeof notification !== "object") return null;
+
+    const notificationId = normalizeMockId(notification.id);
+    if (!notificationId) return null;
+
+    return {
+      ...notification,
+      id: notificationId
+    };
+  };
+
+  const normalizeMockNotifications = (notifications) =>
+    (Array.isArray(notifications) ? notifications : [])
+      .map((notification) => normalizeMockNotificationEntry(notification))
+      .filter(Boolean);
+
   const DEFAULT_STATE = {
     user: {
       id: "demo-user",
@@ -434,11 +503,11 @@ const FakeBackend = (() => {
         ...DEFAULT_STATE,
         ...parsed,
         user: { ...DEFAULT_STATE.user, ...(parsed.user || {}) },
-        lists: parsed.lists || DEFAULT_STATE.lists.slice(),
-        library: parsed.library || DEFAULT_STATE.library.slice(),
+        lists: normalizeMockLists(parsed.lists || DEFAULT_STATE.lists.slice()),
+        library: normalizeMockLibrary(parsed.library || DEFAULT_STATE.library.slice()),
         activities: normalizeMockActivities(parsed.activities || DEFAULT_STATE.activities.slice()),
         goals: parsed.goals || DEFAULT_STATE.goals.slice(),
-        notifications: parsed.notifications || DEFAULT_STATE.notifications.slice()
+        notifications: normalizeMockNotifications(parsed.notifications || DEFAULT_STATE.notifications.slice())
       };
 
       // Migración legacy (si aplica) y persistencia en el state único
