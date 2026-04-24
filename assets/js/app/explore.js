@@ -684,6 +684,9 @@ const ExploreModule = (() => {
     return (
       feed.find((x) => _normalizeId(x?.eid) === targetEid) ||
       featuredFeed.find((x) => _normalizeId(x?.eid) === targetEid) ||
+      (Array.isArray(__detailViewItem?.relatedItems)
+        ? __detailViewItem.relatedItems.find((x) => _normalizeId(x?.eid) === targetEid)
+        : null) ||
       null
     );
   }
@@ -979,6 +982,9 @@ const ExploreModule = (() => {
     const mergedItem = {
       ...item,
       ...detail,
+      relatedItems: (Array.isArray(detail?.relatedItems) ? detail.relatedItems : [])
+        .map((entry, index) => _normalizeExploreItem(entry, index))
+        .filter((entry) => _normalizeId(entry?.eid) !== eid),
       eid,
       __saving: item.__saving,
       __inLibrary: item.__inLibrary,
@@ -1281,6 +1287,45 @@ const ExploreModule = (() => {
       .join("");
   }
 
+  function _renderContentDetailRelatedItems(sectionEl, gridEl, items = []) {
+    if (!sectionEl || !gridEl) return;
+
+    const safeItems = (Array.isArray(items) ? items : [])
+      .filter((item) => _normalizeId(item?.eid) && _safeText(item?.title).trim())
+      .slice(0, 8);
+
+    if (safeItems.length === 0) {
+      sectionEl.hidden = true;
+      gridEl.innerHTML = "";
+      return;
+    }
+
+    sectionEl.hidden = false;
+    gridEl.innerHTML = safeItems
+      .map((item) => {
+        const vm = _buildExploreCardViewModel(item);
+        const openDetailLabel = window.I18n.t("explore_card_open_detail")
+          .replace("{title}", vm.title);
+
+        return `
+          <article
+            class="explore-card explore-card--poster"
+            data-eid="${vm.eid}"
+            data-action="open-item-detail"
+            tabindex="0"
+            role="button"
+            aria-label="${openDetailLabel}"
+          >
+            ${_cardCover(item)}
+            <div class="explore-card-overlay">
+              <span class="explore-card-type">${vm.typeLabel}</span>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
   function _syncContentDetailTrailerLink(linkEl, wrapperEl, trailerUrl = "") {
     if (!linkEl || !wrapperEl) return;
 
@@ -1497,6 +1542,8 @@ const ExploreModule = (() => {
     const providersMetaEl = document.getElementById("contentDetailProvidersMeta");
     const providersLinkEl = document.getElementById("contentDetailProvidersLink");
     const providersEl = document.getElementById("contentDetailProviders");
+    const relatedSectionEl = document.getElementById("contentDetailRelatedSection");
+    const relatedGridEl = document.getElementById("contentDetailRelatedGrid");
     const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
     const metaPrimaryCardEl = document.getElementById("contentDetailMetaPrimaryCard");
@@ -1567,6 +1614,7 @@ const ExploreModule = (() => {
       metaVm.watchProvidersRegion,
       metaVm.watchProvidersLink
     );
+    _renderContentDetailRelatedItems(relatedSectionEl, relatedGridEl, item?.relatedItems);
     _renderContentDetailCast(castEl, metaVm.cast);
     _renderContentDetailSeasons(item, metaVm);
 

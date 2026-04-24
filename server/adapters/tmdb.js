@@ -339,6 +339,17 @@ function _baseSearchItemFromTv(item) {
   };
 }
 
+function _extractTmdbRelatedItems(results = [], type = "pelicula", currentId = "") {
+  const safeType = String(type || "").trim().toLowerCase();
+  const targetId = String(currentId || "").trim();
+  const mapper = safeType === "serie" ? _baseSearchItemFromTv : _baseSearchItemFromMovie;
+
+  return (Array.isArray(results) ? results : [])
+    .map((item) => mapper(item))
+    .filter((item) => item.title && item.externalId && item.externalId !== targetId)
+    .slice(0, 8);
+}
+
 function _normalizeTmdbSearchText(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -532,13 +543,17 @@ export async function getTmdbDetail({ type, externalId }) {
   }
 
   if (safeType === "pelicula") {
-    const [detailData, watchProvidersData] = await Promise.allSettled([
+    const [detailData, watchProvidersData, relatedData] = await Promise.allSettled([
       _tmdbGet(`/movie/${encodeURIComponent(safeId)}`, {
         language: "es-ES",
         append_to_response: "credits,images,videos",
         include_image_language: "es,en,null"
       }),
-      _tmdbGet(`/movie/${encodeURIComponent(safeId)}/watch/providers`)
+      _tmdbGet(`/movie/${encodeURIComponent(safeId)}/watch/providers`),
+      _tmdbGet(`/movie/${encodeURIComponent(safeId)}/recommendations`, {
+        language: "es-ES",
+        page: 1
+      })
     ]);
 
     if (detailData.status !== "fulfilled") {
@@ -550,6 +565,10 @@ export async function getTmdbDetail({ type, externalId }) {
       watchProvidersData.status === "fulfilled"
         ? _extractTmdbWatchProviders(watchProvidersData.value?.results)
         : { region: "", link: "", services: [] };
+    const relatedItems =
+      relatedData.status === "fulfilled"
+        ? _extractTmdbRelatedItems(relatedData.value?.results, "pelicula", safeId)
+        : [];
 
     return {
       eid: `tmdb:movie:${safeId}`,
@@ -569,6 +588,7 @@ export async function getTmdbDetail({ type, externalId }) {
       ratingCount: Number(data.vote_count || 0) || 0,
       statusLabel: String(data.status || "").trim(),
       cast: _mapTmdbCast(data?.credits?.cast || []),
+      relatedItems,
       meta: {
         year: _yearFromDate(data.release_date),
         watchProviders,
@@ -577,13 +597,17 @@ export async function getTmdbDetail({ type, externalId }) {
     };
   }
 
-  const [detailData, watchProvidersData] = await Promise.allSettled([
+  const [detailData, watchProvidersData, relatedData] = await Promise.allSettled([
     _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
       language: "es-ES",
       append_to_response: "aggregate_credits,images,videos",
       include_image_language: "es,en,null"
     }),
-    _tmdbGet(`/tv/${encodeURIComponent(safeId)}/watch/providers`)
+    _tmdbGet(`/tv/${encodeURIComponent(safeId)}/watch/providers`),
+    _tmdbGet(`/tv/${encodeURIComponent(safeId)}/recommendations`, {
+      language: "es-ES",
+      page: 1
+    })
   ]);
 
   if (detailData.status !== "fulfilled") {
@@ -595,6 +619,10 @@ export async function getTmdbDetail({ type, externalId }) {
     watchProvidersData.status === "fulfilled"
       ? _extractTmdbWatchProviders(watchProvidersData.value?.results)
       : { region: "", link: "", services: [] };
+  const relatedItems =
+    relatedData.status === "fulfilled"
+      ? _extractTmdbRelatedItems(relatedData.value?.results, "serie", safeId)
+      : [];
 
 const seasonBreakdown = Array.isArray(data.seasons)
   ? data.seasons
@@ -634,6 +662,7 @@ const seasonBreakdown = Array.isArray(data.seasons)
     ratingCount: Number(data.vote_count || 0) || 0,
     statusLabel: String(data.status || "").trim(),
     cast: _mapTmdbCast(data?.aggregate_credits?.cast || []),
+    relatedItems,
     seasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
     episodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
     meta: {

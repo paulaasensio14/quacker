@@ -6807,6 +6807,20 @@ body.modal-open{
   background: var(--bg-card);
 }
 
+.content-detail-related {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border: 3px solid var(--border-strong);
+  border-radius: 28px;
+  background: var(--bg-card);
+}
+
+.content-detail-related-grid {
+  width: 100%;
+}
+
 .content-detail-seasons[hidden] {
   display: none !important;
 }
