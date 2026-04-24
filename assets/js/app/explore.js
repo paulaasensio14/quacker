@@ -106,6 +106,30 @@ const ExploreModule = (() => {
       .replace("{count}", String(safeCount));
   }
 
+  function _getExploreLocale() {
+    const lang = _safeText(window.I18n?.getLang?.()).trim().toLowerCase();
+    return lang === "en" ? "en-US" : "es-ES";
+  }
+
+  function _formatExploreDate(dateStr, options = {}) {
+    const safeDate = _safeText(dateStr).trim();
+    if (!safeDate) return "";
+
+    const date = new Date(safeDate);
+    if (Number.isNaN(date.getTime())) return safeDate;
+
+    try {
+      return new Intl.DateTimeFormat(_getExploreLocale(), {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        ...options
+      }).format(date);
+    } catch (_) {
+      return safeDate;
+    }
+  }
+
   function _normalizeExploreItem(rawItem, index = 0) {
     const raw = rawItem && typeof rawItem === "object" ? rawItem : {};
     const eid = _normalizeId(raw.eid) || `explore_${index + 1}`;
@@ -746,7 +770,7 @@ const ExploreModule = (() => {
               const episodeStill = _safeText(episode?.still).trim();
               const episodeSummary = _safeText(episode?.summary).trim();
               const episodeMeta = [
-                _safeText(episode?.airDate).trim(),
+                _formatExploreDate(episode?.airDate),
                 Number(episode?.runtime || 0) > 0
                   ? `${Number(episode.runtime)} ${window.I18n.t("time_minutes")}`
                   : ""
@@ -2133,7 +2157,7 @@ const ExploreModule = (() => {
       detailType: resolvedTypeLabel,
       detailReleaseDate:
         item?.releaseDate
-          ? _safeText(item.releaseDate)
+          ? _formatExploreDate(item.releaseDate)
           : window.I18n.t("explore_drawer_no_date"),
       detailLibraryState:
         item?.__inLibrary
@@ -2249,6 +2273,7 @@ const ExploreModule = (() => {
     const trailerUrl = _safeText(item?.meta?.trailerUrl).trim();
     const creator = _safeText(item?.meta?.creator).trim();
     const lastAirDate = _safeText(item?.meta?.lastAirDate).trim();
+    const formattedLastAirDate = _formatExploreDate(lastAirDate);
     const durationValue =
       runtimeNumber > 0
         ? `${runtimeNumber} ${window.I18n.t("time_minutes")}`
@@ -2312,9 +2337,12 @@ const ExploreModule = (() => {
       if (hasAlternativeOriginalTitle) {
         secondaryLabel = window.I18n.t("explore_detail_label_original_title");
         secondaryValue = safeOriginalTitle;
-      } else if (lastAirDate && lastAirDate !== _safeText(item?.releaseDate).trim()) {
+      } else if (
+        formattedLastAirDate &&
+        lastAirDate !== _safeText(item?.releaseDate).trim()
+      ) {
         secondaryLabel = window.I18n.t("explore_detail_label_last_aired");
-        secondaryValue = lastAirDate;
+        secondaryValue = formattedLastAirDate;
       }
 
       tertiaryLabel = window.I18n.t("explore_detail_label_status");
