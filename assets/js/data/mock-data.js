@@ -15,7 +15,7 @@ const FakeBackend = (() => {
 
     const activityId =
       normalizeMockId(activity.id) ||
-      `${normalizeMockId(activity.type) || "activity"}_${index + 1}`;
+      normalizeMockId(`${normalizeMockId(activity.type) || "activity"}_${index + 1}`);
 
     return {
       ...activity,
@@ -101,7 +101,7 @@ const FakeBackend = (() => {
   const normalizeMockGoalEntry = (goal, index = 0) => {
     if (!goal || typeof goal !== "object") return null;
 
-    const goalId = normalizeMockId(goal.id) || `goal_${index + 1}`;
+    const goalId = normalizeMockId(goal.id) || normalizeMockId(`goal_${index + 1}`);
 
     return {
       ...goal,
@@ -476,7 +476,7 @@ const FakeBackend = (() => {
                   .filter(Boolean);
 
                 const nowIso = new Date().toISOString();
-                const listId = normalizeMockId(l?.id) || `${Date.now()}_${idx}`;
+                const listId = normalizeMockId(l?.id) || normalizeMockId(`${Date.now()}_${idx}`);
 
                 return {
                   id: listId,
@@ -561,7 +561,7 @@ const FakeBackend = (() => {
   // ===== actividades =====
   function addActivity(activityData) {
     const state = _load();
-    const activityId = normalizeMockId(activityData.id) || String(Date.now());
+    const activityId = normalizeMockId(activityData.id) || normalizeMockId(String(Date.now()));
     const targetId = normalizeMockId(activityData.targetId) || null;
     const newActivity = {
       id: activityId,
