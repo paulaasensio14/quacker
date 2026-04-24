@@ -3291,12 +3291,13 @@ const ApiClient = (() => {
 
     const persistedGoal = state?.goals?.[0] || null;
     if (persistedGoal) {
+      const persistedGoalId = _normalizeDataId(persistedGoal.id);
       const goalEnd = new Date(persistedGoal.periodEnd + "T23:59:59");
       const goalDiffMs = goalEnd - now;
       const goalDiffD = Math.max(0, Math.ceil(goalDiffMs / (1000 * 60 * 60 * 24)));
 
       return {
-        id: persistedGoal.id,
+        id: persistedGoalId || `goal-${year}-${month + 1}`,
         title: persistedGoal.title,
         description: persistedGoal.description,
         current: persistedGoal.current,
@@ -3307,6 +3308,7 @@ const ApiClient = (() => {
     }
 
     const fallback = fallbackChallenges[month];
+    const fallbackGoalId = _normalizeDataId(fallback?.id) || `goal-${year}-${month + 1}`;
 
     const completedThisMonth = library.filter((item) => {
       if (item.status !== "completed") return false;
@@ -3316,7 +3318,7 @@ const ApiClient = (() => {
     }).length;
 
     return {
-      id: fallback.id,
+      id: fallbackGoalId,
       title: fallback.title,
       description: fallback.description,
       current: Math.min(completedThisMonth, fallback.target),
