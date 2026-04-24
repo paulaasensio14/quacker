@@ -6555,8 +6555,9 @@ body.modal-open{
 
 .content-detail-card-head {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
@@ -6568,6 +6569,30 @@ body.modal-open{
 }
 
 .content-detail-card-meta[hidden] {
+  display: none !important;
+}
+
+.content-detail-card-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 2px solid var(--border-strong);
+  background: #fff8dc;
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.content-detail-card-link:hover {
+  transform: translateY(-1px);
+}
+
+.content-detail-card-link[hidden] {
   display: none !important;
 }
 
@@ -6979,6 +7004,11 @@ body.modal-open{
 
   .content-detail-season-panel.is-open {
     grid-column: span 1;
+  }
+
+  .content-detail-card-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

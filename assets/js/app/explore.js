@@ -1171,7 +1171,15 @@ const ExploreModule = (() => {
     return key ? window.I18n.t(key) : "";
   }
 
-  function _renderContentDetailProviders(cardEl, listEl, metaEl, providers = [], region = "") {
+  function _renderContentDetailProviders(
+    cardEl,
+    listEl,
+    metaEl,
+    linkEl,
+    providers = [],
+    region = "",
+    href = ""
+  ) {
     if (!cardEl || !listEl) return;
 
     const safeProviders = (Array.isArray(providers) ? providers : [])
@@ -1181,6 +1189,8 @@ const ExploreModule = (() => {
         accessType: _safeText(provider?.accessType).trim()
       }))
       .filter((provider) => provider.name);
+    const safeHref = _safeText(href).trim();
+    const hasSafeHref = /^https?:\/\//i.test(safeHref);
 
     if (safeProviders.length === 0) {
       cardEl.hidden = true;
@@ -1188,6 +1198,10 @@ const ExploreModule = (() => {
       if (metaEl) {
         metaEl.hidden = true;
         metaEl.textContent = "";
+      }
+      if (linkEl) {
+        linkEl.hidden = true;
+        linkEl.removeAttribute("href");
       }
       return;
     }
@@ -1202,6 +1216,16 @@ const ExploreModule = (() => {
 
       metaEl.textContent = metaText;
       metaEl.hidden = !metaText;
+    }
+
+    if (linkEl) {
+      if (hasSafeHref) {
+        linkEl.hidden = false;
+        linkEl.href = safeHref;
+      } else {
+        linkEl.hidden = true;
+        linkEl.removeAttribute("href");
+      }
     }
 
     listEl.innerHTML = safeProviders
@@ -1427,6 +1451,7 @@ const ExploreModule = (() => {
     const metaFooterGridEl = document.getElementById("contentDetailMetaFooterGrid");
     const providersCardEl = document.getElementById("contentDetailProvidersCard");
     const providersMetaEl = document.getElementById("contentDetailProvidersMeta");
+    const providersLinkEl = document.getElementById("contentDetailProvidersLink");
     const providersEl = document.getElementById("contentDetailProviders");
     const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
@@ -1492,8 +1517,10 @@ const ExploreModule = (() => {
       providersCardEl,
       providersEl,
       providersMetaEl,
+      providersLinkEl,
       metaVm.watchProviders,
-      metaVm.watchProvidersRegion
+      metaVm.watchProvidersRegion,
+      metaVm.watchProvidersLink
     );
     _renderContentDetailCast(castEl, metaVm.cast);
     _renderContentDetailSeasons(item, metaVm);
@@ -2197,6 +2224,7 @@ const ExploreModule = (() => {
     const watchProvidersRegion = _safeText(item?.meta?.watchProviders?.region)
       .trim()
       .toUpperCase();
+    const watchProvidersLink = _safeText(item?.meta?.watchProviders?.link).trim();
 
     let primaryLabel = window.I18n.t("explore_detail_label_meta");
     let primaryValue = window.I18n.t("explore_detail_no_meta");
@@ -2335,6 +2363,7 @@ const ExploreModule = (() => {
       cast,
       watchProviders,
       watchProvidersRegion,
+      watchProvidersLink,
       seasonBreakdown,
       seasonsSummary:
         totalSeasonsNumber > 0 || totalEpisodesNumber > 0
