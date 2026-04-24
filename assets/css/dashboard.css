@@ -6259,6 +6259,16 @@ body.modal-open{
   font-weight: 700;
 }
 
+#contentDetailAddLibrary[disabled],
+#contentDetailAddLibrary[aria-disabled="true"] {
+  background: #d9f99d;
+  color: #365314;
+  border-color: #84cc16;
+  box-shadow: none;
+  cursor: default;
+  transform: none;
+}
+
 .content-detail-hero {
   position: relative;
   min-height: 280px;

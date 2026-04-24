@@ -1137,6 +1137,20 @@ const ExploreModule = (() => {
       .join("");
   }
 
+  function _syncContentDetailAddLibraryButton(btn, item) {
+    if (!btn) return;
+
+    const isSaving = !!item?.__saving;
+    const isInLibrary = !!item?.__inLibrary;
+
+    btn.textContent = isInLibrary
+      ? window.I18n.t("detail_library_added")
+      : window.I18n.t("explore_drawer_add_library");
+
+    btn.disabled = isSaving || isInLibrary;
+    btn.setAttribute("aria-disabled", btn.disabled ? "true" : "false");
+  }
+
   function _renderContentDetailSeasons(item, metaVm) {
     const sectionEl = document.getElementById("contentDetailSeasonsSection");
     const metaEl = document.getElementById("contentDetailSeasonsMeta");
@@ -1274,7 +1288,6 @@ const ExploreModule = (() => {
     const titleEl = document.getElementById("contentDetailTitle");
     const metaEl = document.getElementById("contentDetailMeta");
     const coverEl = document.getElementById("contentDetailCover");
-    const badgeEl = document.getElementById("contentDetailBadge");
     const highlightsEl = document.getElementById("contentDetailHighlights");
     const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
@@ -1287,7 +1300,6 @@ const ExploreModule = (() => {
     const metaTertiaryCardEl = document.getElementById("contentDetailMetaTertiaryCard");
     const metaTertiaryLabelEl = document.getElementById("contentDetailMetaTertiaryLabel");
     const metaTertiaryValueEl = document.getElementById("contentDetailMetaTertiaryValue");
-    const libraryEl = document.getElementById("contentDetailLibraryState");
     const listsEl = document.getElementById("contentDetailListsCount");
     const genresEl = document.getElementById("contentDetailGenres");
     const castEl = document.getElementById("contentDetailCast");
@@ -1300,12 +1312,6 @@ const ExploreModule = (() => {
 
     _applyExploreVisualCover(coverEl, item);
 
-    if (badgeEl) {
-      badgeEl.textContent = vm.badge;
-      badgeEl.hidden = !vm.hasBadge;
-    }
-
-    if (libraryEl) libraryEl.textContent = vm.detailLibraryState;
     if (listsEl) listsEl.textContent = vm.detailListsCount;
     if (genresEl) genresEl.textContent = metaVm.genres;
     if (metaPrimaryLabelEl) metaPrimaryLabelEl.textContent = metaVm.primaryLabel;
@@ -1330,7 +1336,7 @@ const ExploreModule = (() => {
 
     if (addLibraryBtn) {
       addLibraryBtn.dataset.eid = detailEid;
-      addLibraryBtn.disabled = !!item.__saving;
+      _syncContentDetailAddLibraryButton(addLibraryBtn, item);
     }
 
     if (addListsBtn) {
