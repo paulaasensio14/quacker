@@ -1040,12 +1040,9 @@ const ExploreModule = (() => {
     }
   }
 
-  function _renderExploreRating(ratingEl, item) {
-    if (!ratingEl) return;
-
+  function _buildExploreRatingMarkup(item, { compact = false } = {}) {
     const rawRating = Number(item?.rating || 0);
     const safeRating = Number.isFinite(rawRating) ? Math.max(0, Math.min(10, rawRating)) : 0;
-
     const duckCount = Math.round(safeRating / 2);
     const maxDucks = 5;
 
@@ -1055,19 +1052,24 @@ const ExploreModule = (() => {
       return `
         <img
           src="assets/img/quacker-rating.png"
-          class="explore-rating-duck${filled ? " is-filled" : ""}"
+          class="explore-rating-duck${compact ? " explore-rating-duck--compact" : ""}${filled ? " is-filled" : ""}"
           alt=""
           aria-hidden="true"
         />
       `;
     }).join("");
 
-    ratingEl.innerHTML = `
-      <span class="explore-rating-ducks" aria-label="${safeRating.toFixed(1)} sobre 10">
+    return `
+      <span class="explore-rating-ducks${compact ? " explore-rating-ducks--compact" : ""}" aria-label="${safeRating.toFixed(1)} sobre 10">
         ${ducks}
       </span>
-      <span class="explore-rating-number">${safeRating.toFixed(1)}</span>
+      <span class="explore-rating-number${compact ? " explore-rating-number--compact" : ""}">${safeRating.toFixed(1)}</span>
     `;
+  }
+
+  function _renderExploreRating(ratingEl, item) {
+    if (!ratingEl) return;
+    ratingEl.innerHTML = _buildExploreRatingMarkup(item);
   }
 
   function _renderContentDetailCast(castEl, castEntries = []) {
@@ -1113,7 +1115,7 @@ const ExploreModule = (() => {
     .join("");
   }
 
-  function _renderContentDetailHighlights(highlightsEl, facts = []) {
+  function _renderContentDetailHighlights(highlightsEl, facts = [], item = null) {
     if (!highlightsEl) return;
 
     const safeFacts = (Array.isArray(facts) ? facts : [])
@@ -1128,12 +1130,25 @@ const ExploreModule = (() => {
 
     highlightsEl.hidden = false;
     highlightsEl.innerHTML = safeFacts
-      .map((fact) => `
-        <span class="content-detail-highlight">
-          <span class="content-detail-highlight-label">${_escapeHtml(fact.label)}</span>
-          <strong class="content-detail-highlight-value">${_escapeHtml(fact.value)}</strong>
-        </span>
-      `)
+      .map((fact) => {
+        if (fact?.kind === "rating") {
+          return `
+            <span class="content-detail-highlight content-detail-highlight--rating">
+              <span class="content-detail-highlight-label">${_escapeHtml(fact.label)}</span>
+              <span class="content-detail-highlight-rating">
+                ${_buildExploreRatingMarkup(item, { compact: true })}
+              </span>
+            </span>
+          `;
+        }
+
+        return `
+          <span class="content-detail-highlight">
+            <span class="content-detail-highlight-label">${_escapeHtml(fact.label)}</span>
+            <strong class="content-detail-highlight-value">${_escapeHtml(fact.value)}</strong>
+          </span>
+        `;
+      })
       .join("");
   }
 
@@ -1289,6 +1304,8 @@ const ExploreModule = (() => {
     const metaEl = document.getElementById("contentDetailMeta");
     const coverEl = document.getElementById("contentDetailCover");
     const highlightsEl = document.getElementById("contentDetailHighlights");
+    const quickGridEl = document.getElementById("contentDetailQuickGrid");
+    const supportGridEl = document.getElementById("contentDetailSupportGrid");
     const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
     const metaPrimaryCardEl = document.getElementById("contentDetailMetaPrimaryCard");
@@ -1297,9 +1314,11 @@ const ExploreModule = (() => {
     const metaSecondaryCardEl = document.getElementById("contentDetailMetaSecondaryCard");
     const metaSecondaryLabelEl = document.getElementById("contentDetailMetaSecondaryLabel");
     const metaSecondaryValueEl = document.getElementById("contentDetailMetaSecondaryValue");
+    const genresCardEl = document.getElementById("contentDetailGenresCard");
     const metaTertiaryCardEl = document.getElementById("contentDetailMetaTertiaryCard");
     const metaTertiaryLabelEl = document.getElementById("contentDetailMetaTertiaryLabel");
     const metaTertiaryValueEl = document.getElementById("contentDetailMetaTertiaryValue");
+    const listsCardEl = document.getElementById("contentDetailListsCard");
     const listsEl = document.getElementById("contentDetailListsCount");
     const genresEl = document.getElementById("contentDetailGenres");
     const castEl = document.getElementById("contentDetailCast");
@@ -1324,9 +1343,24 @@ const ExploreModule = (() => {
     if (metaPrimaryCardEl) metaPrimaryCardEl.hidden = !metaVm.showPrimaryCard;
     if (metaSecondaryCardEl) metaSecondaryCardEl.hidden = !metaVm.showSecondaryCard;
     if (metaTertiaryCardEl) metaTertiaryCardEl.hidden = !metaVm.showTertiaryCard;
+    if (quickGridEl) {
+      quickGridEl.hidden = !(
+        (ratingCardEl && !ratingCardEl.hidden) ||
+        (metaPrimaryCardEl && !metaPrimaryCardEl.hidden) ||
+        (metaSecondaryCardEl && !metaSecondaryCardEl.hidden)
+      );
+    }
+    if (genresCardEl) genresCardEl.hidden = false;
+    if (supportGridEl) {
+      supportGridEl.hidden = !(
+        (genresCardEl && !genresCardEl.hidden) ||
+        (metaTertiaryCardEl && !metaTertiaryCardEl.hidden)
+      );
+    }
+    if (listsCardEl) listsCardEl.hidden = false;
 
     _renderExploreRating(ratingEl, item);
-    _renderContentDetailHighlights(highlightsEl, metaVm.heroFacts);
+    _renderContentDetailHighlights(highlightsEl, metaVm.heroFacts, item);
     _renderContentDetailCast(castEl, metaVm.cast);
     _renderContentDetailSeasons(item, metaVm);
 
@@ -2101,7 +2135,8 @@ const ExploreModule = (() => {
       heroFacts.push({
         key: "rating",
         label: window.I18n.t("explore_detail_label_rating"),
-        value: safeRatingValue
+        value: safeRatingValue,
+        kind: "rating"
       });
       heroFactKeys.add("rating");
     }
@@ -2116,13 +2151,17 @@ const ExploreModule = (() => {
         heroFactKeys.add("secondary");
       }
 
-      if (tertiaryValue && tertiaryValue !== noMetaValue) {
+      if (
+        primaryLabel === window.I18n.t("explore_detail_label_duration") &&
+        primaryValue &&
+        primaryValue !== noMetaValue
+      ) {
         heroFacts.push({
-          key: "tertiary",
-          label: tertiaryLabel,
-          value: tertiaryValue
+          key: "primary",
+          label: primaryLabel,
+          value: primaryValue
         });
-        heroFactKeys.add("tertiary");
+        heroFactKeys.add("primary");
       }
     } else {
       if (
@@ -2136,19 +2175,6 @@ const ExploreModule = (() => {
           value: primaryValue
         });
         heroFactKeys.add("primary");
-      }
-
-      if (tertiaryLabel === window.I18n.t("explore_detail_label_status") &&
-        tertiaryValue &&
-        tertiaryValue !== noMetaValue &&
-        heroFacts.length < 3
-      ) {
-        heroFacts.push({
-          key: "tertiary",
-          label: tertiaryLabel,
-          value: tertiaryValue
-        });
-        heroFactKeys.add("tertiary");
       }
     }
 
