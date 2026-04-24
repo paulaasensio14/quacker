@@ -1109,7 +1109,31 @@ const ExploreModule = (() => {
             </div>
           </article>
         `;
-      })
+    })
+    .join("");
+  }
+
+  function _renderContentDetailHighlights(highlightsEl, facts = []) {
+    if (!highlightsEl) return;
+
+    const safeFacts = (Array.isArray(facts) ? facts : [])
+      .filter((fact) => _safeText(fact?.label).trim() && _safeText(fact?.value).trim())
+      .slice(0, 3);
+
+    if (safeFacts.length === 0) {
+      highlightsEl.hidden = true;
+      highlightsEl.innerHTML = "";
+      return;
+    }
+
+    highlightsEl.hidden = false;
+    highlightsEl.innerHTML = safeFacts
+      .map((fact) => `
+        <span class="content-detail-highlight">
+          <span class="content-detail-highlight-label">${_escapeHtml(fact.label)}</span>
+          <strong class="content-detail-highlight-value">${_escapeHtml(fact.value)}</strong>
+        </span>
+      `)
       .join("");
   }
 
@@ -1251,11 +1275,16 @@ const ExploreModule = (() => {
     const metaEl = document.getElementById("contentDetailMeta");
     const coverEl = document.getElementById("contentDetailCover");
     const badgeEl = document.getElementById("contentDetailBadge");
+    const highlightsEl = document.getElementById("contentDetailHighlights");
+    const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
+    const metaPrimaryCardEl = document.getElementById("contentDetailMetaPrimaryCard");
     const metaPrimaryLabelEl = document.getElementById("contentDetailMetaPrimaryLabel");
     const metaPrimaryValueEl = document.getElementById("contentDetailMetaPrimaryValue");
+    const metaSecondaryCardEl = document.getElementById("contentDetailMetaSecondaryCard");
     const metaSecondaryLabelEl = document.getElementById("contentDetailMetaSecondaryLabel");
     const metaSecondaryValueEl = document.getElementById("contentDetailMetaSecondaryValue");
+    const metaTertiaryCardEl = document.getElementById("contentDetailMetaTertiaryCard");
     const metaTertiaryLabelEl = document.getElementById("contentDetailMetaTertiaryLabel");
     const metaTertiaryValueEl = document.getElementById("contentDetailMetaTertiaryValue");
     const libraryEl = document.getElementById("contentDetailLibraryState");
@@ -1285,8 +1314,13 @@ const ExploreModule = (() => {
     if (metaSecondaryValueEl) metaSecondaryValueEl.textContent = metaVm.secondaryValue;
     if (metaTertiaryLabelEl) metaTertiaryLabelEl.textContent = metaVm.tertiaryLabel;
     if (metaTertiaryValueEl) metaTertiaryValueEl.textContent = metaVm.tertiaryValue;
+    if (ratingCardEl) ratingCardEl.hidden = !metaVm.showRatingCard;
+    if (metaPrimaryCardEl) metaPrimaryCardEl.hidden = !metaVm.showPrimaryCard;
+    if (metaSecondaryCardEl) metaSecondaryCardEl.hidden = !metaVm.showSecondaryCard;
+    if (metaTertiaryCardEl) metaTertiaryCardEl.hidden = !metaVm.showTertiaryCard;
 
     _renderExploreRating(ratingEl, item);
+    _renderContentDetailHighlights(highlightsEl, metaVm.heroFacts);
     _renderContentDetailCast(castEl, metaVm.cast);
     _renderContentDetailSeasons(item, metaVm);
 
@@ -1952,6 +1986,7 @@ const ExploreModule = (() => {
     const hasAlternativeOriginalTitle =
       safeOriginalTitle &&
       _norm(safeOriginalTitle) !== _norm(safeCurrentTitle);
+    const noMetaValue = window.I18n.t("explore_detail_no_meta");
 
     const rawSeasonBreakdown = Array.isArray(item?.meta?.seasonBreakdown)
       ? item.meta.seasonBreakdown
@@ -1994,9 +2029,6 @@ const ExploreModule = (() => {
     } else if (totalPagesNumber > 0) {
       primaryLabel = window.I18n.t("explore_detail_label_pages");
       primaryValue = `${totalPagesNumber} ${window.I18n.t("library_pages")}`;
-    } else if (statusLabel) {
-      primaryLabel = window.I18n.t("explore_detail_label_status");
-      primaryValue = statusLabel;
     }
 
     if (_norm(item?.type) === "serie") {
@@ -2052,6 +2084,68 @@ const ExploreModule = (() => {
       }
     }
 
+    const heroFacts = [];
+    const heroFactKeys = new Set();
+    const safeRatingValue =
+      Number.isFinite(ratingNumber) && ratingNumber > 0
+        ? ratingNumber.toFixed(1)
+        : "";
+
+    if (safeRatingValue) {
+      heroFacts.push({
+        key: "rating",
+        label: window.I18n.t("explore_detail_label_rating"),
+        value: safeRatingValue
+      });
+      heroFactKeys.add("rating");
+    }
+
+    if (_norm(item?.type) === "serie") {
+      if (secondaryValue && secondaryValue !== noMetaValue) {
+        heroFacts.push({
+          key: "secondary",
+          label: secondaryLabel,
+          value: secondaryValue
+        });
+        heroFactKeys.add("secondary");
+      }
+
+      if (tertiaryValue && tertiaryValue !== noMetaValue) {
+        heroFacts.push({
+          key: "tertiary",
+          label: tertiaryLabel,
+          value: tertiaryValue
+        });
+        heroFactKeys.add("tertiary");
+      }
+    } else {
+      if (
+        primaryLabel === window.I18n.t("explore_detail_label_duration") &&
+        primaryValue &&
+        primaryValue !== noMetaValue
+      ) {
+        heroFacts.push({
+          key: "primary",
+          label: primaryLabel,
+          value: primaryValue
+        });
+        heroFactKeys.add("primary");
+      }
+
+      if (tertiaryLabel === window.I18n.t("explore_detail_label_status") &&
+        tertiaryValue &&
+        tertiaryValue !== noMetaValue &&
+        heroFacts.length < 3
+      ) {
+        heroFacts.push({
+          key: "tertiary",
+          label: tertiaryLabel,
+          value: tertiaryValue
+        });
+        heroFactKeys.add("tertiary");
+      }
+    }
+
     return {
       genres: genres.length
         ? genres.join(", ")
@@ -2063,6 +2157,11 @@ const ExploreModule = (() => {
       secondaryValue,
       tertiaryLabel,
       tertiaryValue,
+      heroFacts,
+      showRatingCard: safeRatingValue && !heroFactKeys.has("rating"),
+      showPrimaryCard: primaryValue !== noMetaValue && !heroFactKeys.has("primary"),
+      showSecondaryCard: secondaryValue !== noMetaValue && !heroFactKeys.has("secondary"),
+      showTertiaryCard: tertiaryValue !== noMetaValue && !heroFactKeys.has("tertiary"),
       cast,
       seasonBreakdown,
       seasonsSummary:
