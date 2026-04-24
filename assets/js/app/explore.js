@@ -2569,17 +2569,10 @@ const ExploreModule = (() => {
         const item = _getExploreItemByEid(eid);
         if (!item) return;
 
-        _syncExploreDrawerFromItem(item);
-        _renderExploreDrawerDetails(item);
-        _openExploreDrawer(detailTrigger);
-        return;
-      }
-
-      const addListsBtn = e.target.closest("#exploreDrawerAddLists");
-      if (addListsBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        await _handleExploreDrawerAddToListClick();
+        _openContentDetailView(item, {
+          originView: "explore",
+          triggerEl: detailTrigger
+        });
         return;
       }
     });
@@ -2598,33 +2591,11 @@ const ExploreModule = (() => {
       const item = _getExploreItemByEid(eid);
       if (!item) return;
 
-      _syncExploreDrawerFromItem(item);
-      _renderExploreDrawerDetails(item);
-      _openExploreDrawer(card);
+      _openContentDetailView(item, {
+        originView: "explore",
+        triggerEl: card
+      });
     });
-
-    // BOTÓN CERRAR DRAWER
-
-    const closeDrawerBtn = document.getElementById("exploreDrawerClose");
-    if (closeDrawerBtn && !closeDrawerBtn.dataset.bound) {
-      closeDrawerBtn.dataset.bound = "1";
-
-      closeDrawerBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        _closeExploreDrawer();
-      });
-    }
-
-    // BACKDROP
-
-    const backdrop = document.getElementById("exploreDrawerBackdrop");
-    if (backdrop && !backdrop.dataset.bound) {
-      backdrop.dataset.bound = "1";
-
-      backdrop.addEventListener("click", () => {
-        _closeExploreDrawer();
-      });
-    }
 
     // ESC
 
@@ -2640,78 +2611,6 @@ const ExploreModule = (() => {
         }
       }
     });
-
-    // EXPANDIR / CONTRAER DRAWER
-
-    const expandDrawerBtn = document.getElementById("exploreDrawerExpand");
-
-    if (expandDrawerBtn && !expandDrawerBtn.dataset.bound) {
-      expandDrawerBtn.dataset.bound = "1";
-
-      expandDrawerBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        _setExploreDrawerExpanded(!__drawerExpanded);
-      });
-    }
-
-    const openDetailPageBtn = document.getElementById("exploreDrawerOpenPage");
-
-    if (openDetailPageBtn && !openDetailPageBtn.dataset.bound) {
-      openDetailPageBtn.dataset.bound = "1";
-
-      openDetailPageBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const item = _getActiveExploreItem();
-        if (!item) return;
-
-        _openContentDetailView(item, {
-          originView: "explore",
-          triggerEl: openDetailPageBtn
-        });
-      });
-    }
-
-    // AÑADIR A BIBLIOTECA
-
-    const addLibraryBtn = document.getElementById("exploreDrawerAddLibrary");
-
-    if (addLibraryBtn && !addLibraryBtn.dataset.bound) {
-      addLibraryBtn.dataset.bound = "1";
-
-      addLibraryBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const item = _getActiveExploreItem();
-        if (!item) return;
-
-        _setDrawerButtonLoading(addLibraryBtn, true);
-
-        try {
-          const ensured = await _ensureInLibrary(item);
-          if (!ensured?.ok) return;
-
-          await _syncInLibraryFlags();
-
-          const fresh = _getExploreItemByEid(item.eid);
-          if (fresh) {
-            _syncExploreDrawerFromItem(fresh);
-            _renderExploreDrawerDetails(fresh);
-          }
-
-          _render();
-
-          _showDrawerInlineNote(window.I18n.t("explore_library_added_title"));
-        } finally {
-          _setDrawerButtonLoading(addLibraryBtn, false);
-          _renderDrawerAddCtaLabel();
-        }
-      });
-    }
 
     // Añadir a lista
 
