@@ -6625,6 +6625,11 @@ body.modal-open{
   white-space: nowrap;
 }
 
+.content-detail-card-link[type="button"] {
+  cursor: pointer;
+  font: inherit;
+}
+
 .content-detail-card-link:hover {
   transform: translateY(-1px);
 }

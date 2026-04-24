@@ -99,7 +99,7 @@ function _profileUrl(path) {
   return path ? `${TMDB_IMAGE_BASE}${path}` : "";
 }
 
-function _mapTmdbCast(castEntries = [], limit = 8) {
+function _mapTmdbCast(castEntries = [], limit = 16) {
   return (Array.isArray(castEntries) ? castEntries : [])
     .map((entry) => {
       const character =

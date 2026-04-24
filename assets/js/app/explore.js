@@ -39,6 +39,7 @@ const ExploreModule = (() => {
   let __detailViewLastFocusEl = null;
   let __detailListsPickerOpen = false;
   let __detailOriginView = "explore";
+  let __detailCastExpanded = false;
   const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
 
@@ -1125,10 +1126,21 @@ const ExploreModule = (() => {
     ratingEl.innerHTML = _buildExploreRatingMarkup(item);
   }
 
-  function _renderContentDetailCast(castEl, castEntries = []) {
+  function _renderContentDetailCast(castEl, castEntries = [], toggleBtnEl = null) {
     if (!castEl) return;
 
     const safeCastEntries = Array.isArray(castEntries) ? castEntries : [];
+    const hasMoreCast = safeCastEntries.length > 8;
+    const visibleCastEntries = hasMoreCast && !__detailCastExpanded
+      ? safeCastEntries.slice(0, 8)
+      : safeCastEntries;
+
+    if (toggleBtnEl) {
+      toggleBtnEl.hidden = !hasMoreCast;
+      toggleBtnEl.textContent = __detailCastExpanded
+        ? window.I18n.t("explore_detail_cast_show_less")
+        : window.I18n.t("explore_detail_cast_show_more");
+    }
 
     if (safeCastEntries.length === 0) {
       castEl.innerHTML = `
@@ -1139,7 +1151,7 @@ const ExploreModule = (() => {
       return;
     }
 
-    castEl.innerHTML = safeCastEntries
+    castEl.innerHTML = visibleCastEntries
       .map((entry) => {
         const profile = _safeText(entry.profile).trim();
         const initial = _escapeHtml(String(entry.name || "?").trim().charAt(0).toUpperCase() || "?");
@@ -1560,6 +1572,7 @@ const ExploreModule = (() => {
     const listsEl = document.getElementById("contentDetailListsCount");
     const genresEl = document.getElementById("contentDetailGenres");
     const castEl = document.getElementById("contentDetailCast");
+    const castToggleBtn = document.getElementById("contentDetailCastToggle");
     const summaryEl = document.getElementById("contentDetailSummary");
     const addLibraryBtn = document.getElementById("contentDetailAddLibrary");
     const addListsBtn = document.getElementById("contentDetailAddLists");
@@ -1615,7 +1628,7 @@ const ExploreModule = (() => {
       metaVm.watchProvidersLink
     );
     _renderContentDetailRelatedItems(relatedSectionEl, relatedGridEl, item?.relatedItems);
-    _renderContentDetailCast(castEl, metaVm.cast);
+    _renderContentDetailCast(castEl, metaVm.cast, castToggleBtn);
     _renderContentDetailSeasons(item, metaVm);
 
     if (summaryEl) {
@@ -1677,6 +1690,7 @@ const ExploreModule = (() => {
     __detailViewLoading = false;
     __detailViewError = false;
     __detailListsPickerOpen = false;
+    __detailCastExpanded = false;
     __detailExpandedSeasonKeys.clear();
     __detailViewReqSeq += 1;
     activeEid = detailEid;
@@ -1711,6 +1725,7 @@ const ExploreModule = (() => {
     __detailViewLoading = false;
     __detailViewError = false;
     __detailListsPickerOpen = false;
+    __detailCastExpanded = false;
     __detailExpandedSeasonKeys.clear();
     _syncContentDetailFeedback();
     _syncContentDetailListPicker();
@@ -3189,6 +3204,20 @@ const ExploreModule = (() => {
         if (!seasonNumber) return;
 
         await _toggleContentDetailSeason(seasonNumber);
+        return;
+      }
+
+      const castToggle = e.target.closest("#contentDetailCastToggle");
+      if (castToggle) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        __detailCastExpanded = !__detailCastExpanded;
+
+        const activeDetailItem = _getActiveDetailItem();
+        if (activeDetailItem) {
+          _renderContentDetailView(activeDetailItem);
+        }
       }
     });
 
