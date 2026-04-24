@@ -98,6 +98,22 @@ const FakeBackend = (() => {
       .map((notification) => normalizeMockNotificationEntry(notification))
       .filter(Boolean);
 
+  const normalizeMockGoalEntry = (goal, index = 0) => {
+    if (!goal || typeof goal !== "object") return null;
+
+    const goalId = normalizeMockId(goal.id) || `goal_${index + 1}`;
+
+    return {
+      ...goal,
+      id: goalId
+    };
+  };
+
+  const normalizeMockGoals = (goals) =>
+    (Array.isArray(goals) ? goals : [])
+      .map((goal, index) => normalizeMockGoalEntry(goal, index))
+      .filter(Boolean);
+
   const DEFAULT_STATE = {
     user: {
       id: "demo-user",
@@ -335,7 +351,7 @@ const FakeBackend = (() => {
     lists: normalizeMockLists(state?.lists || DEFAULT_STATE.lists.slice()),
     library: normalizeMockLibrary(state?.library || DEFAULT_STATE.library.slice()),
     activities: normalizeMockActivities(state?.activities || DEFAULT_STATE.activities.slice()),
-    goals: Array.isArray(state?.goals) ? state.goals : DEFAULT_STATE.goals.slice(),
+    goals: normalizeMockGoals(state?.goals || DEFAULT_STATE.goals.slice()),
     notifications: normalizeMockNotifications(state?.notifications || DEFAULT_STATE.notifications.slice())
   });
 
