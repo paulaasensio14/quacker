@@ -82,10 +82,26 @@ const ExploreModule = (() => {
     return _safeText(value).trim();
   }
 
+  function _escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function _getActiveViewId() {
     return (
       document.querySelector(".view.is-active")?.getAttribute("data-view-id") || ""
     );
+  }
+
+  function _formatExploreCountLabel(count, singularKey, pluralKey) {
+    const safeCount = Math.max(0, Number(count || 0));
+    return window.I18n
+      .t(safeCount === 1 ? singularKey : pluralKey)
+      .replace("{count}", String(safeCount));
   }
 
   function _normalizeExploreItem(rawItem, index = 0) {
@@ -895,6 +911,106 @@ const ExploreModule = (() => {
     `;
   }
 
+  function _renderContentDetailCast(castEl, castEntries = []) {
+    if (!castEl) return;
+
+    const safeCastEntries = Array.isArray(castEntries) ? castEntries : [];
+
+    if (safeCastEntries.length === 0) {
+      castEl.innerHTML = `
+        <p class="content-detail-cast-empty">
+          ${_escapeHtml(window.I18n.t("explore_detail_no_cast"))}
+        </p>
+      `;
+      return;
+    }
+
+    castEl.innerHTML = safeCastEntries
+      .map((entry) => {
+        const profile = _safeText(entry.profile).trim();
+        const initial = _escapeHtml(String(entry.name || "?").trim().charAt(0).toUpperCase() || "?");
+
+        return `
+          <article class="content-detail-cast-person">
+            <div
+              class="content-detail-cast-avatar${profile ? "" : " is-fallback"}"
+              ${profile ? `style="background-image: url('${_escapeHtml(profile)}');"` : ""}
+              aria-hidden="true"
+            >
+              ${profile ? "" : `<span class="content-detail-cast-avatar-initial">${initial}</span>`}
+            </div>
+
+            <div class="content-detail-cast-copy">
+              <strong class="content-detail-cast-name">${_escapeHtml(entry.name)}</strong>
+              ${
+                entry.character
+                  ? `<span class="content-detail-cast-role">${_escapeHtml(entry.character)}</span>`
+                  : ""
+              }
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  function _renderContentDetailSeasons(metaVm) {
+    const sectionEl = document.getElementById("contentDetailSeasonsSection");
+    const metaEl = document.getElementById("contentDetailSeasonsMeta");
+    const gridEl = document.getElementById("contentDetailSeasonGrid");
+
+    if (!sectionEl || !metaEl || !gridEl) return;
+
+    const seasonBreakdown = Array.isArray(metaVm?.seasonBreakdown)
+      ? metaVm.seasonBreakdown
+      : [];
+
+    if (seasonBreakdown.length === 0) {
+      sectionEl.hidden = true;
+      metaEl.textContent = "";
+      gridEl.innerHTML = "";
+      return;
+    }
+
+    sectionEl.hidden = false;
+    metaEl.textContent = metaVm?.seasonsSummary || "";
+
+    gridEl.innerHTML = seasonBreakdown
+      .map((season) => {
+        const seasonNumber = Math.max(0, Number(season?.seasonNumber || 0) || 0);
+        const seasonTitle =
+          _safeText(season?.name).trim() ||
+          window.I18n
+            .t("explore_detail_season_name")
+            .replace("{number}", String(seasonNumber));
+        const episodeLabel = _formatExploreCountLabel(
+          season?.episodeCount || 0,
+          "explore_detail_episode_single",
+          "explore_detail_episode_plural"
+        );
+        const airYear = _safeText(season?.airDate).trim().slice(0, 4);
+        const seasonMeta = [episodeLabel, airYear].filter(Boolean).join(" · ");
+        const poster = _safeText(season?.poster).trim();
+
+        return `
+          <article class="content-detail-season-card">
+            <div
+              class="content-detail-season-poster${poster ? "" : " is-fallback"}"
+              ${poster ? `style="background-image: url('${_escapeHtml(poster)}');"` : ""}
+            >
+              ${poster ? "" : `<span class="content-detail-season-initial">T${seasonNumber}</span>`}
+            </div>
+
+            <div class="content-detail-season-copy">
+              <strong class="content-detail-season-title">${_escapeHtml(seasonTitle)}</strong>
+              <span class="content-detail-season-meta">${_escapeHtml(seasonMeta)}</span>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
   function _syncExploreDrawerFromItem(item) {
     if (!item) return null;
     const drawerEid = _normalizeId(item.eid);
@@ -952,14 +1068,17 @@ const ExploreModule = (() => {
     const metaEl = document.getElementById("contentDetailMeta");
     const coverEl = document.getElementById("contentDetailCover");
     const badgeEl = document.getElementById("contentDetailBadge");
-    const typeEl = document.getElementById("contentDetailType");
-    const releaseEl = document.getElementById("contentDetailReleaseDate");
     const ratingEl = document.getElementById("contentDetailRating");
     const metaPrimaryLabelEl = document.getElementById("contentDetailMetaPrimaryLabel");
     const metaPrimaryValueEl = document.getElementById("contentDetailMetaPrimaryValue");
+    const metaSecondaryLabelEl = document.getElementById("contentDetailMetaSecondaryLabel");
+    const metaSecondaryValueEl = document.getElementById("contentDetailMetaSecondaryValue");
+    const metaTertiaryLabelEl = document.getElementById("contentDetailMetaTertiaryLabel");
+    const metaTertiaryValueEl = document.getElementById("contentDetailMetaTertiaryValue");
     const libraryEl = document.getElementById("contentDetailLibraryState");
     const listsEl = document.getElementById("contentDetailListsCount");
     const genresEl = document.getElementById("contentDetailGenres");
+    const castEl = document.getElementById("contentDetailCast");
     const summaryEl = document.getElementById("contentDetailSummary");
     const addLibraryBtn = document.getElementById("contentDetailAddLibrary");
     const addListsBtn = document.getElementById("contentDetailAddLists");
@@ -974,15 +1093,19 @@ const ExploreModule = (() => {
       badgeEl.hidden = !vm.hasBadge;
     }
 
-    if (typeEl) typeEl.textContent = vm.detailType;
-    if (releaseEl) releaseEl.textContent = vm.detailReleaseDate;
     if (libraryEl) libraryEl.textContent = vm.detailLibraryState;
     if (listsEl) listsEl.textContent = vm.detailListsCount;
     if (genresEl) genresEl.textContent = metaVm.genres;
     if (metaPrimaryLabelEl) metaPrimaryLabelEl.textContent = metaVm.primaryLabel;
     if (metaPrimaryValueEl) metaPrimaryValueEl.textContent = metaVm.primaryValue;
+    if (metaSecondaryLabelEl) metaSecondaryLabelEl.textContent = metaVm.secondaryLabel;
+    if (metaSecondaryValueEl) metaSecondaryValueEl.textContent = metaVm.secondaryValue;
+    if (metaTertiaryLabelEl) metaTertiaryLabelEl.textContent = metaVm.tertiaryLabel;
+    if (metaTertiaryValueEl) metaTertiaryValueEl.textContent = metaVm.tertiaryValue;
 
     _renderExploreRating(ratingEl, item);
+    _renderContentDetailCast(castEl, metaVm.cast);
+    _renderContentDetailSeasons(metaVm);
 
     if (summaryEl) {
       summaryEl.textContent = vm.summary;
@@ -1540,6 +1663,7 @@ const ExploreModule = (() => {
   function _buildExploreDrawerTextModel(item) {
     const count = Number(item?.__listsCount || 0);
     const normalizedType = _norm(item?.type);
+    const releaseYear = Number(item?.meta?.year || String(item?.releaseDate || "").slice(0, 4) || 0);
     const resolvedTypeLabel =
       TYPE_LABELS[normalizedType]?.() ||
       (normalizedType === "tv" ? window.I18n.t("home_type_series") : "") ||
@@ -1550,7 +1674,7 @@ const ExploreModule = (() => {
 
     const metaParts = [
       resolvedTypeLabel,
-      item?.releaseDate ? _safeText(item.releaseDate) : ""
+      releaseYear > 0 ? String(releaseYear) : ""
     ].filter(Boolean);
 
     const badgeParts = [];
@@ -1629,9 +1753,49 @@ const ExploreModule = (() => {
     const statusLabel = _translateExploreStatusLabel(item?.statusLabel);
     const runtimeNumber = Number(item?.runtime || 0);
     const totalPagesNumber = Number(item?.meta?.totalPages || 0);
+    const totalSeasonsNumber = Math.max(
+      0,
+      Number(item?.meta?.totalSeasons || item?.seasons || 0) || 0
+    );
+    const totalEpisodesNumber = Math.max(
+      0,
+      Number(item?.meta?.totalEpisodes || item?.episodes || 0) || 0
+    );
+    const yearNumber = Number(item?.meta?.year || 0);
+    const safeOriginalTitle = _safeText(item?.originalTitle).trim();
+    const safeCurrentTitle = _safeText(item?.title).trim();
+    const hasAlternativeOriginalTitle =
+      safeOriginalTitle &&
+      _norm(safeOriginalTitle) !== _norm(safeCurrentTitle);
+
+    const rawSeasonBreakdown = Array.isArray(item?.meta?.seasonBreakdown)
+      ? item.meta.seasonBreakdown
+      : [];
+
+    const seasonBreakdown = rawSeasonBreakdown
+      .map((season) => ({
+        seasonNumber: Math.max(0, Number(season?.seasonNumber || 0) || 0),
+        episodeCount: Math.max(0, Number(season?.episodeCount || 0) || 0),
+        name: _safeText(season?.name).trim(),
+        airDate: _safeText(season?.airDate).trim(),
+        poster: _safeText(season?.poster).trim()
+      }))
+      .filter((season) => season.seasonNumber > 0);
+
+    const cast = (Array.isArray(item?.cast) ? item.cast : [])
+      .map((entry) => ({
+        name: _safeText(entry?.name).trim(),
+        character: _safeText(entry?.character).trim(),
+        profile: _safeText(entry?.profile).trim()
+      }))
+      .filter((entry) => entry.name);
 
     let primaryLabel = window.I18n.t("explore_detail_label_meta");
     let primaryValue = window.I18n.t("explore_detail_no_meta");
+    let secondaryLabel = window.I18n.t("explore_detail_label_meta");
+    let secondaryValue = window.I18n.t("explore_detail_no_meta");
+    let tertiaryLabel = window.I18n.t("explore_detail_label_meta");
+    let tertiaryValue = window.I18n.t("explore_detail_no_meta");
 
     if (author) {
       primaryLabel = window.I18n.t("explore_detail_label_author");
@@ -1650,13 +1814,93 @@ const ExploreModule = (() => {
       primaryValue = statusLabel;
     }
 
+    if (_norm(item?.type) === "serie") {
+      const seasonParts = [];
+
+      if (totalSeasonsNumber > 0) {
+        seasonParts.push(
+          _formatExploreCountLabel(
+            totalSeasonsNumber,
+            "explore_detail_season_single",
+            "explore_detail_season_plural"
+          )
+        );
+      }
+
+      if (totalEpisodesNumber > 0) {
+        seasonParts.push(
+          _formatExploreCountLabel(
+            totalEpisodesNumber,
+            "explore_detail_episode_single",
+            "explore_detail_episode_plural"
+          )
+        );
+      }
+
+      secondaryLabel = window.I18n.t("explore_detail_label_series_overview");
+      secondaryValue =
+        seasonParts.join(" · ") || window.I18n.t("explore_detail_no_seasons");
+
+      tertiaryLabel = window.I18n.t("explore_detail_label_status");
+      tertiaryValue = statusLabel || window.I18n.t("explore_detail_no_meta");
+    } else {
+      if (hasAlternativeOriginalTitle) {
+        secondaryLabel = window.I18n.t("explore_detail_label_original_title");
+        secondaryValue = safeOriginalTitle;
+      } else if (yearNumber > 0) {
+        secondaryLabel = window.I18n.t("explore_detail_label_year");
+        secondaryValue = String(yearNumber);
+      }
+
+      if (_norm(item?.type) === "pelicula") {
+        tertiaryLabel = window.I18n.t("explore_detail_label_status");
+        tertiaryValue = statusLabel || window.I18n.t("explore_detail_no_meta");
+      } else if (_norm(item?.type) === "book" && totalPagesNumber > 0) {
+        tertiaryLabel = window.I18n.t("explore_detail_label_pages");
+        tertiaryValue = `${totalPagesNumber} ${window.I18n.t("library_pages")}`;
+      } else if (_norm(item?.type) === "game" && yearNumber > 0) {
+        tertiaryLabel = window.I18n.t("explore_detail_label_year");
+        tertiaryValue = String(yearNumber);
+      } else if (statusLabel) {
+        tertiaryLabel = window.I18n.t("explore_detail_label_status");
+        tertiaryValue = statusLabel;
+      }
+    }
+
     return {
       genres: genres.length
         ? genres.join(", ")
         : window.I18n.t("explore_detail_no_genres"),
       rating,
       primaryLabel,
-      primaryValue
+      primaryValue,
+      secondaryLabel,
+      secondaryValue,
+      tertiaryLabel,
+      tertiaryValue,
+      cast,
+      seasonBreakdown,
+      seasonsSummary:
+        totalSeasonsNumber > 0 || totalEpisodesNumber > 0
+          ? [
+              totalSeasonsNumber > 0
+                ? _formatExploreCountLabel(
+                    totalSeasonsNumber,
+                    "explore_detail_season_single",
+                    "explore_detail_season_plural"
+                  )
+                : "",
+              totalEpisodesNumber > 0
+                ? _formatExploreCountLabel(
+                    totalEpisodesNumber,
+                    "explore_detail_episode_single",
+                    "explore_detail_episode_plural"
+                  )
+                : ""
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : window.I18n.t("explore_detail_no_seasons")
     };
   }
 

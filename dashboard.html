@@ -873,16 +873,6 @@
 
             <div class="content-detail-grid">
               <article class="explore-detail-card">
-                <span class="explore-detail-label" data-i18n="explore_drawer_label_type">Tipo</span>
-                <strong class="explore-detail-value" id="contentDetailType">—</strong>
-              </article>
-
-              <article class="explore-detail-card">
-                <span class="explore-detail-label" data-i18n="explore_drawer_label_release_date">Fecha de lanzamiento</span>
-                <strong class="explore-detail-value" id="contentDetailReleaseDate">—</strong>
-              </article>
-
-              <article class="explore-detail-card">
                 <span class="explore-detail-label" data-i18n="explore_detail_label_rating">Puntuación</span>
                 <strong class="explore-detail-value" id="contentDetailRating">—</strong>
               </article>
@@ -890,6 +880,16 @@
               <article class="explore-detail-card">
                 <span class="explore-detail-label" id="contentDetailMetaPrimaryLabel">Detalle</span>
                 <strong class="explore-detail-value" id="contentDetailMetaPrimaryValue">—</strong>
+              </article>
+
+              <article class="explore-detail-card">
+                <span class="explore-detail-label" id="contentDetailMetaSecondaryLabel">Detalle</span>
+                <strong class="explore-detail-value" id="contentDetailMetaSecondaryValue">—</strong>
+              </article>
+
+              <article class="explore-detail-card">
+                <span class="explore-detail-label" id="contentDetailMetaTertiaryLabel">Detalle</span>
+                <strong class="explore-detail-value" id="contentDetailMetaTertiaryValue">—</strong>
               </article>
 
               <article class="explore-detail-card">
@@ -908,10 +908,26 @@
               </article>
 
               <article class="explore-detail-card explore-detail-card--full">
+                <span class="explore-detail-label" data-i18n="explore_detail_label_cast">Reparto</span>
+                <div class="content-detail-cast-list" id="contentDetailCast">—</div>
+              </article>
+
+              <article class="explore-detail-card explore-detail-card--full">
                 <span class="explore-detail-label" data-i18n="explore_detail_label_summary">Resumen</span>
                 <p class="explore-detail-text" id="contentDetailSummary">—</p>
               </article>
             </div>
+
+            <section class="content-detail-seasons" id="contentDetailSeasonsSection" hidden>
+              <div class="content-detail-section-head">
+                <div>
+                  <h3 class="content-detail-section-title" data-i18n="explore_detail_label_seasons">Temporadas</h3>
+                  <p class="content-detail-section-meta" id="contentDetailSeasonsMeta"></p>
+                </div>
+              </div>
+
+              <div class="content-detail-season-grid" id="contentDetailSeasonGrid"></div>
+            </section>
           </section>
         </div>
       </section>

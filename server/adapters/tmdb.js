@@ -85,6 +85,28 @@ function _yearFromDate(dateStr) {
   return Number.isFinite(year) ? year : null;
 }
 
+function _profileUrl(path) {
+  return path ? `${TMDB_IMAGE_BASE}${path}` : "";
+}
+
+function _mapTmdbCast(castEntries = [], limit = 8) {
+  return (Array.isArray(castEntries) ? castEntries : [])
+    .map((entry) => {
+      const character =
+        String(entry?.character || "").trim() ||
+        String(entry?.roles?.[0]?.character || "").trim();
+
+      return {
+        id: String(entry?.id || entry?.credit_id || "").trim(),
+        name: String(entry?.name || entry?.original_name || "").trim(),
+        character,
+        profile: _profileUrl(entry?.profile_path)
+      };
+    })
+    .filter((entry) => entry.name)
+    .slice(0, limit);
+}
+
 function _baseSearchItemFromMovie(item) {
     return {
     eid: `tmdb:movie:${String(item.id)}`,
@@ -317,7 +339,8 @@ export async function getTmdbDetail({ type, externalId }) {
 
   if (safeType === "pelicula") {
     const data = await _tmdbGet(`/movie/${encodeURIComponent(safeId)}`, {
-      language: "es-ES"
+      language: "es-ES",
+      append_to_response: "credits"
     });
 
     return {
@@ -337,6 +360,7 @@ export async function getTmdbDetail({ type, externalId }) {
       rating: Number(data.vote_average || 0) || null,
       ratingCount: Number(data.vote_count || 0) || 0,
       statusLabel: String(data.status || "").trim(),
+      cast: _mapTmdbCast(data?.credits?.cast || []),
       meta: {
         year: _yearFromDate(data.release_date)
       }
@@ -344,14 +368,18 @@ export async function getTmdbDetail({ type, externalId }) {
   }
 
   const data = await _tmdbGet(`/tv/${encodeURIComponent(safeId)}`, {
-    language: "es-ES"
+    language: "es-ES",
+    append_to_response: "aggregate_credits"
   });
 
 const seasonBreakdown = Array.isArray(data.seasons)
   ? data.seasons
       .map((season) => ({
         seasonNumber: Number(season?.season_number || 0) || 0,
-        episodeCount: Number(season?.episode_count || 0) || 0
+        episodeCount: Number(season?.episode_count || 0) || 0,
+        name: String(season?.name || "").trim(),
+        airDate: String(season?.air_date || "").trim(),
+        poster: _posterUrl(season?.poster_path)
       }))
       .filter((season) => season.seasonNumber > 0 && season.episodeCount > 0)
       .sort((a, b) => a.seasonNumber - b.seasonNumber)
@@ -381,6 +409,7 @@ const seasonBreakdown = Array.isArray(data.seasons)
     rating: Number(data.vote_average || 0) || null,
     ratingCount: Number(data.vote_count || 0) || 0,
     statusLabel: String(data.status || "").trim(),
+    cast: _mapTmdbCast(data?.aggregate_credits?.cast || []),
     seasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
     episodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
     meta: {
