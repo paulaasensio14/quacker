@@ -2248,7 +2248,7 @@ const ExploreModule = (() => {
     const watchProvidersLink = _safeText(item?.meta?.watchProviders?.link).trim();
     const trailerUrl = _safeText(item?.meta?.trailerUrl).trim();
     const creator = _safeText(item?.meta?.creator).trim();
-    const network = _safeText(item?.meta?.network).trim();
+    const lastAirDate = _safeText(item?.meta?.lastAirDate).trim();
     const durationValue =
       runtimeNumber > 0
         ? `${runtimeNumber} ${window.I18n.t("time_minutes")}`
@@ -2309,9 +2309,12 @@ const ExploreModule = (() => {
         primaryValue = creator;
       }
 
-      if (network) {
-        secondaryLabel = window.I18n.t("explore_detail_label_network");
-        secondaryValue = network;
+      if (hasAlternativeOriginalTitle) {
+        secondaryLabel = window.I18n.t("explore_detail_label_original_title");
+        secondaryValue = safeOriginalTitle;
+      } else if (lastAirDate && lastAirDate !== _safeText(item?.releaseDate).trim()) {
+        secondaryLabel = window.I18n.t("explore_detail_label_last_aired");
+        secondaryValue = lastAirDate;
       }
 
       tertiaryLabel = window.I18n.t("explore_detail_label_status");

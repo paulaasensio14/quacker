@@ -639,7 +639,7 @@ const seasonBreakdown = Array.isArray(data.seasons)
     meta: {
       year: _yearFromDate(data.first_air_date),
       creator: _joinTmdbNamedEntries(data?.created_by, 2),
-      network: _joinTmdbNamedEntries(data?.networks, 2),
+      lastAirDate: String(data?.last_air_date || "").trim(),
       totalSeasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
       totalEpisodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
       seasonBreakdown,
