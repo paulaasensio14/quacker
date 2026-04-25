@@ -6873,6 +6873,7 @@ body.modal-open{
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+  cursor: grab;
 }
 
 .content-detail-related-grid::-webkit-scrollbar {
@@ -6892,6 +6893,20 @@ body.modal-open{
 
 .content-detail-related-grid .explore-card {
   scroll-snap-align: start;
+  user-select: none;
+}
+
+.content-detail-related-grid .explore-cover-img {
+  -webkit-user-drag: none;
+}
+
+.content-detail-related-grid.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+}
+
+.content-detail-related-grid.is-dragging .explore-card {
+  pointer-events: none;
 }
 
 .content-detail-related-grid.is-scrollable {

@@ -42,6 +42,13 @@ const ExploreModule = (() => {
   let __detailCastExpanded = false;
   const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
+  const __detailRelatedDrag = {
+    pointerId: null,
+    startX: 0,
+    startScrollLeft: 0,
+    moved: false,
+    suppressClickUntil: 0
+  };
 
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
@@ -1360,6 +1367,34 @@ const ExploreModule = (() => {
     }
   }
 
+  function _resetContentDetailRelatedDrag(gridEl) {
+    if (gridEl) {
+      gridEl.classList.remove("is-dragging");
+
+      if (
+        __detailRelatedDrag.pointerId != null &&
+        typeof gridEl.hasPointerCapture === "function" &&
+        gridEl.hasPointerCapture(__detailRelatedDrag.pointerId)
+      ) {
+        try {
+          gridEl.releasePointerCapture(__detailRelatedDrag.pointerId);
+        } catch (_) {}
+      }
+    }
+
+    __detailRelatedDrag.pointerId = null;
+    __detailRelatedDrag.startX = 0;
+    __detailRelatedDrag.startScrollLeft = 0;
+    __detailRelatedDrag.moved = false;
+  }
+
+  function _shouldSuppressContentDetailRelatedClick(target) {
+    return (
+      !!target?.closest?.("#contentDetailRelatedGrid") &&
+      Date.now() < __detailRelatedDrag.suppressClickUntil
+    );
+  }
+
   function _renderContentDetailRelatedItems(
     sectionEl,
     gridEl,
@@ -1418,6 +1453,54 @@ const ExploreModule = (() => {
 
       event.preventDefault();
       gridEl.scrollLeft += event.deltaY;
+    };
+
+    gridEl.onpointerdown = (event) => {
+      const maxScrollLeft = Math.max(0, gridEl.scrollWidth - gridEl.clientWidth);
+      if (maxScrollLeft <= 8) return;
+      if (event.button !== 0) return;
+
+      __detailRelatedDrag.pointerId = event.pointerId;
+      __detailRelatedDrag.startX = event.clientX;
+      __detailRelatedDrag.startScrollLeft = gridEl.scrollLeft;
+      __detailRelatedDrag.moved = false;
+      gridEl.classList.add("is-dragging");
+
+      if (typeof gridEl.setPointerCapture === "function") {
+        try {
+          gridEl.setPointerCapture(event.pointerId);
+        } catch (_) {}
+      }
+    };
+
+    gridEl.onpointermove = (event) => {
+      if (__detailRelatedDrag.pointerId !== event.pointerId) return;
+
+      const deltaX = event.clientX - __detailRelatedDrag.startX;
+      if (Math.abs(deltaX) > 6) {
+        __detailRelatedDrag.moved = true;
+      }
+
+      if (!__detailRelatedDrag.moved) return;
+
+      event.preventDefault();
+      gridEl.scrollLeft = __detailRelatedDrag.startScrollLeft - deltaX;
+    };
+
+    gridEl.onpointerup = (event) => {
+      if (__detailRelatedDrag.pointerId !== event.pointerId) return;
+      if (__detailRelatedDrag.moved) {
+        __detailRelatedDrag.suppressClickUntil = Date.now() + 180;
+      }
+      _resetContentDetailRelatedDrag(gridEl);
+    };
+
+    gridEl.onpointercancel = () => {
+      _resetContentDetailRelatedDrag(gridEl);
+    };
+
+    gridEl.onlostpointercapture = () => {
+      _resetContentDetailRelatedDrag(gridEl);
     };
 
     requestAnimationFrame(() => {
@@ -3294,6 +3377,12 @@ const ExploreModule = (() => {
     document.addEventListener("click", async (e) => {
       const detailTrigger = e.target.closest('[data-action="open-item-detail"][data-eid]');
       if (detailTrigger) {
+        if (_shouldSuppressContentDetailRelatedClick(detailTrigger)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
 
