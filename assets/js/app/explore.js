@@ -2435,6 +2435,8 @@ const ExploreModule = (() => {
     const watchProvidersLink = _safeText(item?.meta?.watchProviders?.link).trim();
     const trailerUrl = _safeText(item?.meta?.trailerUrl).trim();
     const creator = _safeText(item?.meta?.creator).trim();
+    const director = _safeText(item?.meta?.director).trim();
+    const writer = _safeText(item?.meta?.writer).trim();
     const lastAirDate = _safeText(item?.meta?.lastAirDate).trim();
     const formattedLastAirDate = _formatExploreDate(lastAirDate);
     const durationValue =
@@ -2511,17 +2513,30 @@ const ExploreModule = (() => {
       tertiaryLabel = window.I18n.t("explore_detail_label_status");
       tertiaryValue = statusLabel || window.I18n.t("explore_detail_no_meta");
     } else {
+      if (_norm(item?.type) === "pelicula" && director) {
+        primaryLabel = window.I18n.t("explore_detail_label_director");
+        primaryValue = director;
+      }
+
       if (hasAlternativeOriginalTitle) {
         secondaryLabel = window.I18n.t("explore_detail_label_original_title");
         secondaryValue = safeOriginalTitle;
+      } else if (_norm(item?.type) === "pelicula" && writer) {
+        secondaryLabel = window.I18n.t("explore_detail_label_writer");
+        secondaryValue = writer;
       } else if (yearNumber > 0) {
         secondaryLabel = window.I18n.t("explore_detail_label_year");
         secondaryValue = String(yearNumber);
       }
 
       if (_norm(item?.type) === "pelicula") {
-        tertiaryLabel = window.I18n.t("explore_detail_label_status");
-        tertiaryValue = statusLabel || window.I18n.t("explore_detail_no_meta");
+        if (hasAlternativeOriginalTitle && writer) {
+          tertiaryLabel = window.I18n.t("explore_detail_label_writer");
+          tertiaryValue = writer;
+        } else {
+          tertiaryLabel = window.I18n.t("explore_detail_label_status");
+          tertiaryValue = statusLabel || window.I18n.t("explore_detail_no_meta");
+        }
       } else if (_norm(item?.type) === "book" && totalPagesNumber > 0) {
         tertiaryLabel = window.I18n.t("explore_detail_label_pages");
         tertiaryValue = `${totalPagesNumber} ${window.I18n.t("library_pages")}`;

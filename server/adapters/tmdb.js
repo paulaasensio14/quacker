@@ -117,6 +117,20 @@ function _mapTmdbCast(castEntries = [], limit = 16) {
     .slice(0, limit);
 }
 
+function _joinTmdbCrewNames(crewEntries = [], jobs = [], limit = 2) {
+  const allowedJobs = (Array.isArray(jobs) ? jobs : [])
+    .map((job) => String(job || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  return (Array.isArray(crewEntries) ? crewEntries : [])
+    .filter((entry) => allowedJobs.includes(String(entry?.job || "").trim().toLowerCase()))
+    .map((entry) => String(entry?.name || "").trim())
+    .filter(Boolean)
+    .filter((name, index, arr) => arr.indexOf(name) === index)
+    .slice(0, limit)
+    .join(", ");
+}
+
 function _joinTmdbNamedEntries(entries = [], limit = 2) {
   return (Array.isArray(entries) ? entries : [])
     .map((entry) => String(entry?.name || "").trim())
@@ -591,6 +605,8 @@ export async function getTmdbDetail({ type, externalId }) {
       relatedItems,
       meta: {
         year: _yearFromDate(data.release_date),
+        director: _joinTmdbCrewNames(data?.credits?.crew, ["Director"], 2),
+        writer: _joinTmdbCrewNames(data?.credits?.crew, ["Writer", "Screenplay"], 2),
         watchProviders,
         trailerUrl: _pickTmdbVideoUrl(data?.videos?.results)
       }
