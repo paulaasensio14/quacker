@@ -6831,7 +6831,9 @@ body.modal-open{
   gap: 12px;
   overflow-x: auto;
   overflow-y: hidden;
+  padding-top: 6px;
   padding-bottom: 8px;
+  margin-top: -6px;
   scroll-snap-type: x proximity;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
