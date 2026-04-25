@@ -6822,6 +6822,39 @@ body.modal-open{
   background: var(--bg-card);
 }
 
+.content-detail-related-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.content-detail-related-nav[hidden] {
+  display: none !important;
+}
+
+.content-detail-related-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 2px solid var(--border-strong);
+  background: #fff8dc;
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+.content-detail-related-nav-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.content-detail-related-nav-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .content-detail-related-grid {
   width: 100%;
   display: grid;

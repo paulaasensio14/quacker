@@ -1317,7 +1317,51 @@ const ExploreModule = (() => {
       .join("");
   }
 
-  function _renderContentDetailRelatedItems(sectionEl, gridEl, items = []) {
+  function _syncContentDetailRelatedNav(gridEl, navEl, prevBtnEl, nextBtnEl) {
+    if (!gridEl) return;
+
+    const maxScrollLeft = Math.max(0, gridEl.scrollWidth - gridEl.clientWidth);
+    const canScroll = maxScrollLeft > 8;
+    const scrollLeft = Math.max(0, gridEl.scrollLeft);
+
+    if (navEl) {
+      navEl.hidden = !canScroll;
+    }
+
+    if (prevBtnEl) {
+      prevBtnEl.disabled = !canScroll || scrollLeft <= 4;
+    }
+
+    if (nextBtnEl) {
+      nextBtnEl.disabled = !canScroll || scrollLeft >= maxScrollLeft - 4;
+    }
+  }
+
+  function _scrollContentDetailRelated(gridEl, direction = 1) {
+    if (!gridEl) return;
+
+    const cardWidth = gridEl.firstElementChild?.getBoundingClientRect?.().width || 168;
+    const gap = 12;
+    const delta = Math.max(cardWidth + gap, Math.floor(gridEl.clientWidth * 0.72));
+
+    try {
+      gridEl.scrollBy({
+        left: delta * direction,
+        behavior: "smooth"
+      });
+    } catch (_) {
+      gridEl.scrollLeft += delta * direction;
+    }
+  }
+
+  function _renderContentDetailRelatedItems(
+    sectionEl,
+    gridEl,
+    navEl,
+    prevBtnEl,
+    nextBtnEl,
+    items = []
+  ) {
     if (!sectionEl || !gridEl) return;
 
     const safeItems = (Array.isArray(items) ? items : [])
@@ -1327,6 +1371,7 @@ const ExploreModule = (() => {
     if (safeItems.length === 0) {
       sectionEl.hidden = true;
       gridEl.innerHTML = "";
+      if (navEl) navEl.hidden = true;
       return;
     }
 
@@ -1354,6 +1399,14 @@ const ExploreModule = (() => {
         `;
       })
       .join("");
+
+    gridEl.onscroll = () => {
+      _syncContentDetailRelatedNav(gridEl, navEl, prevBtnEl, nextBtnEl);
+    };
+
+    requestAnimationFrame(() => {
+      _syncContentDetailRelatedNav(gridEl, navEl, prevBtnEl, nextBtnEl);
+    });
   }
 
   function _syncContentDetailTrailerLink(linkEl, wrapperEl, trailerUrl = "") {
@@ -1573,6 +1626,9 @@ const ExploreModule = (() => {
     const providersLinkEl = document.getElementById("contentDetailProvidersLink");
     const providersEl = document.getElementById("contentDetailProviders");
     const relatedSectionEl = document.getElementById("contentDetailRelatedSection");
+    const relatedNavEl = document.getElementById("contentDetailRelatedNav");
+    const relatedPrevBtnEl = document.getElementById("contentDetailRelatedPrev");
+    const relatedNextBtnEl = document.getElementById("contentDetailRelatedNext");
     const relatedGridEl = document.getElementById("contentDetailRelatedGrid");
     const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
@@ -1645,7 +1701,14 @@ const ExploreModule = (() => {
       metaVm.watchProvidersRegion,
       metaVm.watchProvidersLink
     );
-    _renderContentDetailRelatedItems(relatedSectionEl, relatedGridEl, item?.relatedItems);
+    _renderContentDetailRelatedItems(
+      relatedSectionEl,
+      relatedGridEl,
+      relatedNavEl,
+      relatedPrevBtnEl,
+      relatedNextBtnEl,
+      item?.relatedItems
+    );
     _renderContentDetailCast(castEl, metaVm.cast, castToggleBtn);
     _renderContentDetailSeasons(item, metaVm);
 
@@ -3239,6 +3302,22 @@ const ExploreModule = (() => {
         if (activeDetailItem) {
           _renderContentDetailView(activeDetailItem);
         }
+        return;
+      }
+
+      const relatedPrevBtn = e.target.closest("#contentDetailRelatedPrev");
+      if (relatedPrevBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        _scrollContentDetailRelated(document.getElementById("contentDetailRelatedGrid"), -1);
+        return;
+      }
+
+      const relatedNextBtn = e.target.closest("#contentDetailRelatedNext");
+      if (relatedNextBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        _scrollContentDetailRelated(document.getElementById("contentDetailRelatedGrid"), 1);
       }
     });
 
