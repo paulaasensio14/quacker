@@ -6824,6 +6824,38 @@ body.modal-open{
 
 .content-detail-related-grid {
   width: 100%;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 168px;
+  grid-template-columns: none;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.content-detail-related-grid::-webkit-scrollbar {
+  height: 10px;
+}
+
+.content-detail-related-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content-detail-related-grid::-webkit-scrollbar-thumb {
+  background: rgba(2, 6, 23, 0.28);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.content-detail-related-grid .explore-card {
+  scroll-snap-align: start;
 }
 
 .content-detail-seasons[hidden] {
