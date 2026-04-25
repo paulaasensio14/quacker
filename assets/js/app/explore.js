@@ -1323,17 +1323,23 @@ const ExploreModule = (() => {
     const maxScrollLeft = Math.max(0, gridEl.scrollWidth - gridEl.clientWidth);
     const canScroll = maxScrollLeft > 8;
     const scrollLeft = Math.max(0, gridEl.scrollLeft);
+    const isAtStart = scrollLeft <= 4;
+    const isAtEnd = scrollLeft >= maxScrollLeft - 4;
 
     if (navEl) {
       navEl.hidden = !canScroll;
     }
 
+    gridEl.classList.toggle("is-scrollable", canScroll);
+    gridEl.classList.toggle("is-at-start", !canScroll || isAtStart);
+    gridEl.classList.toggle("is-at-end", !canScroll || isAtEnd);
+
     if (prevBtnEl) {
-      prevBtnEl.disabled = !canScroll || scrollLeft <= 4;
+      prevBtnEl.disabled = !canScroll || isAtStart;
     }
 
     if (nextBtnEl) {
-      nextBtnEl.disabled = !canScroll || scrollLeft >= maxScrollLeft - 4;
+      nextBtnEl.disabled = !canScroll || isAtEnd;
     }
   }
 
@@ -1402,6 +1408,16 @@ const ExploreModule = (() => {
 
     gridEl.onscroll = () => {
       _syncContentDetailRelatedNav(gridEl, navEl, prevBtnEl, nextBtnEl);
+    };
+
+    gridEl.onwheel = (event) => {
+      const maxScrollLeft = Math.max(0, gridEl.scrollWidth - gridEl.clientWidth);
+      if (maxScrollLeft <= 8) return;
+
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+      event.preventDefault();
+      gridEl.scrollLeft += event.deltaY;
     };
 
     requestAnimationFrame(() => {

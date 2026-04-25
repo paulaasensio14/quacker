@@ -6813,6 +6813,7 @@ body.modal-open{
 }
 
 .content-detail-related {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -6891,6 +6892,34 @@ body.modal-open{
 
 .content-detail-related-grid .explore-card {
   scroll-snap-align: start;
+}
+
+.content-detail-related-grid.is-scrollable {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 18px,
+    #000 calc(100% - 18px),
+    transparent 100%
+  );
+}
+
+.content-detail-related-grid.is-scrollable.is-at-start {
+  mask-image: linear-gradient(
+    to right,
+    #000 0,
+    #000 calc(100% - 18px),
+    transparent 100%
+  );
+}
+
+.content-detail-related-grid.is-scrollable.is-at-end {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 18px,
+    #000 100%
+  );
 }
 
 .content-detail-seasons[hidden] {
