@@ -49,8 +49,17 @@ function sameContentIdentity(a, b) {
   const aCanonicalKey = getCanonicalContentKey(a);
   const bCanonicalKey = getCanonicalContentKey(b);
 
+  // En modo estricto, solo aceptamos identidad canónica
   if (aCanonicalKey && bCanonicalKey) {
     return aCanonicalKey === bCanonicalKey;
+  }
+
+  // Fallback temporal (legacy) — marcar como deprecated
+  if (!aCanonicalKey || !bCanonicalKey) {
+    console.warn("[ItemIdentity] Legacy identity fallback used", {
+      a,
+      b
+    });
   }
 
   return getNormalizedContentKey(a) === getNormalizedContentKey(b);
