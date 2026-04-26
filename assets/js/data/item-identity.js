@@ -80,14 +80,7 @@ function resolveLibraryItemIdFromCache(item, libraryCache = []) {
     }
   }
 
-  const key = getNormalizedContentKey(item);
-  if (!key) return "";
-
-  const match = (libraryCache || []).find(
-    (entry) => getNormalizedContentKey(entry) === key
-  );
-
-  return match?.id ? normalizeIdentityId(match.id) : "";
+  return "";
 }
 
 window.ItemIdentity = {
