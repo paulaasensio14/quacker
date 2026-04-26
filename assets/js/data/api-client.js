@@ -287,22 +287,14 @@ const ApiClient = (() => {
   }
 
   function _isSameLibraryIdentity(a, b) {
-    const aHasCanonical = _hasCanonicalIdentity(a);
-    const bHasCanonical = _hasCanonicalIdentity(b);
-
-    if (aHasCanonical && bHasCanonical) {
-      return (
-        String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
-        String(a.externalId).trim() === String(b.externalId).trim()
-      );
+    if (!_hasCanonicalIdentity(a) || !_hasCanonicalIdentity(b)) {
+      return false;
     }
 
-    const aTitle = _normalizeContentText(a?.title).toLocaleLowerCase("es");
-    const bTitle = _normalizeContentText(b?.title).toLocaleLowerCase("es");
-    const aType = String(a?.type || "").trim();
-    const bType = String(b?.type || "").trim();
-
-    return aTitle === bTitle && aType === bType;
+    return (
+      String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
+      String(a.externalId).trim() === String(b.externalId).trim()
+    );
   }
 
   function _sanitizeLibraryMeta(meta) {
@@ -988,27 +980,32 @@ const ApiClient = (() => {
     });
   }
 
-  // Explore: contar listas por identidad canónica cuando exista.
-  // title+type queda como compatibilidad para items legacy.
-  async function getListsCountByLibraryMatch({ title, type, source = "", externalId = "" } = {}) {
-    if ((!title || !type) && (!source || !externalId)) return 0;
+  // Explore: contar listas por identidad canónica.
+  async function getListsCountByLibraryMatch({ source = "", externalId = "" }) {
+    const canonical = _normalizeCanonicalIdentity(source, externalId);
+
+    if (!canonical.source || !canonical.externalId) return 0;
 
     const lists = await getLists();
     const library = await getLibrary();
 
-    const libId = _normalizeDataId(
-      window.ItemIdentity?.resolveLibraryItemIdFromCache?.(
-        { title, type, source, externalId },
-        library || []
-      )
-    );
+    const libItem = (library || []).find((item) => {
+      const itemIdentity = _normalizeCanonicalIdentity(item?.source, item?.externalId);
 
-    if (!libId) return 0;
+      return (
+        itemIdentity.source === canonical.source &&
+        itemIdentity.externalId === canonical.externalId
+      );
+    });
 
+    if (!libItem?.id) return 0;
+
+    const libId = _normalizeDataId(libItem.id);
     let count = 0;
 
     for (const list of lists || []) {
       const arr = Array.isArray(list?.items) ? list.items : [];
+
       const has = arr.some((entry) => {
         const id = typeof entry === "string" ? entry : entry?.id;
         return _normalizeDataId(id) === libId;
@@ -1020,29 +1017,21 @@ const ApiClient = (() => {
     return count;
   }
 
-  // Devuelve un mapa de conteos por identidad:
-  // - canonical key "source::externalId" cuando exista
-  // - legacy key "type::title" como fallback/compatibilidad
+  // Devuelve un mapa de conteos por identidad canónica "source::externalId".
   async function getListsCountMapByLibraryKey() {
     const lists = await getLists();
     const library = await getLibrary();
 
-    const idToKeys = new Map();
+    const idToKey = new Map();
 
     for (const item of library || []) {
       const itemId = _normalizeDataId(item?.id);
       if (!itemId) continue;
 
-      const keys = new Set();
-      const canonicalKey = window.ItemIdentity?.getCanonicalContentKey?.(item) || "";
-      const normalizedKey = window.ItemIdentity?.getNormalizedContentKey?.(item) || "";
+      const identity = _normalizeCanonicalIdentity(item?.source, item?.externalId);
+      if (!identity.source || !identity.externalId) continue;
 
-      if (canonicalKey) keys.add(canonicalKey);
-      if (normalizedKey) keys.add(normalizedKey);
-
-      if (keys.size > 0) {
-        idToKeys.set(itemId, [...keys]);
-      }
+      idToKey.set(itemId, `${identity.source}::${identity.externalId}`);
     }
 
     const counts = Object.create(null);
@@ -1055,12 +1044,10 @@ const ApiClient = (() => {
         const itemId = _normalizeDataId(id);
         if (!itemId) continue;
 
-        const keys = idToKeys.get(itemId);
-        if (!Array.isArray(keys) || keys.length === 0) continue;
+        const key = idToKey.get(itemId);
+        if (!key) continue;
 
-        for (const key of keys) {
-          counts[key] = (counts[key] || 0) + 1;
-        }
+        counts[key] = (counts[key] || 0) + 1;
       }
     }
 
@@ -2581,6 +2568,10 @@ const ApiClient = (() => {
       throw _makeApiError("invalid_type", 400);
     }
 
+    if (!canonicalIdentity.source || !canonicalIdentity.externalId) {
+      throw _makeApiError("missing_identity", 400);
+    }
+
     if (
       Object.prototype.hasOwnProperty.call(item, "status") &&
       item.status != null &&
@@ -2803,6 +2794,10 @@ const ApiClient = (() => {
 
     if (!allowedTypes.has(type)) {
       throw _makeApiError("invalid_type", 400);
+    }
+
+    if (!canonicalIdentity.source || !canonicalIdentity.externalId) {
+      throw _makeApiError("missing_identity", 400);
     }
 
     if (
