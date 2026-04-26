@@ -105,22 +105,14 @@ function _hasCanonicalIdentity(item) {
 }
 
 function _isSameLibraryIdentity(a, b) {
-  const aHasCanonical = _hasCanonicalIdentity(a);
-  const bHasCanonical = _hasCanonicalIdentity(b);
-
-  if (aHasCanonical && bHasCanonical) {
-    return (
-      String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
-      String(a.externalId).trim() === String(b.externalId).trim()
-    );
+  if (!_hasCanonicalIdentity(a) || !_hasCanonicalIdentity(b)) {
+    return false;
   }
 
-  const aTitle = _normalizeContentText(a?.title).toLocaleLowerCase("es");
-  const bTitle = _normalizeContentText(b?.title).toLocaleLowerCase("es");
-  const aType = String(a?.type || "").trim();
-  const bType = String(b?.type || "").trim();
-
-  return aTitle === bTitle && aType === bType;
+  return (
+    String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
+    String(a.externalId).trim() === String(b.externalId).trim()
+  );
 }
 
 function _sanitizeLibraryMeta(meta) {
@@ -1467,6 +1459,9 @@ app.post("/api/library/restore", _requireAuth, (req, res) => {
   if (title.length < 2) return res.status(400).json({ error: "title_too_short" });
   if (title.length > 120) return res.status(400).json({ error: "title_too_long" });
   if (!allowedTypes.has(type)) return res.status(400).json({ error: "invalid_type" });
+  if (!canonicalIdentity.source || !canonicalIdentity.externalId) {
+    return res.status(400).json({ error: "missing_identity" });
+  }
 
   if (
     Object.prototype.hasOwnProperty.call(data, "status") &&
@@ -1565,6 +1560,10 @@ app.post("/api/library", _requireAuth, (req, res) => {
 
   if (!allowedTypes.has(type)) {
     return res.status(400).json({ error: "invalid_type" });
+  }
+
+  if (!canonicalIdentity.source || !canonicalIdentity.externalId) {
+    return res.status(400).json({ error: "missing_identity" });
   }
 
   if (
