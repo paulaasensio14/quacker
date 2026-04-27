@@ -2803,22 +2803,14 @@ const ExploreModule = (() => {
 
     const libraryByCanonicalKey = new Map(
       lib
-        .map(item => [
+        .map(item =>[
           window.ItemIdentity?.getCanonicalContentKey?.(item) || "",
           item
         ])
         .filter(([key]) => Boolean(key))
     );
 
-    const libraryByKey = new Map(
-      lib.map(item => [
-        `${_norm(item.title)}::${_safeText(item.type)}`,
-        item
-      ])
-    );
-
-    // Mantener el vínculo por ID si ya existe.
-    // Solo usar title+type como fallback para items antiguos o aún no enlazados.
+    // Matching estricto de referencias: ID directo o Identidad Canónica.
     const syncLibraryRefs = (items) =>
       items.map((x) => {
         const currentLibraryId = _normalizeId(x.__libraryItemId) || null;
@@ -2827,11 +2819,8 @@ const ExploreModule = (() => {
         const byCanonical = byId || !canonicalKey
           ? null
           : libraryByCanonicalKey.get(canonicalKey);
-        const byKey = byId || byCanonical
-          ? null
-          : libraryByKey.get(`${_norm(x.title)}::${_safeText(x.type)}`);
 
-        const libraryItem = byId || byCanonical || byKey || null;
+        const libraryItem = byId || byCanonical || null;
 
         return {
           ...x,
