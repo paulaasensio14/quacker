@@ -726,7 +726,7 @@ const ExploreModule = (() => {
   }
 
   function _getActiveDetailItem() {
-    const detailEid = _normalizeId(__detailViewItem?.eid || activeEid);
+    const detailEid = _normalizeId(__detailViewItem?.eid);
     return _getExploreItemByEid(detailEid) || __detailViewItem || null;
   }
 
@@ -1705,7 +1705,7 @@ const ExploreModule = (() => {
     const detailEid = _normalizeId(item?.eid);
     if (!detailEid) return item;
 
-    activeEid = detailEid;
+    // Ya no pisamos activeEid (pertenece al Drawer)
     __detailViewItem = item;
 
     const vm = _buildExploreDrawerTextModel(item);
@@ -1875,7 +1875,7 @@ const ExploreModule = (() => {
     __detailCastExpanded = false;
     __detailExpandedSeasonKeys.clear();
     __detailViewReqSeq += 1;
-    activeEid = detailEid;
+    // Eliminado: activeEid = detailEid;
 
     if (__drawerOpen) {
       _closeExploreDrawer({ restoreFocus: false, clearActiveEid: false });
@@ -1919,7 +1919,7 @@ const ExploreModule = (() => {
     __detailViewLastFocusEl = null;
     __detailViewItem = null;
     __detailOriginView = "explore";
-    activeEid = null;
+    // Eliminado: activeEid = null;
 
     window.Router?.showView?.(originView);
 
