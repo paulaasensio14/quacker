@@ -3320,39 +3320,15 @@ const ExploreModule = (() => {
   function bind() {
 
     const globalSearch = document.getElementById("globalSearch");
-    const globalSearchClear = document.getElementById("globalSearchClear");
-    const globalSearchBox = document.getElementById("globalSearchBox");
 
     if (globalSearch && !globalSearch.__exploreBound) {
       globalSearch.__exploreBound = true;
 
-      globalSearch.disabled = false;
-      globalSearchBox?.classList.remove("is-disabled");
-      globalSearchBox?.setAttribute("aria-disabled", "false");
-
       globalSearch.addEventListener("input", () => {
+        const isExploreActive = document.querySelector("#view-explore")?.classList.contains("is-active");
+        if (!isExploreActive) return;
+
         searchTerm = String(globalSearch.value || "").trim();
-        _scheduleApplyFilters();
-      });
-
-      globalSearch.addEventListener("search", () => {
-        searchTerm = String(globalSearch.value || "").trim();
-        _scheduleApplyFilters();
-      });
-    }
-
-    if (globalSearchClear && !globalSearchClear.__exploreBound) {
-      globalSearchClear.__exploreBound = true;
-
-      globalSearchClear.removeAttribute("tabindex");
-
-      globalSearchClear.addEventListener("click", () => {
-        if (globalSearch) {
-          globalSearch.value = "";
-          globalSearch.focus();
-        }
-
-        searchTerm = "";
         _scheduleApplyFilters();
       });
     }
