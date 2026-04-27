@@ -49,20 +49,13 @@ function sameContentIdentity(a, b) {
   const aCanonicalKey = getCanonicalContentKey(a);
   const bCanonicalKey = getCanonicalContentKey(b);
 
-  // En modo estricto, solo aceptamos identidad canónica
-  if (aCanonicalKey && bCanonicalKey) {
-    return aCanonicalKey === bCanonicalKey;
-  }
-
-  // Fallback temporal (legacy) — marcar como deprecated
+  // IDENTIDAD ESTRICTA OBLIGATORIA: Sin source::externalId, no hay match.
+  // Previene colisiones críticas en remakes, reboots o juegos homónimos.
   if (!aCanonicalKey || !bCanonicalKey) {
-    console.warn("[ItemIdentity] Legacy identity fallback used", {
-      a,
-      b
-    });
+    return false;
   }
 
-  return getNormalizedContentKey(a) === getNormalizedContentKey(b);
+  return aCanonicalKey === bCanonicalKey;
 }
 
 function resolveLibraryItemIdFromCache(item, libraryCache = []) {
@@ -86,7 +79,6 @@ function resolveLibraryItemIdFromCache(item, libraryCache = []) {
 window.ItemIdentity = {
   getLibraryItemId,
   getCanonicalContentKey,
-  getNormalizedContentKey,
   sameContentIdentity,
   resolveLibraryItemIdFromCache
 };
