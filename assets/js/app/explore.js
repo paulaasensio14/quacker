@@ -203,6 +203,35 @@ const ExploreModule = (() => {
     };
   }
 
+  function _normalizeDetailRelatedItem(rawItem, index = 0) {
+    const raw = rawItem && typeof rawItem === "object" ? rawItem : {};
+    const eid = _normalizeId(raw.eid) || `detail_related_${index + 1}`;
+    const title = _safeText(raw.title).trim() || window.I18n.t("common_untitled");
+
+    const rawType = _norm(raw.type);
+    const type =
+      rawType === "serie" || rawType === "series" || rawType === "tv" || rawType === "show"
+        ? "serie"
+        : rawType === "pelicula" || rawType === "película" || rawType === "movie" || rawType === "film"
+          ? "pelicula"
+          : rawType === "book" || rawType === "libro" || rawType === "books"
+            ? "book"
+            : rawType === "game" || rawType === "videojuego" || rawType === "videogame"
+              ? "game"
+              : rawType;
+
+    return {
+      ...raw,
+      eid,
+      title,
+      type,
+      cover: _safeText(raw.cover).trim(),
+      backdrop: _safeText(raw.backdrop).trim(),
+      releaseDate: _safeText(raw.releaseDate).trim(),
+      summary: _safeText(raw.summary).trim()
+    };
+  }
+
   function _daysBetween(a, b) {
     const ms = Math.abs(a.getTime() - b.getTime());
     return Math.floor(ms / (1000 * 60 * 60 * 24));
@@ -1013,8 +1042,8 @@ const ExploreModule = (() => {
     const mergedItem = {
       ...item,
       ...detail,
-      relatedItems: (Array.isArray(detail?.relatedItems) ? detail.relatedItems :[])
-        .map((entry, index) => _normalizeExploreItem(entry, index))
+      relatedItems: (Array.isArray(detail?.relatedItems) ? detail.relatedItems : [])
+        .map((entry, index) => _normalizeDetailRelatedItem(entry, index))
         .filter((entry) => _normalizeId(entry?.eid) !== eid),
       eid,
       __saving: item.__saving,
