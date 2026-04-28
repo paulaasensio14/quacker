@@ -3432,14 +3432,10 @@ const ExploreModule = (() => {
           return;
         }
 
-        // EMISIÓN DE EVENTO: Frontera arquitectónica entre Explore y Detail
-        document.dispatchEvent(new CustomEvent("quacker:open-detail", {
-          detail: {
-            item,
-            originView: isRelatedTrigger ? "detail" : "explore",
-            triggerEl: detailTrigger
-          }
-        }));
+        window.DetailModule?.open?.(item, {
+          originView: isRelatedTrigger ? "detail" : "explore",
+          triggerEl: detailTrigger
+        });
         return;
       }
 
@@ -3513,14 +3509,10 @@ const ExploreModule = (() => {
         return;
       }
 
-      // EMISIÓN DE EVENTO: Frontera arquitectónica entre Explore y Detail
-      document.dispatchEvent(new CustomEvent("quacker:open-detail", {
-        detail: {
-          item,
-          originView: isRelatedTrigger ? "detail" : "explore",
-          triggerEl: card
-        }
-      }));
+      window.DetailModule?.open?.(item, {
+        originView: isRelatedTrigger ? "detail" : "explore",
+        triggerEl: card
+      });
     });
 
     // ESC
