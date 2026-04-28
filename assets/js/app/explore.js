@@ -3390,7 +3390,9 @@ const ExploreModule = (() => {
     // CLICK "+"
 
     document.addEventListener("click", async (e) => {
-      const detailTrigger = e.target.closest('[data-action="open-item-detail"][data-eid]');
+      const detailTrigger = e.target.closest(
+        '[data-action="open-item-detail"][data-eid], [data-detail-related][data-eid]'
+      );
       if (detailTrigger) {
         if (_shouldSuppressContentDetailRelatedClick(detailTrigger)) {
           e.preventDefault();
@@ -3460,7 +3462,9 @@ const ExploreModule = (() => {
     });
 
     document.addEventListener("keydown", async (e) => {
-      const card = e.target.closest('[data-action="open-item-detail"][data-eid]');
+      const card = e.target.closest(
+        '[data-action="open-item-detail"][data-eid], [data-detail-related][data-eid]'
+      );
       if (!card) return;
 
       if (e.key !== "Enter" && e.key !== " ") return;
