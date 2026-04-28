@@ -1523,21 +1523,22 @@ const ExploreModule = (() => {
       __detailRelatedDrag.startX = event.clientX;
       __detailRelatedDrag.startScrollLeft = gridEl.scrollLeft;
       __detailRelatedDrag.moved = false;
-      gridEl.classList.add("is-dragging");
-
-      if (typeof gridEl.setPointerCapture === "function") {
-        try {
-          gridEl.setPointerCapture(event.pointerId);
-        } catch (_) {}
-      }
     };
 
     gridEl.onpointermove = (event) => {
       if (__detailRelatedDrag.pointerId !== event.pointerId) return;
 
       const deltaX = event.clientX - __detailRelatedDrag.startX;
-      if (Math.abs(deltaX) > 6) {
+
+      if (!__detailRelatedDrag.moved && Math.abs(deltaX) > 6) {
         __detailRelatedDrag.moved = true;
+        gridEl.classList.add("is-dragging");
+
+        if (typeof gridEl.setPointerCapture === "function") {
+          try {
+            gridEl.setPointerCapture(event.pointerId);
+          } catch (_) {}
+        }
       }
 
       if (!__detailRelatedDrag.moved) return;
