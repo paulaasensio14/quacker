@@ -5,6 +5,24 @@
 const DetailModule = (() => {
   let __bound = false;
 
+  let __detailViewItem = null;
+  let __detailViewLoading = false;
+  let __detailViewError = false;
+
+  function setDetailState({ item = null, loading = false, error = false } = {}) {
+    __detailViewItem = item;
+    __detailViewLoading = !!loading;
+    __detailViewError = !!error;
+  }
+
+  function getDetailState() {
+    return {
+      item: __detailViewItem,
+      loading: __detailViewLoading,
+      error: __detailViewError
+    };
+  }
+
   function open(item, options = {}) {
     if (!item) return;
 
@@ -59,7 +77,9 @@ const DetailModule = (() => {
     init,
     open,
     close,
-    getRelatedItemByEid
+    getRelatedItemByEid,
+    setDetailState,
+    getDetailState
   };
 })();
 
