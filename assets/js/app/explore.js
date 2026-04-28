@@ -720,9 +720,6 @@ const ExploreModule = (() => {
     return (
       feed.find((x) => _normalizeId(x?.eid) === targetEid) ||
       featuredFeed.find((x) => _normalizeId(x?.eid) === targetEid) ||
-      (Array.isArray(__detailViewItem?.relatedItems)
-        ? __detailViewItem.relatedItems.find((x) => _normalizeId(x?.eid) === targetEid)
-        : null) ||
       null
     );
   }
