@@ -1459,12 +1459,21 @@ const ExploreModule = (() => {
       if (eid) __detailRelatedItemsByEid.set(eid, item);
     });
 
+    __detailRelatedItemsByEid.clear();
+
     if (safeItems.length === 0) {
       sectionEl.hidden = true;
       gridEl.innerHTML = "";
       if (navEl) navEl.hidden = true;
       return;
     }
+
+    safeItems.forEach((item) => {
+      const eid = _normalizeId(item?.eid);
+      if (eid) {
+        __detailRelatedItemsByEid.set(eid, item);
+      }
+    });
 
     sectionEl.hidden = false;
     gridEl.innerHTML = safeItems
