@@ -42,6 +42,7 @@ const ExploreModule = (() => {
   let __detailCastExpanded = false;
   const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
+  const __detailRelatedItemsByEid = new Map();
   const __detailRelatedDrag = {
     pointerId: null,
     startX: 0,
@@ -770,15 +771,7 @@ const ExploreModule = (() => {
     const targetEid = _normalizeId(eid);
     if (!targetEid) return null;
 
-    const activeDetailItem = _getActiveDetailItem();
-    const relatedItems = Array.isArray(activeDetailItem?.relatedItems)
-      ? activeDetailItem.relatedItems
-      : [];
-
-    return (
-      relatedItems.find((item) => _normalizeId(item?.eid) === targetEid) ||
-      null
-    );
+    return __detailRelatedItemsByEid.get(targetEid) || null;
   }
 
   function _getDetailSeasonCacheKey(item, seasonNumber) {
@@ -1459,6 +1452,13 @@ const ExploreModule = (() => {
       .filter((item) => _normalizeId(item?.eid) && _safeText(item?.title).trim())
       .slice(0, 8);
 
+    __detailRelatedItemsByEid.clear();
+
+    safeItems.forEach((item) => {
+      const eid = _normalizeId(item?.eid);
+      if (eid) __detailRelatedItemsByEid.set(eid, item);
+    });
+
     if (safeItems.length === 0) {
       sectionEl.hidden = true;
       gridEl.innerHTML = "";
@@ -1968,6 +1968,7 @@ const ExploreModule = (() => {
 
     __detailViewLastFocusEl = null;
     __detailViewItem = null;
+    __detailRelatedItemsByEid.clear();
     __detailOriginView = "explore";
     // Eliminado: activeEid = null;
 
