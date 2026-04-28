@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }
   try { window.ListsModule?.init?.(); } catch (e) { console.error("ListsModule.init error", e); }
   try { window.ProfileModule?.init?.(); } catch (e) { console.error("ProfileModule.init error", e); }
+  try { window.DetailModule?.init?.(); } catch (e) { console.error("DetailModule.init error", e); }
   try { window.ExploreModule?.init?.(); } catch (e) { console.error("ExploreModule.init error", e); }
   try { window.HomeUI?.init?.(); } catch (e) { console.error("HomeUI.init error", e); }
 

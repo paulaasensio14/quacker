@@ -3769,19 +3769,16 @@ const ExploreModule = (() => {
     }
   });
 
-  function openDetailFromEvent(event) {
-    const { item, originView, triggerEl } = event?.detail || {};
+  function openContentDetail(item, options = {}) {
     if (!item) return;
 
     _openContentDetailView(item, {
-      originView: originView || "explore",
-      triggerEl: triggerEl || null
+      originView: options.originView || "explore",
+      triggerEl: options.triggerEl || null
     });
   }
 
-  document.addEventListener("quacker:open-detail", openDetailFromEvent);
-
-  return { init, load };
+  return { init, load, openContentDetail };
 })();
 
 window.ExploreModule = ExploreModule;
