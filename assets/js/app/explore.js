@@ -3407,15 +3407,28 @@ const ExploreModule = (() => {
         const eid = _normalizeId(detailTrigger.dataset.eid);
         if (!eid) return;
 
-        const item =
-          _getExploreItemByEid(eid) ||
-          _getDetailRelatedItemByEid(eid);
+        const isRelatedTrigger = !!detailTrigger.closest("#contentDetailRelatedGrid");
 
-        if (!item) return;
+        const item = isRelatedTrigger
+          ? _getDetailRelatedItemByEid(eid)
+          : _getExploreItemByEid(eid);
+
+        if (!item) {
+          console.warn("[Detail] open detail target not found", {
+            eid,
+            isRelatedTrigger,
+            relatedKeys: [...__detailRelatedItemsByEid.keys()]
+          });
+          return;
+        }
 
         // EMISIÓN DE EVENTO: Frontera arquitectónica entre Explore y Detail
         document.dispatchEvent(new CustomEvent("quacker:open-detail", {
-          detail: { item, originView: "explore", triggerEl: detailTrigger }
+          detail: {
+            item,
+            originView: isRelatedTrigger ? "detail" : "explore",
+            triggerEl: detailTrigger
+          }
         }));
         return;
       }
@@ -3475,15 +3488,28 @@ const ExploreModule = (() => {
       const eid = _normalizeId(card.dataset.eid);
       if (!eid) return;
 
-      const item =
-        _getExploreItemByEid(eid) ||
-        _getDetailRelatedItemByEid(eid);
+      const isRelatedTrigger = !!card.closest("#contentDetailRelatedGrid");
 
-      if (!item) return;
+      const item = isRelatedTrigger
+        ? _getDetailRelatedItemByEid(eid)
+        : _getExploreItemByEid(eid);
+
+      if (!item) {
+        console.warn("[Detail] open detail target not found", {
+          eid,
+          isRelatedTrigger,
+          relatedKeys: [...__detailRelatedItemsByEid.keys()]
+        });
+        return;
+      }
 
       // EMISIÓN DE EVENTO: Frontera arquitectónica entre Explore y Detail
       document.dispatchEvent(new CustomEvent("quacker:open-detail", {
-        detail: { item, originView: "explore", triggerEl: card }
+        detail: {
+          item,
+          originView: isRelatedTrigger ? "detail" : "explore",
+          triggerEl: card
+        }
       }));
     });
 
