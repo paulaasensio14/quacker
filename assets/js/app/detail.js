@@ -28,8 +28,15 @@ const DetailModule = (() => {
     });
   }
 
-  function close() {
-    console.warn("[DetailModule] close() not implemented yet");
+  function close(options = {}) {
+    if (!window.ExploreModule?.closeContentDetail) {
+      console.error("[DetailModule] Explore detail close bridge is not available");
+      return;
+    }
+
+    window.ExploreModule.closeContentDetail({
+      restoreFocus: options.restoreFocus !== false
+    });
   }
 
   function init() {

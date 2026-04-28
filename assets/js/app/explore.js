@@ -3778,7 +3778,13 @@ const ExploreModule = (() => {
     });
   }
 
-  return { init, load, openContentDetail };
+  function closeContentDetail(options = {}) {
+    _closeContentDetailView({
+      restoreFocus: options.restoreFocus !== false
+    });
+  }
+
+  return { init, load, openContentDetail, closeContentDetail };
 })();
 
 window.ExploreModule = ExploreModule;
