@@ -3357,10 +3357,10 @@ const ExploreModule = (() => {
         const item = _getExploreItemByEid(eid);
         if (!item) return;
 
-        _openContentDetailView(item, {
-          originView: "explore",
-          triggerEl: detailTrigger
-        });
+        // EMISIÓN DE EVENTO: Frontera arquitectónica entre Explore y Detail
+        document.dispatchEvent(new CustomEvent("quacker:open-detail", {
+          detail: { item, originView: "explore", triggerEl: detailTrigger }
+        }));
         return;
       }
 
@@ -3420,10 +3420,10 @@ const ExploreModule = (() => {
       const item = _getExploreItemByEid(eid);
       if (!item) return;
 
-      _openContentDetailView(item, {
-        originView: "explore",
-        triggerEl: card
-      });
+      // EMISIÓN DE EVENTO: Frontera arquitectónica entre Explore y Detail
+      document.dispatchEvent(new CustomEvent("quacker:open-detail", {
+        detail: { item, originView: "explore", triggerEl: card }
+      }));
     });
 
     // ESC
@@ -3670,6 +3670,13 @@ const ExploreModule = (() => {
         void _populateExploreListPicker(null, "detail");
       }
     }
+  });
+
+  // ESCUCHA DEL EVENTO DE DESACOPLAMIENTO
+  document.addEventListener("quacker:open-detail", (e) => {
+    const { item, originView, triggerEl } = e.detail || {};
+    if (!item) return;
+    _openContentDetailView(item, { originView, triggerEl });
   });
 
   return { init, load };
