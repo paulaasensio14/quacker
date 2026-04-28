@@ -3533,7 +3533,7 @@ const ExploreModule = (() => {
         }
 
         if (_isDetailViewActive()) {
-          _closeContentDetailView();
+          window.DetailModule?.close?.();
         }
       }
     });
@@ -3590,7 +3590,7 @@ const ExploreModule = (() => {
 
       detailBackBtn.addEventListener("click", (e) => {
         e.preventDefault();
-        _closeContentDetailView();
+        window.DetailModule?.close?.();
       });
     }
 
