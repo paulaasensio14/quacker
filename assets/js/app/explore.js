@@ -92,6 +92,15 @@ const ExploreModule = (() => {
     return _safeText(value).trim();
   }
 
+  function _getCanonicalIdentityKey(item) {
+    const source = _safeText(item?.source).trim().toLowerCase();
+    const externalId = _safeText(item?.externalId).trim();
+
+    if (!source || !externalId) return "";
+
+    return `${source}::${externalId}`;
+  }
+
   function _escapeHtml(value) {
     return String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -966,14 +975,13 @@ const ExploreModule = (() => {
     if (!item?.eid) return item || null;
 
     const library = await ApiClient.getLibrary();
-    _libraryCache = library ||[];
-    const matchedLibraryItemId = _normalizeId(
-      window.ItemIdentity?.resolveLibraryItemIdFromCache?.(item, library)
-    );
+    _libraryCache = Array.isArray(library) ? library : [];
 
-    const matchedItem = (library ||[]).find(
-      (entry) => _normalizeId(entry?.id) === matchedLibraryItemId
-    );
+    const itemIdentityKey = _getCanonicalIdentityKey(item);
+
+    const matchedItem = itemIdentityKey
+      ? _libraryCache.find((entry) => _getCanonicalIdentityKey(entry) === itemIdentityKey)
+      : null;
 
     // Retorna el objeto actualizado sin mutar nada externo
     return {
