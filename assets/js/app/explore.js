@@ -766,6 +766,21 @@ const ExploreModule = (() => {
     return __detailViewItem || null;
   }
 
+  function _getDetailRelatedItemByEid(eid) {
+    const targetEid = _normalizeId(eid);
+    if (!targetEid) return null;
+
+    const activeDetailItem = _getActiveDetailItem();
+    const relatedItems = Array.isArray(activeDetailItem?.relatedItems)
+      ? activeDetailItem.relatedItems
+      : [];
+
+    return (
+      relatedItems.find((item) => _normalizeId(item?.eid) === targetEid) ||
+      null
+    );
+  }
+
   function _getDetailSeasonCacheKey(item, seasonNumber) {
     const source = _safeText(item?.source).trim();
     const type = _safeText(item?.type).trim();
@@ -3389,7 +3404,10 @@ const ExploreModule = (() => {
         const eid = _normalizeId(detailTrigger.dataset.eid);
         if (!eid) return;
 
-        const item = _getExploreItemByEid(eid);
+        const item =
+          _getExploreItemByEid(eid) ||
+          _getDetailRelatedItemByEid(eid);
+
         if (!item) return;
 
         // EMISIÓN DE EVENTO: Frontera arquitectónica entre Explore y Detail
@@ -3452,7 +3470,10 @@ const ExploreModule = (() => {
       const eid = _normalizeId(card.dataset.eid);
       if (!eid) return;
 
-      const item = _getExploreItemByEid(eid);
+      const item =
+        _getExploreItemByEid(eid) ||
+        _getDetailRelatedItemByEid(eid);
+
       if (!item) return;
 
       // EMISIÓN DE EVENTO: Frontera arquitectónica entre Explore y Detail
