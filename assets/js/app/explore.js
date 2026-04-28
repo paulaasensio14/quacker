@@ -639,11 +639,12 @@ const ExploreModule = (() => {
     _syncExploreDrawerListPicker();
 
     const activeItem = _getActiveExploreItem();
-
     if (activeItem) {
-      _refreshExploreDrawerLibraryState(activeItem)
+      _refreshItemLibraryState(activeItem)
         .then((freshItem) => {
           if (!freshItem) return;
+          // Explore SÍ actualiza su catálogo interno si quiere
+          _replaceExploreItemByEid(freshItem);
           _syncExploreDrawerFromItem(freshItem);
           return _hydrateExploreDrawerDetail(freshItem);
         })
@@ -726,8 +727,8 @@ const ExploreModule = (() => {
   }
 
   function _getActiveDetailItem() {
-    const detailEid = _normalizeId(__detailViewItem?.eid);
-    return _getExploreItemByEid(detailEid) || __detailViewItem || null;
+    // Detail ya no busca en las listas de Explore, confía en su propio estado.
+    return __detailViewItem || null;
   }
 
   function _getDetailSeasonCacheKey(item, seasonNumber) {
@@ -961,26 +962,25 @@ const ExploreModule = (() => {
     return _getExploreItemByEid(targetEid);
   }
 
-  async function _refreshExploreDrawerLibraryState(item) {
+  async function _refreshItemLibraryState(item) {
     if (!item?.eid) return item || null;
 
     const library = await ApiClient.getLibrary();
-    _libraryCache = library || [];
+    _libraryCache = library ||[];
     const matchedLibraryItemId = _normalizeId(
       window.ItemIdentity?.resolveLibraryItemIdFromCache?.(item, library)
     );
 
-    const matchedItem = (library || []).find(
+    const matchedItem = (library ||[]).find(
       (entry) => _normalizeId(entry?.id) === matchedLibraryItemId
     );
 
-    const updatedItem = {
+    // Retorna el objeto actualizado sin mutar nada externo
+    return {
       ...item,
       __inLibrary: !!matchedItem,
       __libraryItemId: _normalizeId(matchedItem?.id)
     };
-
-    return _replaceExploreItemByEid(updatedItem) || updatedItem;
   }
 
   async function _fetchHydratedExploreItemDetail(item) {
@@ -1008,7 +1008,7 @@ const ExploreModule = (() => {
     const mergedItem = {
       ...item,
       ...detail,
-      relatedItems: (Array.isArray(detail?.relatedItems) ? detail.relatedItems : [])
+      relatedItems: (Array.isArray(detail?.relatedItems) ? detail.relatedItems :[])
         .map((entry, index) => _normalizeExploreItem(entry, index))
         .filter((entry) => _normalizeId(entry?.eid) !== eid),
       eid,
@@ -1018,7 +1018,8 @@ const ExploreModule = (() => {
       __listsCount: item.__listsCount
     };
 
-    return _replaceExploreItemByEid(mergedItem) || mergedItem;
+    // Devolvemos el objeto puro, sin mutar las listas de Explore por la espalda
+    return mergedItem;
   }
 
   async function _hydrateExploreDrawerDetail(item) {
@@ -1889,7 +1890,7 @@ const ExploreModule = (() => {
       document.getElementById("contentDetailBack")?.focus?.();
     });
 
-    _refreshExploreDrawerLibraryState(detailItem)
+    _refreshItemLibraryState(detailItem)
       .then((freshItem) => {
         const nextItem = freshItem || detailItem;
         if (!_isDetailViewActive()) return;
