@@ -3673,12 +3673,17 @@ const ExploreModule = (() => {
     }
   });
 
-  // ESCUCHA DEL EVENTO DE DESACOPLAMIENTO
-  document.addEventListener("quacker:open-detail", (e) => {
-    const { item, originView, triggerEl } = e.detail || {};
+  function openDetailFromEvent(event) {
+    const { item, originView, triggerEl } = event?.detail || {};
     if (!item) return;
-    _openContentDetailView(item, { originView, triggerEl });
-  });
+
+    _openContentDetailView(item, {
+      originView: originView || "explore",
+      triggerEl: triggerEl || null
+    });
+  }
+
+  document.addEventListener("quacker:open-detail", openDetailFromEvent);
 
   return { init, load };
 })();
