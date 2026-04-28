@@ -1891,7 +1891,7 @@ const ExploreModule = (() => {
   }
 
   function _openContentDetailView(item, { originView = "explore", triggerEl = null } = {}) {
-    const detailItem = _replaceExploreItemByEid(item) || item;
+    const detailItem = item;
     const detailEid = _normalizeId(detailItem?.eid);
     if (!detailEid) return;
     const openingFromDetail = _isDetailViewActive();
