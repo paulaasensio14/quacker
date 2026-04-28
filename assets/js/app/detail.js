@@ -39,6 +39,15 @@ const DetailModule = (() => {
     });
   }
 
+  function getRelatedItemByEid(eid) {
+    if (!window.ExploreModule?.getDetailRelatedItemByEid) {
+      console.error("[DetailModule] Explore related item bridge is not available");
+      return null;
+    }
+
+    return window.ExploreModule.getDetailRelatedItemByEid(eid);
+  }
+
   function init() {
     if (__bound) return;
     __bound = true;
@@ -49,7 +58,8 @@ const DetailModule = (() => {
   return {
     init,
     open,
-    close
+    close,
+    getRelatedItemByEid
   };
 })();
 

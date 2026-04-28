@@ -767,7 +767,7 @@ const ExploreModule = (() => {
     return __detailViewItem || null;
   }
 
-  function _getDetailRelatedItemByEid(eid) {
+  function getDetailRelatedItemByEid(eid) {
     const targetEid = _normalizeId(eid);
     if (!targetEid) return null;
 
@@ -3420,7 +3420,7 @@ const ExploreModule = (() => {
         const isRelatedTrigger = !!detailTrigger.closest("#contentDetailRelatedGrid");
 
         const item = isRelatedTrigger
-          ? _getDetailRelatedItemByEid(eid)
+          ? window.DetailModule?.getRelatedItemByEid?.(eid)
           : _getExploreItemByEid(eid);
 
         if (!item) {
@@ -3497,7 +3497,7 @@ const ExploreModule = (() => {
       const isRelatedTrigger = !!card.closest("#contentDetailRelatedGrid");
 
       const item = isRelatedTrigger
-        ? _getDetailRelatedItemByEid(eid)
+        ? window.DetailModule?.getRelatedItemByEid?.(eid)
         : _getExploreItemByEid(eid);
 
       if (!item) {
@@ -3776,7 +3776,13 @@ const ExploreModule = (() => {
     });
   }
 
-  return { init, load, openContentDetail, closeContentDetail };
+  return {
+    init,
+    load,
+    openContentDetail,
+    closeContentDetail,
+    getDetailRelatedItemByEid
+  };
 })();
 
 window.ExploreModule = ExploreModule;
