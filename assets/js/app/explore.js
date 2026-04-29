@@ -3778,7 +3778,7 @@ const ExploreModule = (() => {
         close: closeContentDetail,
         render: _renderContentDetailView,
         hydrate: _hydrateContentDetailView,
-        getRelatedItemByEid
+        getRelatedItemByEid: getDetailRelatedItemByEid
       });
 
       // Cargar Explore cuando el router active la vista
