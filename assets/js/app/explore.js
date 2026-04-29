@@ -3773,6 +3773,14 @@ const ExploreModule = (() => {
       await _loadUIState();
       bind();
 
+      window.DetailModule?.registerBridge?.({
+        open: openContentDetail,
+        close: closeContentDetail,
+        render: _renderContentDetailView,
+        hydrate: _hydrateContentDetailView,
+        getRelatedItemByEid
+      });
+
       // Cargar Explore cuando el router active la vista
       if (!init._viewChangeBound) {
         init._viewChangeBound = true;
