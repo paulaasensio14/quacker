@@ -1975,14 +1975,12 @@ const ExploreModule = (() => {
       detailItem &&
       (!normalizedTargetEid || _normalizeId(detailItem.eid) === normalizedTargetEid)
     ) {
-      __detailViewItem = detailItem;
-
-      window.DetailModule?.setDetailState?.({
+      _setActiveDetailState({
         item: detailItem,
         loading: false,
         error: false
       });
-      _renderContentDetailView(detailItem);
+      window.DetailModule?.render?.(detailItem);
     }
   }
 
@@ -2014,7 +2012,7 @@ const ExploreModule = (() => {
       _closeExploreDrawer({ restoreFocus: false, clearActiveEid: false });
     }
 
-    _renderContentDetailView(detailItem);
+    window.DetailModule?.render?.(detailItem);
     window.Router?.showView?.("detail");
 
     requestAnimationFrame(() => {
@@ -2031,12 +2029,12 @@ const ExploreModule = (() => {
           loading: false,
           error: false
         });
-        _renderContentDetailView(nextItem);
-        return _hydrateContentDetailView(nextItem);
+        window.DetailModule?.render?.(nextItem);
+        return window.DetailModule?.hydrate?.(nextItem);
       })
       .catch((error) => {
         console.error("[Explore] failed to refresh detail page state", error);
-        void _hydrateContentDetailView(detailItem);
+        void window.DetailModule?.hydrate?.(detailItem);
       });
   }
 
@@ -3834,10 +3832,10 @@ const ExploreModule = (() => {
       window.DetailModule?.setDetailState?.({
         item: detailItem
       });
-      _renderContentDetailView(detailItem);
+      window.DetailModule?.render?.(detailItem);
       _syncContentDetailFeedback();
 
-      void _hydrateContentDetailView(detailItem);
+      void window.DetailModule?.hydrate?.(detailItem);
 
       if (_isExploreListPickerOpen("detail")) {
         void _populateExploreListPicker(null, "detail");
