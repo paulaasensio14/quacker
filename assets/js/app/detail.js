@@ -17,8 +17,7 @@ const DetailModule = (() => {
     open: null,
     close: null,
     render: null,
-    hydrate: null,
-    getRelatedItemByEid: null
+    hydrate: null
   };
 
   function registerBridge(bridge = {}) {
@@ -26,9 +25,6 @@ const DetailModule = (() => {
     if (typeof bridge.close === "function") __bridge.close = bridge.close;
     if (typeof bridge.render === "function") __bridge.render = bridge.render;
     if (typeof bridge.hydrate === "function") __bridge.hydrate = bridge.hydrate;
-    if (typeof bridge.getRelatedItemByEid === "function") {
-      __bridge.getRelatedItemByEid = bridge.getRelatedItemByEid;
-    }
   }
 
   function setDetailState({
