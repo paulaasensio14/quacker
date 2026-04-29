@@ -992,13 +992,17 @@ const ExploreModule = (() => {
   function _syncContentDetailFeedback() {
     const loadingEl = document.getElementById("contentDetailLoading");
     const errorEl = document.getElementById("contentDetailError");
+    const detailState = window.DetailModule?.getDetailState?.() || {};
+
+    const isLoading = Boolean(detailState.loading ?? __detailViewLoading);
+    const hasError = Boolean(detailState.error ?? __detailViewError);
 
     if (loadingEl) {
-      loadingEl.hidden = !__detailViewLoading;
+      loadingEl.hidden = !isLoading;
     }
 
     if (errorEl) {
-      errorEl.hidden = !__detailViewError;
+      errorEl.hidden = !hasError;
     }
   }
 
