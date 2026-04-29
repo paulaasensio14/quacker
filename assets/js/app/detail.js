@@ -11,6 +11,7 @@ const DetailModule = (() => {
   let __detailViewReqSeq = 0;
   let __detailViewLastFocusEl = null;
   let __detailOriginView = "explore";
+  const __relatedItemsByEid = new Map();
 
   const __bridge = {
     open: null,
@@ -67,6 +68,7 @@ const DetailModule = (() => {
     __detailViewError = false;
     __detailViewLastFocusEl = null;
     __detailOriginView = "explore";
+    __relatedItemsByEid.clear();
   }
 
   function open(item, options = {}) {
@@ -125,13 +127,24 @@ const DetailModule = (() => {
     return __bridge.hydrate(item);
   }
 
-  function getRelatedItemByEid(eid) {
-    if (!__bridge.getRelatedItemByEid) {
-      console.error("[DetailModule] Detail related item bridge is not available");
-      return null;
-    }
+  function setRelatedItems(items = []) {
+    __relatedItemsByEid.clear();
 
-    return __bridge.getRelatedItemByEid(eid);
+    (Array.isArray(items) ? items : []).forEach((item) => {
+      const eid = String(item?.eid || "").trim();
+      if (eid) __relatedItemsByEid.set(eid, item);
+    });
+  }
+
+  function clearRelatedItems() {
+    __relatedItemsByEid.clear();
+  }
+
+  function getRelatedItemByEid(eid) {
+    const safeEid = String(eid || "").trim();
+    if (!safeEid) return null;
+
+    return __relatedItemsByEid.get(safeEid) || null;
   }
 
   function init() {
@@ -148,6 +161,8 @@ const DetailModule = (() => {
     close,
     render,
     hydrate,
+    setRelatedItems,
+    clearRelatedItems,
     getRelatedItemByEid,
     setDetailState,
     getDetailState,

@@ -1522,6 +1522,8 @@ const ExploreModule = (() => {
       if (eid) __detailRelatedItemsByEid.set(eid, item);
     });
 
+    window.DetailModule?.setRelatedItems?.(safeItems);
+
     __detailRelatedItemsByEid.clear();
 
     if (safeItems.length === 0) {
@@ -2058,6 +2060,7 @@ const ExploreModule = (() => {
 
     window.DetailModule?.resetDetailState?.();
     __detailRelatedItemsByEid.clear();
+    window.DetailModule?.clearRelatedItems?.();
     // Eliminado: activeEid = null;
 
     window.Router?.showView?.(originView);
