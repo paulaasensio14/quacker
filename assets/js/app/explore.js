@@ -1515,16 +1515,7 @@ const ExploreModule = (() => {
       .filter((item) => _normalizeId(item?.eid) && _safeText(item?.title).trim())
       .slice(0, 8);
 
-    __detailRelatedItemsByEid.clear();
-
-    safeItems.forEach((item) => {
-      const eid = _normalizeId(item?.eid);
-      if (eid) __detailRelatedItemsByEid.set(eid, item);
-    });
-
     window.DetailModule?.setRelatedItems?.(safeItems);
-
-    __detailRelatedItemsByEid.clear();
 
     if (safeItems.length === 0) {
       sectionEl.hidden = true;
@@ -1532,13 +1523,6 @@ const ExploreModule = (() => {
       if (navEl) navEl.hidden = true;
       return;
     }
-
-    safeItems.forEach((item) => {
-      const eid = _normalizeId(item?.eid);
-      if (eid) {
-        __detailRelatedItemsByEid.set(eid, item);
-      }
-    });
 
     sectionEl.hidden = false;
     gridEl.innerHTML = safeItems
@@ -3510,7 +3494,7 @@ const ExploreModule = (() => {
           console.warn("[Detail] open detail target not found", {
             eid,
             isRelatedTrigger,
-            relatedKeys: [...__detailRelatedItemsByEid.keys()]
+            relatedKeys: "owned-by-DetailModule"
           });
           return;
         }
