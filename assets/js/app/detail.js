@@ -85,6 +85,28 @@ const DetailModule = (() => {
     });
   }
 
+  function render(item = __detailViewItem) {
+    if (!item) return;
+
+    if (!window.ExploreModule?.renderContentDetail) {
+      console.error("[DetailModule] Explore detail render bridge is not available");
+      return;
+    }
+
+    window.ExploreModule.renderContentDetail(item);
+  }
+
+  function hydrate(item = __detailViewItem) {
+    if (!item) return;
+
+    if (!window.ExploreModule?.hydrateContentDetail) {
+      console.error("[DetailModule] Explore detail hydrate bridge is not available");
+      return;
+    }
+
+    return window.ExploreModule.hydrateContentDetail(item);
+  }
+
   function getRelatedItemByEid(eid) {
     if (!window.ExploreModule?.getDetailRelatedItemByEid) {
       console.error("[DetailModule] Explore related item bridge is not available");
@@ -105,6 +127,8 @@ const DetailModule = (() => {
     init,
     open,
     close,
+    render,
+    hydrate,
     getRelatedItemByEid,
     setDetailState,
     getDetailState,

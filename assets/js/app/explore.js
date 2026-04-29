@@ -3865,7 +3865,9 @@ const ExploreModule = (() => {
     load,
     openContentDetail,
     closeContentDetail,
-    getDetailRelatedItemByEid
+    renderContentDetail: _renderContentDetailView,
+    hydrateContentDetail: _hydrateContentDetailView,
+    getDetailRelatedItemByEid,
   };
 })();
 
