@@ -146,6 +146,52 @@ function _sanitizeLibraryMeta(meta) {
   return sanitizedMeta;
 }
 
+function _normalizeActivityType(type) {
+  const safeType = String(type || "").trim().toLowerCase();
+  if (safeType === "completed") return "completed";
+  if (safeType === "progress") return "progress";
+  return "";
+}
+
+function _normalizeActivityCreatedAt(value) {
+  const safeValue = String(value || "").trim();
+  if (!safeValue) return "";
+
+  const parsed = new Date(safeValue);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return parsed.toISOString();
+}
+
+function _appendUserActivity(bucket, activity) {
+  bucket.activities = Array.isArray(bucket.activities) ? bucket.activities : [];
+
+  const createdAt = _normalizeActivityCreatedAt(activity?.createdAt) || new Date().toISOString();
+  const targetId = String(activity?.targetId || "").trim();
+  const type = _normalizeActivityType(activity?.type) || "progress";
+
+  if (!targetId) return null;
+
+  const nextActivity = {
+    id: _uid(),
+    type,
+    targetType: "library_item",
+    targetId,
+    minutes: Number.isFinite(Number(activity?.minutes))
+      ? Math.max(0, Number(activity.minutes))
+      : 0,
+    createdAt
+  };
+
+  bucket.activities.unshift(nextActivity);
+
+  if (bucket.activities.length > 500) {
+    bucket.activities = bucket.activities.slice(0, 500);
+  }
+
+  return nextActivity;
+}
+
 function _getDefaultLibraryStatus(type) {
   return type === "book"
     ? "reading"
@@ -249,7 +295,8 @@ function _getUserBucket(db, userId) {
   db.users[userId] = db.users[userId] || {
     profile: null,
     library: [],
-    lists: []
+    lists: [],
+    activities: []
   };
 
   db.users[userId].library = Array.isArray(db.users[userId].library)
@@ -258,6 +305,10 @@ function _getUserBucket(db, userId) {
 
   db.users[userId].lists = Array.isArray(db.users[userId].lists)
     ? db.users[userId].lists
+    : [];
+
+  db.users[userId].activities = Array.isArray(db.users[userId].activities)
+    ? db.users[userId].activities
     : [];
 
   return db.users[userId];
@@ -300,7 +351,9 @@ app.post("/api/auth/register", (req, res) => {
       passwordSalt: salt,
       passwordHash: hash
     },
-    library: []
+    library: [],
+    lists: [],
+    activities: []
   };
 
   _writeDb(db);
@@ -1414,6 +1467,38 @@ app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
   res.json({ ok: true, removed });
 });
 
+app.get("/api/activities", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const filter = String(req.query.filter || "all").trim().toLowerCase();
+  const limit = Math.max(0, Number(req.query.limit || 0) || 0);
+  const allowedTypes = new Set(["progress", "completed"]);
+
+  const activities = (Array.isArray(bucket.activities) ? bucket.activities : [])
+    .filter((activity) => {
+      const type = _normalizeActivityType(activity?.type);
+      if (!allowedTypes.has(type)) return false;
+      if (filter === "all" || !filter) return true;
+      return type === filter;
+    })
+    .map((activity) => ({
+      id: String(activity?.id || "").trim() || _uid(),
+      type: _normalizeActivityType(activity?.type),
+      targetType: "library_item",
+      targetId: String(activity?.targetId || "").trim(),
+      minutes: Number.isFinite(Number(activity?.minutes))
+        ? Math.max(0, Number(activity.minutes))
+        : 0,
+      createdAt: _normalizeActivityCreatedAt(activity?.createdAt) || new Date().toISOString()
+    }))
+    .filter((activity) => activity.targetId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  res.json({
+    activities: limit > 0 ? activities.slice(0, limit) : activities
+  });
+});
+
 // ===== LIBRARY =====
 app.get("/api/library", _requireAuth, (req, res) => {
   const db = _readDb();
@@ -1628,7 +1713,9 @@ app.post("/api/library", _requireAuth, (req, res) => {
 
 app.patch("/api/library/:id", _requireAuth, (req, res) => {
   const id = String(req.params.id);
-  const patch = req.body || {};
+  const rawPatch = req.body || {};
+  const patch = { ...rawPatch };
+  const shouldLogActivity = rawPatch.logActivity !== false;
 
   if (Object.keys(patch).length === 0) {
     return res.status(400).json({ error: "empty_patch" });
@@ -1642,7 +1729,8 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     "status",
     "progress",
     "meta",
-    "cover"
+    "cover",
+    "lastActivityAt"
   ]);
 
   for (const key of Object.keys(patch)) {
@@ -1670,6 +1758,8 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
 
   const prev = bucket.library[idx];
   const nowIso = new Date().toISOString();
+  const prevProgress = Math.max(0, Math.min(100, Number(prev.progress ?? 0)));
+  const prevCompleted = prevProgress >= 100 || String(prev.status || "").trim().toLowerCase() === "completed";
 
   const next = {
     ...prev,
@@ -1754,6 +1844,16 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     next.cover = String(patch.cover || "").trim();
   }
 
+  if (Object.prototype.hasOwnProperty.call(patch, "lastActivityAt")) {
+    const normalizedLastActivityAt = _normalizeActivityCreatedAt(patch.lastActivityAt);
+
+    if (!normalizedLastActivityAt) {
+      return res.status(400).json({ error: "invalid_last_activity_at" });
+    }
+
+    next.lastActivityAt = normalizedLastActivityAt;
+  }
+
   if (Object.prototype.hasOwnProperty.call(patch, "meta")) {
     if (patch.meta !== undefined) {
       if (typeof patch.meta !== "object" || Array.isArray(patch.meta)) {
@@ -1792,6 +1892,30 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   if (next.progress >= 100) {
     next.progress = 100;
     next.status = "completed";
+  }
+
+  const nextProgress = Math.max(0, Math.min(100, Number(next.progress ?? 0)));
+  const nextCompleted = nextProgress >= 100 || next.status === "completed";
+  const activityCreatedAt = _normalizeActivityCreatedAt(next.lastActivityAt) || nowIso;
+
+  let activityType = "";
+
+  if (shouldLogActivity) {
+    if (!prevCompleted && nextCompleted) {
+      activityType = "completed";
+    } else if (nextProgress > 0 && nextProgress !== prevProgress) {
+      activityType = "progress";
+    }
+  }
+
+  if (activityType) {
+    next.lastActivityAt = activityCreatedAt;
+    _appendUserActivity(bucket, {
+      type: activityType,
+      targetId: id,
+      minutes: 20,
+      createdAt: activityCreatedAt
+    });
   }
 
   bucket.library[idx] = next;

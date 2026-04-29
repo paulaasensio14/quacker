@@ -239,6 +239,110 @@ const ApiClient = (() => {
     return _normalizeDataId(value);
   }
 
+  function _normalizeActivityRecord(entry) {
+    if (!entry || typeof entry !== "object") return null;
+
+    const targetId = _normalizeDataId(entry.targetId);
+    const rawType = String(entry.type || "").trim().toLowerCase();
+    const type = rawType === "completed" ? "completed" : rawType === "progress" ? "progress" : "";
+    const createdAtRaw = String(entry.createdAt || "").trim();
+    const createdAtDate = createdAtRaw ? new Date(createdAtRaw) : null;
+    const createdAt =
+      createdAtDate && !Number.isNaN(createdAtDate.getTime())
+        ? createdAtDate.toISOString()
+        : "";
+
+    if (!targetId || !type || !createdAt) return null;
+
+    return {
+      ...entry,
+      id: _normalizeDataId(entry.id) || `${type}:${targetId}:${createdAt}`,
+      type,
+      targetId,
+      targetType: "library_item",
+      minutes: Number.isFinite(Number(entry.minutes))
+        ? Math.max(0, Number(entry.minutes))
+        : 0,
+      createdAt
+    };
+  }
+
+  async function _getHttpActivities({ limit = 0, filter = "all" } = {}) {
+    if (!_isHttp()) return [];
+
+    const params = new URLSearchParams();
+
+    if (Number(limit) > 0) {
+      params.set("limit", String(Math.max(1, Number(limit))));
+    }
+
+    if (filter && filter !== "all") {
+      params.set("filter", String(filter).trim().toLowerCase());
+    }
+
+    try {
+      const res = await _httpJson(
+        "GET",
+        `/activities${params.toString() ? `?${params.toString()}` : ""}`
+      );
+
+      const items = Array.isArray(res?.activities)
+        ? res.activities
+        : Array.isArray(res)
+          ? res
+          : [];
+
+      return items
+        .map((entry) => _normalizeActivityRecord(entry))
+        .filter(Boolean);
+    } catch (error) {
+      if (error?.status === 404) {
+        return [];
+      }
+
+      throw error;
+    }
+  }
+
+  function _getDashboardActivityStatus(item) {
+    const progress = Math.max(0, Math.min(100, Number(item?.progress ?? 0)));
+    const status =
+      progress >= 100 || item?.status === "completed"
+        ? "completed"
+        : progress <= 0
+          ? "not_started"
+          : "in_progress";
+
+    return { progress, status };
+  }
+
+  function _buildSyntheticActivitiesFromLibrary(library) {
+    return (Array.isArray(library) ? library : [])
+      .map((item) => {
+        const itemId = _normalizeDataId(item?.id);
+        const activityState = _getDashboardActivityStatus(item);
+        const type = activityState.status === "completed"
+          ? "completed"
+          : activityState.status === "in_progress"
+            ? "progress"
+            : "";
+        const createdAt =
+          String(item?.lastActivityAt || item?.updatedAt || item?.createdAt || "").trim();
+
+        if (!itemId || !type || !createdAt) return null;
+
+        return _normalizeActivityRecord({
+          id: `library:${itemId}`,
+          type,
+          targetId: itemId,
+          targetType: "library_item",
+          minutes: 20,
+          createdAt
+        });
+      })
+      .filter(Boolean);
+  }
+
   function _normalizeNotificationsList(items) {
     const seen = new Set();
 
@@ -2874,8 +2978,14 @@ const ApiClient = (() => {
     let activities = [];
 
     if (_isHttp()) {
-      library = await getLibrary();
-      activities = [];
+      [library, activities] = await Promise.all([
+        getLibrary(),
+        _getHttpActivities()
+      ]);
+
+      if (activities.length === 0) {
+        activities = _buildSyntheticActivitiesFromLibrary(library);
+      }
     } else {
       const state = _safeState();
       library = state.library || [];
@@ -2930,30 +3040,52 @@ const ApiClient = (() => {
     });
 
     const inProgressCount = library.filter((item) => {
-      const pct = Number(item.progress ?? 0);
-
-      // En progreso = progreso real, no solo status
-      if (pct <= 0) return false;
-      if (pct >= 100) return false;
-      if (item.status === "completed") return false;
-
-      return true;
+      const activityState = _getDashboardActivityStatus(item);
+      return activityState.status === "in_progress";
     }).length;
 
     if (_isHttp()) {
-      completedThisYear = library.filter((item) => {
-        if (item.status !== "completed") return false;
-        const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
-        if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
-        return updatedAt.getFullYear() === now.getFullYear();
-      }).length;
+      const completedYearIds = new Set();
+      const completedTodayIds = new Set();
 
-      completedToday = library.filter((item) => {
-        if (item.status !== "completed") return false;
-        const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
-        if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
-        return _dateKeyLocal(updatedAt) === todayKey;
-      }).length;
+      activities.forEach((act) => {
+        if (act?.type !== "completed") return;
+
+        const targetId = _normalizeDataId(act?.targetId);
+        if (!targetId || !act.createdAt) return;
+
+        const activityDate = new Date(act.createdAt);
+        if (Number.isNaN(activityDate.getTime())) return;
+
+        if (activityDate.getFullYear() === now.getFullYear()) {
+          completedYearIds.add(targetId);
+        }
+
+        if (_dateKeyLocal(activityDate) === todayKey) {
+          completedTodayIds.add(targetId);
+        }
+      });
+
+      library.forEach((item) => {
+        if (item.status !== "completed") return;
+
+        const itemId = _normalizeDataId(item?.id);
+        const completedAt = item?.lastActivityAt || item?.updatedAt || "";
+        const completedDate = completedAt ? new Date(completedAt) : null;
+
+        if (!itemId || !completedDate || Number.isNaN(completedDate.getTime())) return;
+
+        if (completedDate.getFullYear() === now.getFullYear()) {
+          completedYearIds.add(itemId);
+        }
+
+        if (_dateKeyLocal(completedDate) === todayKey) {
+          completedTodayIds.add(itemId);
+        }
+      });
+
+      completedThisYear = completedYearIds.size;
+      completedToday = completedTodayIds.size;
     }
 
     // racha: días seguidos con al menos una actividad
@@ -2994,21 +3126,55 @@ const ApiClient = (() => {
     let activityDate = null;
 
     if (_isHttp()) {
-      const library = await getLibrary();
+      const [library, activities] = await Promise.all([
+        getLibrary(),
+        _getHttpActivities({ limit: 50 })
+      ]);
+      const effectiveActivities = activities.length > 0
+        ? activities
+        : _buildSyntheticActivitiesFromLibrary(library);
+      const last = [...effectiveActivities]
+        .filter((a) => a && _normalizeDataId(a.targetId) && a.createdAt)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
 
-      item = [...library]
-        .filter((it) => {
-          const pct = Number(it.progress ?? 0);
-          return pct > 0 || it.status === "completed";
-        })
-        .sort((a, b) => {
-          const aTime = a?.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-          const bTime = b?.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-          return bTime - aTime;
-        })[0] || null;
+      if (last) {
+        const lastTargetId = _normalizeDataId(last.targetId);
+        item = library.find((i) => _normalizeDataId(i?.id) === lastTargetId) || null;
+        activityDate = last.createdAt;
 
-      activityDate = item?.updatedAt || null;
-      if (!item || !activityDate) return null;
+        if (!item) {
+          return {
+            id: null,
+            title: "Actividad reciente",
+            meta: "",
+            timeAgo: _formatTimeAgo(last.createdAt),
+            progressPercent: 0,
+            progressLabel: ""
+          };
+        }
+      } else {
+        item = [...library]
+          .filter((it) => {
+            const activityState = _getDashboardActivityStatus(it);
+            return activityState.status === "in_progress" || activityState.status === "completed";
+          })
+          .sort((a, b) => {
+            const aTime = a?.lastActivityAt
+              ? new Date(a.lastActivityAt).getTime()
+              : a?.updatedAt
+                ? new Date(a.updatedAt).getTime()
+                : 0;
+            const bTime = b?.lastActivityAt
+              ? new Date(b.lastActivityAt).getTime()
+              : b?.updatedAt
+                ? new Date(b.updatedAt).getTime()
+                : 0;
+            return bTime - aTime;
+          })[0] || null;
+
+        activityDate = item?.lastActivityAt || item?.updatedAt || null;
+        if (!item || !activityDate) return null;
+      }
     } else {
       if (typeof FakeBackend === "undefined") return null;
 
@@ -3128,18 +3294,47 @@ const ApiClient = (() => {
     }
 
     if (_isHttp()) {
-      const library = await getLibrary();
+      const [library, activities] = await Promise.all([
+        getLibrary(),
+        _getHttpActivities({ limit, filter })
+      ]);
+      const effectiveActivities = activities.length > 0
+        ? activities
+        : _buildSyntheticActivitiesFromLibrary(library)
+            .filter((entry) => {
+              if (filter === "all" || !filter) return true;
+              return entry.type === filter;
+            });
+
+      if (effectiveActivities.length > 0) {
+        return effectiveActivities
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, limit)
+          .map((act) => {
+            const targetId = _normalizeDataId(act?.targetId);
+            const item = library.find((i) => _normalizeDataId(i?.id) === targetId) || null;
+
+            return {
+              id: _normalizeDataId(act.id) || `${String(act.type || "activity")}:${targetId}:${String(act.createdAt || "")}`,
+              type: act.type,
+              label: typeLabel(act.type),
+              targetId: targetId || null,
+              itemTitle: item?.title || _t("library_item_fallback_title", null, "Contenido"),
+              itemMeta: metaForItem(item),
+              timeAgo: _formatTimeAgo(act.createdAt)
+            };
+          });
+      }
 
       const filtered = (library || [])
         .map((item) => {
           const itemId = _normalizeDataId(item?.id);
-          const pct = Math.max(0, Math.min(100, Number(item?.progress ?? 0)));
-          const type =
-            pct >= 100 || item?.status === "completed"
-              ? "completed"
-              : pct > 0
-                ? "progress"
-                : null;
+          const activityState = _getDashboardActivityStatus(item);
+          const type = activityState.status === "completed"
+            ? "completed"
+            : activityState.status === "in_progress"
+              ? "progress"
+              : null;
 
           if (!type || !itemId) return null;
 
@@ -3150,8 +3345,8 @@ const ApiClient = (() => {
             targetId: itemId,
             itemTitle: item?.title || _t("library_item_fallback_title", null, "Contenido"),
             itemMeta: metaForItem(item),
-            timeAgo: formatTimeAgo(item?.updatedAt || item?.createdAt || ""),
-            createdAt: item?.updatedAt || item?.createdAt || ""
+            timeAgo: formatTimeAgo(item?.lastActivityAt || item?.updatedAt || item?.createdAt || ""),
+            createdAt: item?.lastActivityAt || item?.updatedAt || item?.createdAt || ""
           };
         })
         .filter(Boolean)
@@ -3324,12 +3519,45 @@ const ApiClient = (() => {
     const fallback = fallbackChallenges[month];
     const fallbackGoalId = _normalizeDataId(fallback?.id) || `goal-${year}-${month + 1}`;
 
-    const completedThisMonth = library.filter((item) => {
-      if (item.status !== "completed") return false;
-      const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
-      if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
-      return updatedAt.getFullYear() === year && updatedAt.getMonth() === month;
-    }).length;
+    let completedThisMonth = 0;
+
+    if (_isHttp()) {
+      const activities = await _getHttpActivities({ filter: "completed" });
+      const completedIds = new Set();
+
+      activities.forEach((act) => {
+        const targetId = _normalizeDataId(act?.targetId);
+        if (!targetId || !act.createdAt) return;
+
+        const activityDate = new Date(act.createdAt);
+        if (Number.isNaN(activityDate.getTime())) return;
+        if (activityDate.getFullYear() !== year || activityDate.getMonth() !== month) return;
+
+        completedIds.add(targetId);
+      });
+
+      library.forEach((item) => {
+        if (item.status !== "completed") return;
+
+        const itemId = _normalizeDataId(item?.id);
+        const completedAt = item?.lastActivityAt || item?.updatedAt || "";
+        const completedDate = completedAt ? new Date(completedAt) : null;
+
+        if (!itemId || !completedDate || Number.isNaN(completedDate.getTime())) return;
+        if (completedDate.getFullYear() !== year || completedDate.getMonth() !== month) return;
+
+        completedIds.add(itemId);
+      });
+
+      completedThisMonth = completedIds.size;
+    } else {
+      completedThisMonth = library.filter((item) => {
+        if (item.status !== "completed") return false;
+        const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
+        if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
+        return updatedAt.getFullYear() === year && updatedAt.getMonth() === month;
+      }).length;
+    }
 
     return {
       id: fallbackGoalId,
@@ -3350,8 +3578,10 @@ const ApiClient = (() => {
     let activities = [];
 
     if (_isHttp()) {
-      library = await getLibrary();
-      activities = [];
+      [library, activities] = await Promise.all([
+        getLibrary(),
+        _getHttpActivities()
+      ]);
     } else {
       const state = _safeState();
       library = state.library || [];
@@ -3372,17 +3602,15 @@ const ApiClient = (() => {
 
     const lastActivityMap = new Map();
 
-    if (!_isHttp()) {
-      activities.forEach((act) => {
-        const targetId = _normalizeDataId(act?.targetId);
-        if (!targetId || !act.createdAt) return;
-        const prev = lastActivityMap.get(targetId);
-        const curr = new Date(act.createdAt);
-        if (!prev || curr > prev) {
-          lastActivityMap.set(targetId, curr);
-        }
-      });
-    }
+    activities.forEach((act) => {
+      const targetId = _normalizeDataId(act?.targetId);
+      if (!targetId || !act.createdAt) return;
+      const prev = lastActivityMap.get(targetId);
+      const curr = new Date(act.createdAt);
+      if (!prev || curr > prev) {
+        lastActivityMap.set(targetId, curr);
+      }
+    });
 
     function progressLabelFor(item) {
       const pct = item.progress ?? 0;
@@ -3419,9 +3647,7 @@ const ApiClient = (() => {
           item.createdAt ||
           now.toISOString();
 
-        const lastDate = _isHttp()
-          ? new Date(fallbackIso)
-          : (lastActivityMap.get(itemId) || new Date(fallbackIso));
+        const lastDate = lastActivityMap.get(itemId) || new Date(fallbackIso);
 
         const diffMs = now - lastDate;
         const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
