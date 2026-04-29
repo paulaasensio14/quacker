@@ -3763,6 +3763,8 @@ const ExploreModule = (() => {
       _renderContentDetailView(detailItem);
       _syncContentDetailFeedback();
 
+      void _hydrateContentDetailView(detailItem);
+
       if (_isExploreListPickerOpen("detail")) {
         void _populateExploreListPicker(null, "detail");
       }
