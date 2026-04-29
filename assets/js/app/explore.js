@@ -1146,53 +1146,7 @@ const ExploreModule = (() => {
   }
 
   async function _hydrateContentDetailView(item) {
-    if (!item) return;
-
-    const eid = _normalizeId(item?.eid);
-    if (!eid) return;
-
-    const reqSeq = _nextDetailRequestSeq();
-
-    _setActiveDetailState({
-      item,
-      loading: true,
-      error: false
-    });
-    _syncContentDetailFeedback();
-
-    try {
-      const persistedItem = await _fetchHydratedExploreItemDetail(item);
-
-      if (!_isCurrentDetailRequest(reqSeq)) return;
-      if (!_isDetailViewActive()) return;
-      if (_normalizeId(__detailViewItem?.eid) !== eid) return;
-
-      _setActiveDetailState({
-        loading: false,
-        error: !persistedItem
-      });
-      _syncContentDetailFeedback();
-
-      if (!persistedItem) return;
-
-      _setActiveDetailState({
-        item: persistedItem,
-        loading: false,
-        error: false
-      });
-      window.DetailModule?.render?.(persistedItem);
-    } catch (err) {
-      if (!_isCurrentDetailRequest(reqSeq)) return;
-      if (!_isDetailViewActive()) return;
-      if (_normalizeId(__detailViewItem?.eid) !== eid) return;
-
-      _setActiveDetailState({
-        loading: false,
-        error: true
-      });
-      _syncContentDetailFeedback();
-      console.error("[Explore] detail page hydration failed", err);
-    }
+    return window.DetailModule?.hydrate?.(item);
   }
 
   function _applyExploreVisualCover(coverEl, item) {
@@ -3630,8 +3584,7 @@ const ExploreModule = (() => {
 
       window.DetailModule?.registerBridge?.({
         open: openContentDetail,
-        close: closeContentDetail,
-        hydrate: _hydrateContentDetailView
+        close: closeContentDetail
       });
 
       window.DetailModule?.registerRenderDeps?.({
@@ -3650,6 +3603,14 @@ const ExploreModule = (() => {
         syncAddLibraryButton: _syncContentDetailAddLibraryButton,
         syncFeedback: _syncContentDetailFeedback,
         syncListPicker: _syncContentDetailListPicker
+      });
+
+      window.DetailModule?.registerHydrateDeps?.({
+        normalizeId: _normalizeId,
+        setActiveDetailState: _setActiveDetailState,
+        syncFeedback: _syncContentDetailFeedback,
+        fetchHydratedDetail: _fetchHydratedExploreItemDetail,
+        isDetailViewActive: _isDetailViewActive
       });
 
       // Cargar Explore cuando el router active la vista

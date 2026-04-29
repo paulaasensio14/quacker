@@ -20,9 +20,14 @@ const DetailModule = (() => {
   };
 
   const __renderDeps = {};
+  const __hydrateDeps = {};
 
   function registerRenderDeps(deps = {}) {
     Object.assign(__renderDeps, deps || {});
+  }
+
+  function registerHydrateDeps(deps = {}) {
+    Object.assign(__hydrateDeps, deps || {});
   }
 
   function registerBridge(bridge = {}) {
@@ -248,15 +253,59 @@ const DetailModule = (() => {
     return item;
   }
 
-  function hydrate(item = __detailViewItem) {
+  async function hydrate(item = __detailViewItem) {
     if (!item) return;
 
-    if (!__bridge.hydrate) {
-      console.error("[DetailModule] Detail hydrate bridge is not available");
-      return;
-    }
+    const eid = __hydrateDeps.normalizeId?.(item?.eid) || "";
+    if (!eid) return;
 
-    return __bridge.hydrate(item);
+    const reqSeq = nextRequestSeq();
+
+    __hydrateDeps.setActiveDetailState?.({
+      item,
+      loading: true,
+      error: false
+    });
+    __hydrateDeps.syncFeedback?.();
+
+    try {
+      const persistedItem = await __hydrateDeps.fetchHydratedDetail?.(item);
+
+      if (!isCurrentRequest(reqSeq)) return;
+      if (!__hydrateDeps.isDetailViewActive?.()) return;
+      if ((__hydrateDeps.normalizeId?.(getDetailState()?.item?.eid) || "") !== eid) return;
+
+      __hydrateDeps.setActiveDetailState?.({
+        loading: false,
+        error: !persistedItem
+      });
+      __hydrateDeps.syncFeedback?.();
+
+      if (!persistedItem) return;
+
+      __hydrateDeps.setActiveDetailState?.({
+        item: persistedItem,
+        loading: false,
+        error: false
+      });
+
+      render(persistedItem);
+    } catch (err) {
+      if (!isCurrentRequest(reqSeq)) return;
+      if (!__hydrateDeps.isDetailViewActive?.()) return;
+      if ((__hydrateDeps.normalizeId?.(getDetailState()?.item?.eid) || "") !== eid) return;
+
+      __hydrateDeps.setActiveDetailState?.({
+        loading: false,
+        error: true
+      });
+      __hydrateDeps.syncFeedback?.();
+      console.error("[DetailModule] detail hydration failed", err);
+    }
+  }
+
+  function isCurrentRequest(reqSeq) {
+    return Number(reqSeq) === Number(__detailViewReqSeq);
   }
 
   function setRelatedItems(items = []) {
@@ -290,6 +339,7 @@ const DetailModule = (() => {
     init,
     registerBridge,
     registerRenderDeps,
+    registerHydrateDeps,
     open,
     close,
     render,
