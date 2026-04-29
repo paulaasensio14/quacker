@@ -32,10 +32,7 @@ const ExploreModule = (() => {
   let __drawerDetailReqSeq = 0;
   const __drawerDetailCache = new Map();
   let __libraryStateSyncPromise = null;
-  let __detailViewReqSeq = 0;
-  let __detailViewLastFocusEl = null;
   let __detailListsPickerOpen = false;
-  let __detailOriginView = "explore";
   let __detailCastExpanded = false;
   const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
@@ -760,8 +757,7 @@ const ExploreModule = (() => {
   }
 
   function _getActiveDetailItem() {
-    // Detail ya no busca en las listas de Explore, confía en su propio estado.
-    return __detailViewItem || null;
+    return window.DetailModule?.getDetailState?.()?.item || null;
   }
 
   function getDetailRelatedItemByEid(eid) {
@@ -1923,15 +1919,17 @@ const ExploreModule = (() => {
         ? (__drawerLastFocusEl || triggerEl || document.activeElement)
         : (triggerEl || document.activeElement);
 
-    __detailOriginView = originView || "explore";
-    __detailViewLastFocusEl = fallbackFocusEl;
-    __detailViewItem = detailItem;
-    __detailViewLoading = false;
-    __detailViewError = false;
+    window.DetailModule?.setDetailState?.({
+      item: detailItem,
+      loading: false,
+      error: false,
+      originView: originView || "explore",
+      lastFocusEl: fallbackFocusEl
+    });
     __detailListsPickerOpen = false;
     __detailCastExpanded = false;
     __detailExpandedSeasonKeys.clear();
-    __detailViewReqSeq += 1;
+    window.DetailModule?.nextRequestSeq?.();
     // Eliminado: activeEid = detailEid;
 
     if (__drawerOpen) {
@@ -1950,7 +1948,11 @@ const ExploreModule = (() => {
       .then((freshItem) => {
         const nextItem = freshItem || detailItem;
         if (!_isDetailViewActive()) return;
-        __detailViewItem = nextItem;
+        window.DetailModule?.setDetailState?.({
+          item: nextItem,
+          loading: false,
+          error: false
+        });
         _renderContentDetailView(nextItem);
         return _hydrateContentDetailView(nextItem);
       })
@@ -1961,22 +1963,23 @@ const ExploreModule = (() => {
   }
 
   function _closeContentDetailView({ restoreFocus = true } = {}) {
-    __detailViewReqSeq += 1;
-    __detailViewLoading = false;
-    __detailViewError = false;
+    window.DetailModule?.nextRequestSeq?.();
+    window.DetailModule?.setDetailState?.({
+      loading: false,
+      error: false
+    });
     __detailListsPickerOpen = false;
     __detailCastExpanded = false;
     __detailExpandedSeasonKeys.clear();
     _syncContentDetailFeedback();
     _syncContentDetailListPicker();
 
-    const back = __detailViewLastFocusEl;
-    const originView = __detailOriginView || "explore";
+    const detailState = window.DetailModule?.getDetailState?.() || {};
+    const back = detailState.lastFocusEl || null;
+    const originView = detailState.originView || "explore";
 
-    __detailViewLastFocusEl = null;
-    __detailViewItem = null;
+    window.DetailModule?.resetDetailState?.();
     __detailRelatedItemsByEid.clear();
-    __detailOriginView = "explore";
     // Eliminado: activeEid = null;
 
     window.Router?.showView?.(originView);
@@ -3748,7 +3751,9 @@ const ExploreModule = (() => {
 
     const detailItem = _getActiveDetailItem();
     if (_isDetailViewActive() && detailItem) {
-      __detailViewItem = detailItem;
+      window.DetailModule?.setDetailState?.({
+        item: detailItem
+      });
       _renderContentDetailView(detailItem);
       _syncContentDetailFeedback();
 
