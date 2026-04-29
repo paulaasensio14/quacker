@@ -1188,7 +1188,7 @@ const ExploreModule = (() => {
         loading: false,
         error: false
       });
-      _renderContentDetailView(persistedItem);
+      window.DetailModule?.render?.(persistedItem);
     } catch (err) {
       if (!_isCurrentDetailRequest(reqSeq)) return;
       if (!_isDetailViewActive()) return;
@@ -2342,8 +2342,10 @@ const ExploreModule = (() => {
       }
 
       if (scope === "detail" && fresh) {
-        __detailViewItem = fresh;
-        _renderContentDetailView(fresh);
+        _setActiveDetailState({
+          item: fresh
+        });
+        window.DetailModule?.render?.(fresh);
       }
     } catch (err) {
       console.error("[Explore] add item to list failed", err);
@@ -3685,8 +3687,10 @@ const ExploreModule = (() => {
 
           const fresh = _getActiveDetailItem();
           if (fresh) {
-            __detailViewItem = fresh;
-            _renderContentDetailView(fresh);
+            _setActiveDetailState({
+              item: fresh
+            });
+            window.DetailModule?.render?.(fresh);
           }
 
           _render();
@@ -3695,8 +3699,10 @@ const ExploreModule = (() => {
 
           const fresh = _getActiveDetailItem();
           if (fresh) {
-            __detailViewItem = fresh;
-            _renderContentDetailView(fresh);
+            _setActiveDetailState({
+              item: fresh
+            });
+            window.DetailModule?.render?.(fresh);
           }
         }
       });
