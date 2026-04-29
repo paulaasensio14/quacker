@@ -2042,7 +2042,9 @@ const ExploreModule = (() => {
 
   function _closeContentDetailView({ restoreFocus = true } = {}) {
     _nextDetailRequestSeq();
-    window.DetailModule?.setDetailState?.({
+
+    _setActiveDetailState({
+      item: null,
       loading: false,
       error: false
     });
