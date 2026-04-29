@@ -1859,7 +1859,6 @@ const ExploreModule = (() => {
     _syncContentDetailListPicker();
 
     window.DetailModule?.resetDetailState?.();
-    __detailRelatedItemsByEid.clear();
     window.DetailModule?.clearRelatedItems?.();
     // Eliminado: activeEid = null;
 
