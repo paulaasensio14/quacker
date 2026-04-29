@@ -3876,8 +3876,7 @@ const ExploreModule = (() => {
     init,
     load,
     openContentDetail,
-    closeContentDetail,
-    getDetailRelatedItemByEid
+    closeContentDetail
   };
 })();
 
