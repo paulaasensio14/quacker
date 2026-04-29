@@ -42,7 +42,6 @@ const ExploreModule = (() => {
   let __detailCastExpanded = false;
   const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
-  const __detailRelatedItemsByEid = new Map();
   const __detailRelatedDrag = {
     pointerId: null,
     startX: 0,
@@ -813,13 +812,6 @@ const ExploreModule = (() => {
 
   function _isCurrentDetailRequest(reqSeq) {
     return Number(reqSeq) === _getCurrentDetailRequestSeq();
-  }
-
-  function getDetailRelatedItemByEid(eid) {
-    const targetEid = _normalizeId(eid);
-    if (!targetEid) return null;
-
-    return __detailRelatedItemsByEid.get(targetEid) || null;
   }
 
   function _getDetailSeasonCacheKey(item, seasonNumber) {
