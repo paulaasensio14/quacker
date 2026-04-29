@@ -32,7 +32,13 @@ const ExploreModule = (() => {
   let __drawerDetailReqSeq = 0;
   const __drawerDetailCache = new Map();
   let __libraryStateSyncPromise = null;
+  let __detailViewReqSeq = 0;
+  let __detailViewLastFocusEl = null;
+  let __detailViewItem = null;
+  let __detailViewLoading = false;
+  let __detailViewError = false;
   let __detailListsPickerOpen = false;
+  let __detailOriginView = "explore";
   let __detailCastExpanded = false;
   const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
