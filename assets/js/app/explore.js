@@ -763,7 +763,8 @@ const ExploreModule = (() => {
   }
 
   function _getActiveDetailItem() {
-    return window.DetailModule?.getDetailState?.()?.item || null;
+    const detailState = window.DetailModule?.getDetailState?.();
+    return detailState?.item || __detailViewItem || null;
   }
 
   function getDetailRelatedItemByEid(eid) {
@@ -1910,6 +1911,12 @@ const ExploreModule = (() => {
       (!normalizedTargetEid || _normalizeId(detailItem.eid) === normalizedTargetEid)
     ) {
       __detailViewItem = detailItem;
+
+      window.DetailModule?.setDetailState?.({
+        item: detailItem,
+        loading: false,
+        error: false
+      });
       _renderContentDetailView(detailItem);
     }
   }
