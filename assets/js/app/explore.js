@@ -789,6 +789,32 @@ const ExploreModule = (() => {
     });
   }
 
+  function _nextDetailRequestSeq() {
+    const nextSeq = window.DetailModule?.nextRequestSeq?.();
+
+    if (Number.isFinite(Number(nextSeq))) {
+      __detailViewReqSeq = Number(nextSeq);
+      return __detailViewReqSeq;
+    }
+
+    __detailViewReqSeq += 1;
+    return __detailViewReqSeq;
+  }
+
+  function _getCurrentDetailRequestSeq() {
+    const detailSeq = window.DetailModule?.getDetailState?.()?.reqSeq;
+
+    if (Number.isFinite(Number(detailSeq))) {
+      return Number(detailSeq);
+    }
+
+    return __detailViewReqSeq;
+  }
+
+  function _isCurrentDetailRequest(reqSeq) {
+    return Number(reqSeq) === _getCurrentDetailRequestSeq();
+  }
+
   function getDetailRelatedItemByEid(eid) {
     const targetEid = _normalizeId(eid);
     if (!targetEid) return null;
@@ -1133,7 +1159,7 @@ const ExploreModule = (() => {
     const eid = _normalizeId(item?.eid);
     if (!eid) return;
 
-    const reqSeq = ++__detailViewReqSeq;
+    const reqSeq = _nextDetailRequestSeq();
 
     _setActiveDetailState({
       item,
@@ -1145,7 +1171,7 @@ const ExploreModule = (() => {
     try {
       const persistedItem = await _fetchHydratedExploreItemDetail(item);
 
-      if (reqSeq !== __detailViewReqSeq) return;
+      if (!_isCurrentDetailRequest(reqSeq)) return;
       if (!_isDetailViewActive()) return;
       if (_normalizeId(__detailViewItem?.eid) !== eid) return;
 
@@ -1164,7 +1190,7 @@ const ExploreModule = (() => {
       });
       _renderContentDetailView(persistedItem);
     } catch (err) {
-      if (reqSeq !== __detailViewReqSeq) return;
+      if (!_isCurrentDetailRequest(reqSeq)) return;
       if (!_isDetailViewActive()) return;
       if (_normalizeId(__detailViewItem?.eid) !== eid) return;
 
@@ -1981,7 +2007,7 @@ const ExploreModule = (() => {
     __detailListsPickerOpen = false;
     __detailCastExpanded = false;
     __detailExpandedSeasonKeys.clear();
-    window.DetailModule?.nextRequestSeq?.();
+    _nextDetailRequestSeq();
     // Eliminado: activeEid = detailEid;
 
     if (__drawerOpen) {
@@ -2015,7 +2041,7 @@ const ExploreModule = (() => {
   }
 
   function _closeContentDetailView({ restoreFocus = true } = {}) {
-    window.DetailModule?.nextRequestSeq?.();
+    _nextDetailRequestSeq();
     window.DetailModule?.setDetailState?.({
       loading: false,
       error: false
