@@ -1843,6 +1843,10 @@ const ExploreModule = (() => {
   function _closeContentDetailView({ restoreFocus = true } = {}) {
     _nextDetailRequestSeq();
 
+    const detailState = window.DetailModule?.getDetailState?.() || {};
+    const back = detailState.lastFocusEl || null;
+    const originView = detailState.originView || "explore";
+
     _setActiveDetailState({
       item: null,
       loading: false,
@@ -1853,10 +1857,6 @@ const ExploreModule = (() => {
     __detailExpandedSeasonKeys.clear();
     _syncContentDetailFeedback();
     _syncContentDetailListPicker();
-
-    const detailState = window.DetailModule?.getDetailState?.() || {};
-    const back = detailState.lastFocusEl || null;
-    const originView = detailState.originView || "explore";
 
     window.DetailModule?.resetDetailState?.();
     __detailRelatedItemsByEid.clear();
