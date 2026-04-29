@@ -12,6 +12,24 @@ const DetailModule = (() => {
   let __detailViewLastFocusEl = null;
   let __detailOriginView = "explore";
 
+  const __bridge = {
+    open: null,
+    close: null,
+    render: null,
+    hydrate: null,
+    getRelatedItemByEid: null
+  };
+
+  function registerBridge(bridge = {}) {
+    if (typeof bridge.open === "function") __bridge.open = bridge.open;
+    if (typeof bridge.close === "function") __bridge.close = bridge.close;
+    if (typeof bridge.render === "function") __bridge.render = bridge.render;
+    if (typeof bridge.hydrate === "function") __bridge.hydrate = bridge.hydrate;
+    if (typeof bridge.getRelatedItemByEid === "function") {
+      __bridge.getRelatedItemByEid = bridge.getRelatedItemByEid;
+    }
+  }
+
   function setDetailState({
     item = __detailViewItem,
     loading = __detailViewLoading,
@@ -54,12 +72,12 @@ const DetailModule = (() => {
   function open(item, options = {}) {
     if (!item) return;
 
-    if (!window.ExploreModule?.openContentDetail) {
-      console.error("[DetailModule] Explore detail bridge is not available");
+    if (!__bridge.open) {
+      console.error("[DetailModule] Detail open bridge is not available");
       return;
     }
 
-    window.ExploreModule.openContentDetail(item, {
+    __bridge.open(item, {
       originView: options.originView || "explore",
       triggerEl: options.triggerEl || null
     });
@@ -75,12 +93,12 @@ const DetailModule = (() => {
   }
 
   function close(options = {}) {
-    if (!window.ExploreModule?.closeContentDetail) {
-      console.error("[DetailModule] Explore detail close bridge is not available");
+    if (!__bridge.close) {
+      console.error("[DetailModule] Detail close bridge is not available");
       return;
     }
 
-    window.ExploreModule.closeContentDetail({
+    __bridge.close({
       restoreFocus: options.restoreFocus !== false
     });
   }
@@ -88,32 +106,32 @@ const DetailModule = (() => {
   function render(item = __detailViewItem) {
     if (!item) return;
 
-    if (!window.ExploreModule?.renderContentDetail) {
-      console.error("[DetailModule] Explore detail render bridge is not available");
+    if (!__bridge.render) {
+      console.error("[DetailModule] Detail render bridge is not available");
       return;
     }
 
-    window.ExploreModule.renderContentDetail(item);
+    __bridge.render(item);
   }
 
   function hydrate(item = __detailViewItem) {
     if (!item) return;
 
-    if (!window.ExploreModule?.hydrateContentDetail) {
-      console.error("[DetailModule] Explore detail hydrate bridge is not available");
+    if (!__bridge.hydrate) {
+      console.error("[DetailModule] Detail hydrate bridge is not available");
       return;
     }
 
-    return window.ExploreModule.hydrateContentDetail(item);
+    return __bridge.hydrate(item);
   }
 
   function getRelatedItemByEid(eid) {
-    if (!window.ExploreModule?.getDetailRelatedItemByEid) {
-      console.error("[DetailModule] Explore related item bridge is not available");
+    if (!__bridge.getRelatedItemByEid) {
+      console.error("[DetailModule] Detail related item bridge is not available");
       return null;
     }
 
-    return window.ExploreModule.getDetailRelatedItemByEid(eid);
+    return __bridge.getRelatedItemByEid(eid);
   }
 
   function init() {
@@ -125,6 +143,7 @@ const DetailModule = (() => {
 
   return {
     init,
+    registerBridge,
     open,
     close,
     render,
