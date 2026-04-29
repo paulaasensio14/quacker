@@ -1801,137 +1801,7 @@ const ExploreModule = (() => {
   }
 
   function _renderContentDetailView(item) {
-    if (!item) return null;
-
-    const detailEid = _normalizeId(item?.eid);
-    if (!detailEid) return item;
-
-    // Ya no pisamos activeEid (pertenece al Drawer)
-    _setActiveDetailState({
-      item
-    });
-
-    const vm = _buildExploreDrawerTextModel(item);
-    const metaVm = _buildExploreDrawerDetailMeta(item);
-
-    const titleEl = document.getElementById("contentDetailTitle");
-    const metaEl = document.getElementById("contentDetailMeta");
-    const coverEl = document.getElementById("contentDetailCover");
-    const highlightsEl = document.getElementById("contentDetailHighlights");
-    const heroActionsEl = document.getElementById("contentDetailHeroActions");
-    const trailerLinkEl = document.getElementById("contentDetailTrailerLink");
-    const quickGridEl = document.getElementById("contentDetailQuickGrid");
-    const supportGridEl = document.getElementById("contentDetailSupportGrid");
-    const metaFooterGridEl = document.getElementById("contentDetailMetaFooterGrid");
-    const providersCardEl = document.getElementById("contentDetailProvidersCard");
-    const providersMetaEl = document.getElementById("contentDetailProvidersMeta");
-    const providersLinkEl = document.getElementById("contentDetailProvidersLink");
-    const providersEl = document.getElementById("contentDetailProviders");
-    const relatedSectionEl = document.getElementById("contentDetailRelatedSection");
-    const relatedNavEl = document.getElementById("contentDetailRelatedNav");
-    const relatedPrevBtnEl = document.getElementById("contentDetailRelatedPrev");
-    const relatedNextBtnEl = document.getElementById("contentDetailRelatedNext");
-    const relatedGridEl = document.getElementById("contentDetailRelatedGrid");
-    const ratingCardEl = document.getElementById("contentDetailRatingCard");
-    const ratingEl = document.getElementById("contentDetailRating");
-    const metaPrimaryCardEl = document.getElementById("contentDetailMetaPrimaryCard");
-    const metaPrimaryLabelEl = document.getElementById("contentDetailMetaPrimaryLabel");
-    const metaPrimaryValueEl = document.getElementById("contentDetailMetaPrimaryValue");
-    const metaSecondaryCardEl = document.getElementById("contentDetailMetaSecondaryCard");
-    const metaSecondaryLabelEl = document.getElementById("contentDetailMetaSecondaryLabel");
-    const metaSecondaryValueEl = document.getElementById("contentDetailMetaSecondaryValue");
-    const genresCardEl = document.getElementById("contentDetailGenresCard");
-    const metaTertiaryCardEl = document.getElementById("contentDetailMetaTertiaryCard");
-    const metaTertiaryLabelEl = document.getElementById("contentDetailMetaTertiaryLabel");
-    const metaTertiaryValueEl = document.getElementById("contentDetailMetaTertiaryValue");
-    const listsCardEl = document.getElementById("contentDetailListsCard");
-    const listsEl = document.getElementById("contentDetailListsCount");
-    const genresEl = document.getElementById("contentDetailGenres");
-    const castEl = document.getElementById("contentDetailCast");
-    const castToggleBtn = document.getElementById("contentDetailCastToggle");
-    const summaryEl = document.getElementById("contentDetailSummary");
-    const addLibraryBtn = document.getElementById("contentDetailAddLibrary");
-    const addListsBtn = document.getElementById("contentDetailAddLists");
-
-    if (titleEl) titleEl.textContent = vm.title;
-    if (metaEl) metaEl.textContent = vm.meta;
-
-    _applyExploreVisualCover(coverEl, item);
-    _syncContentDetailTrailerLink(trailerLinkEl, heroActionsEl, metaVm.trailerUrl);
-
-    if (listsEl) listsEl.textContent = vm.detailListsCount;
-    if (genresEl) genresEl.textContent = metaVm.genres;
-    if (metaPrimaryLabelEl) metaPrimaryLabelEl.textContent = metaVm.primaryLabel;
-    if (metaPrimaryValueEl) metaPrimaryValueEl.textContent = metaVm.primaryValue;
-    if (metaSecondaryLabelEl) metaSecondaryLabelEl.textContent = metaVm.secondaryLabel;
-    if (metaSecondaryValueEl) metaSecondaryValueEl.textContent = metaVm.secondaryValue;
-    if (metaTertiaryLabelEl) metaTertiaryLabelEl.textContent = metaVm.tertiaryLabel;
-    if (metaTertiaryValueEl) metaTertiaryValueEl.textContent = metaVm.tertiaryValue;
-    if (ratingCardEl) ratingCardEl.hidden = !metaVm.showRatingCard;
-    if (metaPrimaryCardEl) metaPrimaryCardEl.hidden = !metaVm.showPrimaryCard;
-    if (metaSecondaryCardEl) metaSecondaryCardEl.hidden = !metaVm.showSecondaryCard;
-    if (metaTertiaryCardEl) metaTertiaryCardEl.hidden = !metaVm.showTertiaryCard;
-    if (quickGridEl) {
-      quickGridEl.hidden = !(
-        (metaPrimaryCardEl && !metaPrimaryCardEl.hidden) ||
-        (metaSecondaryCardEl && !metaSecondaryCardEl.hidden)
-      );
-    }
-    if (genresCardEl) genresCardEl.hidden = false;
-    if (supportGridEl) {
-      supportGridEl.hidden = !(
-        (genresCardEl && !genresCardEl.hidden) ||
-        (metaTertiaryCardEl && !metaTertiaryCardEl.hidden)
-      );
-    }
-    if (listsCardEl) listsCardEl.hidden = false;
-    if (metaFooterGridEl) {
-      metaFooterGridEl.hidden = !(
-        (ratingCardEl && !ratingCardEl.hidden) ||
-        (listsCardEl && !listsCardEl.hidden)
-      );
-    }
-
-    _renderExploreRating(ratingEl, item);
-    _renderContentDetailHighlights(highlightsEl, metaVm.heroFacts, item);
-    _renderContentDetailProviders(
-      providersCardEl,
-      providersEl,
-      providersMetaEl,
-      providersLinkEl,
-      metaVm.watchProviders,
-      metaVm.watchProvidersRegion,
-      metaVm.watchProvidersLink
-    );
-    _renderContentDetailRelatedItems(
-      relatedSectionEl,
-      relatedGridEl,
-      relatedNavEl,
-      relatedPrevBtnEl,
-      relatedNextBtnEl,
-      item?.relatedItems
-    );
-    _renderContentDetailCast(castEl, metaVm.cast, castToggleBtn);
-    _renderContentDetailSeasons(item, metaVm);
-
-    if (summaryEl) {
-      summaryEl.textContent = vm.summary;
-    }
-
-    if (addLibraryBtn) {
-      addLibraryBtn.dataset.eid = detailEid;
-      _syncContentDetailAddLibraryButton(addLibraryBtn, item);
-    }
-
-    if (addListsBtn) {
-      addListsBtn.dataset.eid = detailEid;
-      addListsBtn.disabled = !!item.__saving;
-    }
-
-    _syncContentDetailFeedback();
-    _syncContentDetailListPicker();
-
-    return item;
+    return window.DetailModule?.render?.(item) || item;
   }
 
   function _syncActiveExploreSurfaces(targetEid = "") {
@@ -3761,8 +3631,25 @@ const ExploreModule = (() => {
       window.DetailModule?.registerBridge?.({
         open: openContentDetail,
         close: closeContentDetail,
-        render: _renderContentDetailView,
         hydrate: _hydrateContentDetailView
+      });
+
+      window.DetailModule?.registerRenderDeps?.({
+        normalizeId: _normalizeId,
+        setActiveDetailState: _setActiveDetailState,
+        buildTextModel: _buildExploreDrawerTextModel,
+        buildDetailMeta: _buildExploreDrawerDetailMeta,
+        applyVisualCover: _applyExploreVisualCover,
+        syncTrailerLink: _syncContentDetailTrailerLink,
+        renderRating: _renderExploreRating,
+        renderHighlights: _renderContentDetailHighlights,
+        renderProviders: _renderContentDetailProviders,
+        renderRelatedItems: _renderContentDetailRelatedItems,
+        renderCast: _renderContentDetailCast,
+        renderSeasons: _renderContentDetailSeasons,
+        syncAddLibraryButton: _syncContentDetailAddLibraryButton,
+        syncFeedback: _syncContentDetailFeedback,
+        syncListPicker: _syncContentDetailListPicker
       });
 
       // Cargar Explore cuando el router active la vista
