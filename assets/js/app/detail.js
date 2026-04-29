@@ -8,19 +8,47 @@ const DetailModule = (() => {
   let __detailViewItem = null;
   let __detailViewLoading = false;
   let __detailViewError = false;
+  let __detailViewReqSeq = 0;
+  let __detailViewLastFocusEl = null;
+  let __detailOriginView = "explore";
 
-  function setDetailState({ item = null, loading = false, error = false } = {}) {
+  function setDetailState({
+    item = __detailViewItem,
+    loading = __detailViewLoading,
+    error = __detailViewError,
+    originView = __detailOriginView,
+    lastFocusEl = __detailViewLastFocusEl
+  } = {}) {
     __detailViewItem = item;
     __detailViewLoading = !!loading;
     __detailViewError = !!error;
+    __detailOriginView = originView || "explore";
+    __detailViewLastFocusEl = lastFocusEl || null;
   }
 
   function getDetailState() {
     return {
       item: __detailViewItem,
       loading: __detailViewLoading,
-      error: __detailViewError
+      error: __detailViewError,
+      reqSeq: __detailViewReqSeq,
+      originView: __detailOriginView,
+      lastFocusEl: __detailViewLastFocusEl
     };
+  }
+
+  function nextRequestSeq() {
+    __detailViewReqSeq += 1;
+    return __detailViewReqSeq;
+  }
+
+  function resetDetailState() {
+    __detailViewReqSeq += 1;
+    __detailViewItem = null;
+    __detailViewLoading = false;
+    __detailViewError = false;
+    __detailViewLastFocusEl = null;
+    __detailOriginView = "explore";
   }
 
   function open(item, options = {}) {
@@ -79,7 +107,9 @@ const DetailModule = (() => {
     close,
     getRelatedItemByEid,
     setDetailState,
-    getDetailState
+    getDetailState,
+    nextRequestSeq,
+    resetDetailState
   };
 })();
 
