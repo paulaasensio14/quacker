@@ -3571,7 +3571,7 @@ const ExploreModule = (() => {
         console.warn("[Detail] open detail target not found", {
           eid,
           isRelatedTrigger,
-          relatedKeys: [...__detailRelatedItemsByEid.keys()]
+          relatedKeys: "owned-by-DetailModule"
         });
         return;
       }
