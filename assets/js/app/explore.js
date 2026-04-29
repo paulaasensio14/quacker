@@ -767,6 +767,22 @@ const ExploreModule = (() => {
     return detailState?.item || __detailViewItem || null;
   }
 
+  function _setActiveDetailState({
+    item = __detailViewItem,
+    loading = __detailViewLoading,
+    error = __detailViewError
+  } = {}) {
+    __detailViewItem = item || null;
+    __detailViewLoading = !!loading;
+    __detailViewError = !!error;
+
+    window.DetailModule?.setDetailState?.({
+      item: __detailViewItem,
+      loading: __detailViewLoading,
+      error: __detailViewError
+    });
+  }
+
   function getDetailRelatedItemByEid(eid) {
     const targetEid = _normalizeId(eid);
     if (!targetEid) return null;
@@ -1109,8 +1125,11 @@ const ExploreModule = (() => {
 
     const reqSeq = ++__detailViewReqSeq;
 
-    __detailViewLoading = true;
-    __detailViewError = false;
+    _setActiveDetailState({
+      item,
+      loading: true,
+      error: false
+    });
     _syncContentDetailFeedback();
 
     try {
@@ -1120,21 +1139,29 @@ const ExploreModule = (() => {
       if (!_isDetailViewActive()) return;
       if (_normalizeId(__detailViewItem?.eid) !== eid) return;
 
-      __detailViewLoading = false;
-      __detailViewError = !persistedItem;
+      _setActiveDetailState({
+        loading: false,
+        error: !persistedItem
+      });
       _syncContentDetailFeedback();
 
       if (!persistedItem) return;
 
-      __detailViewItem = persistedItem;
+      _setActiveDetailState({
+        item: persistedItem,
+        loading: false,
+        error: false
+      });
       _renderContentDetailView(persistedItem);
     } catch (err) {
       if (reqSeq !== __detailViewReqSeq) return;
       if (!_isDetailViewActive()) return;
       if (_normalizeId(__detailViewItem?.eid) !== eid) return;
 
-      __detailViewLoading = false;
-      __detailViewError = true;
+      _setActiveDetailState({
+        loading: false,
+        error: true
+      });
       _syncContentDetailFeedback();
       console.error("[Explore] detail page hydration failed", err);
     }
@@ -1766,7 +1793,9 @@ const ExploreModule = (() => {
     if (!detailEid) return item;
 
     // Ya no pisamos activeEid (pertenece al Drawer)
-    __detailViewItem = item;
+    _setActiveDetailState({
+      item
+    });
 
     const vm = _buildExploreDrawerTextModel(item);
     const metaVm = _buildExploreDrawerDetailMeta(item);
