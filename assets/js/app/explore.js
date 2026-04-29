@@ -769,17 +769,23 @@ const ExploreModule = (() => {
 
   function _setActiveDetailState({
     item = __detailViewItem,
-    loading = __detailViewLoading,
-    error = __detailViewError
+    loading = undefined,
+    error = undefined
   } = {}) {
     __detailViewItem = item || null;
-    __detailViewLoading = !!loading;
-    __detailViewError = !!error;
+
+    if (typeof loading !== "undefined") {
+      __detailViewLoading = !!loading;
+    }
+
+    if (typeof error !== "undefined") {
+      __detailViewError = !!error;
+    }
 
     window.DetailModule?.setDetailState?.({
       item: __detailViewItem,
-      loading: __detailViewLoading,
-      error: __detailViewError
+      loading: typeof loading !== "undefined" ? !!loading : undefined,
+      error: typeof error !== "undefined" ? !!error : undefined
     });
   }
 
