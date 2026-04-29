@@ -944,12 +944,12 @@ const ExploreModule = (() => {
 
     if (__detailExpandedSeasonKeys.has(cacheKey)) {
       __detailExpandedSeasonKeys.delete(cacheKey);
-      _renderContentDetailView(activeItem);
+      window.DetailModule?.render?.(activeItem);
       return;
     }
 
     __detailExpandedSeasonKeys.add(cacheKey);
-    _renderContentDetailView(activeItem);
+    window.DetailModule?.render?.(activeItem);
 
     const cachedSeason = __detailSeasonCache.get(cacheKey);
     if (cachedSeason?.status === "loaded" || cachedSeason?.status === "loading") {
@@ -960,7 +960,7 @@ const ExploreModule = (() => {
       status: "loading",
       episodes: []
     });
-    _renderContentDetailView(activeItem);
+    window.DetailModule?.render?.(activeItem);
 
     try {
       const season = await ApiClient.getExploreItemSeasonDetail({
@@ -998,7 +998,7 @@ const ExploreModule = (() => {
 
     const freshItem = _getActiveDetailItem();
     if (freshItem) {
-      _renderContentDetailView(freshItem);
+      window.DetailModule?.render?.(freshItem);
     }
   }
 
@@ -3538,7 +3538,7 @@ const ExploreModule = (() => {
 
         const activeDetailItem = _getActiveDetailItem();
         if (activeDetailItem) {
-          _renderContentDetailView(activeDetailItem);
+          window.DetailModule?.render?.(activeDetailItem);
         }
         return;
       }
