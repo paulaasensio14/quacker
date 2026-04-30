@@ -2709,21 +2709,67 @@ main.app-main {
 
 #listsGrid.lists-grid--list {
   grid-template-columns: minmax(0, 1fr);
-  max-width: 920px;
+  max-width: 960px;
+  gap: 12px;
 }
 
 #listsGrid.lists-grid--list .list-card {
-  min-height: 86px;
+  min-height: 92px;
+  padding: 14px 16px;
+  justify-content: center;
 }
 
 #listsGrid.lists-grid--list .list-card-header {
-  align-items: center;
+  align-items: flex-start;
+  gap: 18px;
 }
 
-#listsGrid.lists-grid--list .list-card-body,
-#listsGrid.lists-grid--list .list-meta,
+#listsGrid.lists-grid--list .list-card-header > h3 {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+#listsGrid.lists-grid--list .list-card-header-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+#listsGrid.lists-grid--list .list-visibility {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 2px solid var(--border-strong);
+  background: var(--bg-body);
+  box-shadow: 2px 2px 0 var(--border-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+#listsGrid.lists-grid--list .list-meta {
+  max-width: 64ch;
+  margin-top: 6px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
 #listsGrid.lists-grid--list .list-count {
-  max-width: 72ch;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 201, 40, 0.18);
+  border: 2px solid rgba(2, 6, 23, 0.12);
+  color: var(--text-main);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .list-card.is-removing{
