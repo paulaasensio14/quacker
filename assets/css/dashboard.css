@@ -2900,6 +2900,54 @@ main.app-main {
   max-width: 720px;
 }
 
+.list-items-controls .select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.list-items-controls .select-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--text-main);
+  border-bottom: 2px solid var(--text-main);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+
+.list-items-controls .select-wrap select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  height: 34px;
+  min-width: 96px;
+  padding: 0 30px 0 12px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-body);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 2px 2px 0 var(--border-strong);
+  cursor: pointer;
+  outline: none;
+}
+
+.list-items-controls .select-wrap select:hover {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
+.list-items-controls .select-wrap select:focus-visible {
+  outline: 3px solid rgba(255, 199, 44, 0.45);
+  outline-offset: 3px;
+}
+
 .list-items-search{
   display:inline-flex;
   align-items:center;
