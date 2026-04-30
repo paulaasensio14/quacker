@@ -112,10 +112,28 @@ const ListsModule = (() => {
   }
 
   function _setListsOverviewControlsHidden(hidden) {
+    const isHidden = !!hidden;
     const listsView = _getEl("view-lists");
-    if (!listsView) return;
 
-    listsView.classList.toggle("is-detail-open", !!hidden);
+    if (listsView) {
+      listsView.classList.toggle("is-detail-open", isHidden);
+    }
+
+    const overviewControls = [
+      _getEl("listsSearch")?.closest(".lists-toolbar"),
+      _getEl("listsSearch")?.closest(".search-box"),
+      _getEl("countAll")?.closest(".library-pills"),
+      _getEl("countAll")?.closest(".lists-filters"),
+      document.querySelector("#view-lists .view-toggle"),
+      document.querySelector("#view-lists .layout-toggle"),
+      document.querySelector("#view-lists [data-lists-layout-toggle]")
+    ];
+
+    overviewControls
+      .filter(Boolean)
+      .forEach((el) => {
+        el.hidden = isHidden;
+      });
   }
 
   function _formatCreatedListsCount(total) {
