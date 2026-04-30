@@ -2714,33 +2714,41 @@ main.app-main {
 }
 
 #listsGrid.lists-grid--list .list-card {
-  min-height: 112px;
-  padding: 0;
+  min-height: 96px;
+  padding: 12px;
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr);
-  align-items: stretch;
+  grid-template-areas:
+    "cover header"
+    "cover meta";
+  align-items: start;
+  column-gap: 16px;
+  row-gap: 6px;
 }
 
 #listsGrid.lists-grid--list .list-cover {
-  height: auto;
-  min-height: 96px;
-  margin: 8px 0 8px 8px;
-  border-right: 2px solid var(--border-strong);
+  grid-area: cover;
+  height: 72px;
+  min-height: 72px;
+  margin: 0;
+  border: 2px solid var(--border-strong);
+  border-radius: 18px;
 }
 
 #listsGrid.lists-grid--list .list-card-header,
 #listsGrid.lists-grid--list .list-meta,
 #listsGrid.lists-grid--list .list-count {
-  margin-left: 16px;
-  margin-right: 16px;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 #listsGrid.lists-grid--list .list-card-header {
-  margin-top: 14px;
+  grid-area: header;
+  margin-top: 0;
 }
 
 #listsGrid.lists-grid--list .list-count {
-  margin-bottom: 14px;
+  display: none;
 }
 
 #listsGrid.lists-grid--cards .list-count {
@@ -2779,25 +2787,15 @@ main.app-main {
 }
 
 #listsGrid.lists-grid--list .list-meta {
+  grid-area: meta;
   max-width: 64ch;
-  margin-top: 6px;
+  margin-top: 0;
   font-size: 0.88rem;
   line-height: 1.35;
 }
 
 #listsGrid.lists-grid--list .list-count {
-  margin-top: 8px;
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(255, 201, 40, 0.18);
-  border: 2px solid rgba(2, 6, 23, 0.12);
-  color: var(--text-main);
-  font-size: 0.82rem;
-  font-weight: 800;
+  display: none;
 }
 
 .list-card.is-removing{
@@ -3324,6 +3322,17 @@ main.app-main {
   gap: 3px;
   padding: 3px;
   background: var(--border-strong);
+}
+
+#listsGrid.lists-grid--list .list-cover-collage {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+}
+
+#listsGrid.lists-grid--list .list-cover-collage img {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .list-cover img {
