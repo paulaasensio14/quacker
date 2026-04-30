@@ -3680,6 +3680,8 @@ const ApiClient = (() => {
   // Backlog
   async function getBacklogItems(limit = 4, minDays = 5) {
     const now = new Date();
+    const safeLimit = Math.max(1, Number(limit) || 4);
+    const safeMinDays = Math.max(0, Number(minDays) || 0);
 
     let library = [];
     let activities = [];
@@ -3695,90 +3697,104 @@ const ApiClient = (() => {
       activities = state.activities || [];
     }
 
-    const safeMinDays = Math.max(0, Number(minDays) || 0);
-
-    function minDaysForType() {
-      return safeMinDays;
-    }
-
     const lastActivityMap = new Map();
 
     activities.forEach((act) => {
       const targetId = _normalizeDataId(act?.targetId);
       if (!targetId || !act.createdAt) return;
-      const prev = lastActivityMap.get(targetId);
+
       const curr = new Date(act.createdAt);
+      if (Number.isNaN(curr.getTime())) return;
+
+      const prev = lastActivityMap.get(targetId);
       if (!prev || curr > prev) {
         lastActivityMap.set(targetId, curr);
       }
     });
 
-    function progressLabelFor(item) {
-      const pct = item.progress ?? 0;
+    function isActiveLibraryItem(item) {
+      const pct = Number(item?.progress ?? 0);
+      const status = String(item?.status || "").trim().toLowerCase();
+      const type = String(item?.type || "").trim();
 
-      if (item.type === "serie" && item.meta) {
-        const s = item.meta.season || 1;
-        const e = item.meta.episode || 1;
+      if (type === "pelicula") return false;
+      if (pct >= 100 || status === "completed") return false;
+
+      return (
+        pct > 0 ||
+        status === "in_progress" ||
+        status === "watching" ||
+        status === "reading" ||
+        status === "playing"
+      );
+    }
+
+    function progressLabelFor(item) {
+      const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
+      const meta = item.meta || {};
+
+      if (item.type === "serie" && meta) {
+        const s = meta.season || 1;
+        const e = meta.episode || 1;
         return `T${s} · E${e}`;
       }
 
-      if (item.type === "book" && item.meta?.pagesRead && item.meta?.totalPages) {
-        return `${item.meta.pagesRead}/${item.meta.totalPages} ${_t("home_pages", null, "páginas")}`;
+      if (item.type === "book") {
+        const pagesRead = Number(meta.pagesRead || 0);
+        const totalPages = Number(meta.totalPages || 0);
+
+        if (Number.isFinite(pagesRead) && Number.isFinite(totalPages) && totalPages > 0) {
+          return `${Math.max(0, Math.min(totalPages, pagesRead))}/${totalPages} ${_t("home_pages", null, "páginas")}`;
+        }
       }
 
       if (item.type === "game") {
-        return `${pct}% ${_t("library_progress_completed_suffix", null, "completado")}`;
+        const hours = Math.max(0, Number(meta.hoursPlayed || 0));
+
+        if (hours > 0 && pct > 0) return `${hours} h · ${pct}%`;
+        if (hours > 0) return `${hours} h`;
       }
 
       return `${pct}% ${_t("library_progress_completed_suffix", null, "completado")}`;
     }
 
     const candidates = library
-      .filter((item) => {
-        const pct = Number(item.progress ?? 0);
-        const status = String(item.status || "").trim().toLowerCase();
-        const isActiveStatus =
-          status === "in_progress" ||
-          status === "watching" ||
-          status === "reading" ||
-          status === "playing";
-
-        if (pct >= 100 || status === "completed") return false;
-        if (item.type === "pelicula") return false;
-
-        return pct > 0 || isActiveStatus;
-      })
+      .filter(isActiveLibraryItem)
       .map((item) => {
         const itemId = _normalizeDataId(item?.id);
         if (!itemId) return null;
 
-        const fallbackIso =
-          item.lastActivityAt ||
-          item.updatedAt ||
-          item.createdAt ||
-          now.toISOString();
+        const activityDate = lastActivityMap.get(itemId);
+        const fallbackIso = item.lastActivityAt || item.createdAt || "";
+        const fallbackDate = fallbackIso ? new Date(fallbackIso) : null;
 
-        const lastDate = lastActivityMap.get(itemId) || new Date(fallbackIso);
+        const lastDate =
+          activityDate ||
+          (fallbackDate && !Number.isNaN(fallbackDate.getTime()) ? fallbackDate : null);
 
-        const diffMs = now - lastDate;
-        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const days = lastDate
+          ? Math.max(0, Math.floor((now - lastDate) / (1000 * 60 * 60 * 24)))
+          : safeMinDays;
+
+        if (days < safeMinDays) return null;
 
         return {
           id: itemId,
           type: item.type,
           title: item.title,
           daysSinceLast: days,
-          progressPercent: item.progress ?? 0,
+          progressPercent: Math.max(0, Math.min(100, Number(item.progress ?? 0))),
           progressLabel: progressLabelFor(item),
-          cover: item.cover || ""
+          cover: item.cover || "",
+          source: item.source || "",
+          externalId: item.externalId || ""
         };
       })
-      .filter(Boolean)
-      .filter((row) => row.daysSinceLast >= minDaysForType(row.type));
+      .filter(Boolean);
 
     candidates.sort((a, b) => b.daysSinceLast - a.daysSinceLast);
 
-    return candidates.slice(0, limit);
+    return candidates.slice(0, safeLimit);
   }
 
   // === DASHBOARD HOME: sugerencias ===
