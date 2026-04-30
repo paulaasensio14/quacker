@@ -3886,12 +3886,54 @@ body.dark-theme .notif-mark-btn:hover {
   color:var(--text);
 }
 
+.library-sort {
+  position: relative;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.library-sort::after {
+  content: "⌄";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-54%);
+  color: var(--text-main, #020617);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .library-sort select {
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid var(--border);
-  background:var(--panel);
-  color:var(--text);
+  appearance: none;
+  min-width: 178px;
+  height: 44px;
+  padding: 0 38px 0 18px;
+  border: 3px solid var(--border-strong, #020617);
+  border-radius: 999px;
+  background: var(--panel, #ffffff);
+  color: var(--text-main, #020617);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--border-strong, #020617);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.library-sort select:hover {
+  transform: translateY(1px);
+  box-shadow: 2px 2px 0 var(--border-strong, #020617);
+  background: var(--surface-soft, #fff7cc);
+}
+
+.library-sort select:focus-visible {
+  outline: 3px solid rgba(255, 199, 44, 0.45);
+  outline-offset: 3px;
 }
 
 .library-filters {
@@ -3937,9 +3979,7 @@ body.dark-theme .notif-mark-btn:hover {
 }
 
 #librarySort{
-  height: 36px;
-  padding: 0 10px;
-  border-radius: 10px;
+  min-width: 178px;
 }
 
 /* Biblioteca: botón "Hecho" */
@@ -4261,6 +4301,7 @@ body.dark-theme .notif-mark-btn:hover {
   display: grid;
   grid-template-columns: repeat(6, minmax(190px, 1fr));
   gap: 14px;
+  margin-top: 14px;
 }
 
 /* Tipo + select en la misma fila */
