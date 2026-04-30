@@ -4147,6 +4147,55 @@ body.dark-theme [data-theme-toggle] {
     border: 2px solid var(--border-soft);   /* borde acorde al modo oscuro */
 }
 
+body.dark-theme #view-lists .search-input {
+  background: #0b1724;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+body.dark-theme #view-lists .search-input::placeholder {
+  color: rgba(249, 250, 251, 0.58);
+}
+
+body.dark-theme #view-lists .pill-filter {
+  background: #0b1724;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+}
+
+body.dark-theme #view-lists .pill-filter.active {
+  background: var(--bg-yellow);
+  color: #111827;
+  border-color: var(--border-strong);
+}
+
+body.dark-theme #view-lists .pill-filter span.count {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+
+body.dark-theme #view-lists .pill-filter.active span.count {
+  background: rgba(17, 24, 39, 0.16);
+  color: #111827;
+}
+
+body.dark-theme #view-lists .list-card {
+  background: #081523;
+  border-color: #010b16;
+}
+
+body.dark-theme #view-lists .list-cover--empty {
+  background:
+    radial-gradient(circle at center, rgba(255, 201, 40, 0.18), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(8, 21, 35, 0.22)),
+    #102235;
+}
+
+body.dark-theme #view-lists .list-meta {
+  color: rgba(249, 250, 251, 0.72);
+}
+
 /* Por si el texto "Modo claro" hereda otro color raro */
 body.dark-theme .sidebar-bottom,
 body.dark-theme .sidebar-bottom * {
