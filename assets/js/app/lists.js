@@ -743,12 +743,15 @@ const ListsModule = (() => {
             <span class="list-item-type-badge" aria-label="${type}" title="${type}">
               ${_typeIconSvg(it.type)}
             </span>
+
+            <div class="list-item-progress" aria-label="${prog}">
+              <span class="list-item-progress-fill" style="width:${Math.max(0, Math.min(100, Number(it.progress ?? 0)))}%;"></span>
+            </div>
           </div>
+
           <div class="list-item-body">
             <div class="list-item-title">${title}</div>
-            <div class="list-item-sub">
-              <span>${prog}</span>
-            </div>
+
             <div class="list-item-actions">
               <button type="button" class="list-item-remove" data-action="remove-from-list" data-item-id="${_safeText(it.id)}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"

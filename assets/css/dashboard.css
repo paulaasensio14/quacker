@@ -3125,6 +3125,25 @@ main.app-main {
   height: 17px;
 }
 
+.list-item-progress{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  border-top: 3px solid var(--border-strong);
+  overflow: hidden;
+}
+
+.list-item-progress-fill{
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--bg-yellow);
+  transition: width 0.25s ease;
+}
+
 .list-item-body{
   padding: 10px 12px 12px;
   display:grid;
@@ -3138,27 +3157,19 @@ main.app-main {
   color: var(--text-main);
 }
 
-.list-item-sub{
-  display:flex;
-  align-items:center;
-  justify-content: flex-end;
-  gap: 10px;
-  color: var(--text-muted);
-  font-weight: 700;
-  font-size: 12px;
-}
-
 .list-item-actions{
   display:flex;
-  justify-content: flex-end;
-  margin-top: 2px;
+  justify-content: stretch;
+  margin-top: 4px;
 }
 
 .list-item-remove{
+  width: 100%;
   display:inline-flex;
   align-items:center;
+  justify-content:center;
   gap: 8px;
-  height: 32px;
+  min-height: 36px;
   padding: 0 12px;
   border-radius: 999px;
   border: 2px solid var(--border-strong);
