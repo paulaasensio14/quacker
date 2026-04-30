@@ -1033,7 +1033,12 @@ const ListsModule = (() => {
 
       document.getElementById("lm_name").value = list.name || "";
       document.getElementById("lm_desc").value = list.description || "";
-      document.getElementById("lm_visibility").value = list.visibility || "private";
+
+      const visibilitySelect = document.getElementById("lm_visibility");
+      if (visibilitySelect) {
+        visibilitySelect.value = "private";
+        visibilitySelect.disabled = true;
+      }
 
     } else {
 
@@ -1045,7 +1050,12 @@ const ListsModule = (() => {
 
       document.getElementById("lm_name").value = "";
       document.getElementById("lm_desc").value = "";
-      document.getElementById("lm_visibility").value = "private";
+
+      const visibilitySelect = document.getElementById("lm_visibility");
+      if (visibilitySelect) {
+        visibilitySelect.value = "private";
+        visibilitySelect.disabled = true;
+      }
     }
 
     window.UIModal?.open(modal, { initialFocusSelector: "#lm_name" });
@@ -1090,8 +1100,7 @@ const ListsModule = (() => {
     const nameInput = document.getElementById("lm_name");
     const name = (nameInput?.value || "").replace(/\s+/g, " ").trim();
     const description = (document.getElementById("lm_desc")?.value || "").trim();
-    const visibility = document.getElementById("lm_visibility")?.value || "private";
-    const validVisibilities = new Set(["private", "public", "collab"]);
+    const visibility = "private";
 
     if (nameInput && nameInput.value !== name) {
       nameInput.value = name;
@@ -1112,12 +1121,6 @@ const ListsModule = (() => {
     if (name.length > 80) {
       showListErrors(t("lists_modal_name_too_long"));
       nameInput?.focus?.();
-      return;
-    }
-
-    if (!validVisibilities.has(String(visibility).trim().toLowerCase())) {
-      showListErrors(t("lists_modal_invalid_visibility"));
-      document.getElementById("lm_visibility")?.focus?.();
       return;
     }
 
