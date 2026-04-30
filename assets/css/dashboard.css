@@ -2801,13 +2801,20 @@ main.app-main {
 
 .list-detail{
   display: grid;
-  gap: 14px;
+  gap: 18px;
+}
+
+.list-detail[hidden] {
+  display: none !important;
 }
 
 .list-detail-top{
-  display:flex;
-  align-items:flex-start;
-  gap: 14px;
+  display:grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items:center;
+  gap: 12px;
+  margin-top: 10px;
+  margin-bottom: 2px;
 }
 
 .list-detail-back{
@@ -2818,8 +2825,8 @@ main.app-main {
 }
 
 .list-detail-titlewrap{
-  flex:1;
   min-width: 0;
+  padding-left: 2px;
 }
 
 .list-detail-title{
@@ -2861,29 +2868,36 @@ main.app-main {
 
 .list-detail-items{
   display:grid;
-  gap: 10px;
+  gap: 14px;
+  padding: 14px 16px 16px;
+  border: 3px solid var(--border-strong);
+  border-radius: 24px;
+  background: var(--bg-card);
+  box-shadow: 3px 3px 0 var(--border-strong);
 }
 
 .list-items-header{
-  display:flex;
-  align-items:baseline;
-  justify-content: space-between;
-  gap: 12px;
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items:start;
+  gap: 14px;
 }
 
 .list-items-head-left{
   display:flex;
-  align-items:baseline;
-  gap: 10px;
+  flex-direction:column;
+  align-items:flex-start;
+  gap: 3px;
   min-width: 220px;
 }
 
 .list-items-controls{
   display:flex;
   align-items:center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   justify-content:flex-end;
+  max-width: 720px;
 }
 
 .list-items-search{
