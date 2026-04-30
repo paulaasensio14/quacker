@@ -4216,6 +4216,35 @@ body.dark-theme #listDetail .list-item-remove:hover {
   color: #fee2e2;
 }
 
+body.dark-theme #listModal .modal-field input,
+body.dark-theme #listModal .modal-field select,
+body.dark-theme #listModal .modal-field textarea {
+  background: #081523;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+body.dark-theme #listModal .modal-field input::placeholder,
+body.dark-theme #listModal .modal-field textarea::placeholder {
+  color: rgba(249, 250, 251, 0.48);
+}
+
+body.dark-theme #listModal .modal-field input:focus,
+body.dark-theme #listModal .modal-field select:focus,
+body.dark-theme #listModal .modal-field textarea:focus {
+  background: #0b1724;
+  border-color: var(--bg-yellow);
+  box-shadow:
+    2px 2px 0 var(--border-strong),
+    0 0 0 3px rgba(255, 201, 40, 0.22);
+}
+
+body.dark-theme #listModal .modal-close {
+  background: #f9fafb;
+  color: #111827;
+}
+
 /* Por si el texto "Modo claro" hereda otro color raro */
 body.dark-theme .sidebar-bottom,
 body.dark-theme .sidebar-bottom * {
