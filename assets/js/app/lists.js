@@ -579,6 +579,69 @@ const ListsModule = (() => {
     return `${n}%`;
   }
 
+  function _typeIconSvg(type) {
+    if (type === "serie") {
+      return `
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+          aria-hidden="true" focusable="false">
+          <rect x="3" y="4" width="18" height="14" rx="2"></rect>
+          <path d="M8 20h8"></path>
+          <path d="M12 18v2"></path>
+        </svg>
+      `;
+    }
+
+    if (type === "pelicula") {
+      return `
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+          aria-hidden="true" focusable="false">
+          <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+          <path d="M7 5v14"></path>
+          <path d="M17 5v14"></path>
+          <path d="M3 9h4"></path>
+          <path d="M3 15h4"></path>
+          <path d="M17 9h4"></path>
+          <path d="M17 15h4"></path>
+        </svg>
+      `;
+    }
+
+    if (type === "book") {
+      return `
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+          aria-hidden="true" focusable="false">
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"></path>
+          <path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20"></path>
+        </svg>
+      `;
+    }
+
+    if (type === "game") {
+      return `
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+          aria-hidden="true" focusable="false">
+          <path d="M6 12h4"></path>
+          <path d="M8 10v4"></path>
+          <path d="M15 13h.01"></path>
+          <path d="M18 11h.01"></path>
+          <path d="M7 7h10a4 4 0 0 1 3.9 3.1l1 4.5a3 3 0 0 1-5 2.8L15 15H9l-1.9 2.4a3 3 0 0 1-5-2.8l1-4.5A4 4 0 0 1 7 7Z"></path>
+        </svg>
+      `;
+    }
+
+    return `
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+        aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="8"></circle>
+      </svg>
+    `;
+  }
+
   async function renderActiveListItems(){
     const grid = _getEl("listDetailItemsGrid");
     const empty = _getEl("listDetailEmpty");
@@ -676,11 +739,14 @@ const ListsModule = (() => {
 
       return `
         <article class="list-item-card" data-item-id="${_safeText(it.id)}">
-          <div class="list-item-cover" ${coverStyle}></div>
+          <div class="list-item-cover" ${coverStyle}>
+            <span class="list-item-type-badge" aria-label="${type}" title="${type}">
+              ${_typeIconSvg(it.type)}
+            </span>
+          </div>
           <div class="list-item-body">
             <div class="list-item-title">${title}</div>
             <div class="list-item-sub">
-              <span>${type}</span>
               <span>${prog}</span>
             </div>
             <div class="list-item-actions">

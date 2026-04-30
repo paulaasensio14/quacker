@@ -3094,11 +3094,35 @@ main.app-main {
 }
 
 .list-item-cover{
+  position: relative;
   height: 260px;
   background: #111827;
   background-size: cover;
   background-position: center;
   border-bottom: 3px solid var(--border-strong);
+}
+
+.list-item-type-badge{
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 2px solid var(--border-strong);
+  color: var(--border-strong);
+  box-shadow: 2px 2px 0 var(--border-strong);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.list-item-type-badge svg{
+  width: 17px;
+  height: 17px;
 }
 
 .list-item-body{
@@ -3117,21 +3141,11 @@ main.app-main {
 .list-item-sub{
   display:flex;
   align-items:center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   color: var(--text-muted);
   font-weight: 700;
   font-size: 12px;
-}
-
-.list-item-sub span:first-child{
-  display:inline-flex;
-  align-items:center;
-  min-height: 24px;
-  padding: 0 9px;
-  border-radius: 999px;
-  border: 1px solid rgba(2, 6, 23, 0.14);
-  background: var(--bg-body);
 }
 
 .list-item-actions{
