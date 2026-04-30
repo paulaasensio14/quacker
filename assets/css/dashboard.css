@@ -2573,6 +2573,13 @@ main.app-main {
   gap:12px;
 }
 
+#view-lists #btnNewList {
+  height: 42px;
+  min-height: 42px;
+  padding: 0 18px;
+  align-self: center;
+}
+
 .lists-toolbar-top .lists-search{
   flex:1;
   min-width:280px;
