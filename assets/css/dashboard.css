@@ -3127,12 +3127,12 @@ main.app-main {
 
 .list-item-progress{
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.72);
-  border-top: 3px solid var(--border-strong);
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
   overflow: hidden;
 }
 
@@ -3140,6 +3140,7 @@ main.app-main {
   display: block;
   height: 100%;
   width: 0;
+  border-radius: inherit;
   background: var(--bg-yellow);
   transition: width 0.25s ease;
 }
