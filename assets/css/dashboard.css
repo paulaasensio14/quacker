@@ -4769,6 +4769,42 @@ body.dark-theme .notif-mark-btn:hover {
   background: rgba(34,197,94,0.18);
 }
 
+body.dark-theme #view-library .pill-filter {
+  background: #0b1724;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+}
+
+body.dark-theme #view-library .pill-filter.active {
+  background: var(--bg-yellow);
+  color: #111827;
+  border-color: var(--border-strong);
+}
+
+body.dark-theme #view-library .pill-filter span.count {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+
+body.dark-theme #view-library .pill-filter.active span.count {
+  background: rgba(17, 24, 39, 0.16);
+  color: #111827;
+}
+
+body.dark-theme #view-library .library-filter-label {
+  color: rgba(249, 250, 251, 0.72);
+}
+
+body.dark-theme #view-library .library-sort select {
+  background: #0b1724;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+}
+
+body.dark-theme #view-library .library-sort::after {
+  border-color: var(--text-main);
+}
+
 .lib-primary-btn:disabled {
   opacity:0.6;
   cursor:not-allowed;
