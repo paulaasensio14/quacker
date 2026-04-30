@@ -2904,10 +2904,12 @@ main.app-main {
   display:inline-flex;
   align-items:center;
   gap: 8px;
-  padding: 8px 10px;
-  border-radius: 12px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
   border: 2px solid var(--border-strong);
   background: var(--bg-card);
+  box-shadow: 2px 2px 0 var(--border-strong);
 }
 
 .list-items-search input{
@@ -2916,6 +2918,9 @@ main.app-main {
   background: transparent;
   color: var(--text-main);
   outline: none;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
 }
 
 @media (max-width: 900px){
@@ -2923,8 +2928,15 @@ main.app-main {
 }
 
 .list-items-showing{
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 2px solid var(--border-strong);
+  background: var(--bg-body);
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -3008,25 +3020,29 @@ main.app-main {
 .list-item-remove{
   display:inline-flex;
   align-items:center;
-  gap: 10px;
+  gap: 8px;
   height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 0;
+  border: 2px solid var(--border-strong);
+  box-shadow: 2px 2px 0 var(--border-strong);
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 12px;
-  background: rgba(239,68,68,0.14);
-  color: var(--text);
-  transition: transform .08s ease, background .12s ease;
+  background: #ffe4e6;
+  color: var(--text-main);
+  transition: transform .08s ease, box-shadow .12s ease, background .12s ease;
 }
 
 .list-item-remove:hover{
-  background: rgba(239,68,68,0.18);
+  background: #fecdd3;
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
 }
 
 .list-item-remove:active{
-  transform: translateY(1px);
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--border-strong);
 }
 
 /* ===== Lists: highlight suave tras "Deshacer" ===== */
