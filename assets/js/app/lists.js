@@ -6,6 +6,7 @@ const ListsModule = (() => {
 
   let allLists = [];
   let visibleLists = [];
+  let listsOverviewLibrary = [];
   let listsFilter = "all";     // "all" | "public" | "private" | "collab"
   
   let pendingDeleteListId = null;
@@ -41,6 +42,14 @@ const ListsModule = (() => {
 
   function _safeText(v) {
     return (v ?? "").toString();
+  }
+
+  function _safeAttr(v) {
+    return _safeText(v)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
 
   function _normalizeId(value) {
@@ -161,6 +170,71 @@ const ListsModule = (() => {
     return count === 1
       ? `1 ${t("lists_item_singular")}`
       : `${count} ${t("lists_item_plural")}`;
+  }
+
+  async function _loadListsOverviewLibrary() {
+    try {
+      const library = await ApiClient.getLibrary();
+      listsOverviewLibrary = Array.isArray(library) ? library : [];
+    } catch (e) {
+      console.error("ListsModule: failed to load library previews", e);
+      listsOverviewLibrary = [];
+    }
+  }
+
+  function _getListPreviewItems(list) {
+    const ids = Array.isArray(list?.items)
+      ? list.items.map((entry) => _getListItemEntryId(entry)).filter(Boolean)
+      : [];
+
+    if (!ids.length || !listsOverviewLibrary.length) return [];
+
+    const libraryById = new Map(
+      listsOverviewLibrary.map((item) => [_normalizeId(item?.id), item])
+    );
+
+    return ids
+      .map((id) => libraryById.get(_normalizeId(id)))
+      .filter((item) => item?.cover)
+      .slice(0, 4);
+  }
+
+  function _renderListCover(list, count) {
+    const previewItems = _getListPreviewItems(list);
+
+    if (!previewItems.length) {
+      return `
+        <div class="list-cover list-cover--empty" aria-hidden="true">
+          <div class="list-cover-empty-mark">☰</div>
+          <div class="list-cover-badges">
+            <span class="cover-count-pill">${_formatItemsCount(count)}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const covers = previewItems
+      .map((item) => `
+        <img
+          src="${_safeAttr(item.cover)}"
+          alt=""
+          loading="lazy"
+          aria-hidden="true"
+        >
+      `)
+      .join("");
+
+    return `
+      <div class="list-cover list-cover--${previewItems.length}" aria-hidden="true">
+        <div class="list-cover-collage">
+          ${covers}
+        </div>
+
+        <div class="list-cover-badges">
+          <span class="cover-count-pill">${_formatItemsCount(count)}</span>
+        </div>
+      </div>
+    `;
   }
 
   function _sleep(ms) {
@@ -330,6 +404,8 @@ const ListsModule = (() => {
       allLists = await ApiClient.getLists();
       if (!Array.isArray(allLists)) allLists = [];
 
+      await _loadListsOverviewLibrary();
+
       visibleLists = [...allLists]; // lo que se muestra
       updateFilterCounts();
       _syncListsToolbarUI();
@@ -470,10 +546,13 @@ const ListsModule = (() => {
         const desc = _safeText(list.description);
         const count = _itemsCount(list);
         const vis = _visibilityLabel(list.visibility);
+        const cover = _renderListCover(list, count);
 
         return `
 
           <article class="list-card" data-id="${_safeText(list.id)}">
+            ${cover}
+
             <div class="list-card-header">
 
             <h3>${name}</h3>
