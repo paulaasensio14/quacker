@@ -356,20 +356,67 @@ const ListsModule = (() => {
 
     if (hasError) {
       container.innerHTML = `
-        <div class="lists-empty-state">
-          ${t("lists_load_error")}
+        <div class="lib-empty-state">
+          <div class="lib-empty-state-card lib-empty-state-card--error" role="status" aria-live="polite">
+            <div class="lib-empty-state-icon" aria-hidden="true">!</div>
+            <div class="lib-empty-state-title">${t("lists_load_error")}</div>
+            <div class="lib-empty-state-actions">
+              <button type="button" class="btn btn-primary" id="listsRetryLoadBtn">
+                ${t("library_retry")}
+              </button>
+            </div>
+          </div>
         </div>
       `;
+
+      requestAnimationFrame(() => {
+        document.getElementById("listsRetryLoadBtn")?.addEventListener("click", () => {
+          load();
+        });
+      });
+
       return;
     }
 
     if (!visibleLists.length) {
       const isFiltering = listsFilter !== "all" || (searchTerm || "").trim().length > 0;
-      container.innerHTML = `
-        <div class="lists-empty-state">
-          ${isFiltering ? t("lists_empty_filtered") : t("lists_empty_initial")}
-        </div>
-      `;
+
+      container.innerHTML = isFiltering
+        ? `
+          <div class="lib-empty-state">
+            <div class="lib-empty-state-card" role="status" aria-live="polite">
+              <h3 class="lib-empty-state-title">${t("lists_empty_filtered")}</h3>
+            </div>
+          </div>
+        `
+        : `
+          <div class="lib-empty-state">
+            <div class="lib-empty-state-card" role="status" aria-live="polite">
+              <div class="lib-empty-state-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="lib-empty-state-icon-svg">
+                  <path d="M7.5 4.75A2.75 2.75 0 0 1 10.25 2h6A2.75 2.75 0 0 1 19 4.75v10.5A2.75 2.75 0 0 1 16.25 18h-6A2.75 2.75 0 0 1 7.5 15.25V4.75Zm2.75-1.25A1.25 1.25 0 0 0 9 4.75v10.5c0 .69.56 1.25 1.25 1.25h6c.69 0 1.25-.56 1.25-1.25V4.75c0-.69-.56-1.25-1.25-1.25h-6Z"/>
+                  <path d="M11 7h4.5v1.5H11V7Zm0 3.25h4.5v1.5H11v-1.5Zm0 3.25h3v1.5h-3v-1.5Z"/>
+                  <path d="M4 7.75h1.5v8.5H4v-8.5Zm0 10h1.5v1.5H4v-1.5Z"/>
+                </svg>
+              </div>
+              <div class="lib-empty-state-kicker">Quacker</div>
+              <h3 class="lib-empty-state-title">${t("lists_empty_initial")}</h3>
+              <p class="lib-empty-state-text">${t("lists_subtitle")}</p>
+              <div class="lib-empty-state-actions">
+                <button type="button" class="btn btn-primary" id="listsEmptyCreateBtn">
+                  + ${t("common_create")}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+      requestAnimationFrame(() => {
+        document.getElementById("listsEmptyCreateBtn")?.addEventListener("click", () => {
+          openListModal();
+        });
+      });
+
       return;
     }
 
