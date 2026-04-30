@@ -3900,8 +3900,8 @@ body.dark-theme .notif-mark-btn:hover {
   top: 50%;
   transform: translateY(-54%);
   color: var(--text-main, #020617);
-  font-size: 1rem;
-  font-weight: 800;
+  font-size: 0.9rem;
+  font-weight: 700;
   line-height: 1;
   pointer-events: none;
 }
@@ -4318,9 +4318,26 @@ body.dark-theme .notif-mark-btn:hover {
   margin-left: auto;    /* empuja el select a la derecha */
 }
 
+#view-library #btnAddLibraryItem {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 16px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  box-shadow: 2px 2px 0 var(--border-strong);
+}
+
+#view-library #btnAddLibraryItem:hover {
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
 #view-library .library-sort select{
-  height: 36px;         /* igual que tus pills */
-  border-radius: 12px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 2px 2px 0 var(--border-strong, #020617);
 }
 
 /* Modal genérico */
