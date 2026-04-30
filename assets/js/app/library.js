@@ -714,7 +714,12 @@ const LibraryUI = (() => {
       }
     }
 
-    if ((type === "pelicula" || type === "game" || type === "serie") && isStartedStatus && progress <= 0) {
+    if (type === "pelicula") {
+      progress = status === "completed" || progress >= 100 ? 100 : 0;
+      status = progress >= 100 ? "completed" : "not_started";
+    }
+
+    if ((type === "game" || type === "serie") && isStartedStatus && progress <= 0) {
       progress = 10;
     }
 
@@ -769,6 +774,11 @@ const LibraryUI = (() => {
   function logicalStatus(item) {
     const pct = Number(item?.progress ?? 0);
     const status = String(item?.status || "").trim().toLowerCase();
+    const type = String(item?.type || "").trim();
+
+    if (type === "pelicula") {
+      return pct >= 100 || status === "completed" ? "completed" : "not_started";
+    }
 
     // completado manda siempre
     if (pct >= 100 || status === "completed") return "completed";
@@ -911,13 +921,16 @@ const LibraryUI = (() => {
     }
 
     if (type === "pelicula") {
-      const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
-      return pct ? `${pct}%` : "";
+      return "";
     }
 
     if (type === "game") {
       const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
-      if (pct) return `${pct}%`;
+      const hours = Math.max(0, Number(meta.hoursPlayed || 0));
+
+      if (hours > 0 && pct > 0) return `${hours} h · ${pct}%`;
+      if (hours > 0) return `${hours} h`;
+      if (pct > 0) return `${pct}%`;
       if (String(meta.platform || "").trim()) return String(meta.platform).trim();
       return "";
     }
@@ -1656,7 +1669,10 @@ const LibraryUI = (() => {
       const currentProgress = Math.max(0, Math.min(100, Number(sourceItem.progress ?? 0)));
       let nextProgress = currentProgress;
 
-      if (nextItem.type === "book") {
+      if (nextItem.type === "pelicula") {
+        nextProgress = 100;
+        nextItem.status = "completed";
+      } else if (nextItem.type === "book") {
         const totalPages = Math.max(0, Math.round(Number(nextItem.meta.totalPages || 0)));
         const currentPages = Math.max(0, Math.round(Number(nextItem.meta.pagesRead || 0)));
 
@@ -1676,6 +1692,9 @@ const LibraryUI = (() => {
         nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
         nextItem.status = nextProgress >= 100 ? "completed" : "watching";
       } else if (nextItem.type === "game") {
+        const currentHours = Math.max(0, Number(nextItem.meta.hoursPlayed || 0));
+
+        nextItem.meta.hoursPlayed = currentHours + 1;
         nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
         nextItem.status = nextProgress >= 100 ? "completed" : "playing";
       } else {
@@ -1696,7 +1715,11 @@ const LibraryUI = (() => {
         justCompleted: Number(updatedItem.progress ?? 0) >= 100 || updatedItem.status === "completed",
         deltaLabel: nextItem.type === "book" && Number(nextItem.meta?.totalPages || 0) > 0
           ? `${nextItem.meta.pagesRead}/${nextItem.meta.totalPages} ${t("library_pages")}`
-          : `${Math.round(Number(updatedItem.progress ?? 0))}%`
+          : nextItem.type === "game"
+            ? `${nextItem.meta.hoursPlayed} h · ${Math.round(Number(updatedItem.progress ?? 0))}%`
+            : nextItem.type === "pelicula"
+              ? t("library_progress_movie_completed")
+              : `${Math.round(Number(updatedItem.progress ?? 0))}%`
       };
 
       const justCompleted = !!res?.justCompleted;
