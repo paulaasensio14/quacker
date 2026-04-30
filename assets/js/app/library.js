@@ -754,12 +754,22 @@ const LibraryUI = (() => {
 
   function logicalStatus(item) {
     const pct = Number(item?.progress ?? 0);
+    const status = String(item?.status || "").trim().toLowerCase();
 
     // completado manda siempre
-    if (pct >= 100 || item?.status === "completed") return "completed";
+    if (pct >= 100 || status === "completed") return "completed";
 
-    // si aún no ha empezado (0%), da igual si puso "watching" por error:
-    // para el usuario sigue siendo "No empezado"
+    // si el usuario ha pulsado Empezar, el estado manda aunque el progreso siga en 0
+    if (
+      status === "in_progress" ||
+      status === "watching" ||
+      status === "reading" ||
+      status === "playing"
+    ) {
+      return "in_progress";
+    }
+
+    // si no hay progreso ni estado activo, sigue sin empezar
     if (pct <= 0) return "not_started";
 
     // si hay progreso pero no está al 100, es "en progreso"
