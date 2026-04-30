@@ -2216,6 +2216,27 @@ const ExploreModule = (() => {
     featuredFeed = featuredFeed.map(applyPatch);
     visible = visible.map(applyPatch);
 
+    const detailItem = _getActiveDetailItem();
+
+    if (_normalizeId(detailItem?.eid) === targetEid) {
+      const nextDetailItem = {
+        ...detailItem,
+        ...patcher(detailItem)
+      };
+
+      didChange = true;
+
+      _setActiveDetailState({
+        item: nextDetailItem,
+        loading: false,
+        error: false
+      });
+
+      if (_isDetailViewActive()) {
+        window.DetailModule?.render?.(nextDetailItem);
+      }
+    }
+
     return didChange;
   }
 
@@ -2876,11 +2897,15 @@ const ExploreModule = (() => {
     if (!eid) return { ok: false, createdId: null };
 
     const current = _getExploreItemByEid(eid);
+    const activeDetailItem = _getActiveDetailItem();
+    const currentOrDetail =
+      current ||
+      (_normalizeId(activeDetailItem?.eid) === eid ? activeDetailItem : null);
 
-    if (current?.__inLibrary) {
+    if (currentOrDetail?.__inLibrary) {
       return {
         ok: true,
-        createdId: _normalizeId(current.__libraryItemId) || null
+        createdId: _normalizeId(currentOrDetail.__libraryItemId) || null
       };
     }
 
