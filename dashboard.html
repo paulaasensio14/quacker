@@ -520,17 +520,6 @@
           <section class="home-panel">
             <div class="home-panel-header">
               <h3 data-i18n="home_challenge_title">Reto mensual</h3>
-              <button class="icon-btn" type="button" id="btnChallengeSettings" aria-label="Configurar retos" data-i18n-aria-label="home_challenge_settings_label">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M4 7h10"></path>
-                  <path d="M18 7h2"></path>
-                  <circle cx="16" cy="7" r="2"></circle>
-                  <path d="M4 17h2"></path>
-                  <path d="M10 17h10"></path>
-                  <circle cx="8" cy="17" r="2"></circle>
-                </svg>
-              </button>
             </div>
 
             <div class="challenge-card">
@@ -1481,67 +1470,6 @@
     </div>
   </div>
 </div>
-
-<div class="modal-overlay" id="challengeSettingsModal" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="challengeSettingsTitle">
-    <div class="modal-header">
-      <h3 id="challengeSettingsTitle" data-i18n="home_challenge_settings_title">Configurar reto mensual</h3>
-      <button class="modal-close" id="closeChallengeSettingsModal" aria-label="Cerrar" data-i18n-aria-label="common_close">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
-          aria-hidden="true" focusable="false">
-          <path d="M6 6l12 12M6 18L18 6"></path>
-        </svg>
-      </button>
-    </div>
-
-    <div class="modal-body">
-      <p class="challenge-settings-note" data-i18n="home_challenge_settings_text">
-        Define cuántos contenidos quieres completar este mes y la recompensa que te motivará a conseguirlo.
-      </p>
-
-      <div class="modal-field">
-        <label for="challengeGoalTarget" data-i18n="home_challenge_settings_target_label">Objetivo del mes</label>
-        <select id="challengeGoalTarget">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-        </select>
-      </div>
-
-      <div class="modal-field">
-        <label for="challengeRewardLabel" data-i18n="home_challenge_settings_reward_label">Recompensa</label>
-        <input
-          id="challengeRewardLabel"
-          type="text"
-          maxlength="80"
-          placeholder="Ej: Insignia de maratón"
-          data-i18n-placeholder="home_challenge_settings_reward_placeholder"
-        />
-      </div>
-
-      <div class="modal-errors" id="challengeSettingsErrors" style="display:none;"></div>
-    </div>
-
-    <div class="modal-actions">
-      <button type="button" class="btn-ghost modal-action-left" id="challengeSettingsReset" data-i18n="home_challenge_settings_reset">
-        Restablecer
-      </button>
-
-      <button type="button" class="btn-secondary" id="challengeSettingsCancel" data-i18n="common_cancel">
-        Cancelar
-      </button>
-
-      <button type="button" class="btn-primary" id="challengeSettingsSave" data-i18n="home_challenge_settings_save">
-        Guardar reto
-      </button>
-    </div>
-  </div>
-</div>
-
 
   <!-- Toast container -->
   <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>

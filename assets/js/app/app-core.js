@@ -106,8 +106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       kind === "library" ||
       kind === "lists" ||
       kind === "notifications" ||
-      kind === "activities" ||
-      kind === "goals";
+      kind === "activities";
 
     if (affectsHome) {
       scheduleHomeRefresh();

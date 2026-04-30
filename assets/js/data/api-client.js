@@ -171,9 +171,9 @@ const ApiClient = (() => {
         lists: [],
         library: [],
         activities: [],
-        goals: []
-      };
-    }
+      goals: []
+    };
+  }
     return FakeBackend.getState();
   }
 
@@ -204,44 +204,6 @@ const ApiClient = (() => {
 
   function _cloneCollection(items) {
     return (Array.isArray(items) ? items : []).map((item) => _cloneData(item));
-  }
-
-  function _getCurrentGoalPeriod(date = new Date()) {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const monthNumber = String(month + 1).padStart(2, "0");
-    const lastDay = String(new Date(year, month + 1, 0).getDate()).padStart(2, "0");
-
-    return {
-      goalId: `goal-${year}-${month + 1}`,
-      periodStart: `${year}-${monthNumber}-01`,
-      periodEnd: `${year}-${monthNumber}-${lastDay}`
-    };
-  }
-
-  function _normalizeGoalConfigRecord(goal) {
-    if (!goal || typeof goal !== "object" || Array.isArray(goal)) return null;
-
-    const targetNumber = Number(goal.target ?? 0);
-    const safeTarget = Number.isFinite(targetNumber)
-      ? Math.max(1, Math.min(6, Math.round(targetNumber)))
-      : 2;
-    const safeRewardLabel = _normalizeContentText(goal.rewardLabel).slice(0, 80);
-    const safeTitle = _normalizeContentText(goal.title).slice(0, 120);
-    const safeDescription = _normalizeContentText(goal.description).slice(0, 220);
-    const { goalId, periodStart, periodEnd } = _getCurrentGoalPeriod();
-
-    return {
-      id: _normalizeDataId(goal.id) || goalId,
-      type: "count_completed",
-      target: safeTarget,
-      current: 0,
-      periodStart,
-      periodEnd,
-      rewardLabel: safeRewardLabel,
-      ...(safeTitle ? { title: safeTitle } : {}),
-      ...(safeDescription ? { description: safeDescription } : {})
-    };
   }
 
   function _extractLibraryMutationItem(response, fallbackReason = "invalid_library_response", expectedId = "") {
@@ -1741,77 +1703,6 @@ const ApiClient = (() => {
     const lang = (language === "en" || language === "es") ? language : "es";
     await updateUser({ language: lang });
     return { ok: true, language: lang };
-  }
-
-  async function getCurrentGoalConfig() {
-    if (_isHttp()) {
-      const res = await _httpJson("GET", "/goals/current");
-      return _normalizeGoalConfigRecord(res?.goal);
-    }
-
-    const state = _safeState();
-    return _normalizeGoalConfigRecord(state?.goals?.[0] || null);
-  }
-
-  async function saveCurrentGoalConfig(patch = {}) {
-    if (_isHttp()) {
-      const res = await _httpJson("PUT", "/goals/current", patch);
-      const goal = _normalizeGoalConfigRecord(res?.goal);
-
-      _emitDataChanged({
-        kind: "goals",
-        action: "update"
-      });
-
-      return { ok: true, goal };
-    }
-
-    const state = _safeState();
-    const currentGoal = _normalizeGoalConfigRecord(state?.goals?.[0] || {});
-    const nextGoal = _normalizeGoalConfigRecord({
-      ...currentGoal,
-      ...patch
-    });
-
-    state.goals = nextGoal ? [nextGoal] : [];
-
-    if (typeof FakeBackend !== "undefined") {
-      FakeBackend.saveState(state);
-    }
-
-    _emitDataChanged({
-      kind: "goals",
-      action: "update"
-    });
-
-    return { ok: true, goal: nextGoal };
-  }
-
-  async function clearCurrentGoalConfig() {
-    if (_isHttp()) {
-      await _httpJson("DELETE", "/goals/current");
-
-      _emitDataChanged({
-        kind: "goals",
-        action: "clear"
-      });
-
-      return { ok: true };
-    }
-
-    const state = _safeState();
-    state.goals = [];
-
-    if (typeof FakeBackend !== "undefined") {
-      FakeBackend.saveState(state);
-    }
-
-    _emitDataChanged({
-      kind: "goals",
-      action: "clear"
-    });
-
-    return { ok: true };
   }
 
   // === NOTIFICACIONES ===
@@ -3688,17 +3579,12 @@ const ApiClient = (() => {
 
     let library = [];
     let state = null;
-    let persistedGoal = null;
 
     if (_isHttp()) {
-      [library, persistedGoal] = await Promise.all([
-        getLibrary(),
-        getCurrentGoalConfig()
-      ]);
+      library = await getLibrary();
     } else {
       state = _safeState();
       library = state.library || [];
-      persistedGoal = _normalizeGoalConfigRecord(state?.goals?.[0] || null);
     }
 
     const fallback = fallbackChallenges[month];
@@ -3742,28 +3628,6 @@ const ApiClient = (() => {
         if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
         return updatedAt.getFullYear() === year && updatedAt.getMonth() === month;
       }).length;
-    }
-
-    if (persistedGoal) {
-      const persistedGoalId = _normalizeDataId(persistedGoal.id);
-      const target = Math.max(1, Number(persistedGoal.target || fallback.target) || fallback.target);
-      const goalEnd = new Date(`${persistedGoal.periodEnd || end.toISOString().slice(0, 10)}T23:59:59`);
-      const goalDiffMs = goalEnd - now;
-      const goalDiffD = Math.max(0, Math.ceil(goalDiffMs / (1000 * 60 * 60 * 24)));
-
-      return {
-        id: persistedGoalId || `goal-${year}-${month + 1}`,
-        title: persistedGoal.title || fallback.title,
-        description: persistedGoal.description || (
-          target === 1
-            ? _t("home_challenge_custom_description_single", { count: target }, "Completa 1 contenido este mes.")
-            : _t("home_challenge_custom_description_plural", { count: target }, `Completa ${target} contenidos este mes.`)
-        ),
-        current: Math.min(completedThisMonth, target),
-        target,
-        daysRemaining: goalDiffD,
-        rewardLabel: persistedGoal.rewardLabel || fallback.rewardLabel
-      };
     }
 
     return {
@@ -4198,9 +4062,6 @@ const ApiClient = (() => {
     getHomeStats,
     getLastActivityDetailed,
     getMonthlyChallenge,
-    getCurrentGoalConfig,
-    saveCurrentGoalConfig,
-    clearCurrentGoalConfig,
     getSuggestions,
     getContinueWatchingItems,
     getBacklogItems,
