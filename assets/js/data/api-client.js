@@ -2990,7 +2990,10 @@ const ApiClient = (() => {
 
     return {
       visibilityFilter: (ui.visibilityFilter && typeof ui.visibilityFilter === "string") ? ui.visibilityFilter : "all",
-      searchTerm: (ui.searchTerm && typeof ui.searchTerm === "string") ? ui.searchTerm : ""
+      searchTerm: (ui.searchTerm && typeof ui.searchTerm === "string") ? ui.searchTerm : "",
+      detailSearch: (ui.detailSearch && typeof ui.detailSearch === "string") ? ui.detailSearch : "",
+      detailType: (ui.detailType && typeof ui.detailType === "string") ? ui.detailType : "all",
+      detailStatus: (ui.detailStatus && typeof ui.detailStatus === "string") ? ui.detailStatus : "all"
     };
   }
 
@@ -3005,6 +3008,9 @@ const ApiClient = (() => {
     const next = { ...ui, ...patch };
     if (typeof next.visibilityFilter !== "string") next.visibilityFilter = "all";
     if (typeof next.searchTerm !== "string") next.searchTerm = "";
+    if (typeof next.detailSearch !== "string") next.detailSearch = "";
+    if (typeof next.detailType !== "string") next.detailType = "all";
+    if (typeof next.detailStatus !== "string") next.detailStatus = "all";
 
     state.user.lists.ui = next;
     if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);

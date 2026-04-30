@@ -68,7 +68,10 @@ const ListsModule = (() => {
     try {
       await ApiClient.setListsUIState?.({
         visibilityFilter: listsFilter,
-        searchTerm
+        searchTerm,
+        detailSearch,
+        detailType,
+        detailStatus
       });
     } catch (e) {
       console.error("ListsModule: failed to persist UI state", e);
@@ -82,9 +85,29 @@ const ListsModule = (() => {
 
       listsFilter = typeof ui.visibilityFilter === "string" ? ui.visibilityFilter : "all";
       searchTerm = typeof ui.searchTerm === "string" ? ui.searchTerm : "";
+      detailSearch = typeof ui.detailSearch === "string" ? ui.detailSearch : "";
+      detailType = typeof ui.detailType === "string" ? ui.detailType : "all";
+      detailStatus = typeof ui.detailStatus === "string" ? ui.detailStatus : "all";
       _syncListsToolbarUI();
     } catch (e) {
       console.error("ListsModule: failed to load UI state", e);
+    }
+  }
+
+  function _syncListDetailFiltersUI() {
+    const qInput = _getEl("listDetailSearch");
+    if (qInput && qInput.value !== detailSearch) {
+      qInput.value = detailSearch;
+    }
+
+    const typeSel = _getEl("listDetailTypeFilter");
+    if (typeSel && typeSel.value !== detailType) {
+      typeSel.value = detailType;
+    }
+
+    const statusSel = _getEl("listDetailStatusFilter");
+    if (statusSel && statusSel.value !== detailStatus) {
+      statusSel.value = detailStatus;
     }
   }
 
@@ -449,20 +472,7 @@ const ListsModule = (() => {
     _setHidden(detail, false);
 
     _renderActiveListDetailHeader(list);
-
-    // Reset filtros al entrar al detalle
-    detailSearch = "";
-    detailType = "all";
-    detailStatus = "all";
-
-    const qInput2 = _getEl("listDetailSearch");
-    if (qInput2) qInput2.value = "";
-
-    const typeSel2 = _getEl("listDetailTypeFilter");
-    if (typeSel2) typeSel2.value = "all";
-
-    const statusSel2 = _getEl("listDetailStatusFilter");
-    if (statusSel2) statusSel2.value = "all";
+    _syncListDetailFiltersUI();
 
     const showing2 = _getEl("listDetailShowing");
     if (showing2) showing2.textContent = "";
@@ -1096,6 +1106,7 @@ const ListsModule = (() => {
       qInput.addEventListener("input", () => {
         const v = String(qInput.value || "").trim().toLowerCase();
         detailSearch = v;
+        _saveUIState();
 
         // Debounce suave para no repintar en cada tecla
         if (__detailSearchTimer) clearTimeout(__detailSearchTimer);
@@ -1109,6 +1120,7 @@ const ListsModule = (() => {
     if (typeSel) {
       typeSel.addEventListener("change", () => {
         detailType = String(typeSel.value || "all");
+        _saveUIState();
         renderActiveListItems();
       });
     }
@@ -1117,6 +1129,7 @@ const ListsModule = (() => {
     if (statusSel) {
       statusSel.addEventListener("change", () => {
         detailStatus = String(statusSel.value || "all");
+        _saveUIState();
         renderActiveListItems();
       });
     }

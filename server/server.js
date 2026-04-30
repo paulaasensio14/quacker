@@ -265,7 +265,10 @@ function _normalizeListsUiState(ui) {
 
   return {
     visibilityFilter: typeof safeUi.visibilityFilter === "string" ? safeUi.visibilityFilter : "all",
-    searchTerm: typeof safeUi.searchTerm === "string" ? safeUi.searchTerm : ""
+    searchTerm: typeof safeUi.searchTerm === "string" ? safeUi.searchTerm : "",
+    detailSearch: typeof safeUi.detailSearch === "string" ? safeUi.detailSearch : "",
+    detailType: typeof safeUi.detailType === "string" ? safeUi.detailType : "all",
+    detailStatus: typeof safeUi.detailStatus === "string" ? safeUi.detailStatus : "all"
   };
 }
 
