@@ -52,6 +52,42 @@ const ListsModule = (() => {
     return t("lists_visibility_private");
   }
 
+  function _syncListsToolbarUI() {
+    const search = document.getElementById("listsSearch");
+    if (search && search.value !== searchTerm) {
+      search.value = searchTerm;
+    }
+
+    document.querySelectorAll(".pill-filter").forEach((btn) => {
+      const isActive = (btn.dataset.filter || "all") === listsFilter;
+      btn.classList.toggle("active", isActive);
+    });
+  }
+
+  async function _saveUIState() {
+    try {
+      await ApiClient.setListsUIState?.({
+        visibilityFilter: listsFilter,
+        searchTerm
+      });
+    } catch (e) {
+      console.error("ListsModule: failed to persist UI state", e);
+    }
+  }
+
+  async function _loadUIState() {
+    try {
+      const ui = await ApiClient.getListsUIState?.();
+      if (!ui || typeof ui !== "object") return;
+
+      listsFilter = typeof ui.visibilityFilter === "string" ? ui.visibilityFilter : "all";
+      searchTerm = typeof ui.searchTerm === "string" ? ui.searchTerm : "";
+      _syncListsToolbarUI();
+    } catch (e) {
+      console.error("ListsModule: failed to load UI state", e);
+    }
+  }
+
   function _formatCreatedListsCount(total) {
     return total === 1
       ? ` · 1 ${t("lists_count_created_singular")}`
@@ -233,6 +269,7 @@ const ListsModule = (() => {
 
       visibleLists = [...allLists]; // lo que se muestra
       updateFilterCounts();
+      _syncListsToolbarUI();
       applyFilters();
 
       const detailOpen = !_getEl("listDetail")?.hidden && !!activeListId;
@@ -924,6 +961,7 @@ const ListsModule = (() => {
       search.addEventListener("input", () => {
         searchTerm = search.value;
         applyFilters();
+        _saveUIState();
       });
     }
 
@@ -932,7 +970,7 @@ const ListsModule = (() => {
 
       // Cuando entramos en "lists", recargamos y pintamos
       if (viewId === "lists") {
-        load();
+        _loadUIState().then(() => load()).catch(console.error);
         return;
       }
 
@@ -997,6 +1035,7 @@ const ListsModule = (() => {
 
         listsFilter = btn.dataset.filter || "all";
         applyFilters();
+        _saveUIState();
       });
     });
 

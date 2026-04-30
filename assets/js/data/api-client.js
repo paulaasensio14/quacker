@@ -2968,6 +2968,50 @@ const ApiClient = (() => {
     return { ok: true, ui: next };
   }
 
+  // === LISTS: UI state (filtro + búsqueda) persistente en user ===
+  function _ensureListsUIState(state) {
+    state.user = state.user || {};
+    state.user.lists = state.user.lists && typeof state.user.lists === "object" && !Array.isArray(state.user.lists)
+      ? state.user.lists
+      : {};
+    state.user.lists.ui = state.user.lists.ui && typeof state.user.lists.ui === "object"
+      ? state.user.lists.ui
+      : {};
+    return state.user.lists.ui;
+  }
+
+  async function getListsUIState() {
+    if (_isHttp()) {
+      return _httpJson("GET", "/user/ui/lists");
+    }
+
+    const state = _safeState();
+    const ui = _ensureListsUIState(state);
+
+    return {
+      visibilityFilter: (ui.visibilityFilter && typeof ui.visibilityFilter === "string") ? ui.visibilityFilter : "all",
+      searchTerm: (ui.searchTerm && typeof ui.searchTerm === "string") ? ui.searchTerm : ""
+    };
+  }
+
+  async function setListsUIState(patch = {}) {
+    if (_isHttp()) {
+      return _httpJson("PATCH", "/user/ui/lists", patch);
+    }
+
+    const state = _safeState();
+    const ui = _ensureListsUIState(state);
+
+    const next = { ...ui, ...patch };
+    if (typeof next.visibilityFilter !== "string") next.visibilityFilter = "all";
+    if (typeof next.searchTerm !== "string") next.searchTerm = "";
+
+    state.user.lists.ui = next;
+    if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
+
+    return { ok: true, ui: next };
+  }
+
   async function getExploreDismissed() {
     if (_isHttp()) {
       const res = await _httpJson("GET", "/user/explore/dismissed");
@@ -4027,6 +4071,8 @@ const ApiClient = (() => {
     getListsCountMapByLibraryKey,
     getLibraryUIState,
     setLibraryUIState,
+    getListsUIState,
+    setListsUIState,
     // listas
     getLists,
     getListsContainingItem,

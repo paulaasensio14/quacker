@@ -260,6 +260,15 @@ function _normalizeLibraryUiState(ui) {
   };
 }
 
+function _normalizeListsUiState(ui) {
+  const safeUi = ui && typeof ui === "object" && !Array.isArray(ui) ? ui : {};
+
+  return {
+    visibilityFilter: typeof safeUi.visibilityFilter === "string" ? safeUi.visibilityFilter : "all",
+    searchTerm: typeof safeUi.searchTerm === "string" ? safeUi.searchTerm : ""
+  };
+}
+
 function _normalizeExploreDismissedIds(list) {
   const seen = new Set();
 
@@ -384,7 +393,8 @@ function _getUserBucket(db, userId) {
     },
     ui: {
       explore: _normalizeExploreUiState(),
-      library: _normalizeLibraryUiState()
+      library: _normalizeLibraryUiState(),
+      lists: _normalizeListsUiState()
     }
   };
 
@@ -417,6 +427,7 @@ function _getUserBucket(db, userId) {
 
   db.users[userId].ui.explore = _normalizeExploreUiState(db.users[userId].ui.explore);
   db.users[userId].ui.library = _normalizeLibraryUiState(db.users[userId].ui.library);
+  db.users[userId].ui.lists = _normalizeListsUiState(db.users[userId].ui.lists);
 
   return db.users[userId];
 }
@@ -467,7 +478,8 @@ app.post("/api/auth/register", (req, res) => {
     },
     ui: {
       explore: _normalizeExploreUiState(),
-      library: _normalizeLibraryUiState()
+      library: _normalizeLibraryUiState(),
+      lists: _normalizeListsUiState()
     }
   };
 
@@ -1396,6 +1408,27 @@ app.patch("/api/user/ui/library", _requireAuth, (req, res) => {
   _writeDb(db);
 
   res.json({ ok: true, ui: bucket.ui.library });
+});
+
+app.get("/api/user/ui/lists", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  res.json(bucket.ui.lists);
+});
+
+app.patch("/api/user/ui/lists", _requireAuth, (req, res) => {
+  const patch = req.body || {};
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.ui.lists = _normalizeListsUiState({
+    ...bucket.ui.lists,
+    ...patch
+  });
+
+  _writeDb(db);
+
+  res.json({ ok: true, ui: bucket.ui.lists });
 });
 
 app.get("/api/user/explore/dismissed", _requireAuth, (req, res) => {
