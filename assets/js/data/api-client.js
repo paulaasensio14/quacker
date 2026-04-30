@@ -1708,15 +1708,24 @@ const ApiClient = (() => {
   // === NOTIFICACIONES ===
   async function addNotification({ title, text = "", color = "#2563eb", icon = "check" } = {}) {
     if (_isHttp()) {
-      return {
-        ok: true,
-        skipped: true,
-        reason: "http_not_supported",
+      const res = await _httpJson("POST", "/notifications", {
         title: title || "Notificación",
         text,
         color,
         icon
-      };
+      });
+
+      const notif = _normalizeNotificationsList([res?.notification || res])[0] || null;
+
+      if (notif) {
+        _emitDataChanged({
+          kind: "notifications",
+          action: "add",
+          notificationId: _normalizeNotificationId(notif?.id)
+        });
+      }
+
+      return _cloneData(notif);
     }
 
     const state = _safeState();
@@ -1755,11 +1764,9 @@ const ApiClient = (() => {
 
   // === RACHA (notificación por hitos) ===
   async function maybeNotifyStreak() {
-    if (_isHttp()) {
-      return { ok: true, notified: false, skipped: true, reason: "http_not_supported" };
-    }
-
-    const state = _safeState();
+    const state = _isHttp()
+      ? { user: (await getUser()) || {} }
+      : _safeState();
     state.user = state.user || {};
 
     // racha actual
@@ -3706,7 +3713,13 @@ const ApiClient = (() => {
   // === NOTIFICACIONES (dashboard) ===
   async function getNotifications() {
     if (_isHttp()) {
-      return [];
+      const res = await _httpJson("GET", "/notifications");
+      const list = Array.isArray(res?.notifications)
+        ? res.notifications
+        : Array.isArray(res)
+          ? res
+          : [];
+      return _cloneCollection(_normalizeNotificationsList(list));
     }
 
     const state = _safeState();
@@ -3716,7 +3729,18 @@ const ApiClient = (() => {
 
   async function dismissNotification(notificationId) {
     if (_isHttp()) {
-      return { ok: true, skipped: true, reason: "http_not_supported" };
+      const targetNotificationId = _normalizeNotificationId(notificationId);
+      if (!targetNotificationId) {
+        return { ok: false, reason: "missing_id" };
+      }
+
+      await _httpJson("DELETE", `/notifications/${encodeURIComponent(targetNotificationId)}`);
+      _emitDataChanged({
+        kind: "notifications",
+        action: "dismiss",
+        notificationId: targetNotificationId
+      });
+      return { ok: true };
     }
 
     const targetNotificationId = _normalizeNotificationId(notificationId);
@@ -3743,7 +3767,9 @@ const ApiClient = (() => {
 
   async function clearNotifications() {
     if (_isHttp()) {
-      return { ok: true, skipped: true, reason: "http_not_supported" };
+      await _httpJson("DELETE", "/notifications");
+      _emitDataChanged({ kind: "notifications", action: "clear_all" });
+      return { ok: true };
     }
 
     const state = _safeState();
@@ -3759,7 +3785,16 @@ const ApiClient = (() => {
 
   async function setNotifications(nextList = []) {
     if (_isHttp()) {
-      return { ok: true, skipped: true, reason: "http_not_supported", count: 0 };
+      const safeList = _normalizeNotificationsList(nextList);
+      const res = await _httpJson("PUT", "/notifications", {
+        notifications: safeList
+      });
+      const list = Array.isArray(res?.notifications)
+        ? _normalizeNotificationsList(res.notifications)
+        : safeList;
+
+      _emitDataChanged({ kind: "notifications", action: "set_all" });
+      return { ok: true, count: list.length };
     }
 
     const state = _safeState();

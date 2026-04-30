@@ -192,6 +192,53 @@ function _appendUserActivity(bucket, activity) {
   return nextActivity;
 }
 
+function _normalizeNotificationId(value) {
+  return String(value || "").trim();
+}
+
+function _normalizeNotificationCreatedAt(value) {
+  const safeValue = String(value || "").trim();
+  if (!safeValue) return "";
+
+  const parsed = new Date(safeValue);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return parsed.toISOString();
+}
+
+function _normalizeUserNotification(entry) {
+  if (!entry || typeof entry !== "object") return null;
+
+  const title = String(entry.title || "").trim();
+  const createdAt = _normalizeNotificationCreatedAt(entry.createdAt) || new Date().toISOString();
+  const notificationId = _normalizeNotificationId(entry.id) || _uid();
+
+  if (!title) return null;
+
+  return {
+    id: notificationId,
+    title,
+    text: String(entry.text || "").trim(),
+    color: String(entry.color || "").trim() || "#2563eb",
+    icon: String(entry.icon || "").trim() || "check",
+    createdAt
+  };
+}
+
+function _normalizeUserNotificationsList(list) {
+  const seen = new Set();
+
+  return (Array.isArray(list) ? list : [])
+    .map((entry) => _normalizeUserNotification(entry))
+    .filter((entry) => {
+      if (!entry || seen.has(entry.id)) return false;
+      seen.add(entry.id);
+      return true;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 200);
+}
+
 function _getDefaultLibraryStatus(type) {
   return type === "book"
     ? "reading"
@@ -296,7 +343,8 @@ function _getUserBucket(db, userId) {
     profile: null,
     library: [],
     lists: [],
-    activities: []
+    activities: [],
+    notifications: []
   };
 
   db.users[userId].library = Array.isArray(db.users[userId].library)
@@ -310,6 +358,10 @@ function _getUserBucket(db, userId) {
   db.users[userId].activities = Array.isArray(db.users[userId].activities)
     ? db.users[userId].activities
     : [];
+
+  db.users[userId].notifications = _normalizeUserNotificationsList(
+    db.users[userId].notifications
+  );
 
   return db.users[userId];
 }
@@ -353,7 +405,8 @@ app.post("/api/auth/register", (req, res) => {
     },
     library: [],
     lists: [],
-    activities: []
+    activities: [],
+    notifications: []
   };
 
   _writeDb(db);
@@ -1151,7 +1204,8 @@ app.patch("/api/user", _requireAuth, (req, res) => {
     "language",
     "bio",
     "avatar",
-    "theme"
+    "theme",
+    "lastStreakNotified"
   ]);
 
   const safePatch = {};
@@ -1208,6 +1262,11 @@ app.patch("/api/user", _requireAuth, (req, res) => {
       return res.status(400).json({ error: "bio_too_long" });
     }
     safePatch.bio = safeBio;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(safePatch, "lastStreakNotified")) {
+    const safeValue = Math.max(0, Number(safePatch.lastStreakNotified || 0) || 0);
+    safePatch.lastStreakNotified = safeValue;
   }
 
   if (Object.prototype.hasOwnProperty.call(safePatch, "theme")) {
@@ -1496,6 +1555,79 @@ app.get("/api/activities", _requireAuth, (req, res) => {
 
   res.json({
     activities: limit > 0 ? activities.slice(0, limit) : activities
+  });
+});
+
+app.get("/api/notifications", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  res.json({
+    notifications: _normalizeUserNotificationsList(bucket.notifications)
+  });
+});
+
+app.post("/api/notifications", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const nextNotification = _normalizeUserNotification(req.body || {});
+
+  if (!nextNotification) {
+    return res.status(400).json({ error: "invalid_notification" });
+  }
+
+  bucket.notifications = _normalizeUserNotificationsList([
+    nextNotification,
+    ...(Array.isArray(bucket.notifications) ? bucket.notifications : [])
+  ]);
+  _writeDb(db);
+
+  res.status(201).json(nextNotification);
+});
+
+app.delete("/api/notifications/:id", _requireAuth, (req, res) => {
+  const targetId = _normalizeNotificationId(req.params.id);
+  if (!targetId) {
+    return res.status(400).json({ error: "missing_id" });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const before = bucket.notifications.length;
+
+  bucket.notifications = _normalizeUserNotificationsList(bucket.notifications).filter(
+    (entry) => entry.id !== targetId
+  );
+
+  if (bucket.notifications.length === before) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  _writeDb(db);
+  res.json({ ok: true, removed: 1 });
+});
+
+app.delete("/api/notifications", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.notifications = [];
+  _writeDb(db);
+
+  res.json({ ok: true, cleared: true });
+});
+
+app.put("/api/notifications", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const nextList = _normalizeUserNotificationsList(req.body?.notifications);
+
+  bucket.notifications = nextList;
+  _writeDb(db);
+
+  res.json({
+    ok: true,
+    notifications: nextList
   });
 });
 
