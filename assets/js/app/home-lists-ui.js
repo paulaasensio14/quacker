@@ -1369,8 +1369,8 @@ async function renderHomeDashboard() {
 
       return `
       <article class="cw-card${completedClass}" data-id="${itemId}">
-        <div class="cw-cover lib-cover" style="background-image:url('${item.cover || ""}');">
-          <span class="lib-cover-type-icon" role="img" aria-label="${typeIconLabel}" title="${typeIconLabel}">
+        <div class="cw-cover" style="background-image:url('${item.cover || ""}');">
+          <span class="cw-cover-type-badge" role="img" aria-label="${typeIconLabel}" title="${typeIconLabel}">
             ${typeIconSvg}
           </span>
         </div>
