@@ -273,6 +273,50 @@ function _normalizeExploreDismissedIds(list) {
     .slice(0, 500);
 }
 
+function _getCurrentGoalPeriod(date = new Date()) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const monthNumber = String(month + 1).padStart(2, "0");
+  const lastDay = String(new Date(year, month + 1, 0).getDate()).padStart(2, "0");
+
+  return {
+    goalId: `goal-${year}-${month + 1}`,
+    periodStart: `${year}-${monthNumber}-01`,
+    periodEnd: `${year}-${monthNumber}-${lastDay}`
+  };
+}
+
+function _normalizeGoalConfig(goal) {
+  if (!goal || typeof goal !== "object" || Array.isArray(goal)) return null;
+
+  const targetNumber = Number(goal.target ?? 0);
+  const safeTarget = Number.isFinite(targetNumber)
+    ? Math.max(1, Math.min(6, Math.round(targetNumber)))
+    : 2;
+  const safeRewardLabel = _normalizeContentText(goal.rewardLabel).slice(0, 80);
+  const safeTitle = _normalizeContentText(goal.title).slice(0, 120);
+  const safeDescription = _normalizeContentText(goal.description).slice(0, 220);
+  const { goalId, periodStart, periodEnd } = _getCurrentGoalPeriod();
+
+  return {
+    id: String(goal.id || "").trim() || goalId,
+    type: "count_completed",
+    target: safeTarget,
+    current: 0,
+    periodStart,
+    periodEnd,
+    rewardLabel: safeRewardLabel,
+    ...(safeTitle ? { title: safeTitle } : {}),
+    ...(safeDescription ? { description: safeDescription } : {})
+  };
+}
+
+function _normalizeGoalsList(list) {
+  const firstGoal = Array.isArray(list) ? list[0] : null;
+  const normalizedGoal = _normalizeGoalConfig(firstGoal);
+  return normalizedGoal ? [normalizedGoal] : [];
+}
+
 function _getDefaultLibraryStatus(type) {
   return type === "book"
     ? "reading"
@@ -379,6 +423,7 @@ function _getUserBucket(db, userId) {
     lists: [],
     activities: [],
     notifications: [],
+    goals: [],
     explore: {
       dismissed: []
     },
@@ -403,6 +448,8 @@ function _getUserBucket(db, userId) {
   db.users[userId].notifications = _normalizeUserNotificationsList(
     db.users[userId].notifications
   );
+
+  db.users[userId].goals = _normalizeGoalsList(db.users[userId].goals);
 
   db.users[userId].explore = db.users[userId].explore && typeof db.users[userId].explore === "object"
     ? db.users[userId].explore
@@ -463,6 +510,7 @@ app.post("/api/auth/register", (req, res) => {
     lists: [],
     activities: [],
     notifications: [],
+    goals: [],
     explore: {
       dismissed: []
     },
@@ -1430,6 +1478,45 @@ app.delete("/api/user/explore/dismissed", _requireAuth, (req, res) => {
   const bucket = _getUserBucket(db, req.session.userId);
 
   bucket.explore.dismissed = [];
+
+  _writeDb(db);
+
+  res.json({ ok: true });
+});
+
+app.get("/api/goals/current", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  res.json({ goal: bucket.goals[0] || null });
+});
+
+app.put("/api/goals/current", _requireAuth, (req, res) => {
+  const patch = req.body || {};
+
+  if (Object.keys(patch).length === 0) {
+    return res.status(400).json({ error: "empty_patch" });
+  }
+
+  const normalizedGoal = _normalizeGoalConfig(patch);
+  if (!normalizedGoal) {
+    return res.status(400).json({ error: "invalid_goal" });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.goals = [normalizedGoal];
+
+  _writeDb(db);
+
+  res.json({ ok: true, goal: normalizedGoal });
+});
+
+app.delete("/api/goals/current", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.goals = [];
 
   _writeDb(db);
 

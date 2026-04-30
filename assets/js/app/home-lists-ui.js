@@ -1738,6 +1738,144 @@ function __closeActivityModal({ restoreFocus = true } = {}) {
   }
 }
 
+function __showChallengeSettingsErrors(errors = []) {
+  const box = document.getElementById("challengeSettingsErrors");
+  if (!box) return;
+
+  if (!errors.length) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  box.style.display = "block";
+  box.innerHTML = errors.map((entry) => `<div class="error-line">${entry}</div>`).join("");
+}
+
+async function __openChallengeSettingsModal() {
+  const modal = document.getElementById("challengeSettingsModal");
+  const targetEl = document.getElementById("challengeGoalTarget");
+  const rewardEl = document.getElementById("challengeRewardLabel");
+
+  if (!modal || !targetEl || !rewardEl) return;
+
+  try {
+    const [goalConfig, challenge] = await Promise.all([
+      ApiClient.getCurrentGoalConfig?.(),
+      ApiClient.getMonthlyChallenge?.()
+    ]);
+
+    const safeTarget = Math.max(
+      1,
+      Math.min(6, Number(goalConfig?.target || challenge?.target || 2) || 2)
+    );
+
+    targetEl.value = String(safeTarget);
+    rewardEl.value = String(goalConfig?.rewardLabel || challenge?.rewardLabel || "").trim();
+    __showChallengeSettingsErrors([]);
+
+    window.UIModal?.open(modal, { initialFocusSelector: "#challengeGoalTarget" });
+  } catch (error) {
+    console.error(error);
+    window.toast?.({
+      title: window.I18n.t("home_challenge_settings_title"),
+      message: window.I18n.t("common_try_again"),
+      type: "error",
+      duration: 2800
+    });
+  }
+}
+
+async function __saveChallengeSettings() {
+  const targetEl = document.getElementById("challengeGoalTarget");
+  const rewardEl = document.getElementById("challengeRewardLabel");
+  const saveBtn = document.getElementById("challengeSettingsSave");
+  const modal = document.getElementById("challengeSettingsModal");
+
+  if (!targetEl || !rewardEl || !saveBtn || !modal) return;
+
+  const target = Math.max(1, Math.min(6, Number(targetEl.value || 0) || 0));
+  const rewardLabel = String(rewardEl.value || "").trim();
+  const errors = [];
+
+  if (!target) {
+    errors.push(window.I18n.t("home_challenge_settings_target_error"));
+  }
+
+  if (!rewardLabel) {
+    errors.push(window.I18n.t("home_challenge_settings_reward_error"));
+  }
+
+  if (errors.length) {
+    __showChallengeSettingsErrors(errors);
+    return;
+  }
+
+  const prevLabel = saveBtn.textContent;
+  saveBtn.disabled = true;
+  saveBtn.textContent = window.I18n.t("home_loading");
+
+  try {
+    assertHomeMutationOk(
+      await ApiClient.saveCurrentGoalConfig({
+        target,
+        rewardLabel
+      }),
+      "save_goal_failed"
+    );
+
+    __showChallengeSettingsErrors([]);
+    window.UIModal?.close(modal);
+
+    window.toast?.({
+      title: window.I18n.t("home_challenge_settings_saved_title"),
+      message: window.I18n.t("home_challenge_settings_saved_text"),
+      type: "success",
+      duration: 2600
+    });
+  } catch (error) {
+    console.error(error);
+    __showChallengeSettingsErrors([window.I18n.t("common_try_again")]);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = prevLabel;
+  }
+}
+
+async function __resetChallengeSettings() {
+  const resetBtn = document.getElementById("challengeSettingsReset");
+  const modal = document.getElementById("challengeSettingsModal");
+
+  if (!resetBtn || !modal) return;
+
+  const prevLabel = resetBtn.textContent;
+  resetBtn.disabled = true;
+  resetBtn.textContent = window.I18n.t("home_loading");
+
+  try {
+    assertHomeMutationOk(
+      await ApiClient.clearCurrentGoalConfig(),
+      "clear_goal_failed"
+    );
+
+    __showChallengeSettingsErrors([]);
+    window.UIModal?.close(modal);
+
+    window.toast?.({
+      title: window.I18n.t("home_challenge_settings_reset_title"),
+      message: window.I18n.t("home_challenge_settings_reset_text"),
+      type: "success",
+      duration: 2600
+    });
+  } catch (error) {
+    console.error(error);
+    __showChallengeSettingsErrors([window.I18n.t("common_try_again")]);
+  } finally {
+    resetBtn.disabled = false;
+    resetBtn.textContent = prevLabel;
+  }
+}
+
 window.HomeUI = {
     init() {
     // Evitar doble init
@@ -1794,6 +1932,34 @@ window.HomeUI = {
         document.querySelector("main.app-main")?.scrollTo({ top: 0, behavior: "smooth" });
       });
     }
+
+    window.UIModal?.bind("challengeSettingsModal", {
+      closeSelectors: ["#closeChallengeSettingsModal", "#challengeSettingsCancel"],
+      initialFocusSelector: "#challengeGoalTarget"
+    });
+
+    const btnChallengeSettings = document.getElementById("btnChallengeSettings");
+    if (btnChallengeSettings) {
+      btnChallengeSettings.addEventListener("click", () => {
+        __openChallengeSettingsModal();
+      });
+    }
+
+    document.getElementById("challengeSettingsSave")?.addEventListener("click", () => {
+      __saveChallengeSettings();
+    });
+
+    document.getElementById("challengeSettingsReset")?.addEventListener("click", () => {
+      __resetChallengeSettings();
+    });
+
+    document.getElementById("challengeGoalTarget")?.addEventListener("change", () => {
+      __showChallengeSettingsErrors([]);
+    });
+
+    document.getElementById("challengeRewardLabel")?.addEventListener("input", () => {
+      __showChallengeSettingsErrors([]);
+    });
 
     // Botón de "Progreso hecho" en Última actividad
     const markLastActivityBtn = document.querySelector("#btnMarkLastActivity");
