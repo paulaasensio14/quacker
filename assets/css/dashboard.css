@@ -3660,7 +3660,8 @@ main.app-main {
 }
 
 .modal-field input,
-.modal-field select {
+.modal-field select,
+#listModal .modal-field textarea {
   width: 100%;
   border-radius: 12px;
   border: 2px solid var(--border-strong);
@@ -3668,6 +3669,27 @@ main.app-main {
   font-family: inherit;
   font-size: 0.9rem;
   outline: none;
+  background: #fff;
+  color: var(--text-main);
+}
+
+#listModal .modal-field textarea {
+  min-height: 96px;
+  padding: 12px;
+  border-radius: 16px;
+  resize: vertical;
+  line-height: 1.45;
+  box-shadow: 3px 3px 0 var(--border-strong);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast), background var(--transition-fast);
+}
+
+#listModal .modal-field textarea::placeholder {
+  color: var(--text-muted);
+}
+
+#listModal .modal-field textarea:focus {
+  background: #fffdf2;
+  box-shadow: 2px 2px 0 var(--border-strong);
 }
 
 .modal-actions {
