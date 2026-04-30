@@ -2969,13 +2969,19 @@ main.app-main {
 }
 
 .list-item-card{
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04);
+  border-radius: 22px;
+  border: 3px solid var(--border-strong);
+  background: var(--bg-card);
+  box-shadow: 3px 3px 0 var(--border-strong);
   overflow: hidden;
   display:flex;
   flex-direction: column;
-  transition: transform 140ms ease, opacity 140ms ease;
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+}
+
+.list-item-card:hover{
+  transform: translateY(1px);
+  box-shadow: 2px 2px 0 var(--border-strong);
 }
 
 .list-item-card.is-leaving{
@@ -2984,22 +2990,24 @@ main.app-main {
 }
 
 .list-item-cover{
-  height: 110px;
-  background: rgba(255,255,255,0.06);
+  height: 130px;
+  background: #111827;
   background-size: cover;
   background-position: center;
+  border-bottom: 3px solid var(--border-strong);
 }
 
 .list-item-body{
-  padding: 12px;
+  padding: 10px 12px 12px;
   display:grid;
   gap: 8px;
 }
 
 .list-item-title{
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   line-height: 1.15;
+  color: var(--text-main);
 }
 
 .list-item-sub{
@@ -3012,9 +3020,20 @@ main.app-main {
   font-size: 12px;
 }
 
+.list-item-sub span:first-child{
+  display:inline-flex;
+  align-items:center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(2, 6, 23, 0.14);
+  background: var(--bg-body);
+}
+
 .list-item-actions{
   display:flex;
   justify-content: flex-end;
+  margin-top: 2px;
 }
 
 .list-item-remove{
