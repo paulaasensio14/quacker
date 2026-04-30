@@ -1636,10 +1636,68 @@ const LibraryUI = (() => {
       // Marcador temporal para deshacer activities creadas por ESTE click
       const sinceIso = new Date(Date.now() - 2000).toISOString();
 
-      const res = assertLibraryMutationOk(
-        await ApiClient.resumeLibraryItem(normalizedItemId),
+      const sourceItem = snapshotBefore || allItems.find((item) => (
+        _normalizeLibraryItemId(item?.id) === normalizedItemId
+      ));
+
+      if (!sourceItem) {
+        throw createLibraryMutationError({ ok: false, reason: "not_found" }, "not_found");
+      }
+
+      const nowIso = new Date().toISOString();
+      const nextItem = {
+        ...sourceItem,
+        meta: {
+          ...(sourceItem.meta || {})
+        },
+        lastActivityAt: nowIso
+      };
+
+      const currentProgress = Math.max(0, Math.min(100, Number(sourceItem.progress ?? 0)));
+      let nextProgress = currentProgress;
+
+      if (nextItem.type === "book") {
+        const totalPages = Math.max(0, Math.round(Number(nextItem.meta.totalPages || 0)));
+        const currentPages = Math.max(0, Math.round(Number(nextItem.meta.pagesRead || 0)));
+
+        if (totalPages > 0) {
+          const stepPages = Math.max(1, Math.ceil(totalPages * 0.1));
+          const nextPages = Math.min(totalPages, currentPages + stepPages);
+
+          nextItem.meta.totalPages = totalPages;
+          nextItem.meta.pagesRead = nextPages;
+          nextProgress = Math.round((nextPages / totalPages) * 100);
+        } else {
+          nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
+        }
+
+        nextItem.status = nextProgress >= 100 ? "completed" : "reading";
+      } else if (nextItem.type === "serie") {
+        nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
+        nextItem.status = nextProgress >= 100 ? "completed" : "watching";
+      } else if (nextItem.type === "game") {
+        nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
+        nextItem.status = nextProgress >= 100 ? "completed" : "playing";
+      } else {
+        nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
+        nextItem.status = nextProgress >= 100 ? "completed" : "watching";
+      }
+
+      nextItem.progress = Math.max(0, Math.min(100, nextProgress));
+
+      const updatedItem = assertLibraryItemWithId(
+        await ApiClient.updateLibraryItem(nextItem, { logActivity: true }),
         "resume_failed"
       );
+
+      const res = {
+        ok: true,
+        item: updatedItem,
+        justCompleted: Number(updatedItem.progress ?? 0) >= 100 || updatedItem.status === "completed",
+        deltaLabel: nextItem.type === "book" && Number(nextItem.meta?.totalPages || 0) > 0
+          ? `${nextItem.meta.pagesRead}/${nextItem.meta.totalPages} ${t("library_pages")}`
+          : `${Math.round(Number(updatedItem.progress ?? 0))}%`
+      };
 
       const justCompleted = !!res?.justCompleted;
       const title = justCompleted
