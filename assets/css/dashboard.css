@@ -1013,28 +1013,6 @@ main.app-main {
   flex: 0 0 auto;
 }
 
-.explore-reset-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 10px;
-  border: 2px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--bg-card);
-  color: var(--text-main);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  box-shadow: 2px 2px 0 var(--border-strong);
-  cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.explore-reset-btn:hover {
-  transform: translateY(1px);
-  box-shadow: 1px 1px 0 var(--border-strong);
-}
-
 .explore-section {
  display: flex;
  flex-direction: column;
