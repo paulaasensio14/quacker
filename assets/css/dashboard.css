@@ -4770,9 +4770,9 @@ body.dark-theme .notif-mark-btn:hover {
 }
 
 body.dark-theme #view-library .pill-filter {
-  background: #0b1724;
-  color: var(--text-main);
-  border-color: var(--border-soft);
+  background: #102235;
+  color: rgba(249, 250, 251, 0.86);
+  border-color: #010b16;
 }
 
 body.dark-theme #view-library .pill-filter.active {
@@ -4792,7 +4792,7 @@ body.dark-theme #view-library .pill-filter.active span.count {
 }
 
 body.dark-theme #view-library .library-filter-label {
-  color: rgba(249, 250, 251, 0.72);
+  color: rgba(249, 250, 251, 0.82);
 }
 
 body.dark-theme #view-library .library-sort select {
