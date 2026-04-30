@@ -262,10 +262,12 @@ function _normalizeLibraryUiState(ui) {
 
 function _normalizeListsUiState(ui) {
   const safeUi = ui && typeof ui === "object" && !Array.isArray(ui) ? ui : {};
+  const safeListsViewMode = String(safeUi.listsViewMode || "").trim();
 
   return {
     visibilityFilter: typeof safeUi.visibilityFilter === "string" ? safeUi.visibilityFilter : "all",
     searchTerm: typeof safeUi.searchTerm === "string" ? safeUi.searchTerm : "",
+    listsViewMode: safeListsViewMode === "list" ? "list" : "cards",
     detailSearch: typeof safeUi.detailSearch === "string" ? safeUi.detailSearch : "",
     detailType: typeof safeUi.detailType === "string" ? safeUi.detailType : "all",
     detailStatus: typeof safeUi.detailStatus === "string" ? safeUi.detailStatus : "all"

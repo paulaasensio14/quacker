@@ -2731,9 +2731,8 @@ main.app-main {
   height: 72px;
   min-height: 72px;
   margin: 0;
-  border: 2px solid var(--border-strong);
   border-radius: 18px;
-}
+} 
 
 #listsGrid.lists-grid--list .list-card-header,
 #listsGrid.lists-grid--list .list-meta,
@@ -3310,7 +3309,6 @@ main.app-main {
   background:
     radial-gradient(circle at top left, rgba(255, 201, 40, 0.22), transparent 46%),
     #111827;
-  border: 2px solid var(--border-strong);
 }
 
 .list-cover-collage {
@@ -3319,9 +3317,9 @@ main.app-main {
   grid-template-rows: repeat(2, minmax(0, 1fr));
   width: 100%;
   height: 100%;
-  gap: 3px;
-  padding: 3px;
-  background: var(--border-strong);
+  gap: 0;
+  padding: 0;
+  background: #111827;
 }
 
 #listsGrid.lists-grid--list .list-cover-collage {
@@ -3341,7 +3339,7 @@ main.app-main {
   object-fit: cover;
   display: block;
   min-width: 0;
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 .list-cover--1 .list-cover-collage {
