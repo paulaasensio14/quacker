@@ -1558,6 +1558,36 @@ app.get("/api/activities", _requireAuth, (req, res) => {
   });
 });
 
+app.delete("/api/activities", _requireAuth, (req, res) => {
+  const itemId = String(req.query.itemId || "").trim();
+  const sinceIso = _normalizeActivityCreatedAt(req.query.since);
+
+  if (!itemId || !sinceIso) {
+    return res.status(400).json({ error: "missing_params" });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const before = Array.isArray(bucket.activities) ? bucket.activities.length : 0;
+
+  bucket.activities = (Array.isArray(bucket.activities) ? bucket.activities : []).filter((entry) => {
+    const targetId = String(entry?.targetId || "").trim();
+    const type = _normalizeActivityType(entry?.type);
+    const createdAt = _normalizeActivityCreatedAt(entry?.createdAt);
+
+    if (targetId !== itemId) return true;
+    if (!["progress", "completed"].includes(type)) return true;
+    if (!createdAt) return true;
+
+    return new Date(createdAt) < new Date(sinceIso);
+  });
+
+  const removed = before - bucket.activities.length;
+  _writeDb(db);
+
+  res.json({ ok: true, removed });
+});
+
 app.get("/api/notifications", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);

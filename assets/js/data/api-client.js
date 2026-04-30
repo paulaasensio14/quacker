@@ -1811,17 +1811,39 @@ const ApiClient = (() => {
     const normalizedItemId = _normalizeDataId(itemId);
     if (!normalizedItemId) return { ok: false, reason: "missing_params" };
 
-    // En HTTP aún no existe Activities real en backend.
-    // El undo visual/persistente del item se hace restaurando snapshot con updateLibraryItem().
     if (_isHttp()) {
+      const safeSinceIso = String(sinceIso || "").trim();
+      const res = await _httpJson(
+        "DELETE",
+        `/activities?itemId=${encodeURIComponent(normalizedItemId)}&since=${encodeURIComponent(safeSinceIso)}`
+      );
+      const removed = Number(res?.removed || 0);
+
       _emitDataChanged({
         kind: "activities",
         action: "undo_since",
         itemId: normalizedItemId,
-        removed: 0
+        removed
       });
 
-      return { ok: true, removed: 0, mode: "http_noop" };
+      try {
+        const stats = await getHomeStats();
+        const streak = Number(stats?.streakDays || 0);
+
+        const milestones = [3, 7, 14, 30];
+        const achievedNow = milestones.filter((m) => streak >= m).pop() || 0;
+
+        const user = (await getUser()) || {};
+        const lastNotified = Number(user.lastStreakNotified || 0);
+
+        if (lastNotified > achievedNow) {
+          await updateUser({ lastStreakNotified: achievedNow });
+        }
+      } catch (e) {
+        console.error("undoActivitiesForItemSince: reconcile streak failed", e);
+      }
+
+      return { ok: true, removed, mode: "http" };
     }
 
     if (typeof FakeBackend === "undefined" || typeof FakeBackend.removeActivitiesForItemSince !== "function") {
