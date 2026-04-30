@@ -3695,16 +3695,10 @@ const ApiClient = (() => {
       activities = state.activities || [];
     }
 
-    const BACKLOG_MIN_DAYS_BY_TYPE = {
-      serie: 3,
-      book: 5,
-      game: 7,
-      pelicula: 10,
-      default: minDays
-    };
+    const safeMinDays = Math.max(0, Number(minDays) || 0);
 
-    function minDaysForType(type) {
-      return BACKLOG_MIN_DAYS_BY_TYPE[type] ?? BACKLOG_MIN_DAYS_BY_TYPE.default;
+    function minDaysForType() {
+      return safeMinDays;
     }
 
     const lastActivityMap = new Map();
@@ -3742,7 +3736,17 @@ const ApiClient = (() => {
     const candidates = library
       .filter((item) => {
         const pct = Number(item.progress ?? 0);
-        return pct > 0 && pct < 100 && item.status !== "completed";
+        const status = String(item.status || "").trim().toLowerCase();
+        const isActiveStatus =
+          status === "in_progress" ||
+          status === "watching" ||
+          status === "reading" ||
+          status === "playing";
+
+        if (pct >= 100 || status === "completed") return false;
+        if (item.type === "pelicula") return false;
+
+        return pct > 0 || isActiveStatus;
       })
       .map((item) => {
         const itemId = _normalizeDataId(item?.id);
