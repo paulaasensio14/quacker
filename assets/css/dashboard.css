@@ -2677,6 +2677,11 @@ main.app-main {
   background: var(--bg-yellow);
 }
 
+#view-lists .pill-filter[data-filter="public"],
+#view-lists .pill-filter[data-filter="collab"] {
+  display: none;
+}
+
 .view-toggle {
   display: inline-flex;
   border-radius: 999px;
