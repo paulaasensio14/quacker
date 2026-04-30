@@ -2125,33 +2125,43 @@ const ExploreModule = (() => {
 
       const syncedExploreItem = _getExploreItemByEid(activeItem.eid);
       const activeDetailItem = _getActiveDetailItem();
-      const baseFresh =
-        syncedExploreItem ||
-        (_normalizeId(activeDetailItem?.eid) === _normalizeId(activeItem.eid) ? activeDetailItem : null) ||
-        activeItem;
 
-      const resultListsCount = Number(result?.listsCount);
-      const nextListsCount = Number.isFinite(resultListsCount)
-        ? Math.max(0, resultListsCount)
-        : result?.already
-          ? Math.max(0, Number(baseFresh?.__listsCount || 0))
-          : Math.max(0, Number(baseFresh?.__listsCount || 0) + 1);
+      const baseFresh =
+        scope === "detail" && _normalizeId(activeDetailItem?.eid) === _normalizeId(activeItem.eid)
+          ? activeDetailItem
+          : syncedExploreItem || activeItem;
+
+      let authoritativeListsCount = Math.max(0, Number(baseFresh?.__listsCount || 0));
+
+      try {
+        const containingLists = await ApiClient.getListsContainingItem(libraryItemId);
+        authoritativeListsCount = Array.isArray(containingLists)
+          ? containingLists.length
+          : authoritativeListsCount;
+      } catch (error) {
+        console.error("[Explore] failed to refresh item lists count", error);
+      }
 
       const fresh = {
         ...baseFresh,
         __inLibrary: true,
         __libraryItemId: libraryItemId,
-        __listsCount: nextListsCount
+        __listsCount: authoritativeListsCount
       };
 
       if (scope === "detail") {
         _setActiveDetailState({
-          item: fresh
+          item: fresh,
+          loading: false,
+          error: false
         });
+
+        window.DetailModule?.render?.(fresh);
+      } else {
+        _render();
+        _syncActiveExploreSurfaces(activeItem.eid);
       }
 
-      _render();
-      _syncActiveExploreSurfaces(activeItem.eid);
       _closeExploreListPicker(scope);
 
       if (feedbackMessage) {
