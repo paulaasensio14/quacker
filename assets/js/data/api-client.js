@@ -2005,6 +2005,17 @@ const ApiClient = (() => {
 
         await updateLibraryItem(updated, { logActivity: false });
 
+        if (daysSinceLast >= 7) {
+          const hot = daysSinceLast >= 14;
+
+          await addNotification({
+            title: `Retomado: ${item.title}`,
+            text: `Volviste después de ${daysSinceLast} días.`,
+            color: hot ? "#f97316" : "#2563eb",
+            icon: hot ? "flame" : "resume"
+          });
+        }
+
         return {
           ok: true,
           daysSinceLast,
@@ -2033,6 +2044,17 @@ const ApiClient = (() => {
       };
 
       await updateLibraryItem(updated, { logActivity: false });
+
+      if (daysSinceLast >= 7) {
+        const hot = daysSinceLast >= 14;
+
+        await addNotification({
+          title: `Retomado: ${item.title}`,
+          text: `Volviste después de ${daysSinceLast} días.`,
+          color: hot ? "#f97316" : "#2563eb",
+          icon: hot ? "flame" : "resume"
+        });
+      }
 
       return {
         ok: true,
@@ -2208,6 +2230,15 @@ const ApiClient = (() => {
 
       const res = await _httpJson("PATCH", `/library/${encodeURIComponent(targetId)}`, payload);
       const item = _extractLibraryMutationItem(res, "invalid_complete_response", targetId);
+
+      await addNotification({
+        title: _t("library_status_completed", null, "Completado"),
+        text: item.title || current.title,
+        color: "#16a34a",
+        icon: "check"
+      });
+
+      await maybeNotifyStreak();
 
       _emitDataChanged({ kind: "library", action: "complete", itemId: targetId });
       return { ok: true, itemId: targetId, title: item.title || current.title };
