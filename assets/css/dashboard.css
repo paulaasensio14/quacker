@@ -2743,6 +2743,10 @@ main.app-main {
   margin-bottom: 14px;
 }
 
+#listsGrid.lists-grid--cards .list-count {
+  display: none;
+}
+
 #listsGrid.lists-grid--list .list-card-header {
   align-items: flex-start;
   gap: 18px;
@@ -3355,20 +3359,24 @@ main.app-main {
 .list-cover--empty {
   display: grid;
   place-items: center;
+  background:
+    radial-gradient(circle at center, rgba(255, 201, 40, 0.14), transparent 42%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    var(--bg-body);
 }
 
 .list-cover-empty-mark {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 3px solid var(--border-strong);
   background: var(--bg-yellow);
-  box-shadow: 3px 3px 0 var(--border-strong);
+  box-shadow: 2px 2px 0 var(--border-strong);
   color: #111827;
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 900;
 }
 
