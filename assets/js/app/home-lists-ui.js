@@ -1362,6 +1362,10 @@ async function renderHomeDashboard() {
       const footerLabel = pct >= 100 ? window.I18n.t("home_continue_completed") : `${pct}%`;
       const isCompleted = pct >= 100;
       const typeIconSvg = window.LibraryUI?.renderLibraryTypeIcon?.(item.type) || getTypeIconSvg(item.type);
+      const constrainedTypeIconSvg = typeIconSvg.replace(
+        "<svg",
+        '<svg style="width:20px;height:20px;display:block;"'
+      );
       const typeIconLabel = typeLabel(item.type);
       const buttonInnerHtml = isCompleted
         ? window.I18n.t("home_continue_completed")
@@ -1375,8 +1379,9 @@ async function renderHomeDashboard() {
             role="img"
             aria-label="${typeIconLabel}"
             title="${typeIconLabel}"
+            style="top:10px;right:10px;left:auto;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;"
           >
-            ${typeIconSvg}
+            ${constrainedTypeIconSvg}
           </span>
         </div>
         <div class="cw-body">
