@@ -690,18 +690,32 @@ const LibraryUI = (() => {
       ? String(item.status).trim()
       : "not_started";
 
+    const isStartedStatus =
+      status === "in_progress" ||
+      status === "watching" ||
+      status === "reading" ||
+      status === "playing";
+
     if (type === "book") {
       const read = Number(meta.pagesRead || 0);
       const total = Number(meta.totalPages || 0);
+
       if (Number.isFinite(read) && Number.isFinite(total) && total > 0) {
-        meta.pagesRead = Math.max(0, Math.min(total, read));
         meta.totalPages = total;
+        meta.pagesRead = Math.max(0, Math.min(total, read));
+
+        if (isStartedStatus && meta.pagesRead <= 0) {
+          meta.pagesRead = 1;
+        }
+
         progress = clampProgress((meta.pagesRead / total) * 100);
+      } else if (isStartedStatus && progress <= 0) {
+        progress = 10;
       }
     }
 
-    if (type === "pelicula") {
-      progress = status === "completed" || progress >= 100 ? 100 : 0;
+    if ((type === "pelicula" || type === "game" || type === "serie") && isStartedStatus && progress <= 0) {
+      progress = 10;
     }
 
     if (progress >= 100) {
