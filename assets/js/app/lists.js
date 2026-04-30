@@ -412,6 +412,13 @@ const ListsModule = (() => {
       _syncListsToolbarUI();
       applyFilters();
 
+      requestAnimationFrame(() => {
+        const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
+        if (isListsActive) {
+          render(false);
+        }
+      });
+
       const detailOpen = !_getEl("listDetail")?.hidden && !!activeListId;
       const normalizedActiveListId = _normalizeId(activeListId);
 
