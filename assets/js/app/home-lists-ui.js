@@ -155,7 +155,7 @@ async function renderHomeDashboard() {
       ApiClient.getHomeStats(),
       ApiClient.getLastActivityDetailed(),
       ApiClient.getMonthlyChallenge(),
-      ApiClient.getBacklogItems(4,7)
+      ApiClient.getBacklogItems(4,1)
     ]);
 
     window._lastActivityForButton = lastActivity;
