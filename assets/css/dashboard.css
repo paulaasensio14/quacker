@@ -538,6 +538,61 @@ main.app-main {
 .view { display: none; }
 .view.is-active { display: block; }
 
+/* ===== LIST DETAIL FILTER SELECTS ===== */
+
+#view-lists.is-detail-open #listDetailTypeFilter,
+#view-lists.is-detail-open #listDetailStatusFilter {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  min-height: 42px;
+  min-width: 124px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background-color: var(--bg-card);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 13px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+  box-shadow: 2px 2px 0 var(--border-strong);
+  color: var(--text-main);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1;
+  outline: none;
+  padding: 0 34px 0 14px;
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+#view-lists.is-detail-open #listDetailTypeFilter:hover,
+#view-lists.is-detail-open #listDetailStatusFilter:hover {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
+#view-lists.is-detail-open #listDetailTypeFilter:focus-visible,
+#view-lists.is-detail-open #listDetailStatusFilter:focus-visible {
+  box-shadow:
+    2px 2px 0 var(--border-strong),
+    0 0 0 3px rgba(255, 201, 40, 0.35);
+}
+
+#view-lists.is-detail-open #listDetailTypeFilter::-ms-expand,
+#view-lists.is-detail-open #listDetailStatusFilter::-ms-expand {
+  display: none;
+}
+
 /* ===== EXPLORE BADGE ===== */
 
 .explore-card-overlay {
