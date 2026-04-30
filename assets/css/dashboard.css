@@ -4809,6 +4809,32 @@ body.dark-theme #view-library .library-sort::after {
   border-color: var(--text-main);
 }
 
+body.dark-theme #progressModal .modal-field input,
+body.dark-theme #progressModal .modal-field select {
+  background: #081523;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+body.dark-theme #progressModal .modal-field input::placeholder {
+  color: rgba(249, 250, 251, 0.48);
+}
+
+body.dark-theme #progressModal .modal-field input:focus,
+body.dark-theme #progressModal .modal-field select:focus {
+  background: #0b1724;
+  border-color: var(--bg-yellow);
+  box-shadow:
+    2px 2px 0 var(--border-strong),
+    0 0 0 3px rgba(255, 201, 40, 0.22);
+}
+
+body.dark-theme #progressModal .modal-close {
+  background: #f9fafb;
+  color: #111827;
+}
+
 .lib-primary-btn:disabled {
   opacity:0.6;
   cursor:not-allowed;
