@@ -206,6 +206,79 @@ const ApiClient = (() => {
     return (Array.isArray(items) ? items : []).map((item) => _cloneData(item));
   }
 
+  function _getCurrentUiLang() {
+    return window.I18n?.getLang?.() === "en" ? "en" : "es";
+  }
+
+  function _resolveMonthlyChallengeText(value, lang, fallback = "") {
+    if (typeof value === "string") {
+      return String(value).trim() || fallback;
+    }
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const localizedValue =
+        value[lang] ??
+        value.es ??
+        value.en ??
+        "";
+
+      return String(localizedValue || "").trim() || fallback;
+    }
+
+    return fallback;
+  }
+
+  function _buildDefaultMonthlyChallenge(monthIndex = 0, lang = "es") {
+    const monthNumber = Math.max(1, Math.min(12, Number(monthIndex) + 1));
+    const target = monthNumber === 7 || monthNumber === 12 ? 3 : monthNumber === 1 || monthNumber === 4 || monthNumber === 8 ? 1 : 2;
+
+    if (lang === "en") {
+      return {
+        id: `goal-${monthNumber}`,
+        title: "Monthly challenge",
+        description: `Complete ${target} ${target === 1 ? "item" : "items"} this month.`,
+        target,
+        rewardLabel: "Quacker monthly badge"
+      };
+    }
+
+    return {
+      id: `goal-${monthNumber}`,
+      title: "Reto del mes",
+      description: `Completa ${target} ${target === 1 ? "contenido" : "contenidos"} este mes.`,
+      target,
+      rewardLabel: "Insignia mensual de Quacker"
+    };
+  }
+
+  function _getEditorialMonthlyChallenges() {
+    return Array.isArray(window.QuackerMonthlyChallenges) ? window.QuackerMonthlyChallenges : [];
+  }
+
+  function _resolveMonthlyChallengeConfig(monthIndex = 0) {
+    const lang = _getCurrentUiLang();
+    const currentMonth = Math.max(1, Math.min(12, Number(monthIndex) + 1));
+    const currentEntry = _getEditorialMonthlyChallenges().find((entry) => Number(entry?.month) === currentMonth);
+    const fallback = _buildDefaultMonthlyChallenge(monthIndex, lang);
+
+    if (!currentEntry || typeof currentEntry !== "object") {
+      return fallback;
+    }
+
+    const targetNumber = Number(currentEntry.target ?? fallback.target);
+    const safeTarget = Number.isFinite(targetNumber)
+      ? Math.max(1, Math.min(6, Math.round(targetNumber)))
+      : fallback.target;
+
+    return {
+      id: _normalizeDataId(currentEntry.id) || fallback.id,
+      title: _resolveMonthlyChallengeText(currentEntry.title, lang, fallback.title),
+      description: _resolveMonthlyChallengeText(currentEntry.description, lang, fallback.description),
+      target: safeTarget,
+      rewardLabel: _resolveMonthlyChallengeText(currentEntry.rewardLabel, lang, fallback.rewardLabel)
+    };
+  }
+
   function _extractLibraryMutationItem(response, fallbackReason = "invalid_library_response", expectedId = "") {
     const item = response?.item && typeof response.item === "object"
       ? response.item
@@ -3486,93 +3559,6 @@ const ApiClient = (() => {
     const year = now.getFullYear();
     const month = now.getMonth();
 
-    const fallbackChallenges = [
-      {
-        id: "jan-reset",
-        title: "Reto de enero: Nuevo comienzo",
-        description: "Completa 1 contenido este mes.",
-        target: 1,
-        rewardLabel: "Insignia Nuevo Comienzo"
-      },
-      {
-        id: "feb-focus",
-        title: "Reto de febrero: Mes en foco",
-        description: "Completa 2 contenidos este mes.",
-        target: 2,
-        rewardLabel: "Insignia Mes en Foco"
-      },
-      {
-        id: "mar-momentum",
-        title: "Reto de marzo: Coge ritmo",
-        description: "Completa 2 contenidos este mes.",
-        target: 2,
-        rewardLabel: "Insignia Coge Ritmo"
-      },
-      {
-        id: "apr-spring",
-        title: "Reto de abril: Primavera activa",
-        description: "Completa 1 contenido este mes.",
-        target: 1,
-        rewardLabel: "Insignia Primavera Activa"
-      },
-      {
-        id: "may-streak",
-        title: "Reto de mayo: Sigue avanzando",
-        description: "Completa 2 contenidos este mes.",
-        target: 2,
-        rewardLabel: "Insignia Sigue Avanzando"
-      },
-      {
-        id: "jun-summer",
-        title: "Reto de junio: Empieza el verano",
-        description: "Completa 2 contenidos este mes.",
-        target: 2,
-        rewardLabel: "Insignia Inicio de Verano"
-      },
-      {
-        id: "jul-marathon",
-        title: "Reto de julio: Maratón de verano",
-        description: "Completa 3 contenidos este mes.",
-        target: 3,
-        rewardLabel: "Insignia Maratón de Verano"
-      },
-      {
-        id: "aug-chill",
-        title: "Reto de agosto: Relax con ritmo",
-        description: "Completa 1 contenido este mes.",
-        target: 1,
-        rewardLabel: "Insignia Relax con Ritmo"
-      },
-      {
-        id: "sep-back",
-        title: "Reto de septiembre: Vuelta al hábito",
-        description: "Completa 2 contenidos este mes.",
-        target: 2,
-        rewardLabel: "Insignia Vuelta al Hábito"
-      },
-      {
-        id: "oct-spooky",
-        title: "Reto de octubre: Especial de otoño",
-        description: "Completa 2 contenidos este mes.",
-        target: 2,
-        rewardLabel: "Insignia Especial de Otoño"
-      },
-      {
-        id: "nov-push",
-        title: "Reto de noviembre: Último empujón",
-        description: "Completa 2 contenidos este mes.",
-        target: 2,
-        rewardLabel: "Insignia Último Empujón"
-      },
-      {
-        id: "dec-finish",
-        title: "Reto de diciembre: Cierra el año",
-        description: "Completa 3 contenidos este mes.",
-        target: 3,
-        rewardLabel: "Insignia Cierre del Año"
-      }
-    ];
-
     const end = new Date(year, month + 1, 0, 23, 59, 59);
     const diffMs = end - now;
     const diffD = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
@@ -3587,7 +3573,7 @@ const ApiClient = (() => {
       library = state.library || [];
     }
 
-    const fallback = fallbackChallenges[month];
+    const fallback = _resolveMonthlyChallengeConfig(month);
     const fallbackGoalId = _normalizeDataId(fallback?.id) || `goal-${year}-${month + 1}`;
 
     let completedThisMonth = 0;
