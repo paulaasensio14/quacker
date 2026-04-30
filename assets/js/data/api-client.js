@@ -3342,9 +3342,11 @@ const ApiClient = (() => {
         getLibrary(),
         _getHttpActivities({ limit: 50 })
       ]);
-      const effectiveActivities = activities.length > 0
-        ? activities
-        : _buildSyntheticActivitiesFromLibrary(library);
+      const effectiveActivities = [
+        ...activities,
+        ..._buildSyntheticActivitiesFromLibrary(library)
+      ];
+
       const last = [...effectiveActivities]
         .filter((a) => a && _normalizeDataId(a.targetId) && a.createdAt)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;

@@ -56,9 +56,13 @@ function formatMetaLine(item) {
     return "";
   }
 
-  if (type === "pelicula" || type === "game") {
-    const pct = Math.max(0, Math.min(100, Number(item?.progressPercent ?? item?.progress ?? 0)));
-    return pct ? `${pct}%` : "";
+  if (type === "pelicula") {
+    return "";
+  }
+
+  if (type === "game") {
+    const hours = Math.max(0, Number(meta.hoursPlayed || 0));
+    return hours > 0 ? `${hours} h` : "";
   }
 
   return "";

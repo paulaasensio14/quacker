@@ -898,6 +898,11 @@ const LibraryUI = (() => {
       }
     }
 
+    if (item.type === "game") {
+      const hours = Math.max(0, Number(item.meta?.hoursPlayed || 0));
+      if (hours > 0) return `${hours} h`;
+    }
+
     return `${pct}% ${t("library_progress_completed_suffix")}`;
   }
 
@@ -925,12 +930,9 @@ const LibraryUI = (() => {
     }
 
     if (type === "game") {
-      const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
       const hours = Math.max(0, Number(meta.hoursPlayed || 0));
 
-      if (hours > 0 && pct > 0) return `${hours} h · ${pct}%`;
       if (hours > 0) return `${hours} h`;
-      if (pct > 0) return `${pct}%`;
       if (String(meta.platform || "").trim()) return String(meta.platform).trim();
       return "";
     }
@@ -1698,7 +1700,21 @@ const LibraryUI = (() => {
 
         nextItem.status = nextProgress >= 100 ? "completed" : "reading";
       } else if (nextItem.type === "serie") {
-        nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
+        const currentEpisode = Math.max(0, Math.round(Number(nextItem.meta.episode || 0)));
+        const totalEpisodes = Math.max(0, Math.round(Number(nextItem.meta.totalEpisodes || 0)));
+        const nextEpisode = totalEpisodes > 0
+          ? Math.min(totalEpisodes, currentEpisode + 1)
+          : currentEpisode + 1;
+
+        nextItem.meta.episode = Math.max(1, nextEpisode);
+
+        if (totalEpisodes > 0) {
+          nextItem.meta.totalEpisodes = totalEpisodes;
+          nextProgress = Math.round((nextItem.meta.episode / totalEpisodes) * 100);
+        } else {
+          nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
+        }
+
         nextItem.status = nextProgress >= 100 ? "completed" : "watching";
       } else if (nextItem.type === "game") {
         const currentHours = Math.max(0, Number(nextItem.meta.hoursPlayed || 0));
@@ -1725,7 +1741,7 @@ const LibraryUI = (() => {
         deltaLabel: nextItem.type === "book" && Number(nextItem.meta?.totalPages || 0) > 0
           ? `${nextItem.meta.pagesRead}/${nextItem.meta.totalPages} ${t("library_pages")}`
           : nextItem.type === "game"
-            ? `${nextItem.meta.hoursPlayed} h · ${Math.round(Number(updatedItem.progress ?? 0))}%`
+            ? `${nextItem.meta.hoursPlayed} h`
             : nextItem.type === "pelicula"
               ? t("library_progress_movie_completed")
               : `${Math.round(Number(updatedItem.progress ?? 0))}%`
