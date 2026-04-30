@@ -1227,9 +1227,18 @@ const LibraryUI = (() => {
           ? "library_count_singular"
           : "library_count_plural";
 
+      const fallbackLabel = filtered.length === 1
+        ? "contenido"
+        : "contenidos";
+
+      const translatedLabel = t(countKey);
+      const safeLabel = translatedLabel && translatedLabel !== countKey
+        ? translatedLabel
+        : fallbackLabel;
+
       countInline.style.display = "inline";
       countInline.textContent =
-        ` · ${filtered.length} ${t(countKey)}`;
+        ` · ${filtered.length} ${safeLabel}`;
     }
 
     if (!isLibraryActive) return;
