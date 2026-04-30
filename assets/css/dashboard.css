@@ -4196,6 +4196,26 @@ body.dark-theme #view-lists .list-meta {
   color: rgba(249, 250, 251, 0.72);
 }
 
+body.dark-theme #listDetail .list-item-card {
+  background: #081523;
+  border-color: #010b16;
+}
+
+body.dark-theme #listDetail .list-item-body {
+  background: #081523;
+}
+
+body.dark-theme #listDetail .list-item-remove {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.55);
+}
+
+body.dark-theme #listDetail .list-item-remove:hover {
+  background: rgba(248, 113, 113, 0.28);
+  color: #fee2e2;
+}
+
 /* Por si el texto "Modo claro" hereda otro color raro */
 body.dark-theme .sidebar-bottom,
 body.dark-theme .sidebar-bottom * {
