@@ -2754,6 +2754,15 @@ main.app-main {
   display: none;
 }
 
+#listsGrid.lists-grid--cards .list-card-header {
+  margin: 10px 12px 0;
+}
+
+#listsGrid.lists-grid--cards .list-meta {
+  margin: 6px 12px 12px;
+  line-height: 1.35;
+}
+
 #listsGrid.lists-grid--list .list-card-header {
   align-items: flex-start;
   gap: 18px;
