@@ -3472,8 +3472,8 @@ main.app-main {
 
 .notif-panel {
   position: absolute;
-  top: 70px;
-  right: 20px;
+  top: 76px;
+  right: 96px;
   width: 320px;
   max-height: 440px;
   background: var(--bg-card);
@@ -3483,7 +3483,7 @@ main.app-main {
   padding: 10px 10px 12px;
   display: none;
   flex-direction: column;
-  z-index: 40;
+  z-index: 80;
 }
 
     .profile-menu {
