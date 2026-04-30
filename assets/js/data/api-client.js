@@ -2896,6 +2896,11 @@ const ApiClient = (() => {
   }
 
   async function getExploreDismissed() {
+    if (_isHttp()) {
+      const res = await _httpJson("GET", "/user/explore/dismissed");
+      return Array.isArray(res?.dismissed) ? res.dismissed : [];
+    }
+
     const state = _safeState();
     const explore = _ensureExploreUserState(state);
     return [...explore.dismissed];
@@ -2904,6 +2909,10 @@ const ApiClient = (() => {
   async function dismissExploreItem(eid) {
     const key = _normalizeDataId(eid);
     if (!key) return { ok: false };
+
+    if (_isHttp()) {
+      return _httpJson("POST", "/user/explore/dismissed", { eid: key });
+    }
 
     const state = _safeState();
     const explore = _ensureExploreUserState(state);
@@ -2918,6 +2927,10 @@ const ApiClient = (() => {
   }
 
   async function clearExploreDismissed() {
+    if (_isHttp()) {
+      return _httpJson("DELETE", "/user/explore/dismissed");
+    }
+
     const state = _safeState();
     const explore = _ensureExploreUserState(state);
     explore.dismissed = [];

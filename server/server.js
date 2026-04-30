@@ -260,6 +260,19 @@ function _normalizeLibraryUiState(ui) {
   };
 }
 
+function _normalizeExploreDismissedIds(list) {
+  const seen = new Set();
+
+  return (Array.isArray(list) ? list : [])
+    .map((entry) => String(entry || "").trim())
+    .filter((entry) => {
+      if (!entry || seen.has(entry)) return false;
+      seen.add(entry);
+      return true;
+    })
+    .slice(0, 500);
+}
+
 function _getDefaultLibraryStatus(type) {
   return type === "book"
     ? "reading"
@@ -366,6 +379,9 @@ function _getUserBucket(db, userId) {
     lists: [],
     activities: [],
     notifications: [],
+    explore: {
+      dismissed: []
+    },
     ui: {
       explore: _normalizeExploreUiState(),
       library: _normalizeLibraryUiState()
@@ -386,6 +402,14 @@ function _getUserBucket(db, userId) {
 
   db.users[userId].notifications = _normalizeUserNotificationsList(
     db.users[userId].notifications
+  );
+
+  db.users[userId].explore = db.users[userId].explore && typeof db.users[userId].explore === "object"
+    ? db.users[userId].explore
+    : {};
+
+  db.users[userId].explore.dismissed = _normalizeExploreDismissedIds(
+    db.users[userId].explore.dismissed
   );
 
   db.users[userId].ui = db.users[userId].ui && typeof db.users[userId].ui === "object"
@@ -439,6 +463,9 @@ app.post("/api/auth/register", (req, res) => {
     lists: [],
     activities: [],
     notifications: [],
+    explore: {
+      dismissed: []
+    },
     ui: {
       explore: _normalizeExploreUiState(),
       library: _normalizeLibraryUiState()
@@ -1370,6 +1397,43 @@ app.patch("/api/user/ui/library", _requireAuth, (req, res) => {
   _writeDb(db);
 
   res.json({ ok: true, ui: bucket.ui.library });
+});
+
+app.get("/api/user/explore/dismissed", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  res.json({ dismissed: bucket.explore.dismissed });
+});
+
+app.post("/api/user/explore/dismissed", _requireAuth, (req, res) => {
+  const eid = String(req.body?.eid || "").trim();
+
+  if (!eid) {
+    return res.status(400).json({ error: "missing_eid" });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.explore.dismissed = _normalizeExploreDismissedIds([
+    eid,
+    ...bucket.explore.dismissed
+  ]);
+
+  _writeDb(db);
+
+  res.json({ ok: true, dismissed: bucket.explore.dismissed });
+});
+
+app.delete("/api/user/explore/dismissed", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.explore.dismissed = [];
+
+  _writeDb(db);
+
+  res.json({ ok: true });
 });
 
 app.get("/api/lists", _requireAuth, (req, res) => {
