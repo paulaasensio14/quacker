@@ -2616,6 +2616,7 @@ const LibraryUI = (() => {
     setExternalFilters,
     setSearchTerm,
     showProgressErrors,
+    renderLibraryTypeIcon,
     _captureAnchor: captureLibraryAnchor,
     _playQuickFx: playLibraryQuickFx
   };

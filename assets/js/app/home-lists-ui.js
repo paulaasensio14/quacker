@@ -1361,7 +1361,7 @@ async function renderHomeDashboard() {
         : "";
       const footerLabel = pct >= 100 ? window.I18n.t("home_continue_completed") : `${pct}%`;
       const isCompleted = pct >= 100;
-      const typeIconSvg = getTypeIconSvg(item.type);
+      const typeIconSvg = window.LibraryUI?.renderLibraryTypeIcon?.(item.type) || getTypeIconSvg(item.type);
       const typeIconLabel = typeLabel(item.type);
       const buttonInnerHtml = isCompleted
         ? window.I18n.t("home_continue_completed")
@@ -1371,11 +1371,10 @@ async function renderHomeDashboard() {
       <article class="cw-card${completedClass}" data-id="${itemId}">
         <div class="cw-cover" style="background-image:url('${item.cover || ""}'); position:relative;">
           <span
-            class="cw-cover-type-icon"
+            class="lib-cover-type-icon cw-cover-type-icon"
             role="img"
             aria-label="${typeIconLabel}"
             title="${typeIconLabel}"
-            style="position:absolute; top:10px; right:10px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border:3px solid var(--text-main, #020617); border-radius:999px; background:var(--surface, #fff); box-shadow:0 2px 0 var(--text-main, #020617);"
           >
             ${typeIconSvg}
           </span>
