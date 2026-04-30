@@ -1568,6 +1568,13 @@ const ListsModule = (() => {
       }
     });
 
+    requestAnimationFrame(() => {
+      const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
+      if (isListsActive) {
+        load().catch(console.error);
+      }
+    });
+
   }
 
   return { init, load, render };
