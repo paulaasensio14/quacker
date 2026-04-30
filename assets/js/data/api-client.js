@@ -3334,90 +3334,80 @@ const ApiClient = (() => {
 
   // === DASHBOARD HOME: última actividad ===
   async function getLastActivityDetailed() {
-    let item = null;
-    let activityDate = null;
+    let library = [];
+    let activities = [];
 
     if (_isHttp()) {
-      const [library, activities] = await Promise.all([
+      [library, activities] = await Promise.all([
         getLibrary(),
         _getHttpActivities({ limit: 50 })
       ]);
-      const effectiveActivities = [
-        ...activities,
-        ..._buildSyntheticActivitiesFromLibrary(library)
-      ];
-
-      const last = [...effectiveActivities]
-        .filter((a) => a && _normalizeDataId(a.targetId) && a.createdAt)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
-
-      if (last) {
-        const lastTargetId = _normalizeDataId(last.targetId);
-        item = library.find((i) => _normalizeDataId(i?.id) === lastTargetId) || null;
-        activityDate = last.createdAt;
-
-        if (!item) {
-          return {
-            id: null,
-            title: "Actividad reciente",
-            meta: "",
-            timeAgo: _formatTimeAgo(last.createdAt),
-            progressPercent: 0,
-            progressLabel: ""
-          };
-        }
-      } else {
-        item = [...library]
-          .filter((it) => {
-            const activityState = _getDashboardActivityStatus(it);
-            return activityState.status === "in_progress" || activityState.status === "completed";
-          })
-          .sort((a, b) => {
-            const aTime = a?.lastActivityAt
-              ? new Date(a.lastActivityAt).getTime()
-              : a?.updatedAt
-                ? new Date(a.updatedAt).getTime()
-                : 0;
-            const bTime = b?.lastActivityAt
-              ? new Date(b.lastActivityAt).getTime()
-              : b?.updatedAt
-                ? new Date(b.updatedAt).getTime()
-                : 0;
-            return bTime - aTime;
-          })[0] || null;
-
-        activityDate = item?.lastActivityAt || item?.updatedAt || null;
-        if (!item || !activityDate) return null;
-      }
     } else {
       if (typeof FakeBackend === "undefined") return null;
 
       const state = _safeState();
-      const activities = Array.isArray(state.activities) ? state.activities : [];
-      const MEANINGFUL = new Set(["progress", "completed"]);
-
-      const last = [...activities]
-        .filter((a) => a && MEANINGFUL.has(a.type) && _normalizeDataId(a.targetId) && a.createdAt)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
-
-      if (!last) return null;
-
-      const library = state.library || [];
-      const lastTargetId = _normalizeDataId(last.targetId);
-      item = library.find((i) => _normalizeDataId(i?.id) === lastTargetId) || null;
-      activityDate = last.createdAt;
-
-      if (!item) {
-        return {
-          id: null,
-          title: "Actividad reciente",
-          meta: "",
-          timeAgo: _formatTimeAgo(last.createdAt),
-          progressPercent: 0,
-          progressLabel: ""
-        };
-      }
+      library = Array.isArray(state.library) ? state.library : [];
+      activities = Array.isArray(state.activities) ? state.activities : [];
     }
+
+    const normalizedActivities = (Array.isArray(activities) ? activities : [])
+      .map((entry) => _normalizeActivityRecord(entry))
+      .filter(Boolean);
+
+    const syntheticActivities = _buildSyntheticActivitiesFromLibrary(library);
+
+    const libraryActivityCandidates = (Array.isArray(library) ? library : [])
+      .map((entry) => {
+        const itemId = _normalizeDataId(entry?.id);
+        if (!itemId) return null;
+
+        const activityState = _getDashboardActivityStatus(entry);
+        if (activityState.status !== "in_progress" && activityState.status !== "completed") {
+          return null;
+        }
+
+        const createdAtRaw = String(entry?.lastActivityAt || entry?.updatedAt || entry?.createdAt || "").trim();
+        if (!createdAtRaw) return null;
+
+        const createdAtDate = new Date(createdAtRaw);
+        if (Number.isNaN(createdAtDate.getTime())) return null;
+
+        return {
+          id: `library-direct:${itemId}`,
+          type: activityState.status === "completed" ? "completed" : "progress",
+          targetType: "library_item",
+          targetId: itemId,
+          minutes: 0,
+          createdAt: createdAtDate.toISOString()
+        };
+      })
+      .filter(Boolean);
+
+    const candidates = [
+      ...normalizedActivities,
+      ...syntheticActivities,
+      ...libraryActivityCandidates
+    ]
+      .filter((entry) => entry && _normalizeDataId(entry.targetId) && entry.createdAt)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    let item = null;
+    let activityDate = null;
+
+    for (const candidate of candidates) {
+      const candidateTargetId = _normalizeDataId(candidate.targetId);
+      const matchedItem = library.find((entry) => (
+        _normalizeDataId(entry?.id) === candidateTargetId
+      ));
+
+      if (!matchedItem) continue;
+
+      item = matchedItem;
+      activityDate = candidate.createdAt;
+      break;
+    }
+
+    if (!item || !activityDate) return null;
 
     let meta = "";
 
@@ -3443,13 +3433,19 @@ const ApiClient = (() => {
       }
     }
 
-    if (item.type === "pelicula" || item.type === "game") {
-      const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
-      meta = `${Math.round(pct)}%`;
+    if (item.type === "game") {
+      const hours = Math.max(0, Number(item.meta?.hoursPlayed || 0));
+      meta = hours > 0 ? `${hours} h` : "";
+    }
+
+    if (item.type === "pelicula") {
+      meta = "";
     }
 
     const progressPercent = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
-    const progressLabel = `${Math.round(progressPercent)}%`;
+    const progressLabel = item.type === "game" && Number(item.meta?.hoursPlayed || 0) > 0
+      ? `${Math.max(0, Number(item.meta.hoursPlayed || 0))} h`
+      : `${Math.round(progressPercent)}%`;
 
     return {
       id: _normalizeDataId(item.id),
