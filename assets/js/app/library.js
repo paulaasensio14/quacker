@@ -855,8 +855,13 @@ const LibraryUI = (() => {
       return `T${s} · E${e} · ${pct}%`;
     }
 
-    if (item.type === "book" && item.meta?.pagesRead && item.meta?.totalPages) {
-      return `${item.meta.pagesRead}/${item.meta.totalPages} ${t("library_pages")}`;
+    if (item.type === "book") {
+      const pagesRead = Number(item.meta?.pagesRead ?? 0);
+      const totalPages = Number(item.meta?.totalPages ?? 0);
+
+      if (Number.isFinite(pagesRead) && Number.isFinite(totalPages) && totalPages > 0) {
+        return `${Math.max(0, Math.min(totalPages, pagesRead))}/${totalPages} ${t("library_pages")}`;
+      }
     }
 
     return `${pct}% ${t("library_progress_completed_suffix")}`;
