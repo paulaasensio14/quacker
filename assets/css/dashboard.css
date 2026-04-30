@@ -4342,6 +4342,34 @@ body.dark-theme #view-lists .cover-count-pill {
   box-shadow: 2px 2px 0 var(--border-strong);
 }
 
+body.dark-theme #view-lists .empty-state-card {
+  background: #081523;
+  color: var(--text-main);
+  border-color: #010b16;
+  box-shadow: 4px 4px 0 #010b16;
+}
+
+body.dark-theme #view-lists .empty-state-title {
+  color: rgba(249, 250, 251, 0.96);
+}
+
+body.dark-theme #view-lists .empty-state-text {
+  color: rgba(203, 213, 245, 0.82);
+  opacity: 1;
+}
+
+body.dark-theme #view-lists .empty-state-actions .btn-primary {
+  background: var(--bg-yellow);
+  color: #111827;
+  border-color: var(--border-strong);
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+body.dark-theme #view-lists .empty-state-actions .btn-primary:hover {
+  background: #ffd84d;
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
 body.dark-theme #view-lists .lists-search input {
   background: #102235;
   color: rgba(249, 250, 251, 0.92);
@@ -8608,6 +8636,33 @@ body.dark-theme .content-detail-season-body {
   font-size: 18px;
   line-height: 1.45;
   color: #475467;
+}
+
+body.dark-theme #view-library .lib-empty-state-card {
+  background: #081523;
+  color: var(--text-main);
+  border-color: #010b16;
+  box-shadow: 4px 4px 0 #010b16;
+}
+
+body.dark-theme #view-library .lib-empty-state-title {
+  color: rgba(249, 250, 251, 0.96);
+}
+
+body.dark-theme #view-library .lib-empty-state-text {
+  color: rgba(203, 213, 245, 0.82);
+}
+
+body.dark-theme #view-library .lib-empty-state-card .btn-primary {
+  background: var(--bg-yellow);
+  color: #111827;
+  border-color: var(--border-strong);
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+body.dark-theme #view-library .lib-empty-state-card .btn-primary:hover {
+  background: #ffd84d;
+  box-shadow: 1px 1px 0 var(--border-strong);
 }
 
 .empty-state-actions {
