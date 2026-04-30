@@ -111,6 +111,13 @@ const ListsModule = (() => {
     }
   }
 
+  function _setListsOverviewControlsHidden(hidden) {
+    const listsView = _getEl("view-lists");
+    if (!listsView) return;
+
+    listsView.classList.toggle("is-detail-open", !!hidden);
+  }
+
   function _formatCreatedListsCount(total) {
     return total === 1
       ? ` · 1 ${t("lists_count_created_singular")}`
@@ -517,6 +524,7 @@ const ListsModule = (() => {
     // Ocultamos grid, mostramos detalle
     _setHidden(grid, true);
     _setHidden(detail, false);
+    _setListsOverviewControlsHidden(true);
 
     _renderActiveListDetailHeader(list);
     _syncListDetailFiltersUI();
@@ -535,6 +543,7 @@ const ListsModule = (() => {
 
     _setHidden(detail, true);
     _setHidden(grid, false);
+    _setListsOverviewControlsHidden(false);
   }
 
   function _typeLabel(tpe){
