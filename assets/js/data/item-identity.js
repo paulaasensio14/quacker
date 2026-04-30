@@ -79,6 +79,7 @@ function resolveLibraryItemIdFromCache(item, libraryCache = []) {
 window.ItemIdentity = {
   getLibraryItemId,
   getCanonicalContentKey,
+  getNormalizedContentKey,
   sameContentIdentity,
   resolveLibraryItemIdFromCache
 };
