@@ -2123,7 +2123,33 @@ const ExploreModule = (() => {
 
       await _syncInLibraryFlags();
 
-      const fresh = _getExploreItemByEid(activeItem.eid) || activeItem;
+      const syncedExploreItem = _getExploreItemByEid(activeItem.eid);
+      const activeDetailItem = _getActiveDetailItem();
+      const baseFresh =
+        syncedExploreItem ||
+        (_normalizeId(activeDetailItem?.eid) === _normalizeId(activeItem.eid) ? activeDetailItem : null) ||
+        activeItem;
+
+      const resultListsCount = Number(result?.listsCount);
+      const nextListsCount = Number.isFinite(resultListsCount)
+        ? Math.max(0, resultListsCount)
+        : result?.already
+          ? Math.max(0, Number(baseFresh?.__listsCount || 0))
+          : Math.max(0, Number(baseFresh?.__listsCount || 0) + 1);
+
+      const fresh = {
+        ...baseFresh,
+        __inLibrary: true,
+        __libraryItemId: libraryItemId,
+        __listsCount: nextListsCount
+      };
+
+      if (scope === "detail") {
+        _setActiveDetailState({
+          item: fresh
+        });
+      }
+
       _render();
       _syncActiveExploreSurfaces(activeItem.eid);
       _closeExploreListPicker(scope);
@@ -2145,7 +2171,9 @@ const ExploreModule = (() => {
 
       if (scope === "detail" && fresh) {
         _setActiveDetailState({
-          item: fresh
+          item: fresh,
+          loading: false,
+          error: false
         });
         window.DetailModule?.render?.(fresh);
       }
