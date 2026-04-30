@@ -12,6 +12,7 @@ const ListsModule = (() => {
   let lastDeletedListSnapshot = null;
   let editingListId = null;
   let searchTerm = "";         // texto en minúsculas
+  let listsViewMode = "cards"; // "cards" | "list"
 
   let activeListId = null;
   let __returnToAddToListItemId = null;
@@ -62,6 +63,18 @@ const ListsModule = (() => {
       const isActive = (btn.dataset.filter || "all") === listsFilter;
       btn.classList.toggle("active", isActive);
     });
+
+    document.querySelectorAll("[data-lists-view-mode]").forEach((btn) => {
+      const isActive = String(btn.dataset.listsViewMode || "cards") === listsViewMode;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+
+    const grid = _getEl("listsGrid");
+    if (grid) {
+      grid.classList.toggle("lists-grid--list", listsViewMode === "list");
+      grid.classList.toggle("lists-grid--cards", listsViewMode !== "list");
+    }
   }
 
   async function _saveUIState() {
@@ -69,6 +82,7 @@ const ListsModule = (() => {
       await ApiClient.setListsUIState?.({
         visibilityFilter: listsFilter,
         searchTerm,
+        listsViewMode,
         detailSearch,
         detailType,
         detailStatus
@@ -85,6 +99,7 @@ const ListsModule = (() => {
 
       listsFilter = typeof ui.visibilityFilter === "string" ? ui.visibilityFilter : "all";
       searchTerm = typeof ui.searchTerm === "string" ? ui.searchTerm : "";
+      listsViewMode = ui.listsViewMode === "list" ? "list" : "cards";
       detailSearch = typeof ui.detailSearch === "string" ? ui.detailSearch : "";
       detailType = typeof ui.detailType === "string" ? ui.detailType : "all";
       detailStatus = typeof ui.detailStatus === "string" ? ui.detailStatus : "all";
@@ -403,6 +418,8 @@ const ListsModule = (() => {
       return;
     }
 
+    _syncListsToolbarUI();
+
     if (!visibleLists.length) {
       const isFiltering = listsFilter !== "all" || (searchTerm || "").trim().length > 0;
 
@@ -444,6 +461,8 @@ const ListsModule = (() => {
 
       return;
     }
+
+    _syncListsToolbarUI();
 
     container.innerHTML = visibleLists
       .map((list) => {
@@ -1188,6 +1207,17 @@ const ListsModule = (() => {
 
         listsFilter = btn.dataset.filter || "all";
         applyFilters();
+        _saveUIState();
+      });
+    });
+
+    document.querySelectorAll("[data-lists-view-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const nextMode = btn.dataset.listsViewMode === "list" ? "list" : "cards";
+        if (listsViewMode === nextMode) return;
+
+        listsViewMode = nextMode;
+        _syncListsToolbarUI();
         _saveUIState();
       });
     });

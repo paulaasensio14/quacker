@@ -1022,8 +1022,15 @@
               </button>
             </div>
 
-            <div class="view-toggle">
-              <button class="active" aria-label="Vista de tarjetas" data-i18n-aria-label="lists_view_cards">
+            <div class="view-toggle" role="group" aria-label="Cambiar vista de listas">
+              <button
+                type="button"
+                class="active"
+                aria-label="Vista de tarjetas"
+                aria-pressed="true"
+                data-i18n-aria-label="lists_view_cards"
+                data-lists-view-mode="cards"
+              >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="3" width="7" height="7"/>
@@ -1033,7 +1040,13 @@
                 </svg>
               </button>
 
-              <button aria-label="Vista de lista" data-i18n-aria-label="lists_view_list">
+              <button
+                type="button"
+                aria-label="Vista de lista"
+                aria-pressed="false"
+                data-i18n-aria-label="lists_view_list"
+                data-lists-view-mode="list"
+              >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 6h16M4 12h16M4 18h16"/>

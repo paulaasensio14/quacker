@@ -2707,6 +2707,25 @@ main.app-main {
   will-change: opacity, transform;
 }
 
+#listsGrid.lists-grid--list {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 920px;
+}
+
+#listsGrid.lists-grid--list .list-card {
+  min-height: 86px;
+}
+
+#listsGrid.lists-grid--list .list-card-header {
+  align-items: center;
+}
+
+#listsGrid.lists-grid--list .list-card-body,
+#listsGrid.lists-grid--list .list-meta,
+#listsGrid.lists-grid--list .list-count {
+  max-width: 72ch;
+}
+
 .list-card.is-removing{
   opacity: 0;
   transform: translateY(10px) scale(0.98);
