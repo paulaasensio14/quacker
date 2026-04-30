@@ -398,6 +398,7 @@ const ListsModule = (() => {
   }
 
   async function load() {
+    await _loadUIState();
     renderListsSkeleton();
 
     try {
