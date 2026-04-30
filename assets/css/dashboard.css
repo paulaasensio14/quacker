@@ -4835,6 +4835,34 @@ body.dark-theme #progressModal .modal-close {
   color: #111827;
 }
 
+body.dark-theme #addToListModal .atl-option {
+  background: #081523;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+body.dark-theme #addToListModal .atl-option:hover {
+  background: #102235;
+}
+
+body.dark-theme #addToListModal .atl-option-text {
+  color: var(--text-main);
+}
+
+body.dark-theme #addToListModal .atl-option input[type="checkbox"] {
+  accent-color: var(--bg-yellow);
+}
+
+body.dark-theme #addToListModal .atl-option:has(input[type="checkbox"]:checked) {
+  background: rgba(255, 201, 40, 0.16);
+  border-color: var(--bg-yellow);
+}
+
+body.dark-theme #addToListModal .atl-option:has(input[type="checkbox"]:disabled) {
+  opacity: 0.62;
+}
+
 .lib-primary-btn:disabled {
   opacity:0.6;
   cursor:not-allowed;
