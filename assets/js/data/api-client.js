@@ -2809,6 +2809,10 @@ const ApiClient = (() => {
   }
 
   async function getExploreUIState() {
+    if (_isHttp()) {
+      return _httpJson("GET", "/user/ui/explore");
+    }
+
     const state = _safeState();
     const ui = _ensureExploreUIState(state);
 
@@ -2820,6 +2824,10 @@ const ApiClient = (() => {
   }
 
   async function setExploreUIState(patch = {}) {
+    if (_isHttp()) {
+      return _httpJson("PATCH", "/user/ui/explore", patch);
+    }
+
     const state = _safeState();
     const ui = _ensureExploreUIState(state);
 
@@ -2850,7 +2858,11 @@ const ApiClient = (() => {
     return state.user.library.ui;
   }
 
-  function getLibraryUIState() {
+  async function getLibraryUIState() {
+    if (_isHttp()) {
+      return _httpJson("GET", "/user/ui/library");
+    }
+
     const state = _safeState();
     const ui = _ensureLibraryUIState(state);
 
@@ -2864,6 +2876,10 @@ const ApiClient = (() => {
   }
 
   async function setLibraryUIState(patch = {}) {
+    if (_isHttp()) {
+      return _httpJson("PATCH", "/user/ui/library", patch);
+    }
+
     const state = _safeState();
     const ui = _ensureLibraryUIState(state);
 

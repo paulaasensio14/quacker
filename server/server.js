@@ -239,6 +239,27 @@ function _normalizeUserNotificationsList(list) {
     .slice(0, 200);
 }
 
+function _normalizeExploreUiState(ui) {
+  const safeUi = ui && typeof ui === "object" && !Array.isArray(ui) ? ui : {};
+
+  return {
+    typeFilter: typeof safeUi.typeFilter === "string" ? safeUi.typeFilter : "all",
+    sortMode: typeof safeUi.sortMode === "string" ? safeUi.sortMode : "recent",
+    searchTerm: typeof safeUi.searchTerm === "string" ? safeUi.searchTerm : ""
+  };
+}
+
+function _normalizeLibraryUiState(ui) {
+  const safeUi = ui && typeof ui === "object" && !Array.isArray(ui) ? ui : {};
+
+  return {
+    sortMode: typeof safeUi.sortMode === "string" ? safeUi.sortMode : "recent",
+    typeFilter: typeof safeUi.typeFilter === "string" ? safeUi.typeFilter : "all",
+    statusFilter: typeof safeUi.statusFilter === "string" ? safeUi.statusFilter : "all",
+    searchTerm: typeof safeUi.searchTerm === "string" ? safeUi.searchTerm : ""
+  };
+}
+
 function _getDefaultLibraryStatus(type) {
   return type === "book"
     ? "reading"
@@ -344,7 +365,11 @@ function _getUserBucket(db, userId) {
     library: [],
     lists: [],
     activities: [],
-    notifications: []
+    notifications: [],
+    ui: {
+      explore: _normalizeExploreUiState(),
+      library: _normalizeLibraryUiState()
+    }
   };
 
   db.users[userId].library = Array.isArray(db.users[userId].library)
@@ -362,6 +387,13 @@ function _getUserBucket(db, userId) {
   db.users[userId].notifications = _normalizeUserNotificationsList(
     db.users[userId].notifications
   );
+
+  db.users[userId].ui = db.users[userId].ui && typeof db.users[userId].ui === "object"
+    ? db.users[userId].ui
+    : {};
+
+  db.users[userId].ui.explore = _normalizeExploreUiState(db.users[userId].ui.explore);
+  db.users[userId].ui.library = _normalizeLibraryUiState(db.users[userId].ui.library);
 
   return db.users[userId];
 }
@@ -406,7 +438,11 @@ app.post("/api/auth/register", (req, res) => {
     library: [],
     lists: [],
     activities: [],
-    notifications: []
+    notifications: [],
+    ui: {
+      explore: _normalizeExploreUiState(),
+      library: _normalizeLibraryUiState()
+    }
   };
 
   _writeDb(db);
@@ -1292,6 +1328,48 @@ app.patch("/api/user", _requireAuth, (req, res) => {
   _writeDb(db);
 
   res.json({ user: bucket.profile });
+});
+
+app.get("/api/user/ui/explore", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  res.json(bucket.ui.explore);
+});
+
+app.patch("/api/user/ui/explore", _requireAuth, (req, res) => {
+  const patch = req.body || {};
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.ui.explore = _normalizeExploreUiState({
+    ...bucket.ui.explore,
+    ...patch
+  });
+
+  _writeDb(db);
+
+  res.json({ ok: true, ui: bucket.ui.explore });
+});
+
+app.get("/api/user/ui/library", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  res.json(bucket.ui.library);
+});
+
+app.patch("/api/user/ui/library", _requireAuth, (req, res) => {
+  const patch = req.body || {};
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  bucket.ui.library = _normalizeLibraryUiState({
+    ...bucket.ui.library,
+    ...patch
+  });
+
+  _writeDb(db);
+
+  res.json({ ok: true, ui: bucket.ui.library });
 });
 
 app.get("/api/lists", _requireAuth, (req, res) => {
