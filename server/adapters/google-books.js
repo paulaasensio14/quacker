@@ -94,18 +94,35 @@ export async function searchGoogleBooks(query) {
 
  const items = Array.isArray(data?.items) ? data.items : [];
  const normalizedQuery = String(q).trim().toLowerCase();
- const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+ const queryTokens = normalizedQuery
+  .split(/\s+/)
+  .filter(Boolean)
+  .filter((token) => ![
+    "book",
+    "books",
+    "libro",
+    "libros",
+    "novel",
+    "novela",
+    "novelas"
+  ].includes(token));
 
  return items
  .map(_baseSearchItemFromVolume)
  .filter((item) => {
   if (!item?.externalId || !item?.title) return false;
+
   const title = String(item.title || "").trim().toLowerCase();
   const author = String(item?.meta?.author || "").trim().toLowerCase();
+  const summary = String(item.summary || "").trim().toLowerCase();
+  const searchableText = `${title} ${author} ${summary}`.trim();
+
   const strongMatch =
+    !queryTokens.length ||
     title === normalizedQuery ||
     title.startsWith(normalizedQuery) ||
-    queryTokens.every((token) => title.includes(token) || author.includes(token));
+    queryTokens.every((token) => searchableText.includes(token));
+
   const hasMinimumMetadata = Boolean(
     item.cover || author || item.releaseDate || item.summary
   );
