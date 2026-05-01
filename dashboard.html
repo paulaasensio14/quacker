@@ -3,32 +3,6 @@
 <head>
 
   <script>
-    // DEBUG: detectar quién redirige a index.html (se quita luego)
-    (function () {
-      try {
-        const loc = window.location;
-
-        const origReplace = loc.replace.bind(loc);
-        loc.replace = function (url) {
-          console.warn("[NAV][replace]", url);
-          try { console.warn(new Error("[NAV stack]").stack); } catch (_) {}
-          return origReplace(url);
-        };
-
-        const origAssign = loc.assign.bind(loc);
-        loc.assign = function (url) {
-          console.warn("[NAV][assign]", url);
-          try { console.warn(new Error("[NAV stack]").stack); } catch (_) {}
-          return origAssign(url);
-        };
-      } catch (e) {
-        // si el navegador no deja override, no rompemos nada
-        console.warn("[NAV] hook failed", e);
-      }
-    })();
-  </script>
-
-  <script>
     (function () {
       try {
         const isDev = String(window.location.port) === "3000";
