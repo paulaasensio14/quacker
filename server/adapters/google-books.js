@@ -31,12 +31,26 @@ function _normalizeAuthors(volumeInfo = {}) {
     : [];
 }
 
+function _getGoogleBooksApiKey() {
+  const fromEnv =
+    ENV.GOOGLE_BOOKS_API_KEY ||
+    process.env.GOOGLE_BOOKS_KEY ||
+    "";
+
+  return String(fromEnv || "").trim();
+}
+
 async function _googleBooksGet(path, params = {}) {
+  const apiKey = _getGoogleBooksApiKey();
   const url = new URL(`${GOOGLE_BOOKS_BASE_URL}${path}`);
 
   for (const [key, value] of Object.entries(params)) {
     if (value == null || value === "") continue;
     url.searchParams.set(key, String(value));
+  }
+
+  if (apiKey) {
+    url.searchParams.set("key", apiKey);
   }
 
   const res = await fetch(url, {
