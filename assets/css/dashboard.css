@@ -7366,6 +7366,22 @@ body.modal-open{
   font-weight: 700;
 }
 
+body.dark-theme .content-detail-back,
+body.dark-theme .content-detail-top-actions .btn-secondary {
+  background: #102235;
+  color: rgba(249, 250, 251, 0.92);
+  border-color: #010b16;
+  box-shadow: 3px 3px 0 #010b16;
+}
+
+body.dark-theme .content-detail-back:hover,
+body.dark-theme .content-detail-top-actions .btn-secondary:hover {
+  background: var(--bg-yellow);
+  color: #111827;
+  border-color: var(--border-strong);
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
 #contentDetailAddLibrary[disabled],
 #contentDetailAddLibrary[aria-disabled="true"] {
   background: #d9f99d;
