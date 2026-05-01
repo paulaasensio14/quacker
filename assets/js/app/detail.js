@@ -163,6 +163,7 @@ const DetailModule = (() => {
     const genresEl = document.getElementById("contentDetailGenres");
     const castEl = document.getElementById("contentDetailCast");
     const castToggleBtn = document.getElementById("contentDetailCastToggle");
+    const castCardEl = castEl?.closest(".content-detail-cast-card") || null;
     const summaryEl = document.getElementById("contentDetailSummary");
     const addLibraryBtn = document.getElementById("contentDetailAddLibrary");
     const addListsBtn = document.getElementById("contentDetailAddLists");
@@ -230,7 +231,20 @@ const DetailModule = (() => {
       relatedNextBtnEl,
       item?.relatedItems
     );
-    __renderDeps.renderCast?.(castEl, metaVm.cast, castToggleBtn);
+
+    const isBookDetail = String(item?.type || "").trim() === "book";
+
+    if (castCardEl) {
+      castCardEl.hidden = isBookDetail;
+    }
+
+    if (isBookDetail) {
+      if (castEl) castEl.textContent = "";
+      if (castToggleBtn) castToggleBtn.hidden = true;
+    } else {
+      __renderDeps.renderCast?.(castEl, metaVm.cast, castToggleBtn);
+    }
+
     __renderDeps.renderSeasons?.(item, metaVm);
 
     if (summaryEl) {
