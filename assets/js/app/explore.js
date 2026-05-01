@@ -549,14 +549,6 @@ const ExploreModule = (() => {
       });
     }
 
-    if (q) {
-      out = out.filter((x) => {
-        const title = _norm(x.title);
-        const summary = _norm(x.summary);
-        return title.includes(q) || summary.includes(q);
-      });
-    }
-
     return out;
   }
 
