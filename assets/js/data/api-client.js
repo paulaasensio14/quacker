@@ -1050,7 +1050,7 @@ const ApiClient = (() => {
     const FEATURED_REQUESTS = [
       { type: "serie", limit: 5 },
       { type: "pelicula", limit: 5 },
-      { type: "game", limit: 3 },
+      { type: "game", limit: 2 },
       { type: "book", limit: 2 }
     ];
 
