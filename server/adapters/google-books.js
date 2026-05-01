@@ -85,14 +85,6 @@ export async function searchGoogleBooks(query) {
 
  if (!q) return [];
 
- const data = await _googleBooksGet("/volumes", {
-  q,
-  maxResults: 20,
-  printType: "books",
-  orderBy: "relevance"
- });
-
- const items = Array.isArray(data?.items) ? data.items : [];
  const normalizedQuery = String(q).trim().toLowerCase();
  const rawQueryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
  const ignoredQueryTokens = new Set([
@@ -121,6 +113,17 @@ export async function searchGoogleBooks(query) {
   if (token.length === 1 && index === rawQueryTokens.length - 1) return false;
   return true;
  });
+
+ const apiQuery = queryTokens.length ? queryTokens.join(" ") : q;
+
+ const data = await _googleBooksGet("/volumes", {
+  q: apiQuery,
+  maxResults: 20,
+  printType: "books",
+  orderBy: "relevance"
+ });
+
+ const items = Array.isArray(data?.items) ? data.items : [];
 
  return items
  .map(_baseSearchItemFromVolume)
