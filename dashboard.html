@@ -1517,63 +1517,48 @@
 
   <script>
     (async function () {
-      console.log("[DashboardGuard] START", {
-        href: window.location.href,
-        host: window.location.hostname,
-        port: window.location.port
-      });
-
-      // 1) Esperar a que ApiClient exista (máx 2s)
       async function waitForApiClient(ms = 2000) {
         const start = Date.now();
+
         while (Date.now() - start < ms) {
-          if (window.ApiClient && typeof ApiClient.getCurrentSession === "function") return true;
-          await new Promise((r) => setTimeout(r, 30));
+          if (window.ApiClient && typeof ApiClient.getCurrentSession === "function") {
+            return true;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 30));
         }
+
         return false;
       }
 
       try {
-        const ok = await waitForApiClient(5000);
-        console.log("[DashboardGuard] ApiClient ready?", ok);
+        const isApiClientReady = await waitForApiClient(5000);
 
-        if (!ok) {
-          console.warn("[DashboardGuard] ApiClient NOT READY (still waiting)...");
+        if (!isApiClientReady) {
           await waitForApiClient(5000);
         }
 
-        // 2) En server real (3000) SIEMPRE http + /api
         const isNodeServer = String(window.location.port) === "3000";
+
         if (isNodeServer) {
           try {
             if (ApiClient.setBaseUrl) ApiClient.setBaseUrl("/api");
             if (ApiClient.setTransport) ApiClient.setTransport("http");
-          } catch (e) {
-            console.error("[DashboardGuard] setTransport/setBaseUrl failed:", e);
-          }
+          } catch (_) {}
         }
 
-        console.log("[DashboardGuard] transportInfo:", ApiClient.getTransportInfo?.());
-
-        // 3) Guard real
         let session = null;
+
         try {
           session = await ApiClient.getCurrentSession();
-          console.log("[DashboardGuard] session:", session);
-        } catch (err) {
-          console.error("[DashboardGuard] getCurrentSession failed:", err);
+        } catch (_) {
           session = null;
         }
 
         if (!session || !session.user) {
-          console.warn("[DashboardGuard] NO SESSION -> redirect index.html");
           window.location.replace("index.html");
-          return;
         }
-
-        console.log("[DashboardGuard] OK SESSION -> stay");
-      } catch (e) {
-        console.error("[DashboardGuard] CRASH -> redirect index.html", e);
+      } catch (_) {
         window.location.replace("index.html");
       }
     })();
