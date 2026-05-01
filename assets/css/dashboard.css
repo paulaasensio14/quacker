@@ -637,6 +637,37 @@ main.app-main {
   main.app-main {
     padding: 12px;
   }
+
+  .home-main-row {
+    grid-template-columns: 1fr;
+  }
+
+  .last-activity-card {
+    grid-template-columns: 1fr;
+  }
+
+  .last-activity-cover {
+    width: 100%;
+    max-width: none;
+    min-height: 220px;
+  }
+
+  .last-activity-body {
+    min-width: 0;
+  }
+
+  .challenge-card {
+    min-width: 0;
+  }
+
+  .challenge-header {
+    align-items: flex-start;
+  }
+
+  .challenge-meta-row,
+  .challenge-reward-row {
+    flex-wrap: wrap;
+  }
 }
 
 .view { display: none; }
