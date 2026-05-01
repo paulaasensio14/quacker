@@ -94,18 +94,33 @@ export async function searchGoogleBooks(query) {
 
  const items = Array.isArray(data?.items) ? data.items : [];
  const normalizedQuery = String(q).trim().toLowerCase();
- const queryTokens = normalizedQuery
-  .split(/\s+/)
-  .filter(Boolean)
-  .filter((token) => ![
-    "book",
-    "books",
-    "libro",
-    "libros",
-    "novel",
-    "novela",
-    "novelas"
-  ].includes(token));
+ const rawQueryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+ const ignoredQueryTokens = new Set([
+  "book",
+  "books",
+  "libro",
+  "libros",
+  "novel",
+  "novela",
+  "novelas",
+  "y",
+  "e",
+  "el",
+  "la",
+  "los",
+  "las",
+  "de",
+  "del",
+  "the",
+  "and",
+  "of"
+ ]);
+
+ const queryTokens = rawQueryTokens.filter((token, index) => {
+  if (ignoredQueryTokens.has(token)) return false;
+  if (token.length === 1 && index === rawQueryTokens.length - 1) return false;
+  return true;
+ });
 
  return items
  .map(_baseSearchItemFromVolume)

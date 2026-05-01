@@ -563,7 +563,28 @@ function _scoreExploreSearchItem(item, query) {
   const title = _normalizeExploreQueryText(item?.title);
   const author = _normalizeExploreQueryText(item?.meta?.author);
   const summary = _normalizeExploreQueryText(item?.summary);
-  const tokens = _tokenizeExploreQuery(q);
+  const rawTokens = _tokenizeExploreQuery(q);
+  const ignoredSearchTokens = new Set([
+    "y",
+    "e",
+    "el",
+    "la",
+    "los",
+    "las",
+    "de",
+    "del",
+    "the",
+    "and",
+    "of"
+  ]);
+
+  const cleanedTokens = rawTokens.filter((token, index) => {
+    if (ignoredSearchTokens.has(token)) return false;
+    if (token.length === 1 && index === rawTokens.length - 1) return false;
+    return true;
+  });
+
+  const tokens = cleanedTokens.length ? cleanedTokens : rawTokens;
   const titleWords = title.split(/\s+/).filter(Boolean);
 
   const normalizedTitle = title;
