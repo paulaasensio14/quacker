@@ -168,26 +168,66 @@ export async function getWeeklyFeaturedGoogleBooks(limit = 3) {
  const maxItems =
  Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : 3;
 
- const data = await _googleBooksGet("/volumes", {
- q: "subject:fiction",
- maxResults: Math.max(maxItems * 4, 12),
- printType: "books",
- orderBy: "newest"
- });
+ const maxResults = Math.max(maxItems * 4, 12);
 
- const items = Array.isArray(data?.items) ? data.items : [];
+ const requests = [
+  {
+   q: "subject:fiction",
+   maxResults,
+   printType: "books",
+   orderBy: "newest"
+  },
+  {
+   q: "subject:fiction",
+   maxResults,
+   printType: "books",
+   orderBy: "relevance"
+  },
+  {
+   q: "fiction",
+   maxResults,
+   printType: "books",
+   orderBy: "relevance"
+  },
+  {
+   q: "subject:literature",
+   maxResults,
+   printType: "books",
+   orderBy: "relevance"
+  }
+ ];
 
- return items
- .map(_baseSearchItemFromVolume)
- .filter((item) => {
- if (!item?.externalId || !item?.title) return false;
- const author = String(item?.meta?.author || "").trim();
- return Boolean(item.cover || item.releaseDate || item.summary || author);
- })
- .sort((a, b) =>
- String(b.releaseDate || "").localeCompare(String(a.releaseDate || ""))
- )
- .slice(0, maxItems);
+ let lastError = null;
+
+ for (const params of requests) {
+  try {
+   const data = await _googleBooksGet("/volumes", params);
+   const items = Array.isArray(data?.items) ? data.items : [];
+
+   const normalizedItems = items
+    .map(_baseSearchItemFromVolume)
+    .filter((item) => {
+     if (!item?.externalId || !item?.title) return false;
+     const author = String(item?.meta?.author || "").trim();
+     return Boolean(item.cover || item.releaseDate || item.summary || author);
+    })
+    .sort((a, b) =>
+     String(b.releaseDate || "").localeCompare(String(a.releaseDate || ""))
+    );
+
+   if (normalizedItems.length > 0) {
+    return normalizedItems.slice(0, maxItems);
+   }
+  } catch (error) {
+   lastError = error;
+  }
+ }
+
+ if (lastError) {
+  throw lastError;
+ }
+
+ return [];
 }
 
 export async function getGoogleBookDetail(externalId) {
