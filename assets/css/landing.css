@@ -317,6 +317,43 @@ body.dark-theme .nav-link-pill.active .nav-pill-inner {
   gap: 12px;
 }
 
+@media (max-width: 640px) {
+  header.site-header {
+    width: 100%;
+    margin: 12px auto 0;
+    padding: 8px 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .brand-name {
+    font-size: 1.65rem;
+    white-space: nowrap;
+  }
+
+  .nav-center {
+    display: none;
+  }
+
+  .nav-right {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .btn-signin {
+    flex: 1 1 100%;
+    justify-content: center;
+    min-width: 0;
+  }
+}
+
 .btn-signin {
   height: var(--control-height);
   display: inline-flex;
