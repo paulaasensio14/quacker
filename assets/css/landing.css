@@ -35,12 +35,15 @@ body.no-scroll { overflow: hidden; }
 /* ====== MODO OSCURO (minimalista, sin romper el estilo) ====== */
 
 body.dark-theme {
-    /* color que comentas: rgb(26 44 59) */
     --page-bg: rgb(26 44 59 / 1);
-    --text-main: #f9fafb;   /* texto principal claro sobre el fondo oscuro */
-    --text-muted: #cbd5f5;  /* texto secundario */
-
-    /* mantenemos el amarillo, pero ligeramente más cálido si quieres ajustar */
+    --landing-shell: #043244;
+    --landing-card: #081523;
+    --landing-surface: #0b1724;
+    --landing-control: #102235;
+    --landing-control-hover: #132b40;
+    --landing-border: #010b16;
+    --text-main: #f9fafb;
+    --text-muted: #cbd5f5;
     --bg-yellow: #ffc928;
 }
 
@@ -91,10 +94,10 @@ body.dark-theme .nav-link-pill.active .nav-pill-inner {
 body.dark-theme .lang-pill,
 body.dark-theme .btn-signin,
 body.dark-theme .toggle-pill {
-    background: #0b1724;
-    color: var(--text-main);
-    border-color: #020617;
-    box-shadow: 4px 4px 0 #020617;
+    background: var(--landing-control);
+    color: rgba(249, 250, 251, 0.92);
+    border-color: var(--landing-border);
+    box-shadow: 4px 4px 0 var(--landing-border);
 }
 
 /* botones idioma */
@@ -117,7 +120,7 @@ body.dark-theme .toggle-knob {
 }
 
 body.dark-theme .toggle-pill.is-dark {
-    background: #0b1724;
+    background: var(--landing-control);
 }
 
 body.dark-theme .toggle-pill.is-dark .toggle-knob {
@@ -127,12 +130,25 @@ body.dark-theme .toggle-pill.is-dark .toggle-knob {
 
 /* ===== HERO: fondo amarillo, texto oscuro (no se invierte) ===== */
 
-body.dark-theme .hero-frame,
+body.dark-theme .hero-frame {
+/* el hero amarillo mantiene texto oscuro */
+    color: #062019;
+}
+
+body.dark-theme .auth-card-modal {
+    background: var(--landing-card);
+    color: var(--text-main);
+    border-color: var(--landing-border);
+    box-shadow: 8px 8px 0 var(--landing-border);
+}
+
 body.dark-theme .step-card,
 body.dark-theme .contact-card,
-body.dark-theme .auth-card-modal {
-/* siguen siendo tarjetas claras encima del fondo oscuro */
-    color: #062019;
+body.dark-theme .contact-side-card {
+    background: var(--landing-card);
+    border-color: var(--landing-border);
+    box-shadow: 6px 6px 0 var(--landing-border);
+    color: var(--text-main);
 }
 
 body.dark-theme .hero-title,
@@ -149,19 +165,34 @@ body.dark-theme .hero-social-proof {
 body.dark-theme .step-title,
 body.dark-theme .contact-card-title,
 body.dark-theme .form-label {
-    color: #062019;
+    color: var(--text-main);
 }
 
 body.dark-theme .step-text {
-    color: #23463a;
+    color: var(--text-muted);
+}
+
+body.dark-theme .step-badge {
+    background: var(--bg-yellow);
+    color: #062019;
 }
 
 /* inputs y textareas claros con texto oscuro */
 body.dark-theme .form-input,
 body.dark-theme .form-textarea,
 body.dark-theme .input-wrapper-auth {
-    background: #ffffff;
-    color: #062019;
+    background: var(--landing-control);
+    border-color: var(--landing-border);
+    color: rgba(249, 250, 251, 0.94);
+}
+
+body.dark-theme .input-field-auth {
+    color: var(--text-main);
+}
+
+body.dark-theme .input-icon-auth,
+body.dark-theme .password-toggle-auth {
+    color: var(--text-muted);
 }
 
 /* ===== BOTÓN SCROLL ARRIBA ===== */
@@ -416,8 +447,9 @@ body.dark-theme .nav-link-pill.active .nav-pill-inner {
 }
 
 body.dark-theme .lang-pill {
-  background: #020617;
-  box-shadow: var(--btn-shadow);
+  background: var(--landing-control);
+  border-color: var(--landing-border);
+  box-shadow: 4px 4px 0 var(--landing-border);
 }
 
 body.dark-theme .lang-btn {
@@ -761,6 +793,12 @@ section { padding: 32px 0; }
   box-shadow: 0 10px 18px rgba(15, 23, 42, 0.5);
 }
 
+body.dark-theme .feature-card {
+  background: var(--landing-card);
+  border-color: var(--landing-border);
+  box-shadow: 4px 4px 0 var(--landing-border);
+}
+
 .feature-pill {
   display: inline-flex;
   align-items: center;
@@ -771,6 +809,11 @@ section { padding: 32px 0; }
   font-size: 0.85rem;
   font-weight: 500;
   margin-bottom: 8px;
+}
+
+body.dark-theme .feature-pill {
+  background: var(--landing-control);
+  color: rgba(249, 250, 251, 0.92);
 }
 
 .feature-title {
@@ -853,6 +896,12 @@ section { padding: 32px 0; }
   color: #9ca3af;
 }
 
+body.dark-theme .form-input::placeholder,
+body.dark-theme .form-textarea::placeholder,
+body.dark-theme .input-field-auth::placeholder {
+  color: var(--text-muted);
+}
+
 .btn-submit {
   margin-top: 8px;
   width: 100%;
@@ -902,12 +951,14 @@ section { padding: 32px 0; }
     justify-content: center;
     margin-bottom: 16px;
     overflow: hidden;
+    aspect-ratio: 16 / 9;
+    max-height: 210px;
 }
 
 .contact-side-avatar img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 /* Listado dentro de la tarjeta */
@@ -923,8 +974,13 @@ section { padding: 32px 0; }
 
 /* Modo oscuro coherente */
 body.dark-theme .contact-side-card {
-    background: #0b1724;
+    background: var(--landing-surface);
     color: var(--text-main);
+}
+
+body.dark-theme .contact-side-avatar {
+    background: #f8fafc;
+    box-shadow: inset 0 0 0 2px rgba(2, 6, 23, 0.08);
 }
 
 
@@ -1015,6 +1071,10 @@ footer {
   margin-bottom: 18px;
 }
 
+body.dark-theme .auth-subtitle {
+  color: var(--text-muted);
+}
+
 .auth-tabs {
   display: flex;
   border-radius: 14px;
@@ -1036,6 +1096,16 @@ footer {
 }
 
 .auth-tab.active { background: var(--bg-yellow); }
+
+body.dark-theme .auth-tab {
+  background: var(--landing-control);
+  color: rgba(249, 250, 251, 0.92);
+}
+
+body.dark-theme .auth-tab.active {
+  background: var(--bg-yellow);
+  color: #020617;
+}
 
 .form-group-auth { margin-bottom: 14px; }
 
@@ -1125,6 +1195,10 @@ footer {
   color: #4b5563;
 }
 
+body.dark-theme .auth-legal {
+  color: var(--text-muted);
+}
+
 .auth-legal a {
   color: #ea9b00;
   text-decoration: none;
@@ -1146,6 +1220,12 @@ footer {
   cursor: pointer;
   display: grid;
   place-items: center;
+}
+
+body.dark-theme .auth-close {
+  border-color: rgba(249, 250, 251, 0.16);
+  background: var(--landing-control);
+  color: var(--text-main);
 }
 
 .auth-close:hover {
@@ -1209,8 +1289,9 @@ body.dark-theme .scroll-top-btn {
 /* Modo oscuro coherente para botones secundarios */
 body.dark-theme .btn-secondary,
 body.dark-theme .btn-signin {
-  background: #020617;
-  color: #e5e7eb;
+  background: var(--landing-control);
+  color: rgba(249, 250, 251, 0.92);
+  border-color: var(--landing-border);
 }
 
 body.dark-theme .btn-submit {
@@ -1232,11 +1313,52 @@ body.dark-theme .btn-submit {
   .steps-grid,
   .features-grid { grid-template-columns: 1fr; }
   .hero-frame { width: calc(100% - 24px); padding: 32px 18px 40px; }
-  main { padding: 0 16px 40px; }
+  main { padding: 0 16px 56px; }
+
+  .features-grid {
+    gap: 12px;
+  }
+
+  .feature-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .feature-pill {
+    margin-bottom: 10px;
+  }
+
+  .contact-layout {
+    gap: 20px;
+  }
+
+  .contact-card,
+  .contact-side-card {
+    padding: 20px 18px 22px;
+    border-radius: 22px;
+  }
+
+  .contact-card-title {
+    margin-bottom: 16px;
+    font-size: 1.25rem;
+  }
+
+  .contact-duck {
+    width: 104px;
+    margin-bottom: 16px;
+  }
+
+  .scroll-top-btn {
+    right: 14px;
+    bottom: 18px;
+    width: 42px;
+    height: 42px;
+    font-size: 1.05rem;
+  }
 }
 
 body.dark-theme {
-  background: rgba(10, 12, 16, 0.92);
+  background: var(--page-bg);
 }
 
 /* ===============================
