@@ -311,7 +311,6 @@ Two items can have the same or similar title but represent different content.
 
 Quacker uses canonical identity based on:
 
-````md
 ```text
 source + externalId
 ```
