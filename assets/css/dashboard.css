@@ -742,11 +742,40 @@ main.app-main {
   #view-lists .list-card-header {
     align-items: flex-start;
     gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  #view-lists .list-card-header > h3 {
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   #view-lists .list-card-header-actions {
-    flex: 0 0 auto;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
     gap: 6px;
+    padding-right: 2px;
+  }
+
+  body.dark-theme #view-lists .list-edit-btn,
+  body.dark-theme #view-lists .list-delete-btn {
+    background: #102235;
+    color: rgba(249, 250, 251, 0.92);
+    border-color: #010b16;
+    box-shadow: 2px 2px 0 #010b16;
+  }
+
+  body.dark-theme #view-lists .list-edit-btn:hover {
+    background: #132b40;
+    box-shadow: 1px 1px 0 #010b16;
+  }
+
+  body.dark-theme #view-lists .list-delete-btn:hover {
+    background: rgba(248, 113, 113, 0.18);
+    color: #fecaca;
+    border-color: #ef4444;
+    box-shadow: 1px 1px 0 #010b16;
   }
 
   #view-lists .list-visibility {
@@ -9314,56 +9343,54 @@ body.dark-theme .profile-form-group select:hover {
   border-color: rgba(255, 201, 40, 0.72);
 }
 
-body.dark-theme #view-profile .q-modal__panel {
+body.dark-theme #avatarPickerModal .q-modal__panel {
   background: #081523;
+  border-color: #010b16;
+  box-shadow: 6px 6px 0 #010b16;
 }
 
-body.dark-theme #view-profile .q-modal__subtitle {
+body.dark-theme #avatarPickerModal .q-modal__subtitle {
   color: var(--text-muted);
   opacity: 1;
 }
 
-body.dark-theme #view-profile .icon-btn {
+body.dark-theme #avatarPickerModal .icon-btn {
   background: #102235;
   color: var(--text-main);
   border-color: #010b16;
   box-shadow: 2px 2px 0 #010b16;
 }
 
-body.dark-theme #view-profile .icon-btn:hover {
+body.dark-theme #avatarPickerModal .icon-btn:hover {
   background: #132b40;
   box-shadow: 1px 1px 0 #010b16;
 }
 
-body.dark-theme #view-profile .avatar-option {
-  background: #102235;
+body.dark-theme #avatarPickerModal .avatar-option {
+  background: #0b1724;
   color: var(--text-main);
   border-color: #010b16;
   box-shadow: 3px 3px 0 #010b16;
 }
 
-body.dark-theme #view-profile .avatar-option:hover {
+body.dark-theme #avatarPickerModal .avatar-option:hover {
   background: #132b40;
   box-shadow: 2px 2px 0 #010b16;
 }
 
-body.dark-theme #view-profile .avatar-option img {
-  background: #081523;
+body.dark-theme #avatarPickerModal .avatar-option img {
+  background: #102235;
+  border-color: #010b16;
 }
 
-body.dark-theme #view-profile .q-modal__footer .btn-secondary {
+body.dark-theme #avatarPickerModal .q-modal__footer .btn-secondary {
   background: #102235;
   color: var(--text-main);
   border-color: #010b16;
   box-shadow: 3px 3px 0 #010b16;
 }
 
-body.dark-theme #view-profile .q-modal__footer .btn-secondary:hover {
+body.dark-theme #avatarPickerModal .q-modal__footer .btn-secondary:hover {
   background: #132b40;
   box-shadow: 1px 1px 0 #010b16;
-}
-
-body.dark-theme #view-profile .q-modal__footer .btn-primary {
-  background: var(--bg-yellow);
-  color: #111827;
 }
