@@ -313,3 +313,362 @@ Quacker uses canonical identity based on:
 
 ```text
 source + externalId
+
+```md
+```
+
+Examples:
+
+```text
+tmdb + 550
+google_books + volume-id
+rawg + game-id
+```
+
+This identity model is used across:
+
+* Explore
+* Detail
+* Library
+* Lists
+* Home
+* progress updates
+* list membership
+* duplicate prevention
+
+This was critical for avoiding false matches between remakes, adaptations, games, books, and similarly named content.
+
+---
+
+## Event-based synchronization
+
+Because the project does not use a framework store, synchronization is handled through global custom events.
+
+This allows separate views to update after mutations.
+
+Examples:
+
+* adding an item to Library updates Explore, Detail, Library, and Home
+* adding an item to a list updates Lists and Detail counters
+* editing progress updates Library, Home, and activity data
+* deleting list content updates list detail and overview
+
+This event-based approach keeps modules decoupled while still allowing the app to behave like a unified product.
+
+---
+
+## Backend architecture
+
+The backend uses Express and exposes a custom `/api`.
+
+It handles:
+
+* authentication
+* session cookies
+* library persistence
+* lists persistence
+* activities
+* notifications
+* profile data
+* Explore data
+* Detail hydration
+* external API adapters
+
+Data is stored in `server/db.json` for the v1/demo version.
+
+This is intentionally simple and inspectable.
+
+For a production SaaS version, the JSON persistence layer would be replaced by a real database.
+
+---
+
+## External API integrations
+
+Quacker integrates with three external providers:
+
+### TMDB
+
+Used for:
+
+* movies
+* TV shows
+* detail data
+* cast
+* providers
+* seasons
+* related content
+
+### Google Books
+
+Used for:
+
+* book search
+* featured books
+* book detail
+* metadata such as author and page count
+
+### RAWG
+
+Used for:
+
+* video game search
+* featured games
+* game detail
+* platforms and developer metadata
+
+A key product challenge was normalizing these different APIs into a consistent internal content model.
+
+---
+
+## UX and product decisions
+
+### Different progress rules per type
+
+Progress is not the same for every media type.
+
+A movie does not need partial progress in the same way as a TV show, book, or game.
+
+Quacker uses different progress logic for each content type to avoid forcing every item into the same model.
+
+### Private lists only in v1
+
+Public and collaborative lists are attractive features, but they require deeper product and backend support.
+
+For v1, the product intentionally focuses on private lists to avoid promising features that are not fully implemented.
+
+### Dark mode hierarchy
+
+Dark mode was treated as a real design system problem.
+
+The goal was not to invert colors, but to preserve visual hierarchy:
+
+* page background
+* sidebar/shell
+* cards
+* internal surfaces
+* controls
+* hover states
+* borders
+
+This helped avoid flat dark screens where everything has the same tone.
+
+### Responsive before portfolio
+
+Before writing portfolio material, the app went through responsive QA.
+
+The priority was to avoid presenting screenshots while known mobile regressions were still open.
+
+This included fixes around:
+
+* mobile sidebar/topbar
+* Home panels
+* Detail cast layout
+* Library modals
+* Lists card actions
+* Profile layout
+* Avatar modal hierarchy
+
+---
+
+## Main challenges
+
+### Synchronizing views without a framework
+
+The biggest frontend challenge was keeping multiple views in sync without a central framework store.
+
+Explore, Detail, Library, Lists, List Detail, and Home all depend on shared data relationships.
+
+This required careful handling of:
+
+* item identity
+* cache invalidation
+* custom events
+* local state
+* DOM rendering
+* action feedback
+
+### Avoiding duplicate content
+
+Because content comes from multiple providers, duplicate prevention could not rely on title matching.
+
+The canonical identity model was necessary to avoid collisions.
+
+### Handling different content types
+
+Movies, TV shows, books, and games have different metadata and progress models.
+
+The UI had to be flexible without becoming generic or confusing.
+
+### External API instability
+
+External APIs can fail, return partial data, or behave differently by query.
+
+The project needed defensive handling, fallbacks, and UI states that do not collapse when one provider fails.
+
+### Manual DOM rendering
+
+Without a framework, rendering must be explicit.
+
+That means more responsibility around:
+
+* event binding
+* state updates
+* avoiding stale DOM
+* preventing duplicate listeners
+* keeping accessibility attributes correct
+* preserving UI feedback
+
+---
+
+## Quality assurance
+
+Quacker was tested manually across the main product flows.
+
+The final v1 QA pass included:
+
+* Landing
+* Auth modal
+* Home Dashboard
+* Explore
+* Detail
+* Library
+* Lists overview
+* List Detail
+* Profile
+* Avatar modal
+* Notification panel
+* light mode
+* dark mode
+* mobile layout around 393px
+* desktop layout
+* console checks
+* backend checks
+
+Key flows tested:
+
+* Explore → Library → Home
+* Detail → Lists → List Detail
+* Library → Progress → Home
+* Lists overview → List Detail → back
+* theme switching
+* language switching
+* mobile navigation
+
+The project was developed with small commits and regression checks after visual or functional changes.
+
+---
+
+## Results
+
+Quacker reached a portfolio-ready v1 state with:
+
+* a complete landing page
+* a full dashboard experience
+* real external data integrations
+* persistent backend data
+* robust Library and Lists flows
+* type-aware progress tracking
+* synchronized views
+* dark mode
+* responsive layout
+* product screenshots
+* README documentation
+* final regression QA completed
+
+The result is a project that demonstrates more than UI implementation.
+
+It shows the ability to build, stabilize, and present a real product experience.
+
+---
+
+## Trade-offs
+
+### Vanilla JavaScript instead of a framework
+
+Using vanilla JavaScript made the architecture more explicit and educational, but also increased the amount of manual state and DOM work.
+
+This was intentional for portfolio value.
+
+### JSON persistence instead of a database
+
+`server/db.json` is not a production database.
+
+It was chosen because it keeps the v1 simple, inspectable, and easy to run locally.
+
+A production version would need a real database and migration strategy.
+
+### Basic authentication
+
+The current auth system is suitable for local/demo use.
+
+A production SaaS version would require stronger authentication, account recovery, security hardening, and deployment-specific configuration.
+
+### Limited social features
+
+Public profiles, shared lists, and collaborative features were kept out of v1.
+
+This avoided expanding scope before the private personal tracking experience was stable.
+
+### Manual QA
+
+The project currently relies heavily on manual QA.
+
+A future version should add automated tests for critical identity, progress, and API flows.
+
+---
+
+## Future roadmap
+
+Post-v1 improvements could include:
+
+* production database
+* stronger authentication
+* profile settings
+* persistent user preferences
+* onboarding flow
+* recommendation logic
+* import/export tools
+* public profile pages
+* shared lists
+* collaborative lists
+* analytics
+* deployment hardening
+* automated tests
+* SaaS validation
+* pricing/freemium exploration
+
+These are future directions, not current v1 promises.
+
+---
+
+## What this project demonstrates
+
+Quacker demonstrates:
+
+* frontend architecture without a framework
+* modular JavaScript organization
+* product-oriented UI decisions
+* backend/API integration
+* data normalization
+* identity modeling
+* state synchronization
+* responsive design
+* dark mode system thinking
+* debugging and regression handling
+* manual QA discipline
+* portfolio storytelling
+* SaaS product thinking
+
+It is designed to show not only that I can build screens, but that I can build and stabilize a complete product experience.
+
+---
+
+## Final reflection
+
+Quacker became more than a technical exercise.
+
+It evolved into a realistic product case study covering architecture, UX, product scope, external data, persistence, QA, and portfolio presentation.
+
+The most valuable part of the project was not adding more features, but learning how to close the right ones properly.
+
+````
