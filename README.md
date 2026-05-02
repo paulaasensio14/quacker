@@ -8,6 +8,36 @@ The goal of Quacker is not only to show UI work, but to demonstrate product thin
 
 ---
 
+## Product preview
+
+### Landing
+
+![Quacker landing hero](screenshots/landing-hero.png)
+
+### Dashboard
+
+![Quacker dashboard home light mode](screenshots/dashboard-home-light.png)
+
+![Quacker dashboard home dark mode](screenshots/dashboard-home-dark.png)
+
+### Explore
+
+![Quacker explore view](screenshots/explore.png)
+
+### Detail
+
+![Quacker detail view](screenshots/detail.png)
+
+### Library
+
+![Quacker library view](screenshots/library.png)
+
+### Lists
+
+![Quacker lists view](screenshots/lists.png)
+
+---
+
 ## What Quacker does
 
 Quacker helps users organize their personal entertainment backlog across multiple content types:
