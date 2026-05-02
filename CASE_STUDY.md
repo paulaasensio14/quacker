@@ -670,8 +670,6 @@ Quacker became more than a technical exercise.
 It evolved into a realistic product case study covering architecture, UX, product scope, external data, persistence, QA, and portfolio presentation.
 
 
-Cámbialo por esto
-
 ```md
 The most valuable part of the project was not adding more features, but learning how to close the right ones properly.
 ```
