@@ -738,7 +738,7 @@ const LibraryUI = (() => {
       status,
       progress,
       meta,
-      cover: normalizeImageUrl(item.cover),
+      cover: normalizeImageUrl(item.cover || item.backdrop),
       createdAt: safeDateString(item.createdAt),
       updatedAt: safeDateString(item.updatedAt)
     };
