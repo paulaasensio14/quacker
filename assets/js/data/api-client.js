@@ -2365,6 +2365,103 @@ const ApiClient = (() => {
     return { ok: true, itemId: targetId, title: item.title };
   }
 
+  function _normalizeSeriesSeasonBreakdown(meta = {}) {
+    return (Array.isArray(meta.seasonBreakdown) ? meta.seasonBreakdown : [])
+      .map((season) => ({
+        seasonNumber: Math.max(1, Number(season?.seasonNumber || 0) || 0),
+        episodeCount: Math.max(0, Number(season?.episodeCount || 0) || 0)
+      }))
+      .filter((season) => season.seasonNumber > 0 && season.episodeCount > 0)
+      .sort((a, b) => a.seasonNumber - b.seasonNumber);
+  }
+
+  function _getSeriesAbsoluteEpisodeFromMeta(meta = {}, seasonBreakdown = []) {
+    const safeSeason = Math.max(1, Number(meta.season || 1) || 1);
+    const safeEpisode = Math.max(0, Number(meta.episode || 0) || 0);
+    let episodesBeforeSeason = 0;
+
+    for (const season of seasonBreakdown) {
+      if (season.seasonNumber === safeSeason) {
+        return episodesBeforeSeason + safeEpisode;
+      }
+
+      episodesBeforeSeason += season.episodeCount;
+    }
+
+    return safeEpisode;
+  }
+
+  function _getSeriesPositionFromAbsoluteEpisode(seasonBreakdown = [], absoluteEpisode = 1) {
+    let remaining = Math.max(1, Number(absoluteEpisode || 1) || 1);
+
+    for (const season of seasonBreakdown) {
+      if (remaining <= season.episodeCount) {
+        return {
+          season: season.seasonNumber,
+          episode: remaining
+        };
+      }
+
+      remaining -= season.episodeCount;
+    }
+
+    const lastSeason = seasonBreakdown[seasonBreakdown.length - 1];
+
+    return {
+      season: lastSeason?.seasonNumber || 1,
+      episode: lastSeason?.episodeCount || 1
+    };
+  }
+
+  function _buildSeriesQuickProgressPatch(item) {
+    const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
+    const seasonBreakdown = _normalizeSeriesSeasonBreakdown(meta);
+    const totalEpisodesFromBreakdown = seasonBreakdown.reduce(
+      (sum, season) => sum + season.episodeCount,
+      0
+    );
+    const totalEpisodes = totalEpisodesFromBreakdown || Math.max(0, Number(meta.totalEpisodes || 0) || 0);
+
+    if (!seasonBreakdown.length || totalEpisodes <= 0) {
+      return null;
+    }
+
+    const prevProgress = Math.max(0, Math.min(100, Number(item.progress || 0)));
+    const progressAbsoluteEpisode = prevProgress > 0
+      ? Math.round((prevProgress / 100) * totalEpisodes)
+      : 0;
+    const metaAbsoluteEpisode = prevProgress > 0
+      ? _getSeriesAbsoluteEpisodeFromMeta(meta, seasonBreakdown)
+      : 0;
+
+    const currentAbsoluteEpisode = Math.max(
+      0,
+      Math.min(totalEpisodes, Math.max(progressAbsoluteEpisode, metaAbsoluteEpisode))
+    );
+    const nextAbsoluteEpisode = Math.min(totalEpisodes, currentAbsoluteEpisode + 1);
+    const nextPosition = _getSeriesPositionFromAbsoluteEpisode(
+      seasonBreakdown,
+      nextAbsoluteEpisode
+    );
+    const nextProgress = Math.round((nextAbsoluteEpisode / totalEpisodes) * 100);
+    const justCompleted = nextAbsoluteEpisode >= totalEpisodes;
+
+    return {
+      progress: justCompleted ? 100 : Math.max(1, Math.min(99, nextProgress)),
+      status: justCompleted ? "completed" : "watching",
+      meta: {
+        ...meta,
+        season: nextPosition.season,
+        episode: nextPosition.episode,
+        totalEpisodes
+      },
+      deltaLabel: justCompleted
+        ? _t("library_status_completed", null, "Completado")
+        : `T${nextPosition.season} · E${nextPosition.episode}`,
+      justCompleted
+    };
+  }
+
   async function progressLibraryItem(itemId, delta = 5) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
 
@@ -2373,17 +2470,32 @@ const ApiClient = (() => {
     const current = await getLibraryItemById(targetId);
     if (!current) return { ok: false, reason: "not_found" };
 
+    const seriesPatch = current.type === "serie"
+      ? _buildSeriesQuickProgressPatch(current)
+      : null;
+
     const prev = Math.max(0, Math.min(100, Number(current.progress ?? 0)));
     const safeDelta = Math.max(1, Math.min(100, Number(delta || 0)));
-    const next = Math.min(100, Math.max(0, prev + safeDelta));
-    const justCompleted = next >= 100 && prev < 100;
+    const next = seriesPatch
+      ? seriesPatch.progress
+      : Math.min(100, Math.max(0, prev + safeDelta));
+    const justCompleted = seriesPatch
+      ? seriesPatch.justCompleted
+      : next >= 100 && prev < 100;
 
-    const nextItem = {
-      ...current,
-      progress: next
-    };
+    const nextItem = seriesPatch
+      ? {
+        ...current,
+        status: seriesPatch.status,
+        progress: seriesPatch.progress,
+        meta: seriesPatch.meta
+      }
+      : {
+        ...current,
+        progress: next
+      };
 
-    if (current.type === "book") {
+    if (!seriesPatch && current.type === "book") {
       const totalPages = Number(current.meta?.totalPages || 0);
       if (totalPages > 0) {
         nextItem.meta = {
@@ -2401,8 +2513,8 @@ const ApiClient = (() => {
       return updated || { ok: false, reason: "update_failed" };
     }
 
-    let deltaLabel = `${Math.round(next)}%`;
-    if (current.type === "book" && Number(nextItem.meta?.totalPages || 0) > 0) {
+    let deltaLabel = seriesPatch?.deltaLabel || `${Math.round(next)}%`;
+    if (!seriesPatch && current.type === "book" && Number(nextItem.meta?.totalPages || 0) > 0) {
       deltaLabel = `${Number(nextItem.meta.pagesRead || 0)}/${Number(nextItem.meta.totalPages || 0)} ${_t("library_pages", null, "páginas")}`;
     }
 
@@ -4000,15 +4112,21 @@ const ApiClient = (() => {
     }
 
     const prevProgress = Number(item.progress || 0);
-    let nextProgress = prevProgress;
-    let meta = { ...(item.meta || {}) };
-    let deltaLabel = "";
+    const seriesPatch = item.type === "serie"
+      ? _buildSeriesQuickProgressPatch(item)
+      : null;
+    let nextProgress = seriesPatch ? seriesPatch.progress : prevProgress;
+    let meta = seriesPatch ? seriesPatch.meta : { ...(item.meta || {}) };
+    let nextStatus = seriesPatch ? seriesPatch.status : item.status;
+    let deltaLabel = seriesPatch?.deltaLabel || "";
 
     switch (item.type) {
 
       case "serie":
-        nextProgress = Math.min(100, prevProgress + 5);
-        deltaLabel = `${Math.round(nextProgress)}%`;
+        if (!seriesPatch) {
+          nextProgress = Math.min(100, prevProgress + 5);
+          deltaLabel = `${Math.round(nextProgress)}%`;
+        }
         break;
 
       case "pelicula":
@@ -4043,10 +4161,13 @@ const ApiClient = (() => {
         deltaLabel = `${Math.round(nextProgress)}%`;
     }
 
-    const justCompleted = prevProgress < 100 && nextProgress >= 100;
+    const justCompleted = seriesPatch
+      ? seriesPatch.justCompleted
+      : prevProgress < 100 && nextProgress >= 100;
 
     const updatedItem = {
       ...item,
+      status: nextStatus,
       progress: nextProgress,
       meta
     };
