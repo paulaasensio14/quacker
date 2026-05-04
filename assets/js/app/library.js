@@ -1637,6 +1637,98 @@ const LibraryUI = (() => {
     }, 520);
   }
 
+  function normalizeLibrarySeasonBreakdown(meta = {}) {
+    return (Array.isArray(meta.seasonBreakdown) ? meta.seasonBreakdown : [])
+      .map((season) => ({
+        seasonNumber: Math.max(1, Number(season?.seasonNumber || 0) || 0),
+        episodeCount: Math.max(0, Number(season?.episodeCount || 0) || 0)
+      }))
+      .filter((season) => season.seasonNumber > 0 && season.episodeCount > 0)
+      .sort((a, b) => a.seasonNumber - b.seasonNumber);
+  }
+
+  function getLibraryAbsoluteEpisodeFromMeta(meta = {}, seasonBreakdown = []) {
+    const safeSeason = Math.max(1, Number(meta.season || 1) || 1);
+    const safeEpisode = Math.max(0, Number(meta.episode || 0) || 0);
+    let episodesBeforeSeason = 0;
+
+    for (const season of seasonBreakdown) {
+      if (season.seasonNumber === safeSeason) {
+        return episodesBeforeSeason + Math.min(safeEpisode, season.episodeCount);
+      }
+
+      episodesBeforeSeason += season.episodeCount;
+    }
+
+    return safeEpisode;
+  }
+
+  function getLibraryEpisodePositionFromAbsolute(seasonBreakdown = [], absoluteEpisode = 1) {
+    let remaining = Math.max(1, Number(absoluteEpisode || 1) || 1);
+
+    for (const season of seasonBreakdown) {
+      if (remaining <= season.episodeCount) {
+        return {
+          season: season.seasonNumber,
+          episode: remaining
+        };
+      }
+
+      remaining -= season.episodeCount;
+    }
+
+    const lastSeason = seasonBreakdown[seasonBreakdown.length - 1];
+
+    return {
+      season: lastSeason?.seasonNumber || 1,
+      episode: lastSeason?.episodeCount || 1
+    };
+  }
+
+  function buildLibrarySeriesProgressPatch(item) {
+    const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
+    const seasonBreakdown = normalizeLibrarySeasonBreakdown(meta);
+    const totalEpisodesFromBreakdown = seasonBreakdown.reduce(
+      (sum, season) => sum + season.episodeCount,
+      0
+    );
+    const totalEpisodes = totalEpisodesFromBreakdown || Math.max(0, Number(meta.totalEpisodes || 0) || 0);
+
+    if (!seasonBreakdown.length || totalEpisodes <= 0) {
+      return null;
+    }
+
+    const currentProgress = Math.max(0, Math.min(100, Number(item.progress || 0)));
+    const progressAbsoluteEpisode = currentProgress > 0
+      ? Math.round((currentProgress / 100) * totalEpisodes)
+      : 0;
+    const metaAbsoluteEpisode = currentProgress > 0
+      ? getLibraryAbsoluteEpisodeFromMeta(meta, seasonBreakdown)
+      : 0;
+    const currentAbsoluteEpisode = Math.max(
+      0,
+      Math.min(totalEpisodes, Math.max(progressAbsoluteEpisode, metaAbsoluteEpisode))
+    );
+    const nextAbsoluteEpisode = Math.min(totalEpisodes, currentAbsoluteEpisode + 1);
+    const nextPosition = getLibraryEpisodePositionFromAbsolute(
+      seasonBreakdown,
+      nextAbsoluteEpisode
+    );
+    const nextProgress = Math.round((nextAbsoluteEpisode / totalEpisodes) * 100);
+    const justCompleted = nextAbsoluteEpisode >= totalEpisodes;
+
+    return {
+      progress: justCompleted ? 100 : Math.max(1, Math.min(99, nextProgress)),
+      status: justCompleted ? "completed" : "watching",
+      meta: {
+        ...meta,
+        season: nextPosition.season,
+        episode: nextPosition.episode,
+        totalEpisodes
+      }
+    };
+  }
+
   async function applyQuickProgressWithUndo(itemId) {
     const normalizedItemId = _normalizeLibraryItemId(itemId);
     const safeId = _getLibrarySafeItemId(normalizedItemId);
@@ -1700,22 +1792,30 @@ const LibraryUI = (() => {
 
         nextItem.status = nextProgress >= 100 ? "completed" : "reading";
       } else if (nextItem.type === "serie") {
-        const currentEpisode = Math.max(0, Math.round(Number(nextItem.meta.episode || 0)));
-        const totalEpisodes = Math.max(0, Math.round(Number(nextItem.meta.totalEpisodes || 0)));
-        const nextEpisode = totalEpisodes > 0
-          ? Math.min(totalEpisodes, currentEpisode + 1)
-          : currentEpisode + 1;
+        const seriesPatch = buildLibrarySeriesProgressPatch(nextItem);
 
-        nextItem.meta.episode = Math.max(1, nextEpisode);
-
-        if (totalEpisodes > 0) {
-          nextItem.meta.totalEpisodes = totalEpisodes;
-          nextProgress = Math.round((nextItem.meta.episode / totalEpisodes) * 100);
+        if (seriesPatch) {
+          nextItem.meta = seriesPatch.meta;
+          nextItem.status = seriesPatch.status;
+          nextProgress = seriesPatch.progress;
         } else {
-          nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
-        }
+          const currentEpisode = Math.max(0, Math.round(Number(nextItem.meta.episode || 0)));
+          const totalEpisodes = Math.max(0, Math.round(Number(nextItem.meta.totalEpisodes || 0)));
+          const nextEpisode = totalEpisodes > 0
+            ? Math.min(totalEpisodes, currentEpisode + 1)
+            : currentEpisode + 1;
 
-        nextItem.status = nextProgress >= 100 ? "completed" : "watching";
+          nextItem.meta.episode = Math.max(1, nextEpisode);
+
+          if (totalEpisodes > 0) {
+            nextItem.meta.totalEpisodes = totalEpisodes;
+            nextProgress = Math.round((nextItem.meta.episode / totalEpisodes) * 100);
+          } else {
+            nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
+          }
+
+          nextItem.status = nextProgress >= 100 ? "completed" : "watching";
+        }
       } else if (nextItem.type === "game") {
         const currentHours = Math.max(0, Number(nextItem.meta.hoursPlayed || 0));
 
@@ -1742,9 +1842,11 @@ const LibraryUI = (() => {
           ? `${nextItem.meta.pagesRead}/${nextItem.meta.totalPages} ${t("library_pages")}`
           : nextItem.type === "game"
             ? `${nextItem.meta.hoursPlayed} h`
-            : nextItem.type === "pelicula"
-              ? t("library_progress_movie_completed")
-              : `${Math.round(Number(updatedItem.progress ?? 0))}%`
+            : nextItem.type === "serie"
+              ? `T${nextItem.meta.season || 1} · E${nextItem.meta.episode || 1}`
+              : nextItem.type === "pelicula"
+                ? t("library_progress_movie_completed")
+                : `${Math.round(Number(updatedItem.progress ?? 0))}%`
       };
 
       const justCompleted = !!res?.justCompleted;
