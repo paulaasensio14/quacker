@@ -66,7 +66,7 @@ function _baseSearchItemFromRawgGame(item) {
     title: _safeText(item.name),
     releaseDate: _safeText(item.released),
     summary: _safeText(item.slug),
-    cover: "",
+    cover: _rawgImageUrl(item),
     backdrop: _rawgImageUrl(item),
     meta: {
       year: _yearFromDate(item.released),
