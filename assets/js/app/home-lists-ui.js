@@ -882,6 +882,129 @@ async function renderHomeDashboard() {
     return true;
   }
 
+  function _normalizeHomeSeasonBreakdown(seasonBreakdown) {
+    return (Array.isArray(seasonBreakdown) ? seasonBreakdown : [])
+      .map((season) => ({
+        seasonNumber: Math.max(1, Number(season?.seasonNumber || 0) || 0),
+        episodeCount: Math.max(0, Number(season?.episodeCount || 0) || 0)
+      }))
+      .filter((season) => season.seasonNumber > 0 && season.episodeCount > 0)
+      .sort((a, b) => a.seasonNumber - b.seasonNumber);
+  }
+
+  function _getHomeEpisodePositionFromAbsolute(seasonBreakdown, absoluteEpisode) {
+    const safeAbsoluteEpisode = Math.max(1, Number(absoluteEpisode || 1) || 1);
+    let remaining = safeAbsoluteEpisode;
+
+    for (const season of seasonBreakdown) {
+      if (remaining <= season.episodeCount) {
+        return {
+          season: season.seasonNumber,
+          episode: remaining
+        };
+      }
+
+      remaining -= season.episodeCount;
+    }
+
+    const lastSeason = seasonBreakdown[seasonBreakdown.length - 1];
+
+    return {
+      season: lastSeason?.seasonNumber || 1,
+      episode: lastSeason?.episodeCount || 1
+    };
+  }
+
+  function _getHomeAbsoluteEpisodeFromPosition(seasonBreakdown, seasonNumber, episodeNumber) {
+    const safeSeason = Math.max(1, Number(seasonNumber || 1) || 1);
+    const safeEpisode = Math.max(1, Number(episodeNumber || 1) || 1);
+    let totalBeforeSeason = 0;
+
+    for (const season of seasonBreakdown) {
+      if (season.seasonNumber === safeSeason) {
+        return totalBeforeSeason + Math.min(safeEpisode, season.episodeCount);
+      }
+
+      totalBeforeSeason += season.episodeCount;
+    }
+
+    return safeEpisode;
+  }
+
+  async function applyHomeQuickProgress(itemId, snapshotBefore = null) {
+    const item = snapshotBefore || await ApiClient.getLibraryItemById(itemId);
+    const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
+    const seasonBreakdown = _normalizeHomeSeasonBreakdown(meta.seasonBreakdown);
+
+    if (!item || item.type !== "serie" || seasonBreakdown.length === 0) {
+      return assertHomeMutationOk(
+        await (ApiClient.applyQuickProgress
+          ? ApiClient.applyQuickProgress(itemId)
+          : ApiClient.progressLibraryItem(itemId, 5)
+        ),
+        "quick_progress_failed"
+      );
+    }
+
+    const totalEpisodes = seasonBreakdown.reduce(
+      (sum, season) => sum + season.episodeCount,
+      0
+    );
+
+    if (totalEpisodes <= 0) {
+      return assertHomeMutationOk(
+        await (ApiClient.applyQuickProgress
+          ? ApiClient.applyQuickProgress(itemId)
+          : ApiClient.progressLibraryItem(itemId, 5)
+        ),
+        "quick_progress_failed"
+      );
+    }
+
+    const currentAbsoluteEpisode = _getHomeAbsoluteEpisodeFromPosition(
+      seasonBreakdown,
+      meta.season || 1,
+      meta.episode || 0
+    );
+
+    const nextAbsoluteEpisode = Math.min(totalEpisodes, currentAbsoluteEpisode + 1);
+    const nextPosition = _getHomeEpisodePositionFromAbsolute(
+      seasonBreakdown,
+      nextAbsoluteEpisode
+    );
+    const nextProgress = Math.round((nextAbsoluteEpisode / totalEpisodes) * 100);
+    const justCompleted = nextAbsoluteEpisode >= totalEpisodes;
+    const nowIso = new Date().toISOString();
+
+    const nextItem = {
+      ...item,
+      status: justCompleted ? "completed" : "watching",
+      progress: justCompleted ? 100 : Math.max(1, Math.min(99, nextProgress)),
+      meta: {
+        ...meta,
+        season: nextPosition.season,
+        episode: nextPosition.episode,
+        totalEpisodes
+      },
+      updatedAt: nowIso,
+      lastActivityAt: nowIso
+    };
+
+    const result = assertHomeMutationOk(
+      await ApiClient.updateLibraryItem(nextItem),
+      "quick_progress_failed"
+    );
+
+    return {
+      ok: true,
+      item: result?.item || result,
+      justCompleted,
+      deltaLabel: justCompleted
+        ? window.I18n.t("library_status_completed")
+        : `T${nextPosition.season} · E${nextPosition.episode}`
+    };
+  }
+
   async function applyProgressTick(itemId, sourceBtn = null) {
     if (!itemId) return;
 
@@ -911,10 +1034,7 @@ async function renderHomeDashboard() {
       const sinceIso = new Date(Date.now() - 2000).toISOString();
 
       const res = assertHomeMutationOk(
-        await (ApiClient.applyQuickProgress
-          ? ApiClient.applyQuickProgress(itemId)
-          : ApiClient.progressLibraryItem(itemId, 5)
-        ),
+        await applyHomeQuickProgress(itemId, snapshotBefore),
         "quick_progress_failed"
       );
 
@@ -1100,10 +1220,7 @@ async function renderHomeDashboard() {
       );
 
       const progRes = assertHomeMutationOk(
-        await (ApiClient.applyQuickProgress
-          ? ApiClient.applyQuickProgress(itemId)
-          : ApiClient.progressLibraryItem(itemId, 5)
-        ),
+        await applyHomeQuickProgress(itemId, snapshotBefore),
         "quick_progress_failed"
       );
 
