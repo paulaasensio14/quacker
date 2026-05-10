@@ -958,7 +958,6 @@ body.dark-theme .input-field-auth::placeholder {
 .contact-side-avatar img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
 }
 
 /* Listado dentro de la tarjeta */
