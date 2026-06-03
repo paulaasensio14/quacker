@@ -327,6 +327,16 @@ const ApiClient = (() => {
 
     if (!targetId || !type || !createdAt) return null;
 
+    const rawPayload = entry?.payload && typeof entry.payload === "object"
+      ? entry.payload
+      : null;
+    const payloadSeason = Math.max(0, Number(rawPayload?.season || 0) || 0);
+    const payloadEpisode = Math.max(0, Number(rawPayload?.episode || 0) || 0);
+    const payload =
+      payloadSeason > 0 && payloadEpisode > 0
+        ? { season: payloadSeason, episode: payloadEpisode }
+        : null;
+
     return {
       ...entry,
       id: _normalizeDataId(entry.id) || `${type}:${targetId}:${createdAt}`,
@@ -336,11 +346,12 @@ const ApiClient = (() => {
       minutes: Number.isFinite(Number(entry.minutes))
         ? Math.max(0, Number(entry.minutes))
         : 0,
-      createdAt
+      createdAt,
+      payload
     };
   }
 
-  async function _getHttpActivities({ limit = 0, filter = "all" } = {}) {
+  async function _getHttpActivities({ limit = 0, filter = "all", itemId = "" } = {}) {
     if (!_isHttp()) return [];
 
     const params = new URLSearchParams();
@@ -351,6 +362,11 @@ const ApiClient = (() => {
 
     if (filter && filter !== "all") {
       params.set("filter", String(filter).trim().toLowerCase());
+    }
+
+    const normalizedItemId = _normalizeDataId(itemId);
+    if (normalizedItemId) {
+      params.set("itemId", normalizedItemId);
     }
 
     try {
@@ -375,6 +391,29 @@ const ApiClient = (() => {
 
       throw error;
     }
+  }
+
+  async function getLibraryItemActivities(itemId, { limit = 0, filter = "all" } = {}) {
+    const normalizedItemId = _normalizeDataId(itemId);
+    if (!normalizedItemId) return [];
+
+    if (_isHttp()) {
+      return _getHttpActivities({ limit, filter, itemId: normalizedItemId });
+    }
+
+    const state = _safeState();
+    const activities = Array.isArray(state.activities) ? state.activities : [];
+
+    return activities
+      .map((entry) => _normalizeActivityRecord(entry))
+      .filter(Boolean)
+      .filter((entry) => entry.targetId === normalizedItemId)
+      .filter((entry) => {
+        if (filter === "all" || !filter) return true;
+        return entry.type === filter;
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, limit > 0 ? limit : undefined);
   }
 
   function _getDashboardActivityStatus(item) {
@@ -2077,7 +2116,20 @@ const ApiClient = (() => {
           }
         };
 
-        await updateLibraryItem(updated, { logActivity: false });
+        const watchedActivityPayload = hasEpisodeMetadata
+          ? {
+            season: currentSeason,
+            episode: currentEpisode
+          }
+          : null;
+
+        await updateLibraryItem(
+          {
+            ...updated,
+            activityPayload: watchedActivityPayload
+          },
+          { logActivity: true }
+        );
 
         if (daysSinceLast >= 7) {
           const hot = daysSinceLast >= 14;
@@ -2165,6 +2217,7 @@ const ApiClient = (() => {
 
     const daysSinceLast = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
     const nowIso = now.toISOString();
+    let watchedActivityPayload = null;
 
     if (item.type === "serie") {
       const meta = { ...(item.meta || {}) };
@@ -2200,6 +2253,10 @@ const ApiClient = (() => {
       let nextSeason = currentSeason;
       let nextEpisode = currentEpisode;
       let nextStatus = "watching";
+      watchedActivityPayload = {
+        season: currentSeason,
+        episode: currentEpisode
+      };
 
       const currentSeasonEpisodes = getEpisodesInSeason(currentSeason);
 
@@ -2258,11 +2315,14 @@ const ApiClient = (() => {
 
     if (typeof FakeBackend !== "undefined" && typeof FakeBackend.addActivity === "function") {
       FakeBackend.addActivity({
-        type: "resume",
+        type: "progress",
         targetType: "library_item",
         targetId,
-        minutes: 0
+        minutes: 20,
+        payload: item.type === "serie" ? watchedActivityPayload : null
       });
+
+      await maybeNotifyStreak();
     }
 
     if (daysSinceLast >= 7) {
@@ -2343,11 +2403,19 @@ const ApiClient = (() => {
 
     // Registrar actividad
     if (typeof FakeBackend !== "undefined" && typeof FakeBackend.addActivity === "function") {
+      const activityPayload = item.type === "serie"
+        ? {
+          season: item?.meta?.season,
+          episode: item?.meta?.episode
+        }
+        : null;
+
       FakeBackend.addActivity({
         type: "completed",
         targetType: "library_item",
         targetId,
-        minutes: 0
+        minutes: 0,
+        payload: activityPayload
       });
     }
 
@@ -2780,11 +2848,29 @@ const ApiClient = (() => {
           null;
 
         if (actType) {
+          const rawActivityPayload = updatedItem?.activityPayload && typeof updatedItem.activityPayload === "object"
+            ? updatedItem.activityPayload
+            : next.type === "serie"
+              ? {
+                season: next?.meta?.season,
+                episode: next?.meta?.episode
+              }
+              : null;
+          const activitySeason = Math.max(0, Number(rawActivityPayload?.season || 0) || 0);
+          const activityEpisode = Math.max(0, Number(rawActivityPayload?.episode || 0) || 0);
+          const activityPayload =
+            activitySeason > 0 && activityEpisode > 0
+              ? {
+                season: activitySeason,
+                episode: activityEpisode
+              }
+              : null;
           FakeBackend.addActivity({
             type: actType,
             targetType: "library_item",
             targetId: itemId,
-            minutes: 20
+            minutes: 20,
+            payload: activityPayload
           });
 
           await maybeNotifyStreak();
@@ -4233,6 +4319,7 @@ const ApiClient = (() => {
     createLibraryItem,
     getLibrary,
     getLibraryItemById,
+    getLibraryItemActivities,
     updateLibraryItem,
     deleteLibraryItem,
     restoreLibraryItem,

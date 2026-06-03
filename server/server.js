@@ -163,12 +163,24 @@ function _normalizeActivityCreatedAt(value) {
   return parsed.toISOString();
 }
 
+function _normalizeActivityPayload(payload) {
+  if (!payload || typeof payload !== "object") return null;
+
+  const season = Math.max(0, Number(payload.season || 0) || 0);
+  const episode = Math.max(0, Number(payload.episode || 0) || 0);
+
+  if (season <= 0 || episode <= 0) return null;
+
+  return { season, episode };
+}
+
 function _appendUserActivity(bucket, activity) {
   bucket.activities = Array.isArray(bucket.activities) ? bucket.activities : [];
 
   const createdAt = _normalizeActivityCreatedAt(activity?.createdAt) || new Date().toISOString();
   const targetId = String(activity?.targetId || "").trim();
   const type = _normalizeActivityType(activity?.type) || "progress";
+  const payload = _normalizeActivityPayload(activity?.payload);
 
   if (!targetId) return null;
 
@@ -180,7 +192,8 @@ function _appendUserActivity(bucket, activity) {
     minutes: Number.isFinite(Number(activity?.minutes))
       ? Math.max(0, Number(activity.minutes))
       : 0,
-    createdAt
+    createdAt,
+    payload
   };
 
   bucket.activities.unshift(nextActivity);
@@ -1731,12 +1744,14 @@ app.get("/api/activities", _requireAuth, (req, res) => {
   const bucket = _getUserBucket(db, req.session.userId);
   const filter = String(req.query.filter || "all").trim().toLowerCase();
   const limit = Math.max(0, Number(req.query.limit || 0) || 0);
+  const itemId = String(req.query.itemId || "").trim();
   const allowedTypes = new Set(["progress", "completed"]);
 
   const activities = (Array.isArray(bucket.activities) ? bucket.activities : [])
     .filter((activity) => {
       const type = _normalizeActivityType(activity?.type);
       if (!allowedTypes.has(type)) return false;
+      if (itemId && String(activity?.targetId || "").trim() !== itemId) return false;
       if (filter === "all" || !filter) return true;
       return type === filter;
     })
@@ -1748,7 +1763,8 @@ app.get("/api/activities", _requireAuth, (req, res) => {
       minutes: Number.isFinite(Number(activity?.minutes))
         ? Math.max(0, Number(activity.minutes))
         : 0,
-      createdAt: _normalizeActivityCreatedAt(activity?.createdAt) || new Date().toISOString()
+      createdAt: _normalizeActivityCreatedAt(activity?.createdAt) || new Date().toISOString(),
+      payload: _normalizeActivityPayload(activity?.payload)
     }))
     .filter((activity) => activity.targetId)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -2272,11 +2288,20 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
 
   if (activityType) {
     next.lastActivityAt = activityCreatedAt;
+    const activityPayload = next.type === "serie"
+      ? _normalizeActivityPayload(
+        patch?.activityPayload || {
+          season: next?.meta?.season,
+          episode: next?.meta?.episode
+        }
+      )
+      : null;
     _appendUserActivity(bucket, {
       type: activityType,
       targetId: id,
       minutes: 20,
-      createdAt: activityCreatedAt
+      createdAt: activityCreatedAt,
+      payload: activityPayload
     });
   }
 

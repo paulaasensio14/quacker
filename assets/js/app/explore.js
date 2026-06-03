@@ -42,6 +42,7 @@ const ExploreModule = (() => {
   let __detailCastExpanded = false;
   const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
+  const __detailEpisodeActivityCache = new Map();
   const __detailRelatedDrag = {
     pointerId: null,
     startX: 0,
@@ -163,6 +164,104 @@ const ExploreModule = (() => {
     } catch (_) {
       return safeDate;
     }
+  }
+
+  function _hasMeaningfulExploreWatchActivity(item) {
+    const safeType = _norm(item?.type);
+    if (safeType !== "serie" && safeType !== "pelicula") return false;
+
+    const safeProgress = Math.max(0, Math.min(100, Number(item?.progress || 0) || 0));
+    const safeStatus = _norm(item?.status);
+
+    if (safeStatus === "completed" || safeProgress > 0) {
+      return true;
+    }
+
+    if (safeType === "serie") {
+      const safeSeason = Math.max(0, Number(item?.meta?.season || 0) || 0);
+      const safeEpisode = Math.max(0, Number(item?.meta?.episode || 0) || 0);
+      return safeSeason > 0 && safeEpisode > 0;
+    }
+
+    return false;
+  }
+
+  function _getExploreLastWatchedInfo(item) {
+    if (!_hasMeaningfulExploreWatchActivity(item)) {
+      return {
+        label: "",
+        value: ""
+      };
+    }
+
+    const formattedDate = _formatExploreDate(item?.lastActivityAt || item?.updatedAt || "");
+    if (!formattedDate) {
+      return {
+        label: "",
+        value: ""
+      };
+    }
+
+    if (_norm(item?.type) === "serie") {
+      const lastWatchedPosition = _getDetailSeriesLastWatchedPosition(item);
+      const safeSeason = Math.max(0, Number(lastWatchedPosition?.season || 0) || 0);
+      const safeEpisode = Math.max(0, Number(lastWatchedPosition?.episode || 0) || 0);
+      const episodeLabel =
+        safeSeason > 0 && safeEpisode > 0
+          ? `T${safeSeason} · E${safeEpisode}`
+          : "";
+
+      return {
+        label: window.I18n.t(
+          episodeLabel
+            ? "explore_detail_label_last_episode_watched"
+            : "explore_detail_label_last_watched"
+        ),
+        value: [episodeLabel, formattedDate].filter(Boolean).join(" · ")
+      };
+    }
+
+    return {
+      label: window.I18n.t("explore_detail_label_last_watched"),
+      value: formattedDate
+    };
+  }
+
+  function _mergeExploreItemWithLibraryEntry(baseItem, libraryItem) {
+    const safeBaseItem = baseItem && typeof baseItem === "object" ? baseItem : {};
+    const safeLibraryItem = libraryItem && typeof libraryItem === "object" ? libraryItem : null;
+    const baseMeta = safeBaseItem.meta && typeof safeBaseItem.meta === "object"
+      ? safeBaseItem.meta
+      : {};
+    const libraryMeta = safeLibraryItem?.meta && typeof safeLibraryItem.meta === "object"
+      ? safeLibraryItem.meta
+      : {};
+    const normalizedProgress = Number(safeLibraryItem?.progress);
+
+    return {
+      ...safeBaseItem,
+      ...(safeLibraryItem
+        ? {
+          status: _safeText(safeLibraryItem.status).trim() || safeBaseItem.status,
+          progress: Number.isFinite(normalizedProgress) ? normalizedProgress : safeBaseItem.progress,
+          lastActivityAt:
+            _safeText(safeLibraryItem.lastActivityAt).trim() ||
+            _safeText(safeBaseItem.lastActivityAt).trim(),
+          updatedAt:
+            _safeText(safeLibraryItem.updatedAt).trim() ||
+            _safeText(safeBaseItem.updatedAt).trim(),
+          createdAt:
+            _safeText(safeLibraryItem.createdAt).trim() ||
+            _safeText(safeBaseItem.createdAt).trim(),
+          meta: {
+            ...baseMeta,
+            ...libraryMeta
+          }
+        }
+        : {}),
+      __inLibrary: !!safeLibraryItem,
+      __libraryItemId: _normalizeId(safeLibraryItem?.id)
+    };
   }
 
   function _normalizeExploreItem(rawItem, index = 0) {
@@ -802,6 +901,110 @@ const ExploreModule = (() => {
     return Number(reqSeq) === _getCurrentDetailRequestSeq();
   }
 
+  function _getDetailEpisodeActivityCacheKey(item) {
+    const libraryItemId = _normalizeId(item?.__libraryItemId || item?.id);
+    if (!libraryItemId || _norm(item?.type) !== "serie") return "";
+    return `detail_episode_activity:${libraryItemId}`;
+  }
+
+  function _normalizeDetailSeasonBreakdown(meta = {}) {
+    return (Array.isArray(meta?.seasonBreakdown) ? meta.seasonBreakdown : [])
+      .map((season) => ({
+        seasonNumber: Math.max(1, Number(season?.seasonNumber || 0) || 0),
+        episodeCount: Math.max(0, Number(season?.episodeCount || 0) || 0)
+      }))
+      .filter((season) => season.seasonNumber > 0 && season.episodeCount > 0)
+      .sort((a, b) => a.seasonNumber - b.seasonNumber);
+  }
+
+  function _getDetailSeriesLastWatchedPosition(item) {
+    if (_norm(item?.type) !== "serie" || !_hasMeaningfulExploreWatchActivity(item)) {
+      return null;
+    }
+
+    const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
+    const seasonBreakdown = _normalizeDetailSeasonBreakdown(meta);
+    const currentSeason = Math.max(1, Number(meta.season || 1) || 1);
+    const currentEpisode = Math.max(1, Number(meta.episode || 1) || 1);
+    const safeStatus = _norm(item?.status);
+
+    if (safeStatus === "completed") {
+      return {
+        season: currentSeason,
+        episode: currentEpisode
+      };
+    }
+
+    if (currentEpisode > 1) {
+      return {
+        season: currentSeason,
+        episode: currentEpisode - 1
+      };
+    }
+
+    if (currentSeason > 1) {
+      const previousSeason = seasonBreakdown.find(
+        (season) => season.seasonNumber === currentSeason - 1
+      );
+
+      if (previousSeason?.episodeCount > 0) {
+        return {
+          season: currentSeason - 1,
+          episode: previousSeason.episodeCount
+        };
+      }
+    }
+
+    return {
+      season: currentSeason,
+      episode: currentEpisode
+    };
+  }
+
+  function _buildDetailEpisodeActivityMap(item, activities = []) {
+    const safeMap = {};
+    const safeActivities = Array.isArray(activities) ? activities : [];
+
+    safeActivities.forEach((activity) => {
+      const season = Math.max(0, Number(activity?.payload?.season || 0) || 0);
+      const episode = Math.max(0, Number(activity?.payload?.episode || 0) || 0);
+      const createdAt = _safeText(activity?.createdAt).trim();
+
+      if (season <= 0 || episode <= 0 || !createdAt) return;
+
+      const key = `${season}:${episode}`;
+      if (!safeMap[key] || new Date(createdAt) > new Date(safeMap[key])) {
+        safeMap[key] = createdAt;
+      }
+    });
+
+    const fallbackPosition = _getDetailSeriesLastWatchedPosition(item);
+    const fallbackSeason = Math.max(0, Number(fallbackPosition?.season || 0) || 0);
+    const fallbackEpisode = Math.max(0, Number(fallbackPosition?.episode || 0) || 0);
+    const fallbackIso = _safeText(item?.lastActivityAt || item?.updatedAt || "").trim();
+
+    if (fallbackSeason > 0 && fallbackEpisode > 0 && fallbackIso) {
+      const fallbackKey = `${fallbackSeason}:${fallbackEpisode}`;
+      if (!safeMap[fallbackKey] || new Date(fallbackIso) > new Date(safeMap[fallbackKey])) {
+        safeMap[fallbackKey] = fallbackIso;
+      }
+    }
+
+    return safeMap;
+  }
+
+  function _getDetailEpisodeSeenAt(item, seasonNumber, episodeNumber) {
+    const safeSeason = Math.max(0, Number(seasonNumber || 0) || 0);
+    const safeEpisode = Math.max(0, Number(episodeNumber || 0) || 0);
+    if (safeSeason <= 0 || safeEpisode <= 0) return "";
+
+    const history = item?.__episodeActivityMap && typeof item.__episodeActivityMap === "object"
+      ? item.__episodeActivityMap
+      : null;
+    const iso = history ? _safeText(history[`${safeSeason}:${safeEpisode}`]).trim() : "";
+    return iso;
+  }
+
   function _getDetailSeasonCacheKey(item, seasonNumber) {
     const source = _safeText(item?.source).trim();
     const type = _safeText(item?.type).trim();
@@ -870,6 +1073,12 @@ const ExploreModule = (() => {
                   .replace("{number}", String(episodeNumber));
               const episodeStill = _safeText(episode?.still).trim();
               const episodeSummary = _safeText(episode?.summary).trim();
+              const episodeSeenAt = _getDetailEpisodeSeenAt(item, seasonNumber, episodeNumber);
+              const episodeSeenLabel = episodeSeenAt
+                ? window.I18n
+                  .t("explore_detail_episode_seen_on")
+                  .replace("{date}", _formatExploreDate(episodeSeenAt))
+                : "";
               const episodeMeta = [
                 _formatExploreDate(episode?.airDate),
                 Number(episode?.runtime || 0) > 0
@@ -895,6 +1104,11 @@ const ExploreModule = (() => {
                     <strong class="content-detail-episode-title">
                       E${episodeNumber}. ${_escapeHtml(episodeTitle)}
                     </strong>
+                    ${
+                      episodeSeenLabel
+                        ? `<span class="content-detail-episode-seen">${_escapeHtml(episodeSeenLabel)}</span>`
+                        : ""
+                    }
                     ${
                       episodeMeta
                         ? `<span class="content-detail-episode-meta">${_escapeHtml(episodeMeta)}</span>`
@@ -1050,11 +1264,7 @@ const ExploreModule = (() => {
       : null;
 
     // Retorna el objeto actualizado sin mutar nada externo
-    return {
-      ...item,
-      __inLibrary: !!matchedItem,
-      __libraryItemId: _normalizeId(matchedItem?.id)
-    };
+    return _mergeExploreItemWithLibraryEntry(item, matchedItem);
   }
 
   async function _fetchHydratedExploreItemDetail(item) {
@@ -1079,9 +1289,16 @@ const ExploreModule = (() => {
       __drawerDetailCache.set(cacheKey, detail);
     }
 
+    const detailMeta = detail?.meta && typeof detail.meta === "object" ? detail.meta : {};
+    const itemMeta = item?.meta && typeof item.meta === "object" ? item.meta : {};
+
     const mergedItem = {
       ...item,
       ...detail,
+      meta: {
+        ...detailMeta,
+        ...itemMeta
+      },
       relatedItems: (Array.isArray(detail?.relatedItems) ? detail.relatedItems : [])
         .map((entry, index) => _normalizeDetailRelatedItem(entry, index))
         .filter((entry) => _normalizeId(entry?.eid) !== eid),
@@ -1091,6 +1308,19 @@ const ExploreModule = (() => {
       __libraryItemId: item.__libraryItemId,
       __listsCount: item.__listsCount
     };
+
+    const activityCacheKey = _getDetailEpisodeActivityCacheKey(mergedItem);
+
+    if (activityCacheKey) {
+      const activities = await ApiClient.getLibraryItemActivities(
+        _normalizeId(mergedItem.__libraryItemId),
+        { filter: "all" }
+      );
+      const episodeActivityMap = _buildDetailEpisodeActivityMap(mergedItem, activities);
+      __detailEpisodeActivityCache.set(activityCacheKey, episodeActivityMap);
+
+      mergedItem.__episodeActivityMap = episodeActivityMap;
+    }
 
     // Devolvemos el objeto puro, sin mutar las listas de Explore por la espalda
     return mergedItem;
@@ -1641,7 +1871,7 @@ const ExploreModule = (() => {
     sectionEl.hidden = false;
     metaEl.textContent = metaVm?.seasonsSummary || "";
 
-    gridEl.innerHTML = seasonBreakdown
+    const seasonCardsMarkup = seasonBreakdown
       .map((season) => {
         const seasonNumber = Math.max(0, Number(season?.seasonNumber || 0) || 0);
         const seasonKey = _getDetailSeasonCacheKey(item, seasonNumber);
@@ -1662,12 +1892,69 @@ const ExploreModule = (() => {
         const poster = _safeText(season?.poster).trim();
 
         return `
-          <article class="content-detail-season-panel${isExpanded ? " is-open" : ""}">
+          <button
+            type="button"
+            class="content-detail-season-card${isExpandable ? "" : " is-static"}${isExpanded ? " is-active" : ""}"
+            data-season-number="${seasonNumber}"
+            ${isExpandable ? `aria-expanded="${isExpanded ? "true" : "false"}"` : "disabled"}
+          >
+            <div
+              class="content-detail-season-poster${poster ? "" : " is-fallback"}"
+              ${poster ? `style="background-image: url('${_escapeHtml(poster)}');"` : ""}
+            >
+              ${poster ? "" : `<span class="content-detail-season-initial">T${seasonNumber}</span>`}
+            </div>
+
+            <div class="content-detail-season-copy">
+              <strong class="content-detail-season-title">${_escapeHtml(seasonTitle)}</strong>
+              <span class="content-detail-season-meta">${_escapeHtml(seasonMeta)}</span>
+            </div>
+
+            ${
+              isExpandable
+                ? `
+                  <span class="content-detail-season-chevron" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 9l6 6 6-6"></path>
+                    </svg>
+                  </span>
+                `
+                : ""
+            }
+          </button>
+        `;
+      })
+      .join("");
+
+    const expandedPanelsMarkup = seasonBreakdown
+      .filter((season) => {
+        const seasonNumber = Math.max(0, Number(season?.seasonNumber || 0) || 0);
+        const seasonKey = _getDetailSeasonCacheKey(item, seasonNumber);
+        return !!seasonKey && __detailExpandedSeasonKeys.has(seasonKey);
+      })
+      .map((season) => {
+        const seasonNumber = Math.max(0, Number(season?.seasonNumber || 0) || 0);
+        const seasonTitle =
+          _safeText(season?.name).trim() ||
+          window.I18n
+            .t("explore_detail_season_name")
+            .replace("{number}", String(seasonNumber));
+        const episodeLabel = _formatExploreCountLabel(
+          season?.episodeCount || 0,
+          "explore_detail_episode_single",
+          "explore_detail_episode_plural"
+        );
+        const airYear = _safeText(season?.airDate).trim().slice(0, 4);
+        const seasonMeta = [episodeLabel, airYear].filter(Boolean).join(" · ");
+        const poster = _safeText(season?.poster).trim();
+
+        return `
+          <article class="content-detail-season-panel is-open">
             <button
               type="button"
-              class="content-detail-season-card${isExpandable ? "" : " is-static"}"
+              class="content-detail-season-card content-detail-season-card--expanded"
               data-season-number="${seasonNumber}"
-              ${isExpandable ? `aria-expanded="${isExpanded ? "true" : "false"}"` : "disabled"}
+              aria-expanded="true"
             >
               <div
                 class="content-detail-season-poster${poster ? "" : " is-fallback"}"
@@ -1681,24 +1968,33 @@ const ExploreModule = (() => {
                 <span class="content-detail-season-meta">${_escapeHtml(seasonMeta)}</span>
               </div>
 
-              ${
-                isExpandable
-                  ? `
-                    <span class="content-detail-season-chevron" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M6 9l6 6 6-6"></path>
-                      </svg>
-                    </span>
-                  `
-                  : ""
-              }
+              <span class="content-detail-season-chevron" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 9l6 6 6-6"></path>
+                </svg>
+              </span>
             </button>
 
-            ${isExpanded ? _renderContentDetailSeasonBody(item, seasonNumber) : ""}
+            ${_renderContentDetailSeasonBody(item, seasonNumber)}
           </article>
         `;
       })
       .join("");
+
+    gridEl.innerHTML = `
+      <div class="content-detail-season-grid-head">
+        ${seasonCardsMarkup}
+      </div>
+      ${
+        expandedPanelsMarkup
+          ? `
+            <div class="content-detail-season-expanded-list">
+              ${expandedPanelsMarkup}
+            </div>
+          `
+          : ""
+      }
+    `;
   }
 
   function _syncExploreDrawerFromItem(item) {
@@ -2512,6 +2808,7 @@ const ExploreModule = (() => {
     const writer = _safeText(item?.meta?.writer).trim();
     const lastAirDate = _safeText(item?.meta?.lastAirDate).trim();
     const formattedLastAirDate = _formatExploreDate(lastAirDate);
+    const lastWatchedInfo = _getExploreLastWatchedInfo(item);
     const durationValue =
       runtimeNumber > 0
         ? `${runtimeNumber} ${window.I18n.t("time_minutes")}`
@@ -2583,8 +2880,13 @@ const ExploreModule = (() => {
         secondaryValue = formattedLastAirDate;
       }
 
-      tertiaryLabel = window.I18n.t("explore_detail_label_status");
-      tertiaryValue = statusLabel || window.I18n.t("explore_detail_no_meta");
+      if (lastWatchedInfo.value) {
+        tertiaryLabel = lastWatchedInfo.label;
+        tertiaryValue = lastWatchedInfo.value;
+      } else {
+        tertiaryLabel = window.I18n.t("explore_detail_label_status");
+        tertiaryValue = statusLabel || window.I18n.t("explore_detail_no_meta");
+      }
     } else {
       if (_norm(item?.type) === "pelicula" && director) {
         primaryLabel = window.I18n.t("explore_detail_label_director");
@@ -2603,7 +2905,10 @@ const ExploreModule = (() => {
       }
 
       if (_norm(item?.type) === "pelicula") {
-        if (hasAlternativeOriginalTitle && writer) {
+        if (lastWatchedInfo.value) {
+          tertiaryLabel = lastWatchedInfo.label;
+          tertiaryValue = lastWatchedInfo.value;
+        } else if (hasAlternativeOriginalTitle && writer) {
           tertiaryLabel = window.I18n.t("explore_detail_label_writer");
           tertiaryValue = writer;
         } else {
