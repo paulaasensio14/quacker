@@ -961,6 +961,55 @@ const ExploreModule = (() => {
     };
   }
 
+  function _getDetailSeriesNextEpisodePosition(item) {
+    if (_norm(item?.type) !== "serie") {
+      return null;
+    }
+
+    const safeStatus = _norm(item?.status);
+    if (safeStatus === "completed") {
+      return null;
+    }
+
+    const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
+    const seasonBreakdown = _normalizeDetailSeasonBreakdown(meta);
+    const currentSeason = Math.max(1, Number(meta.season || 1) || 1);
+    const currentEpisode = Math.max(1, Number(meta.episode || 1) || 1);
+    const currentEpisodeSeenAt = _getDetailEpisodeSeenAt(item, currentSeason, currentEpisode);
+    const matchingSeason = seasonBreakdown.find((season) => season.seasonNumber === currentSeason);
+
+    if (!matchingSeason?.episodeCount) {
+      return {
+        season: currentSeason,
+        episode: currentEpisode
+      };
+    }
+
+    if (!currentEpisodeSeenAt) {
+      return {
+        season: currentSeason,
+        episode: Math.min(currentEpisode, matchingSeason.episodeCount)
+      };
+    }
+
+    if (currentEpisode < matchingSeason.episodeCount) {
+      return {
+        season: currentSeason,
+        episode: currentEpisode + 1
+      };
+    }
+
+    const nextSeason = seasonBreakdown.find((season) => season.seasonNumber === currentSeason + 1);
+    if (nextSeason?.episodeCount) {
+      return {
+        season: currentSeason + 1,
+        episode: 1
+      };
+    }
+
+    return null;
+  }
+
   function _buildDetailEpisodeActivityMap(item, activities = []) {
     const safeMap = {};
     const safeActivities = Array.isArray(activities) ? activities : [];
@@ -1003,6 +1052,24 @@ const ExploreModule = (() => {
       : null;
     const iso = history ? _safeText(history[`${safeSeason}:${safeEpisode}`]).trim() : "";
     return iso;
+  }
+
+  function _getDetailWatchedEpisodeCount(item, seasonNumber, totalEpisodes = 0) {
+    const safeSeason = Math.max(0, Number(seasonNumber || 0) || 0);
+    if (safeSeason <= 0) return 0;
+
+    const history = item?.__episodeActivityMap && typeof item.__episodeActivityMap === "object"
+      ? item.__episodeActivityMap
+      : null;
+
+    if (!history) return 0;
+
+    const watchedCount = Object.keys(history).filter((key) => {
+      const [seasonKey, episodeKey] = String(key || "").split(":");
+      return Number(seasonKey) === safeSeason && Number(episodeKey) > 0;
+    }).length;
+
+    return totalEpisodes > 0 ? Math.min(watchedCount, totalEpisodes) : watchedCount;
   }
 
   function _getDetailSeasonCacheKey(item, seasonNumber) {
@@ -1049,6 +1116,7 @@ const ExploreModule = (() => {
     }
 
     const episodes = Array.isArray(seasonState.episodes) ? seasonState.episodes : [];
+    const nextEpisodePosition = _getDetailSeriesNextEpisodePosition(item);
 
     if (episodes.length === 0) {
       return `
@@ -1066,6 +1134,9 @@ const ExploreModule = (() => {
           ${episodes
             .map((episode) => {
               const episodeNumber = Math.max(1, Number(episode?.episodeNumber || 0) || 0);
+              const isNextEpisode =
+                Number(nextEpisodePosition?.season || 0) === seasonNumber &&
+                Number(nextEpisodePosition?.episode || 0) === episodeNumber;
               const episodeTitle =
                 _safeText(episode?.name).trim() ||
                 window.I18n
@@ -1087,7 +1158,7 @@ const ExploreModule = (() => {
               ].filter(Boolean).join(" · ");
 
               return `
-                <li class="content-detail-episode-item">
+                <li class="content-detail-episode-item${episodeSeenLabel ? " is-watched" : ""}${isNextEpisode ? " is-next" : ""}">
                   <div
                     class="content-detail-episode-still${episodeStill ? "" : " is-fallback"}"
                     ${episodeStill ? `style="background-image: url('${_escapeHtml(episodeStill)}');"` : ""}
@@ -1101,6 +1172,11 @@ const ExploreModule = (() => {
                   </div>
 
                   <div class="content-detail-episode-copy">
+                    ${
+                      isNextEpisode
+                        ? `<span class="content-detail-episode-next">${_escapeHtml(window.I18n.t("explore_detail_episode_next"))}</span>`
+                        : ""
+                    }
                     <strong class="content-detail-episode-title">
                       E${episodeNumber}. ${_escapeHtml(episodeTitle)}
                     </strong>
@@ -1877,16 +1953,27 @@ const ExploreModule = (() => {
         const seasonKey = _getDetailSeasonCacheKey(item, seasonNumber);
         const isExpandable = _canLoadDetailSeasonEpisodes(item) && !!seasonKey;
         const isExpanded = !!seasonKey && __detailExpandedSeasonKeys.has(seasonKey);
+        const totalEpisodes = Math.max(0, Number(season?.episodeCount || 0) || 0);
         const seasonTitle =
           _safeText(season?.name).trim() ||
           window.I18n
             .t("explore_detail_season_name")
             .replace("{number}", String(seasonNumber));
         const episodeLabel = _formatExploreCountLabel(
-          season?.episodeCount || 0,
+          totalEpisodes,
           "explore_detail_episode_single",
           "explore_detail_episode_plural"
         );
+        const watchedCount = _getDetailWatchedEpisodeCount(item, seasonNumber, totalEpisodes);
+        const watchedProgressLabel = watchedCount > 0
+          ? window.I18n
+            .t("explore_detail_season_progress")
+            .replace("{watched}", String(watchedCount))
+            .replace("{total}", String(Math.max(watchedCount, totalEpisodes)))
+          : "";
+        const watchedProgressPercent = totalEpisodes > 0
+          ? Math.max(0, Math.min(100, (watchedCount / totalEpisodes) * 100))
+          : 0;
         const airYear = _safeText(season?.airDate).trim().slice(0, 4);
         const seasonMeta = [episodeLabel, airYear].filter(Boolean).join(" · ");
         const poster = _safeText(season?.poster).trim();
@@ -1894,7 +1981,7 @@ const ExploreModule = (() => {
         return `
           <button
             type="button"
-            class="content-detail-season-card${isExpandable ? "" : " is-static"}${isExpanded ? " is-active" : ""}"
+            class="content-detail-season-card${isExpandable ? "" : " is-static"}${isExpanded ? " is-active" : ""}${watchedCount > 0 && watchedCount >= totalEpisodes && totalEpisodes > 0 ? " is-complete" : ""}"
             data-season-number="${seasonNumber}"
             ${isExpandable ? `aria-expanded="${isExpanded ? "true" : "false"}"` : "disabled"}
           >
@@ -1908,6 +1995,19 @@ const ExploreModule = (() => {
             <div class="content-detail-season-copy">
               <strong class="content-detail-season-title">${_escapeHtml(seasonTitle)}</strong>
               <span class="content-detail-season-meta">${_escapeHtml(seasonMeta)}</span>
+              ${
+                watchedProgressLabel
+                  ? `
+                    <span class="content-detail-season-progress">${_escapeHtml(watchedProgressLabel)}</span>
+                    <span class="content-detail-season-progressbar" aria-hidden="true">
+                      <span
+                        class="content-detail-season-progressbar-fill"
+                        style="width: ${watchedProgressPercent.toFixed(2)}%;"
+                      ></span>
+                    </span>
+                  `
+                  : ""
+              }
             </div>
 
             ${

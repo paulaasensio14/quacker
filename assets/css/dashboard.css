@@ -8704,6 +8704,38 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
   color: var(--text-muted);
 }
 
+.content-detail-season-progress {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 118, 110, 0.16);
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.content-detail-season-progressbar {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.content-detail-season-progressbar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #34d399 0%, #0f766e 100%);
+}
+
 .content-detail-season-chevron {
   display: inline-flex;
   align-items: center;
@@ -8758,12 +8790,26 @@ body.dark-theme .content-detail-season-meta {
   color: rgba(203, 213, 245, 0.82);
 }
 
+body.dark-theme .content-detail-season-progress {
+  border-color: rgba(94, 234, 212, 0.18);
+  background: rgba(15, 118, 110, 0.18);
+  color: #99f6e4;
+}
+
+body.dark-theme .content-detail-season-progressbar {
+  background: rgba(248, 250, 252, 0.1);
+}
+
 body.dark-theme .content-detail-season-chevron {
   color: rgba(249, 250, 251, 0.72);
 }
 
 body.dark-theme .content-detail-season-body {
   border-top-color: #010b16;
+}
+
+.content-detail-season-card.is-complete .content-detail-season-progressbar-fill {
+  background: linear-gradient(90deg, #facc15 0%, #f59e0b 100%);
 }
 
 .content-detail-season-status {
@@ -8810,6 +8856,17 @@ body.dark-theme .content-detail-season-body {
   min-height: 100%;
 }
 
+.content-detail-episode-item.is-watched {
+  border-color: rgba(15, 118, 110, 0.22);
+  background:
+    linear-gradient(180deg, rgba(15, 118, 110, 0.06) 0%, rgba(255, 255, 255, 0.94) 100%);
+}
+
+.content-detail-episode-item.is-next {
+  border-color: rgba(250, 204, 21, 0.28);
+  box-shadow: 0 10px 22px rgba(250, 204, 21, 0.12);
+}
+
 .content-detail-episode-still {
   width: 100%;
   aspect-ratio: 16 / 8;
@@ -8845,6 +8902,21 @@ body.dark-theme .content-detail-season-body {
   min-width: 0;
 }
 
+.content-detail-episode-next {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 2px solid rgba(250, 204, 21, 0.32);
+  background: rgba(250, 204, 21, 0.14);
+  color: #92400e;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .content-detail-episode-title {
   font-size: 0.95rem;
   line-height: 1.4;
@@ -8859,8 +8931,16 @@ body.dark-theme .content-detail-season-body {
 }
 
 .content-detail-episode-seen {
-  font-size: 0.84rem;
-  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 118, 110, 0.16);
+  background: rgba(15, 118, 110, 0.08);
+  font-size: 0.82rem;
+  line-height: 1;
   font-weight: 700;
   color: #0f766e;
 }
@@ -8876,6 +8956,29 @@ body.dark-theme .content-detail-season-body {
 body.dark-theme .content-detail-episode-item {
   background: rgba(19, 43, 64, 0.68);
   border-color: rgba(249, 250, 251, 0.08);
+}
+
+body.dark-theme .content-detail-episode-item.is-watched {
+  border-color: rgba(94, 234, 212, 0.18);
+  background:
+    linear-gradient(180deg, rgba(15, 118, 110, 0.12) 0%, rgba(19, 43, 64, 0.76) 100%);
+}
+
+body.dark-theme .content-detail-episode-item.is-next {
+  border-color: rgba(250, 204, 21, 0.28);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+
+body.dark-theme .content-detail-episode-next {
+  border-color: rgba(250, 204, 21, 0.28);
+  background: rgba(250, 204, 21, 0.16);
+  color: #fde68a;
+}
+
+body.dark-theme .content-detail-episode-seen {
+  border-color: rgba(94, 234, 212, 0.18);
+  background: rgba(15, 118, 110, 0.18);
+  color: #99f6e4;
 }
 
 @media (max-width: 980px) {
