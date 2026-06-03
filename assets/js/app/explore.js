@@ -1158,7 +1158,11 @@ const ExploreModule = (() => {
               ].filter(Boolean).join(" · ");
 
               return `
-                <li class="content-detail-episode-item${episodeSeenLabel ? " is-watched" : ""}${isNextEpisode ? " is-next" : ""}">
+                <li
+                  class="content-detail-episode-item${episodeSeenLabel ? " is-watched" : ""}${isNextEpisode ? " is-next" : ""}"
+                  data-season-number="${seasonNumber}"
+                  data-episode-number="${episodeNumber}"
+                >
                   <div
                     class="content-detail-episode-still${episodeStill ? "" : " is-fallback"}"
                     ${episodeStill ? `style="background-image: url('${_escapeHtml(episodeStill)}');"` : ""}
@@ -1205,6 +1209,32 @@ const ExploreModule = (() => {
     `;
   }
 
+  function _scrollDetailNextEpisodeIntoView(seasonNumber, { behavior = "smooth" } = {}) {
+    const safeSeasonNumber = Math.max(1, Number(seasonNumber || 0) || 0);
+    if (!safeSeasonNumber) return;
+
+    requestAnimationFrame(() => {
+      const target = document.querySelector(
+        `.content-detail-episode-item.is-next[data-season-number="${safeSeasonNumber}"]`
+      );
+
+      if (!target) return;
+
+      const rect = target.getBoundingClientRect();
+      const viewportTop = 100;
+      const viewportBottom = window.innerHeight - 80;
+      const isFullyVisible = rect.top >= viewportTop && rect.bottom <= viewportBottom;
+
+      if (isFullyVisible) return;
+
+      target.scrollIntoView({
+        behavior,
+        block: "nearest",
+        inline: "nearest"
+      });
+    });
+  }
+
   async function _toggleContentDetailSeason(seasonNumber) {
     const activeItem = _getActiveDetailItem();
     const safeSeasonNumber = Math.max(1, Number(seasonNumber || 0) || 0);
@@ -1223,6 +1253,9 @@ const ExploreModule = (() => {
 
     const cachedSeason = __detailSeasonCache.get(cacheKey);
     if (cachedSeason?.status === "loaded" || cachedSeason?.status === "loading") {
+      if (cachedSeason?.status === "loaded") {
+        _scrollDetailNextEpisodeIntoView(safeSeasonNumber);
+      }
       return;
     }
 
@@ -1269,6 +1302,7 @@ const ExploreModule = (() => {
     const freshItem = _getActiveDetailItem();
     if (freshItem) {
       window.DetailModule?.render?.(freshItem);
+      _scrollDetailNextEpisodeIntoView(safeSeasonNumber);
     }
   }
 
