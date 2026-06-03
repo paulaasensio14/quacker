@@ -524,6 +524,7 @@ const ApiClient = (() => {
       "author",
       "season",
       "episode",
+      "episodeSeenMap",
       "hoursPlayed",
       "pagesRead",
       "seasonBreakdown"
@@ -537,11 +538,44 @@ const ApiClient = (() => {
 
     for (const key of Object.keys(meta)) {
       if (allowedMetaKeys.has(key)) {
-        sanitizedMeta[key] = meta[key];
+        sanitizedMeta[key] = key === "episodeSeenMap"
+          ? _sanitizeEpisodeSeenMap(meta[key])
+          : meta[key];
       }
     }
 
     return sanitizedMeta;
+  }
+
+  function _sanitizeEpisodeSeenMap(value) {
+    const safeMap = {};
+
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return safeMap;
+    }
+
+    for (const [rawKey, rawIso] of Object.entries(value)) {
+      const match = String(rawKey || "").trim().match(/^(\d+):(\d+)$/);
+      if (!match) continue;
+
+      const season = Math.max(0, Number(match[1] || 0) || 0);
+      const episode = Math.max(0, Number(match[2] || 0) || 0);
+      const iso = _safeText(rawIso).trim();
+      const parsed = iso ? new Date(iso) : null;
+
+      if (
+        season <= 0 ||
+        episode <= 0 ||
+        !parsed ||
+        Number.isNaN(parsed.getTime())
+      ) {
+        continue;
+      }
+
+      safeMap[`${season}:${episode}`] = parsed.toISOString();
+    }
+
+    return safeMap;
   }
 
   function _normalizeExploreDismissedIds(items) {
@@ -2357,9 +2391,19 @@ const ApiClient = (() => {
         return { ok: true, alreadyCompleted: true };
       }
 
+      const nowIso = new Date().toISOString();
+      const seriesActivities = current.type === "serie"
+        ? await getLibraryItemActivities(targetId, { filter: "all" })
+        : [];
+      const completedSeriesMeta = current.type === "serie"
+        ? _buildSeriesCompletionMeta(current, seriesActivities, nowIso)
+        : null;
+
       const payload = {
         progress: 100,
-        status: "completed"
+        status: "completed",
+        lastActivityAt: nowIso,
+        ...(completedSeriesMeta ? { meta: completedSeriesMeta } : {})
       };
 
       const res = await _httpJson("PATCH", `/library/${encodeURIComponent(targetId)}`, payload);
@@ -2393,10 +2437,26 @@ const ApiClient = (() => {
       return { ok: true, alreadyCompleted: true };
     }
 
+    const nowIso = new Date().toISOString();
+    const completedSeriesMeta = item.type === "serie"
+      ? _buildSeriesCompletionMeta(
+        item,
+        (Array.isArray(state.activities) ? state.activities : [])
+          .map((entry) => _normalizeActivityRecord(entry))
+          .filter(Boolean)
+          .filter((entry) => entry.targetId === targetId),
+        nowIso
+      )
+      : null;
+
     // Marcar como completado
     item.progress = 100;
     item.status = "completed";
-    item.updatedAt = new Date().toISOString();
+    item.updatedAt = nowIso;
+    item.lastActivityAt = nowIso;
+    if (completedSeriesMeta) {
+      item.meta = _sanitizeLibraryMeta(completedSeriesMeta);
+    }
 
     // Guardar estado
     if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
@@ -2478,6 +2538,83 @@ const ApiClient = (() => {
     return {
       season: lastSeason?.seasonNumber || 1,
       episode: lastSeason?.episodeCount || 1
+    };
+  }
+
+  function _setEpisodeSeenMapEntry(targetMap, key, iso) {
+    const safeKey = String(key || "").trim();
+    const safeIso = _safeText(iso).trim();
+
+    if (!safeKey || !safeIso) return;
+
+    if (!targetMap[safeKey] || new Date(safeIso) > new Date(targetMap[safeKey])) {
+      targetMap[safeKey] = safeIso;
+    }
+  }
+
+  function _buildEpisodeSeenMapFromActivities(activities = []) {
+    const safeMap = {};
+
+    (Array.isArray(activities) ? activities : []).forEach((activity) => {
+      const season = Math.max(0, Number(activity?.payload?.season || 0) || 0);
+      const episode = Math.max(0, Number(activity?.payload?.episode || 0) || 0);
+      const createdAt = _safeText(activity?.createdAt).trim();
+
+      if (season <= 0 || episode <= 0 || !createdAt) return;
+
+      _setEpisodeSeenMapEntry(safeMap, `${season}:${episode}`, createdAt);
+    });
+
+    return safeMap;
+  }
+
+  function _buildSeriesCompletionMeta(item, activities = [], completedAt = "") {
+    const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
+    const normalizedCompletedAt = _safeText(completedAt).trim() || new Date().toISOString();
+    let seasonBreakdown = _normalizeSeriesSeasonBreakdown(meta);
+    const totalEpisodesFromBreakdown = seasonBreakdown.reduce(
+      (sum, season) => sum + season.episodeCount,
+      0
+    );
+    const totalEpisodes = totalEpisodesFromBreakdown || Math.max(0, Number(meta.totalEpisodes || 0) || 0);
+
+    if (!seasonBreakdown.length && totalEpisodes > 0) {
+      seasonBreakdown = [
+        {
+          seasonNumber: Math.max(1, Number(meta.season || 1) || 1),
+          episodeCount: totalEpisodes
+        }
+      ];
+    }
+
+    if (!seasonBreakdown.length || totalEpisodes <= 0) {
+      return null;
+    }
+
+    const mergedSeenMap = _sanitizeEpisodeSeenMap(meta.episodeSeenMap);
+    const activitySeenMap = _buildEpisodeSeenMapFromActivities(activities);
+
+    Object.entries(activitySeenMap).forEach(([key, iso]) => {
+      _setEpisodeSeenMapEntry(mergedSeenMap, key, iso);
+    });
+
+    seasonBreakdown.forEach((season) => {
+      for (let episode = 1; episode <= season.episodeCount; episode += 1) {
+        const key = `${season.seasonNumber}:${episode}`;
+        if (!mergedSeenMap[key]) {
+          mergedSeenMap[key] = normalizedCompletedAt;
+        }
+      }
+    });
+
+    const lastSeason = seasonBreakdown[seasonBreakdown.length - 1];
+
+    return {
+      ...meta,
+      season: lastSeason?.seasonNumber || Math.max(1, Number(meta.season || 1) || 1),
+      episode: lastSeason?.episodeCount || Math.max(1, Number(meta.episode || 1) || 1),
+      totalEpisodes,
+      episodeSeenMap: mergedSeenMap
     };
   }
 

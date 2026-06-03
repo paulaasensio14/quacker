@@ -1027,6 +1027,28 @@ const ExploreModule = (() => {
       }
     });
 
+    const metaEpisodeSeenMap = item?.meta?.episodeSeenMap && typeof item.meta.episodeSeenMap === "object"
+      ? item.meta.episodeSeenMap
+      : null;
+
+    if (metaEpisodeSeenMap) {
+      Object.entries(metaEpisodeSeenMap).forEach(([rawKey, rawIso]) => {
+        const match = String(rawKey || "").trim().match(/^(\d+):(\d+)$/);
+        const createdAt = _safeText(rawIso).trim();
+
+        if (!match || !createdAt) return;
+
+        const season = Math.max(0, Number(match[1] || 0) || 0);
+        const episode = Math.max(0, Number(match[2] || 0) || 0);
+        if (season <= 0 || episode <= 0) return;
+
+        const key = `${season}:${episode}`;
+        if (!safeMap[key] || new Date(createdAt) > new Date(safeMap[key])) {
+          safeMap[key] = createdAt;
+        }
+      });
+    }
+
     const fallbackPosition = _getDetailSeriesLastWatchedPosition(item);
     const fallbackSeason = Math.max(0, Number(fallbackPosition?.season || 0) || 0);
     const fallbackEpisode = Math.max(0, Number(fallbackPosition?.episode || 0) || 0);
@@ -1037,6 +1059,34 @@ const ExploreModule = (() => {
       if (!safeMap[fallbackKey] || new Date(fallbackIso) > new Date(safeMap[fallbackKey])) {
         safeMap[fallbackKey] = fallbackIso;
       }
+    }
+
+    const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
+    const seasonBreakdown = _normalizeDetailSeasonBreakdown(meta);
+    const totalEpisodes = Math.max(0, Number(meta.totalEpisodes || 0) || 0);
+    const shouldBackfillCompletedSeries =
+      _norm(item?.type) === "serie" &&
+      (_norm(item?.status) === "completed" || Number(item?.progress || 0) >= 100) &&
+      !!fallbackIso;
+
+    if (shouldBackfillCompletedSeries) {
+      const normalizedBreakdown = seasonBreakdown.length
+        ? seasonBreakdown
+        : (totalEpisodes > 0
+            ? [{ seasonNumber: Math.max(1, Number(meta.season || 1) || 1), episodeCount: totalEpisodes }]
+            : []);
+
+      normalizedBreakdown.forEach((season) => {
+        const safeSeasonNumber = Math.max(1, Number(season?.seasonNumber || 0) || 0);
+        const safeEpisodeCount = Math.max(0, Number(season?.episodeCount || 0) || 0);
+
+        for (let episode = 1; episode <= safeEpisodeCount; episode += 1) {
+          const key = `${safeSeasonNumber}:${episode}`;
+          if (!safeMap[key]) {
+            safeMap[key] = fallbackIso;
+          }
+        }
+      });
     }
 
     return safeMap;

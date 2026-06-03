@@ -126,6 +126,7 @@ function _sanitizeLibraryMeta(meta) {
     "author",
     "season",
     "episode",
+    "episodeSeenMap",
     "hoursPlayed",
     "pagesRead",
     "seasonBreakdown"
@@ -139,11 +140,38 @@ function _sanitizeLibraryMeta(meta) {
 
   for (const key of Object.keys(meta)) {
     if (allowedMetaKeys.has(key)) {
-      sanitizedMeta[key] = meta[key];
+      sanitizedMeta[key] = key === "episodeSeenMap"
+        ? _sanitizeEpisodeSeenMap(meta[key])
+        : meta[key];
     }
   }
 
   return sanitizedMeta;
+}
+
+function _sanitizeEpisodeSeenMap(value) {
+  const safeMap = {};
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return safeMap;
+  }
+
+  for (const [rawKey, rawIso] of Object.entries(value)) {
+    const match = String(rawKey || "").trim().match(/^(\d+):(\d+)$/);
+    if (!match) continue;
+
+    const season = Math.max(0, Number(match[1] || 0) || 0);
+    const episode = Math.max(0, Number(match[2] || 0) || 0);
+    const normalizedIso = _normalizeActivityCreatedAt(rawIso);
+
+    if (season <= 0 || episode <= 0 || !normalizedIso) {
+      continue;
+    }
+
+    safeMap[`${season}:${episode}`] = normalizedIso;
+  }
+
+  return safeMap;
 }
 
 function _normalizeActivityType(type) {
