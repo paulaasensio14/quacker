@@ -2392,12 +2392,25 @@ const ApiClient = (() => {
       }
 
       const nowIso = new Date().toISOString();
-      const seriesActivities = current.type === "serie"
-        ? await getLibraryItemActivities(targetId, { filter: "all" })
-        : [];
-      const completedSeriesMeta = current.type === "serie"
-        ? _buildSeriesCompletionMeta(current, seriesActivities, nowIso)
-        : null;
+      let seriesActivities = [];
+      if (current.type === "serie") {
+        try {
+          seriesActivities = await getLibraryItemActivities(targetId, { filter: "all" });
+        } catch (error) {
+          console.warn("[ApiClient] completeLibraryItem could not load series activities", error);
+          seriesActivities = [];
+        }
+      }
+
+      let completedSeriesMeta = null;
+      if (current.type === "serie") {
+        try {
+          completedSeriesMeta = _buildSeriesCompletionMeta(current, seriesActivities, nowIso);
+        } catch (error) {
+          console.warn("[ApiClient] completeLibraryItem could not build series completion meta", error);
+          completedSeriesMeta = null;
+        }
+      }
 
       const payload = {
         progress: 100,
@@ -2409,16 +2422,25 @@ const ApiClient = (() => {
       const res = await _httpJson("PATCH", `/library/${encodeURIComponent(targetId)}`, payload);
       const item = _extractLibraryMutationItem(res, "invalid_complete_response", targetId);
 
-      await addNotification({
-        title: _t("library_status_completed", null, "Completado"),
-        text: item.title || current.title,
-        color: "#16a34a",
-        icon: "check"
-      });
-
-      await maybeNotifyStreak();
-
       _emitDataChanged({ kind: "library", action: "complete", itemId: targetId });
+
+      try {
+        await addNotification({
+          title: _t("library_status_completed", null, "Completado"),
+          text: item.title || current.title,
+          color: "#16a34a",
+          icon: "check"
+        });
+      } catch (error) {
+        console.warn("[ApiClient] completeLibraryItem notification failed", error);
+      }
+
+      try {
+        await maybeNotifyStreak();
+      } catch (error) {
+        console.warn("[ApiClient] completeLibraryItem streak notification failed", error);
+      }
+
       return { ok: true, itemId: targetId, title: item.title || current.title };
     }
 

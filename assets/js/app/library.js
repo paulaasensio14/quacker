@@ -1933,11 +1933,6 @@ const LibraryUI = (() => {
 
   async function markAsCompletedWithUndo(itemId) {
     const normalizedItemId = _normalizeLibraryItemId(itemId);
-    const safeId = _getLibrarySafeItemId(normalizedItemId);
-    const card = document.querySelector(`.lib-card[data-id="${safeId}"]`);
-    if (card?.dataset.busy === "1") return;
-
-    if (card) card.dataset.busy = "1";
 
     try {
       if (!normalizedItemId) return { ok: false };
@@ -2007,8 +2002,6 @@ const LibraryUI = (() => {
       });
 
       return { ok: false };
-    } finally {
-      if (card) card.dataset.busy = "0";
     }
   }
 
