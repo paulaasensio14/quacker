@@ -8595,17 +8595,21 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  max-width: 500px;
 }
 
 .content-detail-season-panel {
   border: 2px solid var(--border-strong);
-  border-radius: 22px;
+  border-radius: 28px;
   background: #fff;
   overflow: hidden;
 }
 
 .content-detail-season-panel.is-open {
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.03);
 }
 
 .content-detail-season-card {
@@ -8614,25 +8618,32 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
   align-items: stretch;
   width: 100%;
   padding: 12px;
-  border: 0;
-  background: transparent;
+  border: 2px solid var(--border-soft);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.04);
   cursor: pointer;
   text-align: left;
   font: inherit;
   color: inherit;
+  transition: transform 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
 }
 
 .content-detail-season-card.is-active {
-  background: rgba(250, 204, 21, 0.16);
-}
-
-.content-detail-season-card--expanded {
-  padding: 14px;
-  border-bottom: 2px solid var(--border-soft);
+  background: rgba(250, 204, 21, 0.18);
+  border-color: rgba(250, 204, 21, 0.48);
+  box-shadow:
+    inset 0 -1px 0 rgba(15, 23, 42, 0.04),
+    0 10px 22px rgba(15, 23, 42, 0.08);
 }
 
 .content-detail-season-card.is-static {
   cursor: default;
+}
+
+.content-detail-season-card:hover:not(.is-static) {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .content-detail-season-card:focus-visible {
@@ -8700,7 +8711,7 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
 }
 
 .content-detail-season-body {
-  padding: 12px;
+  padding: 0;
 }
 
 body.dark-theme .content-detail-season-panel {
@@ -8710,15 +8721,23 @@ body.dark-theme .content-detail-season-panel {
 
 body.dark-theme .content-detail-season-panel.is-open {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+  background: rgba(16, 34, 53, 0.86);
 }
 
 body.dark-theme .content-detail-season-card {
+  background: rgba(19, 43, 64, 0.82);
+  border-color: rgba(249, 250, 251, 0.1);
   color: var(--text-main);
 }
 
 body.dark-theme .content-detail-season-card:hover,
 body.dark-theme .content-detail-season-card.is-active {
   background: #132b40;
+}
+
+body.dark-theme .content-detail-season-card.is-active {
+  border-color: rgba(250, 204, 21, 0.32);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.24);
 }
 
 body.dark-theme .content-detail-season-poster {
@@ -8756,7 +8775,7 @@ body.dark-theme .content-detail-season-body {
 .content-detail-episode-list {
   list-style: none;
   margin: 0;
-  padding: 12px 0 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -8766,17 +8785,18 @@ body.dark-theme .content-detail-season-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px;
   border: 2px solid var(--border-soft);
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.04);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .content-detail-episode-still {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 16 / 7;
   min-height: 0;
-  border-radius: 14px;
+  max-height: 220px;
+  border-radius: 18px;
   border: 2px solid var(--border-soft);
   background-color: #fff;
   background-size: cover;
@@ -8834,6 +8854,11 @@ body.dark-theme .content-detail-season-body {
   opacity: 0.84;
 }
 
+body.dark-theme .content-detail-episode-item {
+  background: rgba(19, 43, 64, 0.68);
+  border-color: rgba(249, 250, 251, 0.08);
+}
+
 @media (max-width: 980px) {
   .content-detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -8848,6 +8873,10 @@ body.dark-theme .content-detail-season-body {
   .content-detail-card-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .content-detail-season-expanded-list {
+    max-width: none;
   }
 }
 

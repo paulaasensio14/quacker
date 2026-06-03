@@ -1934,47 +1934,8 @@ const ExploreModule = (() => {
       })
       .map((season) => {
         const seasonNumber = Math.max(0, Number(season?.seasonNumber || 0) || 0);
-        const seasonTitle =
-          _safeText(season?.name).trim() ||
-          window.I18n
-            .t("explore_detail_season_name")
-            .replace("{number}", String(seasonNumber));
-        const episodeLabel = _formatExploreCountLabel(
-          season?.episodeCount || 0,
-          "explore_detail_episode_single",
-          "explore_detail_episode_plural"
-        );
-        const airYear = _safeText(season?.airDate).trim().slice(0, 4);
-        const seasonMeta = [episodeLabel, airYear].filter(Boolean).join(" · ");
-        const poster = _safeText(season?.poster).trim();
-
         return `
           <article class="content-detail-season-panel is-open">
-            <button
-              type="button"
-              class="content-detail-season-card content-detail-season-card--expanded"
-              data-season-number="${seasonNumber}"
-              aria-expanded="true"
-            >
-              <div
-                class="content-detail-season-poster${poster ? "" : " is-fallback"}"
-                ${poster ? `style="background-image: url('${_escapeHtml(poster)}');"` : ""}
-              >
-                ${poster ? "" : `<span class="content-detail-season-initial">T${seasonNumber}</span>`}
-              </div>
-
-              <div class="content-detail-season-copy">
-                <strong class="content-detail-season-title">${_escapeHtml(seasonTitle)}</strong>
-                <span class="content-detail-season-meta">${_escapeHtml(seasonMeta)}</span>
-              </div>
-
-              <span class="content-detail-season-chevron" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M6 9l6 6 6-6"></path>
-                </svg>
-              </span>
-            </button>
-
             ${_renderContentDetailSeasonBody(item, seasonNumber)}
           </article>
         `;
