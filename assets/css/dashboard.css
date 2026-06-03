@@ -8586,8 +8586,8 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
 }
 
 .content-detail-season-grid-head {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -8595,13 +8595,15 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 100%;
-  max-width: 500px;
+  width: min(100%, 980px);
+  max-width: 980px;
+  align-self: stretch;
+  margin-left: 0;
 }
 
 .content-detail-season-panel {
   border: 2px solid var(--border-strong);
-  border-radius: 28px;
+  border-radius: 24px;
   background: #fff;
   overflow: hidden;
 }
@@ -8614,10 +8616,11 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
 
 .content-detail-season-card {
   display: flex;
+  flex: 0 1 250px;
   gap: 12px;
   align-items: stretch;
-  width: 100%;
-  padding: 12px;
+  width: min(100%, 250px);
+  padding: 10px 12px;
   border: 2px solid var(--border-soft);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.82);
@@ -8652,9 +8655,9 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
 }
 
 .content-detail-season-poster {
-  width: 74px;
-  min-width: 74px;
-  border-radius: 16px;
+  width: 64px;
+  min-width: 64px;
+  border-radius: 14px;
   background:
     linear-gradient(135deg, rgba(250, 204, 21, 0.3) 0%, rgba(15, 23, 42, 0.1) 100%);
   background-size: cover;
@@ -8680,20 +8683,21 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
 
 .content-detail-season-title {
-  font-size: 1rem;
+  font-size: 0.96rem;
   font-weight: 800;
   line-height: 1.25;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .content-detail-season-meta {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.45;
   color: var(--text-muted);
 }
@@ -8776,27 +8780,40 @@ body.dark-theme .content-detail-season-body {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 10px;
+  align-items: start;
+}
+
+@media (min-width: 1500px) {
+  .sidebar.collapsed + .main-pane .content-detail-season-expanded-list {
+    width: min(100%, 1280px);
+    max-width: 1280px;
+  }
+
+  .sidebar.collapsed + .main-pane .content-detail-episode-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .content-detail-episode-item {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px;
   border: 2px solid var(--border-soft);
-  border-radius: 22px;
+  border-radius: 20px;
   background: rgba(255, 255, 255, 0.92);
+  min-height: 100%;
 }
 
 .content-detail-episode-still {
   width: 100%;
-  aspect-ratio: 16 / 7;
+  aspect-ratio: 16 / 8;
   min-height: 0;
-  max-height: 220px;
-  border-radius: 18px;
+  max-height: 150px;
+  border-radius: 16px;
   border: 2px solid var(--border-soft);
   background-color: #fff;
   background-size: cover;
@@ -8875,8 +8892,20 @@ body.dark-theme .content-detail-episode-item {
     align-items: flex-start;
   }
 
-  .content-detail-season-expanded-list {
+  .content-detail-season-grid-head .content-detail-season-card {
+    flex-basis: calc(50% - 6px);
+    width: calc(50% - 6px);
     max-width: none;
+  }
+
+  .content-detail-season-expanded-list {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .content-detail-episode-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -8936,13 +8965,22 @@ body.dark-theme .content-detail-episode-item {
   }
 
   .content-detail-cast-list,
-  .content-detail-provider-list,
-  .content-detail-season-grid-head {
+  .content-detail-provider-list {
     grid-template-columns: 1fr;
   }
 
+  .content-detail-season-grid-head {
+    flex-direction: column;
+  }
+
   .content-detail-season-card {
+    width: 100%;
+    max-width: none;
     padding: 10px;
+  }
+
+  .content-detail-episode-list {
+    grid-template-columns: 1fr;
   }
 
   .content-detail-episode-still {
