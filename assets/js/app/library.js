@@ -1714,6 +1714,10 @@ const LibraryUI = (() => {
       seasonBreakdown,
       nextAbsoluteEpisode
     );
+    const watchedPosition = getLibraryEpisodePositionFromAbsolute(
+      seasonBreakdown,
+      currentAbsoluteEpisode > 0 ? currentAbsoluteEpisode : nextAbsoluteEpisode
+    );
     const nextProgress = Math.round((nextAbsoluteEpisode / totalEpisodes) * 100);
     const justCompleted = nextAbsoluteEpisode >= totalEpisodes;
 
@@ -1725,6 +1729,10 @@ const LibraryUI = (() => {
         season: nextPosition.season,
         episode: nextPosition.episode,
         totalEpisodes
+      },
+      activityPayload: {
+        season: watchedPosition.season,
+        episode: watchedPosition.episode
       }
     };
   }
@@ -1798,6 +1806,7 @@ const LibraryUI = (() => {
           nextItem.meta = seriesPatch.meta;
           nextItem.status = seriesPatch.status;
           nextProgress = seriesPatch.progress;
+          nextItem.activityPayload = seriesPatch.activityPayload;
         } else {
           const currentEpisode = Math.max(0, Math.round(Number(nextItem.meta.episode || 0)));
           const totalEpisodes = Math.max(0, Math.round(Number(nextItem.meta.totalEpisodes || 0)));

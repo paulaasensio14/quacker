@@ -2318,7 +2318,7 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     next.lastActivityAt = activityCreatedAt;
     const activityPayload = next.type === "serie"
       ? _normalizeActivityPayload(
-        patch?.activityPayload || {
+        rawPatch?.activityPayload || {
           season: next?.meta?.season,
           episode: next?.meta?.episode
         }

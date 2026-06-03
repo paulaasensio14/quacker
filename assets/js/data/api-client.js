@@ -2648,6 +2648,10 @@ const ApiClient = (() => {
       seasonBreakdown,
       nextAbsoluteEpisode
     );
+    const watchedPosition = _getSeriesPositionFromAbsoluteEpisode(
+      seasonBreakdown,
+      currentAbsoluteEpisode > 0 ? currentAbsoluteEpisode : nextAbsoluteEpisode
+    );
     const nextProgress = Math.round((nextAbsoluteEpisode / totalEpisodes) * 100);
     const justCompleted = nextAbsoluteEpisode >= totalEpisodes;
 
@@ -2659,6 +2663,10 @@ const ApiClient = (() => {
         season: nextPosition.season,
         episode: nextPosition.episode,
         totalEpisodes
+      },
+      activityPayload: {
+        season: watchedPosition.season,
+        episode: watchedPosition.episode
       },
       deltaLabel: justCompleted
         ? _t("library_status_completed", null, "Completado")
@@ -2693,7 +2701,8 @@ const ApiClient = (() => {
         ...current,
         status: seriesPatch.status,
         progress: seriesPatch.progress,
-        meta: seriesPatch.meta
+        meta: seriesPatch.meta,
+        activityPayload: seriesPatch.activityPayload
       }
       : {
         ...current,
@@ -4392,7 +4401,8 @@ const ApiClient = (() => {
       ...item,
       status: nextStatus,
       progress: nextProgress,
-      meta
+      meta,
+      ...(seriesPatch?.activityPayload ? { activityPayload: seriesPatch.activityPayload } : {})
     };
 
     const result = await updateLibraryItem(updatedItem, { logActivity: true });
