@@ -8707,6 +8707,7 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
 .content-detail-season-progress {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   align-self: flex-start;
   min-height: 24px;
   padding: 0 10px;
@@ -8717,6 +8718,21 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
   font-size: 0.76rem;
   font-weight: 800;
   line-height: 1;
+}
+
+.content-detail-season-progress-done {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(250, 204, 21, 0.2);
+  color: #92400e;
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .content-detail-season-progressbar {
@@ -8810,6 +8826,21 @@ body.dark-theme .content-detail-season-body {
 
 .content-detail-season-card.is-complete .content-detail-season-progressbar-fill {
   background: linear-gradient(90deg, #facc15 0%, #f59e0b 100%);
+}
+
+.content-detail-season-card.is-complete {
+  border-color: rgba(250, 204, 21, 0.34);
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.08) 0%, rgba(255, 255, 255, 0.96) 100%);
+}
+
+body.dark-theme .content-detail-season-card.is-complete {
+  border-color: rgba(250, 204, 21, 0.28);
+  background: linear-gradient(180deg, rgba(120, 88, 12, 0.28) 0%, rgba(19, 43, 64, 0.9) 100%);
+}
+
+body.dark-theme .content-detail-season-progress-done {
+  background: rgba(250, 204, 21, 0.22);
+  color: #fde68a;
 }
 
 .content-detail-season-status {

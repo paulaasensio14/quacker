@@ -2008,6 +2008,7 @@ const ExploreModule = (() => {
         const watchedProgressPercent = totalEpisodes > 0
           ? Math.max(0, Math.min(100, (watchedCount / totalEpisodes) * 100))
           : 0;
+        const isCompletedSeason = watchedCount > 0 && watchedCount >= totalEpisodes && totalEpisodes > 0;
         const airYear = _safeText(season?.airDate).trim().slice(0, 4);
         const seasonMeta = [episodeLabel, airYear].filter(Boolean).join(" · ");
         const poster = _safeText(season?.poster).trim();
@@ -2015,7 +2016,7 @@ const ExploreModule = (() => {
         return `
           <button
             type="button"
-            class="content-detail-season-card${isExpandable ? "" : " is-static"}${isExpanded ? " is-active" : ""}${watchedCount > 0 && watchedCount >= totalEpisodes && totalEpisodes > 0 ? " is-complete" : ""}"
+            class="content-detail-season-card${isExpandable ? "" : " is-static"}${isExpanded ? " is-active" : ""}${isCompletedSeason ? " is-complete" : ""}"
             data-season-number="${seasonNumber}"
             ${isExpandable ? `aria-expanded="${isExpanded ? "true" : "false"}"` : "disabled"}
           >
@@ -2032,7 +2033,14 @@ const ExploreModule = (() => {
               ${
                 watchedProgressLabel
                   ? `
-                    <span class="content-detail-season-progress">${_escapeHtml(watchedProgressLabel)}</span>
+                    <span class="content-detail-season-progress">
+                      ${_escapeHtml(watchedProgressLabel)}
+                      ${
+                        isCompletedSeason
+                          ? `<span class="content-detail-season-progress-done">${_escapeHtml(window.I18n.t("explore_detail_season_completed"))}</span>`
+                          : ""
+                      }
+                    </span>
                     <span class="content-detail-season-progressbar" aria-hidden="true">
                       <span
                         class="content-detail-season-progressbar-fill"
