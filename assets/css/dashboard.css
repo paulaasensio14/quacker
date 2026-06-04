@@ -4805,10 +4805,42 @@ body.dark-theme .sidebar-bottom * {
 }
 
 /* Modo oscuro: tarjetas de notificaciones */
+body.dark-theme .notif-panel {
+  background: #0d1b2a;
+  border-color: #010b16;
+  box-shadow: 6px 6px 0 #010b16;
+}
+
+body.dark-theme .notif-title,
+body.dark-theme .notif-body strong {
+  color: rgba(249, 250, 251, 0.96);
+}
+
+body.dark-theme .notif-body {
+  color: rgba(226, 232, 240, 0.92);
+}
+
 body.dark-theme .notif-card {
   background: #102235;
   border-color: #010b16;
   color: var(--text-main);
+}
+
+body.dark-theme .notif-card.is-streak {
+  background:
+    radial-gradient(circle at top left, rgba(251, 191, 36, 0.16), transparent 52%),
+    radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.12), transparent 58%),
+    #102235;
+}
+
+body.dark-theme .notif-chip {
+  background: #f8fafc;
+  color: #102235;
+  border-color: #dbe5f2;
+}
+
+body.dark-theme .notif-time {
+  color: rgba(203, 213, 245, 0.78);
 }
 
 /* Modo oscuro: empty state de notificaciones */
@@ -4842,13 +4874,14 @@ body.dark-theme .notif-icon {
 body.dark-theme .chip-small,
 body.dark-theme .close-chip {
   background: #102235;
-  color: var(--text-main);
-  border-color: #010b16;
+  color: rgba(248, 250, 252, 0.96);
+  border-color: #1c3550;
 }
 
 body.dark-theme .chip-small:hover,
 body.dark-theme .close-chip:hover {
-  background: #132b40;
+  background: #16314c;
+  color: #ffffff;
 }
 
 /* Modo oscuro: adaptar el botón */
