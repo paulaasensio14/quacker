@@ -31,6 +31,8 @@ const DB_PATH = path.join(__dirname, "db.json");
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 // ===== DEBUG SESIÓN (DEV) =====
 // Loguea si llega cookie, cuál es el sessionID y si hay userId en la sesión.
 // Esto nos dirá si el problema es: (a) cookie no llega, (b) session store se pierde, (c) userId desaparece.
