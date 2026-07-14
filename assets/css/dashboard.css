@@ -216,6 +216,11 @@ nav.sidebar-nav {
   flex-shrink: 0;
 }
 
+.sidebar.collapsed .nav-item-btn {
+  justify-content: center;
+  padding-inline: 0;
+}
+
 .sidebar.collapsed .nav-label {
   display: none;
 }
