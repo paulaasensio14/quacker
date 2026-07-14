@@ -89,12 +89,18 @@ const Router = (() => {
     const globalSearch = document.querySelector("#globalSearch");
     const globalSearchBox = document.querySelector("#globalSearchBox");
     const globalSearchClear = document.querySelector("#globalSearchClear");
+    const globalSearchArea = globalSearchBox?.closest(".topbar-center");
 
     const setSearchEnabled = (enabled) => {
       if (!globalSearch) return;
       globalSearch.disabled = !enabled;
 
+      if (globalSearchArea) {
+        globalSearchArea.hidden = !enabled;
+      }
+
       if (globalSearchBox) {
+        globalSearchBox.hidden = !enabled;
         globalSearchBox.classList.toggle("is-disabled", !enabled);
         globalSearchBox.setAttribute("aria-disabled", enabled ? "false" : "true");
 
