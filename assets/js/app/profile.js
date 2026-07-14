@@ -8,6 +8,10 @@ const ProfileModule = (() => {
     { id: "av2", name: "Avatar 2", src: "assets/img/avatars/avatar-2.png" },
     { id: "av3", name: "Avatar 3", src: "assets/img/avatars/avatar-3.png" },
     { id: "av4", name: "Avatar 4", src: "assets/img/avatars/avatar-4.png" },
+    { id: "av5", name: "Avatar 5", src: "assets/img/avatars/avatar-5.png" },
+    { id: "av6", name: "Avatar 6", src: "assets/img/avatars/avatar-6.png" },
+    { id: "av7", name: "Avatar 7", src: "assets/img/avatars/avatar-7.png" },
+    { id: "av8", name: "Avatar 8", src: "assets/img/avatars/avatar-8.png" },
   ]);
   const DEFAULT_AVATAR_SRC = PRESET_AVATARS[0].src;
   const VALID_PRESET_AVATAR_SRCS = new Set(PRESET_AVATARS.map((avatar) => avatar.src));
