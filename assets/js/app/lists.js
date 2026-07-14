@@ -850,8 +850,8 @@ const ListsModule = (() => {
               ${_typeIconSvg(it.type)}
             </span>
 
-            <div class="list-item-progress" aria-label="${prog}">
-              <span class="list-item-progress-fill" style="width:${Math.max(0, Math.min(100, Number(it.progress ?? 0)))}%;"></span>
+            <div class="lib-cover-progress" aria-label="${prog}">
+              <div class="lib-cover-progress-fill" style="width:${Math.max(0, Math.min(100, Number(it.progress ?? 0)))}%;"></div>
             </div>
           </div>
 

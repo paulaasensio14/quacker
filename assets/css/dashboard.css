@@ -3592,22 +3592,22 @@ body.dark-theme #view-home .home-backlog {
   height: 17px;
 }
 
-.list-item-progress{
+#listDetail .list-item-cover .lib-cover-progress{
   position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 10px;
+  border-top: 3px solid var(--border-strong);
+  background: var(--bg-body);
   overflow: hidden;
 }
 
-.list-item-progress-fill{
+#listDetail .list-item-cover .lib-cover-progress-fill{
   display: block;
   height: 100%;
   width: 0;
-  border-radius: inherit;
   background: var(--bg-yellow);
   transition: width 0.25s ease;
 }
