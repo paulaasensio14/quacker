@@ -1377,6 +1377,10 @@ main.app-main {
  max-width: 60ch;
 }
 
+.explore-results .explore-section-grid {
+  margin-top: 18px;
+}
+
 .explore-section-actions {
   display: flex;
   align-items: center;
