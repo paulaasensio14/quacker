@@ -795,7 +795,7 @@ function _scoreExploreSearchItem(item, query) {
     score += 8;
   } else if (item?.source === "rawg") {
     score += 5;
-  } else if (item?.source === "google_books") {
+  } else if (item?.source === "open_library") {
     score += 1;
   }
 
@@ -815,7 +815,7 @@ function _scoreExploreSearchItem(item, query) {
     score += Math.min(20, Math.floor(Math.log10(Math.max(1, ratingCount))) * 5);
   }
 
-  if (item?.source === "google_books") {
+  if (item?.source === "open_library") {
     score += Math.min(8, Math.floor(Math.log10(Math.max(1, ratingCount))) * 3);
   }
 
@@ -860,7 +860,7 @@ function _scoreExploreSearchItem(item, query) {
 function _rankAndMixExploreItems(
   query,
   tmdbItems = [],
-  googleBooksItems = [],
+  openLibraryItems = [],
   rawgItems = []
 ) {
   const seen = new Set();
@@ -876,7 +876,7 @@ function _rankAndMixExploreItems(
       .replace(/\s+/g, " ")
       .trim();
 
-  const deduped = [...tmdbItems, ...googleBooksItems, ...rawgItems].filter((item) => {
+  const deduped = [...tmdbItems, ...openLibraryItems, ...rawgItems].filter((item) => {
     const normalizedTitle = normalizeDedupTitle(item?.title);
     const year = String(item?.meta?.year || "");
     const key = `${normalizedTitle}|${year}`;
@@ -1238,14 +1238,14 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
   }
 
   if (type === "book") {
-  const items = await getWeeklyFeaturedGoogleBooks(weeklyLimit);
+  const items = await getWeeklyFeaturedOpenLibrary(weeklyLimit);
   return res.json({ items });
   }
 
   const [seriesResult, moviesResult, booksResult, gamesResult] = await Promise.allSettled([
   getWeeklyTrendingTmdbByType("serie", weeklyLimit),
   getWeeklyTrendingTmdbByType("pelicula", weeklyLimit),
-  getWeeklyFeaturedGoogleBooks(weeklyLimit),
+  getWeeklyFeaturedOpenLibrary(weeklyLimit),
   getWeeklyFeaturedRawg(weeklyLimit)
   ]);
 
@@ -1307,8 +1307,8 @@ app.get("/api/explore/item/:source/:type/:externalId", _requireAuth, async (req,
       return res.json(item);
     }
 
-    if (source === "google_books") {
-      const item = await getGoogleBookDetail(externalId);
+    if (source === "open_library") {
+      const item = await getOpenLibraryBookDetail(externalId);
       return res.json(item);
     }
 
