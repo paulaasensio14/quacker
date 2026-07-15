@@ -53,21 +53,35 @@ async function _googleBooksGet(path, params = {}) {
     url.searchParams.set("key", apiKey);
   }
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json"
-    }
-  });
+  const maxAttempts = 2;
+  const retryableStatuses = new Set([502, 503, 504]);
 
-  if (!res.ok) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json"
+      }
+    });
+
+    if (res.ok) {
+      return res.json();
+    }
+
     const bodyText = await res.text().catch(() => "");
+    const shouldRetry =
+      retryableStatuses.has(res.status) &&
+      attempt < maxAttempts;
+
+    if (shouldRetry) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      continue;
+    }
+
     const err = new Error(`google_books_request_failed:${res.status}:${bodyText}`);
     err.status = res.status;
     throw err;
   }
-
-  return res.json();
 }
 
 function _baseSearchItemFromVolume(item) {
