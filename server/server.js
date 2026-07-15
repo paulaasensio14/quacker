@@ -12,10 +12,10 @@ import {
  getWeeklyTrendingTmdbByType
 } from "./adapters/tmdb.js";
 import {
- searchGoogleBooks,
- getGoogleBookDetail,
- getWeeklyFeaturedGoogleBooks
-} from "./adapters/google-books.js";
+ searchOpenLibrary,
+ getOpenLibraryBookDetail,
+ getWeeklyFeaturedOpenLibrary
+} from "./adapters/open-library.js";
 import {
  searchRawg,
  getRawgDetail,
