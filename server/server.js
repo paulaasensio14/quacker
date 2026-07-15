@@ -1179,9 +1179,9 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
 
  try {
   if (q) {
-  const [tmdbResult, googleBooksResult, rawgResult] = await Promise.allSettled([
+  const [tmdbResult, openLibraryResult, rawgResult] = await Promise.allSettled([
   searchTmdb(q),
-  searchGoogleBooks(q),
+  searchOpenLibrary(q),
   searchRawg(q)
   ]);
 
@@ -1189,8 +1189,8 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
     console.error("[/api/explore] TMDB search failed:", tmdbResult.reason);
   }
 
-  if (googleBooksResult.status === "rejected") {
-    console.error("[/api/explore] Google Books search failed:", googleBooksResult.reason);
+  if (openLibraryResult.status === "rejected") {
+    console.error("[/api/explore] Open Library search failed:", openLibraryResult.reason);
   }
 
   if (rawgResult.status === "rejected") {
@@ -1202,9 +1202,9 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
   ? tmdbResult.value
   : [];
 
-  const googleBooksItems =
-  googleBooksResult.status === "fulfilled" && Array.isArray(googleBooksResult.value)
-  ? googleBooksResult.value
+  const openLibraryItems =
+  openLibraryResult.status === "fulfilled" && Array.isArray(openLibraryResult.value)
+  ? openLibraryResult.value
   : [];
 
   const rawgItems =
@@ -1212,7 +1212,7 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
   ? rawgResult.value
   : [];
 
-  let rankedItems = _rankAndMixExploreItems(q, tmdbItems, googleBooksItems, rawgItems);
+  let rankedItems = _rankAndMixExploreItems(q, tmdbItems, openLibraryItems, rawgItems);
 
   if (type) {
     rankedItems = rankedItems.filter((item) => String(item?.type || "").trim() === type);
