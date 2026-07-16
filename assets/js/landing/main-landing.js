@@ -62,6 +62,12 @@
         contact_email_label: 'Email',
         contact_message_label: 'Message',
         contact_send: 'Send Message',
+        contact_sending: 'Sending...',
+        contact_success_title: 'Message sent',
+        contact_success_message: 'Thanks. We’ll get back to you soon.',
+        contact_error_title: 'Message not sent',
+        contact_error_message: 'We couldn’t send your message. Please try again.',
+        contact_rate_message: 'Too many attempts. Please wait a few minutes and try again.',
         contact_side_intro: 'We’re still building Quacker, and we’d love to hear how you’d like to use it. Your message can influence what we build next:',
         contact_side_li1: 'Tell us which stats and dashboards you’d love.',
         contact_side_li2: 'Ask for integrations with your favourite apps.',
@@ -156,6 +162,12 @@
         contact_email_label: 'Email',
         contact_message_label: 'Mensaje',
         contact_send: 'Enviar mensaje',
+        contact_sending: 'Enviando...',
+        contact_success_title: 'Mensaje enviado',
+        contact_success_message: 'Gracias. Te responderemos lo antes posible.',
+        contact_error_title: 'Mensaje no enviado',
+        contact_error_message: 'No hemos podido enviar tu mensaje. Inténtalo de nuevo.',
+        contact_rate_message: 'Has realizado demasiados intentos. Espera unos minutos y vuelve a probar.',
         contact_side_intro: 'Seguimos construyendo Quacker y nos encantaría saber cómo te gustaría usarlo. Tu mensaje puede influir en la hoja de ruta:',
         contact_side_li1: 'Cuéntanos qué estadísticas y paneles te gustaría ver.',
         contact_side_li2: 'Pide integraciones con tus aplicaciones favoritas.',
@@ -282,19 +294,99 @@
       });
     });
 
-    document.getElementById("contactForm").addEventListener("submit", (e) => {
-      e.preventDefault();
+    const contactForm = document.getElementById("contactForm");
+    const contactSubmitBtn = document.getElementById("contactSubmitBtn");
 
-      window.toast({
-        title: currentLang === "es" ? "Mensaje enviado" : "Message sent",
-        message: currentLang === "es"
-          ? "Gracias. Te responderemos lo antes posible."
-          : "Thanks. We’ll get back to you soon.",
-        type: "success",
-        duration: 2600
-      });
+    let contactSubmitting = false;
 
-      e.target.reset();
+    contactForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      if (contactSubmitting) return;
+      if (!contactForm.reportValidity()) return;
+
+      const dict = translations[currentLang];
+
+      const payload = {
+        name: String(document.getElementById("cname")?.value || "").trim(),
+        email: String(document.getElementById("cemail")?.value || "").trim(),
+        message: String(document.getElementById("cmessage")?.value || "").trim(),
+        website: String(document.getElementById("cwebsite")?.value || "").trim(),
+        language: currentLang === "en" ? "en" : "es"
+      };
+
+      contactSubmitting = true;
+
+      if (contactSubmitBtn) {
+        contactSubmitBtn.disabled = true;
+        contactSubmitBtn.textContent = dict.contact_sending;
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "same-origin",
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+
+        let result = null;
+
+        try {
+          result = await response.json();
+        } catch (_) {
+          result = null;
+        }
+
+        if (!response.ok) {
+          const error = new Error(result?.error || "contact_delivery_failed");
+          error.status = response.status;
+          error.code = result?.error || "contact_delivery_failed";
+          throw error;
+        }
+
+        window.toast?.({
+          title: dict.contact_success_title,
+          message: dict.contact_success_message,
+          type: "success",
+          duration: 3200
+        });
+
+        contactForm.reset();
+      } catch (error) {
+        const isRateLimited =
+          error?.status === 429 ||
+          error?.code === "contact_rate_limited";
+
+        window.toast?.({
+          title: dict.contact_error_title,
+          message: isRateLimited
+            ? dict.contact_rate_message
+            : dict.contact_error_message,
+          type: "error",
+          duration: 4200
+        });
+
+        console.error("[Landing] contact form failed", {
+          status: error?.status || 0,
+          code: error?.code || error?.name || "unknown"
+        });
+      } finally {
+        clearTimeout(timeoutId);
+        contactSubmitting = false;
+
+        if (contactSubmitBtn) {
+          contactSubmitBtn.disabled = false;
+          contactSubmitBtn.textContent =
+            translations[currentLang].contact_send;
+        }
+      }
     });
 
     // Botón "volver arriba"

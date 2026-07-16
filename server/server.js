@@ -21,6 +21,8 @@ import {
  getRawgDetail,
  getWeeklyFeaturedRawg
 } from "./adapters/rawg.js";
+import nodemailer from "nodemailer";
+import { ENV } from "./config/env.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +42,12 @@ app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 
 const isProduction = process.env.NODE_ENV === "production";
+
+const CONTACT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const CONTACT_RATE_LIMIT_MAX = 3;
+
+const contactRateLimit = new Map();
+let contactTransporter = null;
 
 app.use(
   session({
@@ -80,6 +88,145 @@ function _uid() {
 
 function _normalizeContentText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function _normalizeContactName(value) {
+  return String(value || "")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function _normalizeContactMessage(value) {
+  return String(value || "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+}
+
+function _isValidContactEmail(value) {
+  const email = String(value || "").trim();
+
+  return (
+    email.length <= 254 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  );
+}
+
+function _escapeContactHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function _consumeContactRateLimit(ip) {
+  const now = Date.now();
+  const key = String(ip || "unknown");
+
+  const recentAttempts = (contactRateLimit.get(key) || [])
+    .filter((timestamp) => now - timestamp < CONTACT_RATE_LIMIT_WINDOW_MS);
+
+  if (recentAttempts.length >= CONTACT_RATE_LIMIT_MAX) {
+    contactRateLimit.set(key, recentAttempts);
+    return false;
+  }
+
+  recentAttempts.push(now);
+  contactRateLimit.set(key, recentAttempts);
+
+  if (contactRateLimit.size > 1000) {
+    for (const [storedIp, timestamps] of contactRateLimit.entries()) {
+      const fresh = timestamps.filter(
+        (timestamp) => now - timestamp < CONTACT_RATE_LIMIT_WINDOW_MS
+      );
+
+      if (fresh.length) {
+        contactRateLimit.set(storedIp, fresh);
+      } else {
+        contactRateLimit.delete(storedIp);
+      }
+    }
+  }
+
+  return true;
+}
+
+function _getContactTransporter() {
+  const missingConfig = [
+    ["SMTP_HOST", ENV.SMTP_HOST],
+    ["SMTP_PORT", ENV.SMTP_PORT],
+    ["SMTP_USER", ENV.SMTP_USER],
+    ["SMTP_PASS", ENV.SMTP_PASS],
+    ["CONTACT_TO", ENV.CONTACT_TO]
+  ]
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missingConfig.length) {
+    const error = new Error("contact_mail_not_configured");
+    error.code = "contact_mail_not_configured";
+    error.missingConfig = missingConfig;
+    throw error;
+  }
+
+  if (!contactTransporter) {
+    contactTransporter = nodemailer.createTransport({
+      host: ENV.SMTP_HOST,
+      port: ENV.SMTP_PORT,
+      secure: ENV.SMTP_SECURE,
+      requireTLS: !ENV.SMTP_SECURE,
+      auth: {
+        user: ENV.SMTP_USER,
+        pass: ENV.SMTP_PASS
+      },
+      tls: {
+        minVersion: "TLSv1.2"
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
+    });
+  }
+
+  return contactTransporter;
+}
+
+async function _sendContactEmail({ name, email, message, language }) {
+  const transporter = _getContactTransporter();
+  const languageLabel = language === "en" ? "English" : "Español";
+
+  await transporter.sendMail({
+    from: {
+      name: "Quacker",
+      address: ENV.SMTP_USER
+    },
+    to: ENV.CONTACT_TO,
+    replyTo: {
+      name,
+      address: email
+    },
+    subject: `[Quacker] Nuevo mensaje de ${name}`,
+    text: [
+      "Nuevo mensaje desde el formulario de contacto de Quacker.",
+      "",
+      `Nombre: ${name}`,
+      `Email: ${email}`,
+      `Idioma: ${languageLabel}`,
+      "",
+      "Mensaje:",
+      message
+    ].join("\n"),
+    html: `
+      <h2>Nuevo mensaje desde Quacker</h2>
+      <p><strong>Nombre:</strong> ${_escapeContactHtml(name)}</p>
+      <p><strong>Email:</strong> ${_escapeContactHtml(email)}</p>
+      <p><strong>Idioma:</strong> ${_escapeContactHtml(languageLabel)}</p>
+      <p><strong>Mensaje:</strong></p>
+      <p>${_escapeContactHtml(message).replace(/\n/g, "<br>")}</p>
+    `
+  });
 }
 
 function _normalizeCanonicalIdentity(source, externalId) {
@@ -483,6 +630,61 @@ function _getUserBucket(db, userId) {
 // ===== API BASE =====
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
+});
+
+app.post("/api/contact", async (req, res) => {
+  const body = req.body || {};
+
+  const name = _normalizeContactName(body.name);
+  const email = String(body.email || "").trim().toLowerCase();
+  const message = _normalizeContactMessage(body.message);
+  const language = body.language === "en" ? "en" : "es";
+  const website = String(body.website || "").trim();
+
+  // Campo trampa para bots. Los usuarios reales no lo rellenan.
+  if (website) {
+    return res.json({ ok: true });
+  }
+
+  if (
+    name.length < 2 ||
+    name.length > 80 ||
+    !_isValidContactEmail(email) ||
+    message.length < 10 ||
+    message.length > 3000
+  ) {
+    return res.status(400).json({
+      error: "invalid_contact_form"
+    });
+  }
+
+  if (!_consumeContactRateLimit(req.ip)) {
+    return res.status(429).json({
+      error: "contact_rate_limited"
+    });
+  }
+
+  try {
+    await _sendContactEmail({
+      name,
+      email,
+      message,
+      language
+    });
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("[Contact] email delivery failed", {
+      code: error?.code || "",
+      command: error?.command || "",
+      responseCode: error?.responseCode || null,
+      missingConfig: error?.missingConfig || []
+    });
+
+    return res.status(502).json({
+      error: "contact_delivery_failed"
+    });
+  }
 });
 
 // ===== AUTH =====

@@ -312,21 +312,72 @@
           <h3 class="contact-card-title" data-i18n="contact_form_title">Send us a message</h3>
           <form id="contactForm">
             <div class="form-field">
-              <label class="form-label" for="cname" data-i18n="contact_name_label">Name</label>
-              <input class="form-input" id="cname" name="name"
-                     type="text" placeholder="Your name">
+              <label class="form-label" for="cname" data-i18n="contact_name_label">
+                Name
+              </label>
+              <input
+                class="form-input"
+                id="cname"
+                name="name"
+                type="text"
+                placeholder="Your name"
+                autocomplete="name"
+                minlength="2"
+                maxlength="80"
+                required
+              >
             </div>
+
             <div class="form-field">
-              <label class="form-label" for="cemail" data-i18n="contact_email_label">Email</label>
-              <input class="form-input" id="cemail" name="email"
-                     type="email" placeholder="your@email.com">
+              <label class="form-label" for="cemail" data-i18n="contact_email_label">
+                Email
+              </label>
+              <input
+                class="form-input"
+                id="cemail"
+                name="email"
+                type="email"
+                placeholder="your@email.com"
+                autocomplete="email"
+                inputmode="email"
+                maxlength="254"
+                required
+              >
             </div>
+
             <div class="form-field">
-              <label class="form-label" for="cmessage" data-i18n="contact_message_label">Message</label>
-              <textarea class="form-textarea" id="cmessage" name="message"
-                        placeholder="Tell us what's on your mind..."></textarea>
+              <label class="form-label" for="cmessage" data-i18n="contact_message_label">
+                Message
+              </label>
+              <textarea
+                class="form-textarea"
+                id="cmessage"
+                name="message"
+                placeholder="Tell us what's on your mind..."
+                minlength="10"
+                maxlength="3000"
+                required
+              ></textarea>
             </div>
-            <button class="btn-submit" type="submit" data-i18n="contact_send">Send Message</button>
+
+            <input
+              id="cwebsite"
+              name="website"
+              type="text"
+              autocomplete="off"
+              tabindex="-1"
+              aria-hidden="true"
+              hidden
+            >
+
+            <button
+              class="btn-submit"
+              id="contactSubmitBtn"
+              type="submit"
+              data-i18n="contact_send"
+            >
+              Send Message
+            </button>
           </form>
         </div>
 
@@ -348,7 +399,7 @@
                 </ul>
 
                 <p data-i18n="contact_side_email">
-                ¿Prefieres email? Escríbenos a <strong>hello@quacker.app</strong>.
+                ¿Prefieres email? Escríbenos a <strong>hello@quacker.es</strong>.
                 </p>
             </div>
         </div>
