@@ -1156,10 +1156,38 @@ function _scoreExploreSearchItem(item, query) {
   const q = _normalizeExploreQueryText(query);
   if (!q) return 0;
 
-  const title = _normalizeExploreQueryText(item?.title);
+  const localizedTitle = _normalizeExploreQueryText(item?.title);
+  const originalTitle = _normalizeExploreQueryText(item?.originalTitle);
+  const rawTokens = _tokenizeExploreQuery(q);
+
+  const scoreTitleVariant = (candidate) => {
+    if (!candidate) return -1;
+
+    if (candidate === q) return 1000;
+    if (candidate.startsWith(q)) return 800;
+    if (candidate.includes(q)) return 600;
+
+    const candidateWords = candidate.split(/\s+/).filter(Boolean);
+    const matchedTokens = rawTokens.filter((token) =>
+      candidateWords.includes(token)
+    ).length;
+
+    return (
+      matchedTokens * 100 -
+      Math.max(0, candidateWords.length - rawTokens.length)
+    );
+  };
+
+  const title =
+    [localizedTitle, originalTitle]
+      .filter(Boolean)
+      .sort(
+        (first, second) =>
+          scoreTitleVariant(second) - scoreTitleVariant(first)
+      )[0] || "";
+
   const author = _normalizeExploreQueryText(item?.meta?.author);
   const summary = _normalizeExploreQueryText(item?.summary);
-  const rawTokens = _tokenizeExploreQuery(q);
   const ignoredSearchTokens = new Set([
     "y",
     "e",

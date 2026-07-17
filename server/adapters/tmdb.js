@@ -322,6 +322,7 @@ function _baseSearchItemFromMovie(item) {
     externalId: String(item.id),
     type: "pelicula",
     title: String(item.title || item.original_title || "").trim(),
+    originalTitle: String(item.original_title || "").trim(),
     releaseDate: String(item.release_date || "").trim(),
     summary: String(item.overview || "").trim(),
     cover: _posterUrl(item.poster_path),
@@ -341,8 +342,8 @@ function _baseSearchItemFromTv(item) {
     externalId: String(item.id),
     type: "serie",
     title: String(item.name || item.original_name || "").trim(),
+    originalTitle: String(item.original_name || "").trim(),
     releaseDate: String(item.first_air_date || "").trim(),
-    summary: String(item.overview || "").trim(),
     cover: _posterUrl(item.poster_path),
     meta: {
       year: _yearFromDate(item.first_air_date),
@@ -372,27 +373,46 @@ function _tokenizeTmdbSearchText(value) {
   return _normalizeTmdbSearchText(value).split(/\s+/).filter(Boolean);
 }
 
+function _scoreTmdbTitleMatch(title, query) {
+  if (!title || !query) return 0;
+
+  if (title === query) {
+    return 120;
+  }
+
+  if (title.startsWith(query)) {
+    return 70;
+  }
+
+  if (title.includes(query)) {
+    return 40;
+  }
+
+  return 0;
+}
+
 function _scoreTmdbSearchItem(item, query) {
   const q = _normalizeTmdbSearchText(query);
   if (!q) return 0;
 
   const title = _normalizeTmdbSearchText(item?.title);
+  const originalTitle = _normalizeTmdbSearchText(item?.originalTitle);
   const summary = _normalizeTmdbSearchText(item?.summary);
   const tokens = _tokenizeTmdbSearchText(q);
 
-  let score = 0;
-
-  if (title === q) {
-    score += 120;
-  } else if (title.startsWith(q)) {
-    score += 70;
-  } else if (title.includes(q)) {
-    score += 40;
-  }
+  let score = Math.max(
+    _scoreTmdbTitleMatch(title, q),
+    _scoreTmdbTitleMatch(originalTitle, q)
+  );
 
   for (const token of tokens) {
-    if (title.includes(token)) score += 12;
-    if (summary.includes(token)) score += 2;
+    if (title.includes(token) || originalTitle.includes(token)) {
+      score += 12;
+    }
+
+    if (summary.includes(token)) {
+      score += 2;
+    }
   }
 
   if (item?.cover) score += 6;
