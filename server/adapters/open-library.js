@@ -25,6 +25,49 @@ const OPEN_LIBRARY_SEARCH_FIELDS = [
 
 const searchCache = new Map();
 
+const OPEN_LIBRARY_NON_SEARCH_TOKENS = new Set([
+  "a",
+  "an",
+  "and",
+  "at",
+  "by",
+  "for",
+  "from",
+  "in",
+  "not",
+  "of",
+  "on",
+  "or",
+  "the",
+  "to",
+  "with",
+  "el",
+  "la",
+  "los",
+  "las",
+  "y",
+  "e",
+  "o",
+  "u",
+  "de",
+  "del",
+  "en",
+  "por",
+  "para",
+  "con",
+  "un",
+  "una",
+  "unos",
+  "unas",
+  "book",
+  "books",
+  "libro",
+  "libros",
+  "novel",
+  "novela",
+  "novelas"
+]);
+
 function _normalizeText(value) {
   return String(value || "").trim();
 }
@@ -245,26 +288,42 @@ export async function searchOpenLibrary(query) {
   }
 
   const normalizedQuery = q.toLowerCase();
-  const ignoredQueryTokens = new Set([
-    "book",
-    "books",
-    "libro",
-    "libros",
-    "novel",
-    "novela",
-    "novelas"
-  ]);
 
   const queryTokens = normalizedQuery
     .split(/\s+/)
+    .map((token) => token.replace(/[^\p{L}\p{N}]+/gu, ""))
     .filter(Boolean)
-    .filter((token) => !ignoredQueryTokens.has(token));
+    .filter((token) => !OPEN_LIBRARY_NON_SEARCH_TOKENS.has(token));
 
-  const data = await _searchOpenLibrary({
-    q,
-    lang: "es",
-    limit: 40
-  });
+  const hasSearchableToken = queryTokens.some(
+    (token) => token.length >= 3
+  );
+
+  if (!hasSearchableToken) {
+    return [];
+  }
+
+  let data;
+
+  try {
+    data = await _searchOpenLibrary({
+      q,
+      lang: "es",
+      limit: 40
+    });
+  } catch (error) {
+    const message = String(error?.message || "");
+
+    const isExpectedQueryValidation =
+      error?.status === 422 &&
+      /query too short|queries are not allowed/i.test(message);
+
+    if (isExpectedQueryValidation) {
+      return [];
+    }
+
+    throw error;
+  }
 
   const works = Array.isArray(data?.docs) ? data.docs : [];
 
