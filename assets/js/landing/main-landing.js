@@ -871,7 +871,7 @@
         if (mode === 'login') {
           await ApiClient.login(email, password);
         } else {
-          await ApiClient.register(email, password, name);
+          await ApiClient.register(email, password, name, currentLang);
         }
 
         // Guardamos configuración de conexión (NO datos, NO tokens)

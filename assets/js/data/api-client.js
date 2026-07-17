@@ -1010,15 +1010,27 @@ const ApiClient = (() => {
     return { userId: "demo-user", email };
   }
 
-  async function register(email, password, name) {
+  async function register(email, password, name, language = "es") {
+    const safeLanguage = language === "en" ? "en" : "es";
+
     if (_isHttp()) {
-      const res = await _httpJson("POST", "/auth/register", { email, password, name });
+      const res = await _httpJson("POST", "/auth/register", {
+        email,
+        password,
+        name,
+        language: safeLanguage
+      });
       return res;
     }
 
     // modo local (demo)
     console.log("ApiClient.register", email);
-    return { userId: "demo-user", email, name };
+    return {
+      userId: "demo-user",
+      email,
+      name,
+      language: safeLanguage
+    };
   }
 
   async function logout() {

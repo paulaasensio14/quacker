@@ -47,7 +47,7 @@ const CONTACT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const CONTACT_RATE_LIMIT_MAX = 3;
 
 const contactRateLimit = new Map();
-let contactTransporter = null;
+let mailTransporter = null;
 
 app.use(
   session({
@@ -153,26 +153,25 @@ function _consumeContactRateLimit(ip) {
   return true;
 }
 
-function _getContactTransporter() {
+function _getMailTransporter() {
   const missingConfig = [
     ["SMTP_HOST", ENV.SMTP_HOST],
     ["SMTP_PORT", ENV.SMTP_PORT],
     ["SMTP_USER", ENV.SMTP_USER],
-    ["SMTP_PASS", ENV.SMTP_PASS],
-    ["CONTACT_TO", ENV.CONTACT_TO]
+    ["SMTP_PASS", ENV.SMTP_PASS]
   ]
     .filter(([, value]) => !value)
     .map(([key]) => key);
 
   if (missingConfig.length) {
-    const error = new Error("contact_mail_not_configured");
-    error.code = "contact_mail_not_configured";
+    const error = new Error("mail_not_configured");
+    error.code = "mail_not_configured";
     error.missingConfig = missingConfig;
     throw error;
   }
 
-  if (!contactTransporter) {
-    contactTransporter = nodemailer.createTransport({
+  if (!mailTransporter) {
+    mailTransporter = nodemailer.createTransport({
       host: ENV.SMTP_HOST,
       port: ENV.SMTP_PORT,
       secure: ENV.SMTP_SECURE,
@@ -190,11 +189,18 @@ function _getContactTransporter() {
     });
   }
 
-  return contactTransporter;
+  return mailTransporter;
 }
 
 async function _sendContactEmail({ name, email, message, language }) {
-  const transporter = _getContactTransporter();
+  if (!ENV.CONTACT_TO) {
+    const error = new Error("contact_mail_not_configured");
+    error.code = "contact_mail_not_configured";
+    error.missingConfig = ["CONTACT_TO"];
+    throw error;
+  }
+
+  const transporter = _getMailTransporter();
   const languageLabel = language === "en" ? "English" : "Español";
 
   await transporter.sendMail({
@@ -226,6 +232,91 @@ async function _sendContactEmail({ name, email, message, language }) {
       <p><strong>Mensaje:</strong></p>
       <p>${_escapeContactHtml(message).replace(/\n/g, "<br>")}</p>
     `
+  });
+}
+
+async function _sendWelcomeEmail({ name, email, language }) {
+  const transporter = _getMailTransporter();
+  const isEnglish = language === "en";
+  const safeName = _normalizeContactName(name);
+
+  const subject = isEnglish
+    ? "Welcome to Quacker"
+    : "Te damos la bienvenida a Quacker";
+
+  const text = isEnglish
+    ? [
+        `Hi ${safeName},`,
+        "",
+        "Your Quacker account is ready.",
+        "",
+        "You can now:",
+        "1. Explore a show, movie, book, or video game.",
+        "2. Add it to your library.",
+        "3. Update your progress or create a custom list.",
+        "",
+        "Open Quacker: https://quacker.es",
+        "",
+        "If you need help, reply to this email.",
+        "",
+        "The Quacker team"
+      ].join("\n")
+    : [
+        `Hola ${safeName},`,
+        "",
+        "Tu cuenta de Quacker ya está lista.",
+        "",
+        "Ahora puedes:",
+        "1. Explorar una serie, película, libro o videojuego.",
+        "2. Añadirlo a tu biblioteca.",
+        "3. Actualizar tu progreso o crear una lista personalizada.",
+        "",
+        "Abrir Quacker: https://quacker.es",
+        "",
+        "Si necesitas ayuda, responde a este correo.",
+        "",
+        "El equipo de Quacker"
+      ].join("\n");
+
+  const html = isEnglish
+    ? `
+      <h2>Welcome to Quacker!</h2>
+      <p>Hi <strong>${_escapeContactHtml(safeName)}</strong>,</p>
+      <p>Your Quacker account is ready.</p>
+      <p>You can now:</p>
+      <ol>
+        <li>Explore a show, movie, book, or video game.</li>
+        <li>Add it to your library.</li>
+        <li>Update your progress or create a custom list.</li>
+      </ol>
+      <p><a href="https://quacker.es">Open Quacker</a></p>
+      <p>If you need help, reply to this email.</p>
+      <p>The Quacker team</p>
+    `
+    : `
+      <h2>¡Te damos la bienvenida a Quacker!</h2>
+      <p>Hola <strong>${_escapeContactHtml(safeName)}</strong>,</p>
+      <p>Tu cuenta de Quacker ya está lista.</p>
+      <p>Ahora puedes:</p>
+      <ol>
+        <li>Explorar una serie, película, libro o videojuego.</li>
+        <li>Añadirlo a tu biblioteca.</li>
+        <li>Actualizar tu progreso o crear una lista personalizada.</li>
+      </ol>
+      <p><a href="https://quacker.es">Abrir Quacker</a></p>
+      <p>Si necesitas ayuda, responde a este correo.</p>
+      <p>El equipo de Quacker</p>
+    `;
+
+  await transporter.sendMail({
+    from: {
+      name: "Quacker",
+      address: ENV.SMTP_USER
+    },
+    to: email,
+    subject,
+    text,
+    html
   });
 }
 
@@ -689,8 +780,9 @@ app.post("/api/contact", async (req, res) => {
 
 // ===== AUTH =====
 app.post("/api/auth/register", (req, res) => {
-  const { email, password, name } = req.body || {};
+  const { email, password, name, language } = req.body || {};
   const normalizedEmail = String(email || "").trim().toLowerCase();
+  const safeLanguage = language === "en" ? "en" : "es";
 
   if (!normalizedEmail || !password || !name) {
     return res.status(400).json({ error: "missing_fields" });
@@ -712,7 +804,7 @@ app.post("/api/auth/register", (req, res) => {
       email: normalizedEmail,
       name,
       handle: "@" + String(email).split("@")[0].trim().toLowerCase(),
-      language: "es",
+      language: safeLanguage,
       theme: "light"
     },
     auth: {
@@ -739,7 +831,21 @@ app.post("/api/auth/register", (req, res) => {
 
   req.session.save((err) => {
     if (err) return res.status(500).json({ error: "session_save_failed" });
+
     res.json({ user: db.users[userId].profile });
+
+    void _sendWelcomeEmail({
+      name,
+      email: normalizedEmail,
+      language: safeLanguage
+    }).catch((error) => {
+      console.error("[Auth] welcome email delivery failed", {
+        code: error?.code || "",
+        command: error?.command || "",
+        responseCode: error?.responseCode || null,
+        missingConfig: error?.missingConfig || []
+      });
+    });
   });
 });
 
