@@ -20,3 +20,10 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime database
+server/db.json
+server/db.json.tmp-*
+server/.db.json.tmp-*
+server/db.json.corrupt-*
+server/db.json.backup-*

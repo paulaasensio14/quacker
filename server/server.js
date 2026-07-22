@@ -2,7 +2,6 @@ import express from "express";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import path from "path";
-import fs from "fs";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 import {
@@ -24,6 +23,11 @@ import {
 import nodemailer from "nodemailer";
 import { ENV } from "./config/env.js";
 
+import {
+  readJsonFile,
+  writeJsonFileAtomic
+} from "./lib/json-db.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -41,7 +45,29 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction =
+  process.env.NODE_ENV === "production";
+
+const configuredSessionSecret = String(
+  process.env.SESSION_SECRET || ""
+).trim();
+
+if (
+  isProduction &&
+  configuredSessionSecret.length < 32
+) {
+  const error = new Error(
+    "SESSION_SECRET debe tener al menos 32 caracteres en producción."
+  );
+
+  error.code = "INVALID_SESSION_SECRET";
+
+  throw error;
+}
+
+const sessionSecret =
+  configuredSessionSecret ||
+  "dev-secret-fallback";
 
 const CONTACT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const CONTACT_RATE_LIMIT_MAX = 3;
@@ -51,7 +77,7 @@ let mailTransporter = null;
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "dev-secret-fallback",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -63,23 +89,47 @@ app.use(
 );
 
 // ===== Helpers DB =====
+function _createInitialDb() {
+  return {
+    users: {}
+  };
+}
+
+function _validateDb(db) {
+  const isValidRoot =
+    db &&
+    typeof db === "object" &&
+    !Array.isArray(db);
+
+  const hasValidUsers =
+    isValidRoot &&
+    db.users &&
+    typeof db.users === "object" &&
+    !Array.isArray(db.users);
+
+  if (!hasValidUsers) {
+    const error = new Error(
+      "La base de datos no contiene una estructura users válida."
+    );
+
+    error.code = "INVALID_DATABASE_STRUCTURE";
+
+    throw error;
+  }
+
+  return db;
+}
+
 function _readDb() {
-  if (!fs.existsSync(DB_PATH)) {
-    const init = { users: {} };
-    fs.writeFileSync(DB_PATH, JSON.stringify(init, null, 2), "utf-8");
-    return init;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
-  } catch {
-    const init = { users: {} };
-    fs.writeFileSync(DB_PATH, JSON.stringify(init, null, 2), "utf-8");
-    return init;
-  }
+  return readJsonFile(DB_PATH, {
+    createDefault: _createInitialDb,
+    validate: _validateDb
+  });
 }
 
 function _writeDb(db) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), "utf-8");
+  _validateDb(db);
+  writeJsonFileAtomic(DB_PATH, db);
 }
 
 function _uid() {
@@ -2958,7 +3008,25 @@ app.delete("/api/library/:id", _requireAuth, (req, res) => {
 // Importante: esto evita CORS y hace que cookies funcionen bien.
 app.use(express.static(PROJECT_ROOT));
 
-const PORT = 3000;
+const PORT = Number.parseInt(
+  process.env.PORT || "3000",
+  10
+);
+
+if (
+  !Number.isInteger(PORT) ||
+  PORT < 1 ||
+  PORT > 65535
+) {
+  const error = new Error(
+    "PORT debe ser un número válido entre 1 y 65535."
+  );
+
+  error.code = "INVALID_PORT";
+
+  throw error;
+}
+
 app.listen(PORT, () => {
   console.log(`Quacker server running: http://127.0.0.1:${PORT}`);
 });

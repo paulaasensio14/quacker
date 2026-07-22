@@ -51,23 +51,19 @@ async function _tmdbGet(path, params = {}) {
     url.searchParams.set("api_key", key);
   }
 
-  console.log("[TMDB] REQUEST:", url.toString());
-
   const res = await fetch(url, {
     method: "GET",
     headers: _tmdbHeaders()
   });
 
-  console.log("[TMDB] STATUS:", res.status);
+if (!res.ok) {
+  // Consumimos la respuesta, pero no almacenamos su contenido en logs.
+  await res.text().catch(() => "");
 
-  if (!res.ok) {
-    const bodyText = await res.text().catch(() => "");
-    console.error("[TMDB] ERROR BODY:", bodyText);
-
-    const err = new Error(`tmdb_request_failed:${res.status}:${bodyText}`);
-    err.status = res.status;
-    throw err;
-  }
+  const err = new Error(`tmdb_request_failed:${res.status}`);
+  err.status = res.status;
+  throw err;
+}
 
   return res.json();
 }
