@@ -1,7 +1,9 @@
 import express from "express";
 import session from "express-session";
+import sessionFileStore from "session-file-store";
 import cookieParser from "cookie-parser";
 import path from "path";
+import fs from "fs";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 import {
@@ -27,6 +29,9 @@ import {
   readJsonFile,
   writeJsonFileAtomic
 } from "./lib/json-db.js";
+
+// Protect runtime files containing session or user data.
+process.umask(0o077);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,6 +74,27 @@ const sessionSecret =
   configuredSessionSecret ||
   "dev-secret-fallback";
 
+const FileStore = sessionFileStore(session);
+const SESSION_STORE_PATH = path.resolve(__dirname, ".sessions");
+const SESSION_TTL_SECONDS = 24 * 60 * 60;
+
+fs.mkdirSync(SESSION_STORE_PATH, {
+  recursive: true,
+  mode: 0o700
+});
+
+fs.chmodSync(SESSION_STORE_PATH, 0o700);
+
+const sessionStore = new FileStore({
+  path: SESSION_STORE_PATH,
+  ttl: SESSION_TTL_SECONDS,
+  retries: 5,
+  reapInterval: 60 * 60,
+  reapAsync: false,
+  secret: sessionSecret,
+  logFn: () => {}
+});
+
 const CONTACT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const CONTACT_RATE_LIMIT_MAX = 3;
 
@@ -77,13 +103,16 @@ let mailTransporter = null;
 
 app.use(
   session({
+    store: sessionStore,
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: {
       httpOnly: true,
       sameSite: "lax",
-      secure: isProduction
+      secure: isProduction,
+      maxAge: SESSION_TTL_SECONDS * 1000
     }
   })
 );

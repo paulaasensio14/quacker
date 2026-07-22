@@ -27,3 +27,6 @@ server/db.json.tmp-*
 server/.db.json.tmp-*
 server/db.json.corrupt-*
 server/db.json.backup-*
+
+# Persistent sessions
+server/.sessions/
