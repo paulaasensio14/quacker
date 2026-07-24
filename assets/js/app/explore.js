@@ -94,12 +94,18 @@ const ExploreModule = (() => {
   }
 
   function _getCanonicalIdentityKey(item) {
+    const sharedKey =
+      window.ItemIdentity?.getCanonicalContentKey?.(item) || "";
+
+    if (sharedKey) return sharedKey;
+
     const source = _safeText(item?.source).trim().toLowerCase();
+    const type = _safeText(item?.type).trim().toLowerCase();
     const externalId = _safeText(item?.externalId).trim();
 
-    if (!source || !externalId) return "";
+    if (!source || !type || !externalId) return "";
 
-    return `${source}::${externalId}`;
+    return `${source}::${type}::${externalId}`;
   }
 
   function _escapeHtml(value) {

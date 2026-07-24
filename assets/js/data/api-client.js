@@ -478,27 +478,37 @@ const ApiClient = (() => {
       .slice(0, 30);
   }
 
-  function _normalizeCanonicalIdentity(source, externalId) {
+  function _normalizeCanonicalIdentity(source, type, externalId) {
     const safeSource = String(source || "").trim().toLowerCase();
+    const safeType = String(type || "").trim().toLowerCase();
     const safeExternalId = String(externalId || "").trim();
 
-    if (!safeSource || !safeExternalId) {
+    if (!safeSource || !safeType || !safeExternalId) {
       return {
         source: "",
+        type: "",
         externalId: ""
       };
     }
 
     return {
       source: safeSource,
+      type: safeType,
       externalId: safeExternalId
     };
   }
 
   function _hasCanonicalIdentity(item) {
+    const identity = _normalizeCanonicalIdentity(
+      item?.source,
+      item?.type,
+      item?.externalId
+    );
+
     return Boolean(
-      String(item?.source || "").trim() &&
-      String(item?.externalId || "").trim()
+      identity.source &&
+      identity.type &&
+      identity.externalId
     );
   }
 
@@ -507,9 +517,22 @@ const ApiClient = (() => {
       return false;
     }
 
+    const aIdentity = _normalizeCanonicalIdentity(
+      a?.source,
+      a?.type,
+      a?.externalId
+    );
+
+    const bIdentity = _normalizeCanonicalIdentity(
+      b?.source,
+      b?.type,
+      b?.externalId
+    );
+
     return (
-      String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
-      String(a.externalId).trim() === String(b.externalId).trim()
+      aIdentity.source === bIdentity.source &&
+      aIdentity.type === bIdentity.type &&
+      aIdentity.externalId === bIdentity.externalId
     );
   }
 
@@ -1244,19 +1267,38 @@ const ApiClient = (() => {
   }
 
   // Explore: contar listas por identidad canónica.
-  async function getListsCountByLibraryMatch({ source = "", externalId = "" }) {
-    const canonical = _normalizeCanonicalIdentity(source, externalId);
+  async function getListsCountByLibraryMatch({
+    source = "",
+    type = "",
+    externalId = ""
+  }) {
+    const canonical = _normalizeCanonicalIdentity(
+      source,
+      type,
+      externalId
+    );
 
-    if (!canonical.source || !canonical.externalId) return 0;
+    if (
+      !canonical.source ||
+      !canonical.type ||
+      !canonical.externalId
+    ) {
+      return 0;
+    }
 
     const lists = await getLists();
     const library = await getLibrary();
 
     const libItem = (library || []).find((item) => {
-      const itemIdentity = _normalizeCanonicalIdentity(item?.source, item?.externalId);
+      const itemIdentity = _normalizeCanonicalIdentity(
+        item?.source,
+        item?.type,
+        item?.externalId
+      );
 
       return (
         itemIdentity.source === canonical.source &&
+        itemIdentity.type === canonical.type &&
         itemIdentity.externalId === canonical.externalId
       );
     });
@@ -1280,7 +1322,7 @@ const ApiClient = (() => {
     return count;
   }
 
-  // Devuelve un mapa de conteos por identidad canónica "source::externalId".
+  // Devuelve un mapa de conteos por identidad "source::type::externalId".
   async function getListsCountMapByLibraryKey() {
     const lists = await getLists();
     const library = await getLibrary();
@@ -1291,10 +1333,24 @@ const ApiClient = (() => {
       const itemId = _normalizeDataId(item?.id);
       if (!itemId) continue;
 
-      const identity = _normalizeCanonicalIdentity(item?.source, item?.externalId);
-      if (!identity.source || !identity.externalId) continue;
+      const identity = _normalizeCanonicalIdentity(
+        item?.source,
+        item?.type,
+        item?.externalId
+      );
 
-      idToKey.set(itemId, `${identity.source}::${identity.externalId}`);
+      if (
+        !identity.source ||
+        !identity.type ||
+        !identity.externalId
+      ) {
+        continue;
+      }
+
+      idToKey.set(
+        itemId,
+        `${identity.source}::${identity.type}::${identity.externalId}`
+      );
     }
 
     const counts = Object.create(null);
@@ -2946,13 +3002,18 @@ const ApiClient = (() => {
     ) {
       const canonicalIdentity = _normalizeCanonicalIdentity(
         Object.prototype.hasOwnProperty.call(patch, "source") ? patch.source : prev.source,
+        next.type,
         Object.prototype.hasOwnProperty.call(patch, "externalId") ? patch.externalId : prev.externalId
       );
 
       next.source = canonicalIdentity.source;
       next.externalId = canonicalIdentity.externalId;
     } else {
-      const canonicalIdentity = _normalizeCanonicalIdentity(prev.source, prev.externalId);
+      const canonicalIdentity = _normalizeCanonicalIdentity(
+        prev.source,
+        prev.type,
+        prev.externalId
+      );
       next.source = canonicalIdentity.source;
       next.externalId = canonicalIdentity.externalId;
     }
@@ -3151,12 +3212,28 @@ const ApiClient = (() => {
     const state = _safeState();
     state.library = state.library || [];
 
-    const exists = state.library.find((i) => _normalizeDataId(i?.id) === restoredItemId);
-    if (exists) return { ok: true, already: true, item: exists };
+    const exists = state.library.find(
+      (i) => _normalizeDataId(i?.id) === restoredItemId
+    );
+
+    if (exists) {
+      return {
+        ok: true,
+        already: true,
+        item: {
+          ...exists,
+          alreadyExists: true
+        }
+      };
+    }
 
     const title = _normalizeContentText(item.title);
     const type = String(item.type || "pelicula").trim().toLowerCase();
-    const canonicalIdentity = _normalizeCanonicalIdentity(item.source, item.externalId);
+    const canonicalIdentity = _normalizeCanonicalIdentity(
+      item.source,
+      type,
+      item.externalId
+    );
     const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
     const allowedStatuses = new Set([
       "pending",
@@ -3209,7 +3286,14 @@ const ApiClient = (() => {
     );
 
     if (duplicate) {
-      throw _makeApiError("duplicate_item", 409);
+      return {
+        ok: true,
+        already: true,
+        item: {
+          ...duplicate,
+          alreadyExists: true
+        }
+      };
     }
 
     const rawProgress = Number(item.progress ?? 0);
@@ -3462,6 +3546,7 @@ const ApiClient = (() => {
     const type = String(data.type || "pelicula").trim().toLowerCase();
     const canonicalIdentity = _normalizeCanonicalIdentity(
       data.source,
+      type,
       data.externalId
     );
     const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
@@ -3516,7 +3601,10 @@ const ApiClient = (() => {
     );
 
     if (duplicate) {
-      throw _makeApiError("duplicate_item", 409);
+      return {
+        ...duplicate,
+        alreadyExists: true
+      };
     }
 
     const rawProgress = Number(data.progress ?? 0);

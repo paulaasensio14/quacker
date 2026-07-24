@@ -23,12 +23,16 @@ function getCanonicalContentKey(item) {
     .trim()
     .toLowerCase();
 
+  const type = String(item.type || "")
+    .trim()
+    .toLowerCase();
+
   const externalId = String(item.externalId || "")
     .trim();
 
-  if (!source || !externalId) return "";
+  if (!source || !type || !externalId) return "";
 
-  return `${source}::${externalId}`;
+  return `${source}::${type}::${externalId}`;
 }
 
 function getNormalizedContentKey(item) {
@@ -49,8 +53,8 @@ function sameContentIdentity(a, b) {
   const aCanonicalKey = getCanonicalContentKey(a);
   const bCanonicalKey = getCanonicalContentKey(b);
 
-  // IDENTIDAD ESTRICTA OBLIGATORIA: Sin source::externalId, no hay match.
-  // Previene colisiones críticas en remakes, reboots o juegos homónimos.
+  // IDENTIDAD ESTRICTA OBLIGATORIA:
+  // Sin source::type::externalId, no existe coincidencia canónica.
   if (!aCanonicalKey || !bCanonicalKey) {
     return false;
   }
@@ -63,6 +67,7 @@ function resolveLibraryItemIdFromCache(item, libraryCache = []) {
   if (directId) return directId;
 
   const canonicalKey = getCanonicalContentKey(item);
+
   if (canonicalKey) {
     const canonicalMatch = (libraryCache || []).find(
       (entry) => getCanonicalContentKey(entry) === canonicalKey
