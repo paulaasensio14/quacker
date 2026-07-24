@@ -2763,8 +2763,17 @@ app.post("/api/library", _requireAuth, (req, res) => {
       externalId: canonicalIdentity.externalId
     })
   );
+
   if (duplicate) {
-    return res.status(409).json({ error: "duplicate_item" });
+    return res.json({
+      ok: true,
+      already: true,
+      alreadyExists: true,
+      item: {
+        ...duplicate,
+        alreadyExists: true
+      }
+    });
   }
 
   const sanitizedMeta = _sanitizeLibraryMeta(data.meta);
