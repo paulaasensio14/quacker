@@ -478,23 +478,153 @@ const ApiClient = (() => {
       .slice(0, 30);
   }
 
-  function _normalizeCanonicalIdentity(source, type, externalId) {
-    const safeSource = String(source || "").trim().toLowerCase();
-    const safeType = String(type || "").trim().toLowerCase();
-    const safeExternalId = String(externalId || "").trim();
+  const _allowedIdentityTypes = new Set([
+    "pelicula",
+    "serie",
+    "game",
+    "book"
+  ]);
 
-    if (!safeSource || !safeType || !safeExternalId) {
-      return {
-        source: "",
-        type: "",
-        externalId: ""
-      };
+  const _allowedIdentityPairs = new Set([
+    "tmdb::pelicula",
+    "tmdb::serie",
+    "rawg::game",
+    "open_library::book",
+    "manual::pelicula",
+    "manual::serie",
+    "manual::game",
+    "manual::book"
+  ]);
+
+  function _normalizeIdentitySource(value) {
+    const source = String(value ?? "").trim().toLowerCase();
+
+    return source === "openlibrary"
+      ? "open_library"
+      : source;
+  }
+
+  function _normalizeIdentityType(value) {
+    const type = String(value ?? "").trim().toLowerCase();
+
+    const aliases = {
+      movie: "pelicula",
+      film: "pelicula",
+      tv: "serie",
+      series: "serie",
+      game: "game",
+      book: "book"
+    };
+
+    return aliases[type] || type;
+  }
+
+  function _normalizePositiveIdentityId(value) {
+    const raw = String(value ?? "").trim();
+
+    if (!raw || !/^\d+$/.test(raw)) {
+      return "";
+    }
+
+    const normalized = raw.replace(/^0+(?=\d)/, "");
+
+    return normalized && normalized !== "0"
+      ? normalized
+      : "";
+  }
+
+  function _normalizeCanonicalIdentity(source, type, externalId) {
+    const safeSource = _normalizeIdentitySource(source);
+    const safeType = _normalizeIdentityType(type);
+    const rawExternalId = String(externalId ?? "").trim();
+
+    const invalid = (error) => ({
+      source: safeSource,
+      type: safeType,
+      externalId: "",
+      key: "",
+      error
+    });
+
+    if (!safeSource) return invalid("missing_source");
+    if (!safeType) return invalid("missing_type");
+
+    if (!_allowedIdentityTypes.has(safeType)) {
+      return invalid("invalid_type");
+    }
+
+    if (safeSource === "google_books") {
+      return invalid("retired_source");
+    }
+
+    if (!_allowedIdentityPairs.has(`${safeSource}::${safeType}`)) {
+      return invalid("invalid_source_type");
+    }
+
+    let safeExternalId = "";
+
+    if (safeSource === "tmdb") {
+      const prefixedMatch = rawExternalId.match(
+        /^tmdb:(movie|film|tv|series|serie):(\d+)$/i
+      );
+
+      if (prefixedMatch) {
+        const prefixedType = _normalizeIdentityType(prefixedMatch[1]);
+
+        if (prefixedType !== safeType) {
+          return invalid("identity_type_conflict");
+        }
+
+        safeExternalId = _normalizePositiveIdentityId(prefixedMatch[2]);
+      } else {
+        safeExternalId = _normalizePositiveIdentityId(rawExternalId);
+      }
+    } else if (safeSource === "rawg") {
+      safeExternalId = _normalizePositiveIdentityId(
+        rawExternalId.replace(/^rawg:/i, "")
+      );
+    } else if (safeSource === "open_library") {
+      safeExternalId = rawExternalId
+        .replace(/^https?:\/\/openlibrary\.org/i, "")
+        .replace(/^\/books\//i, "")
+        .toUpperCase();
+
+      if (!/^OL[A-Z0-9]+M$/.test(safeExternalId)) {
+        return invalid(
+          safeExternalId
+            ? "invalid_open_library_edition"
+            : "missing_external_id"
+        );
+      }
+    } else if (safeSource === "manual") {
+      safeExternalId = rawExternalId.toLowerCase();
+
+      const uuidPattern =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+      if (!uuidPattern.test(safeExternalId)) {
+        return invalid(
+          safeExternalId
+            ? "invalid_manual_uuid"
+            : "missing_external_id"
+        );
+      }
+    }
+
+    if (!safeExternalId) {
+      return invalid(
+        rawExternalId
+          ? "invalid_external_id"
+          : "missing_external_id"
+      );
     }
 
     return {
       source: safeSource,
       type: safeType,
-      externalId: safeExternalId
+      externalId: safeExternalId,
+      key: `${safeSource}::${safeType}::${safeExternalId}`,
+      error: ""
     };
   }
 
@@ -2996,27 +3126,30 @@ const ApiClient = (() => {
       next.type = type;
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(patch, "source") ||
+    const canonicalIdentity = _normalizeCanonicalIdentity(
+      Object.prototype.hasOwnProperty.call(patch, "source")
+        ? patch.source
+        : prev.source,
+      next.type,
       Object.prototype.hasOwnProperty.call(patch, "externalId")
-    ) {
-      const canonicalIdentity = _normalizeCanonicalIdentity(
-        Object.prototype.hasOwnProperty.call(patch, "source") ? patch.source : prev.source,
-        next.type,
-        Object.prototype.hasOwnProperty.call(patch, "externalId") ? patch.externalId : prev.externalId
-      );
+        ? patch.externalId
+        : prev.externalId
+    );
 
-      next.source = canonicalIdentity.source;
-      next.externalId = canonicalIdentity.externalId;
-    } else {
-      const canonicalIdentity = _normalizeCanonicalIdentity(
-        prev.source,
-        prev.type,
-        prev.externalId
+    if (
+      canonicalIdentity.error ||
+      !canonicalIdentity.source ||
+      !canonicalIdentity.type ||
+      !canonicalIdentity.externalId
+    ) {
+      throw _makeApiError(
+        canonicalIdentity.error || "missing_identity",
+        400
       );
-      next.source = canonicalIdentity.source;
-      next.externalId = canonicalIdentity.externalId;
     }
+
+    next.source = canonicalIdentity.source;
+    next.externalId = canonicalIdentity.externalId;
 
     if (Object.prototype.hasOwnProperty.call(patch, "status")) {
       const status = String(patch.status || "").trim().toLowerCase();

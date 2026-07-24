@@ -2893,26 +2893,29 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     next.type = type;
   }
 
-  if (
-    Object.prototype.hasOwnProperty.call(patch, "source") ||
+  const canonicalIdentity = _normalizeCanonicalIdentity(
+    Object.prototype.hasOwnProperty.call(patch, "source")
+      ? patch.source
+      : prev.source,
+    next.type,
     Object.prototype.hasOwnProperty.call(patch, "externalId")
+      ? patch.externalId
+      : prev.externalId
+  );
+
+  if (
+    canonicalIdentity.error ||
+    !canonicalIdentity.source ||
+    !canonicalIdentity.type ||
+    !canonicalIdentity.externalId
   ) {
-    const canonicalIdentity = _normalizeCanonicalIdentity(
-      Object.prototype.hasOwnProperty.call(patch, "source") ? patch.source : prev.source,
-      next.type,
-      Object.prototype.hasOwnProperty.call(patch, "externalId") ? patch.externalId : prev.externalId
-    );
-    next.source = canonicalIdentity.source;
-    next.externalId = canonicalIdentity.externalId;
-  } else {
-    const canonicalIdentity = _normalizeCanonicalIdentity(
-        prev.source,
-        next.type,
-        prev.externalId
-    );
-    next.source = canonicalIdentity.source;
-    next.externalId = canonicalIdentity.externalId;
+    return res.status(400).json({
+      error: canonicalIdentity.error || "missing_identity"
+    });
   }
+
+  next.source = canonicalIdentity.source;
+  next.externalId = canonicalIdentity.externalId;
 
   if (Object.prototype.hasOwnProperty.call(patch, "status")) {
     const status = String(patch.status || "").trim().toLowerCase();
