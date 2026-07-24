@@ -30,6 +30,11 @@ import {
   writeJsonFileAtomic
 } from "./lib/json-db.js";
 
+import {
+  normalizeContentIdentity,
+  sameContentIdentity
+} from "./lib/content-identity.js";
+
 // Protect runtime files containing session or user data.
 process.umask(0o077);
 
@@ -644,39 +649,32 @@ async function _sendWelcomeEmail({ name, email, language }) {
   });
 }
 
-function _normalizeCanonicalIdentity(source, externalId) {
-  const safeSource = String(source || "").trim().toLowerCase();
-  const safeExternalId = String(externalId || "").trim();
+function _normalizeCanonicalIdentity(source, type, externalId) {
+  const identity = normalizeContentIdentity({
+    source,
+    type,
+    externalId
+  });
 
-  if (!safeSource || !safeExternalId) {
+  if (!identity.ok) {
     return {
-      source: "",
-      externalId: ""
+      source: identity.source || "",
+      type: identity.type || "",
+      externalId: "",
+      key: "",
+      error: identity.error
     };
   }
 
-  return {
-    source: safeSource,
-    externalId: safeExternalId
-  };
+  return identity;
 }
 
 function _hasCanonicalIdentity(item) {
-  return Boolean(
-    String(item?.source || "").trim() &&
-    String(item?.externalId || "").trim()
-  );
+  return normalizeContentIdentity(item).ok;
 }
 
 function _isSameLibraryIdentity(a, b) {
-  if (!_hasCanonicalIdentity(a) || !_hasCanonicalIdentity(b)) {
-    return false;
-  }
-
-  return (
-    String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
-    String(a.externalId).trim() === String(b.externalId).trim()
-  );
+  return sameContentIdentity(a, b);
 }
 
 function _sanitizeLibraryMeta(meta) {
@@ -2594,7 +2592,7 @@ app.post("/api/library/restore", _requireAuth, (req, res) => {
   const id = String(data.id || "").trim();
   const title = _normalizeContentText(data.title);
   const type = String(data.type || "pelicula").trim().toLowerCase();
-  const canonicalIdentity = _normalizeCanonicalIdentity(data.source, data.externalId);
+  const canonicalIdentity = _normalizeCanonicalIdentity(data.source, type, data.externalId);
 
   const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
   const allowedStatuses = new Set([
@@ -2637,8 +2635,17 @@ app.post("/api/library/restore", _requireAuth, (req, res) => {
   bucket.library = Array.isArray(bucket.library) ? bucket.library : [];
 
   const existing = bucket.library.find((it) => String(it.id) === id);
+
   if (existing) {
-    return res.json({ ok: true, already: true, item: existing });
+    return res.json({
+      ok: true,
+      already: true,
+      alreadyExists: true,
+      item: {
+        ...existing,
+        alreadyExists: true
+      }
+    });
   }
 
   const duplicate = bucket.library.find((it) =>
@@ -2649,8 +2656,17 @@ app.post("/api/library/restore", _requireAuth, (req, res) => {
       externalId: canonicalIdentity.externalId
     })
   );
+
   if (duplicate) {
-    return res.status(409).json({ error: "duplicate_item" });
+    return res.json({
+      ok: true,
+      already: true,
+      alreadyExists: true,
+      item: {
+        ...duplicate,
+        alreadyExists: true
+      }
+    });
   }
 
   const nowIso = new Date().toISOString();
@@ -2685,6 +2701,7 @@ app.post("/api/library", _requireAuth, (req, res) => {
   const type = String(data.type || "pelicula").trim().toLowerCase();
   const canonicalIdentity = _normalizeCanonicalIdentity(
     data.source,
+    type,
     data.externalId
   );
 
@@ -2746,8 +2763,17 @@ app.post("/api/library", _requireAuth, (req, res) => {
       externalId: canonicalIdentity.externalId
     })
   );
+
   if (duplicate) {
-    return res.status(409).json({ error: "duplicate_item" });
+    return res.json({
+      ok: true,
+      already: true,
+      alreadyExists: true,
+      item: {
+        ...duplicate,
+        alreadyExists: true
+      }
+    });
   }
 
   const sanitizedMeta = _sanitizeLibraryMeta(data.meta);
@@ -2867,22 +2893,29 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     next.type = type;
   }
 
-  if (
-    Object.prototype.hasOwnProperty.call(patch, "source") ||
+  const canonicalIdentity = _normalizeCanonicalIdentity(
+    Object.prototype.hasOwnProperty.call(patch, "source")
+      ? patch.source
+      : prev.source,
+    next.type,
     Object.prototype.hasOwnProperty.call(patch, "externalId")
-  ) {
-    const canonicalIdentity = _normalizeCanonicalIdentity(
-      Object.prototype.hasOwnProperty.call(patch, "source") ? patch.source : prev.source,
-      Object.prototype.hasOwnProperty.call(patch, "externalId") ? patch.externalId : prev.externalId
-    );
+      ? patch.externalId
+      : prev.externalId
+  );
 
-    next.source = canonicalIdentity.source;
-    next.externalId = canonicalIdentity.externalId;
-  } else {
-    const canonicalIdentity = _normalizeCanonicalIdentity(prev.source, prev.externalId);
-    next.source = canonicalIdentity.source;
-    next.externalId = canonicalIdentity.externalId;
+  if (
+    canonicalIdentity.error ||
+    !canonicalIdentity.source ||
+    !canonicalIdentity.type ||
+    !canonicalIdentity.externalId
+  ) {
+    return res.status(400).json({
+      error: canonicalIdentity.error || "missing_identity"
+    });
   }
+
+  next.source = canonicalIdentity.source;
+  next.externalId = canonicalIdentity.externalId;
 
   if (Object.prototype.hasOwnProperty.call(patch, "status")) {
     const status = String(patch.status || "").trim().toLowerCase();

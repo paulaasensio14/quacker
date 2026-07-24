@@ -478,27 +478,167 @@ const ApiClient = (() => {
       .slice(0, 30);
   }
 
-  function _normalizeCanonicalIdentity(source, externalId) {
-    const safeSource = String(source || "").trim().toLowerCase();
-    const safeExternalId = String(externalId || "").trim();
+  const _allowedIdentityTypes = new Set([
+    "pelicula",
+    "serie",
+    "game",
+    "book"
+  ]);
 
-    if (!safeSource || !safeExternalId) {
-      return {
-        source: "",
-        externalId: ""
-      };
+  const _allowedIdentityPairs = new Set([
+    "tmdb::pelicula",
+    "tmdb::serie",
+    "rawg::game",
+    "open_library::book",
+    "manual::pelicula",
+    "manual::serie",
+    "manual::game",
+    "manual::book"
+  ]);
+
+  function _normalizeIdentitySource(value) {
+    const source = String(value ?? "").trim().toLowerCase();
+
+    return source === "openlibrary"
+      ? "open_library"
+      : source;
+  }
+
+  function _normalizeIdentityType(value) {
+    const type = String(value ?? "").trim().toLowerCase();
+
+    const aliases = {
+      movie: "pelicula",
+      film: "pelicula",
+      tv: "serie",
+      series: "serie",
+      game: "game",
+      book: "book"
+    };
+
+    return aliases[type] || type;
+  }
+
+  function _normalizePositiveIdentityId(value) {
+    const raw = String(value ?? "").trim();
+
+    if (!raw || !/^\d+$/.test(raw)) {
+      return "";
+    }
+
+    const normalized = raw.replace(/^0+(?=\d)/, "");
+
+    return normalized && normalized !== "0"
+      ? normalized
+      : "";
+  }
+
+  function _normalizeCanonicalIdentity(source, type, externalId) {
+    const safeSource = _normalizeIdentitySource(source);
+    const safeType = _normalizeIdentityType(type);
+    const rawExternalId = String(externalId ?? "").trim();
+
+    const invalid = (error) => ({
+      source: safeSource,
+      type: safeType,
+      externalId: "",
+      key: "",
+      error
+    });
+
+    if (!safeSource) return invalid("missing_source");
+    if (!safeType) return invalid("missing_type");
+
+    if (!_allowedIdentityTypes.has(safeType)) {
+      return invalid("invalid_type");
+    }
+
+    if (safeSource === "google_books") {
+      return invalid("retired_source");
+    }
+
+    if (!_allowedIdentityPairs.has(`${safeSource}::${safeType}`)) {
+      return invalid("invalid_source_type");
+    }
+
+    let safeExternalId = "";
+
+    if (safeSource === "tmdb") {
+      const prefixedMatch = rawExternalId.match(
+        /^tmdb:(movie|film|tv|series|serie):(\d+)$/i
+      );
+
+      if (prefixedMatch) {
+        const prefixedType = _normalizeIdentityType(prefixedMatch[1]);
+
+        if (prefixedType !== safeType) {
+          return invalid("identity_type_conflict");
+        }
+
+        safeExternalId = _normalizePositiveIdentityId(prefixedMatch[2]);
+      } else {
+        safeExternalId = _normalizePositiveIdentityId(rawExternalId);
+      }
+    } else if (safeSource === "rawg") {
+      safeExternalId = _normalizePositiveIdentityId(
+        rawExternalId.replace(/^rawg:/i, "")
+      );
+    } else if (safeSource === "open_library") {
+      safeExternalId = rawExternalId
+        .replace(/^https?:\/\/openlibrary\.org/i, "")
+        .replace(/^\/books\//i, "")
+        .toUpperCase();
+
+      if (!/^OL[A-Z0-9]+M$/.test(safeExternalId)) {
+        return invalid(
+          safeExternalId
+            ? "invalid_open_library_edition"
+            : "missing_external_id"
+        );
+      }
+    } else if (safeSource === "manual") {
+      safeExternalId = rawExternalId.toLowerCase();
+
+      const uuidPattern =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+      if (!uuidPattern.test(safeExternalId)) {
+        return invalid(
+          safeExternalId
+            ? "invalid_manual_uuid"
+            : "missing_external_id"
+        );
+      }
+    }
+
+    if (!safeExternalId) {
+      return invalid(
+        rawExternalId
+          ? "invalid_external_id"
+          : "missing_external_id"
+      );
     }
 
     return {
       source: safeSource,
-      externalId: safeExternalId
+      type: safeType,
+      externalId: safeExternalId,
+      key: `${safeSource}::${safeType}::${safeExternalId}`,
+      error: ""
     };
   }
 
   function _hasCanonicalIdentity(item) {
+    const identity = _normalizeCanonicalIdentity(
+      item?.source,
+      item?.type,
+      item?.externalId
+    );
+
     return Boolean(
-      String(item?.source || "").trim() &&
-      String(item?.externalId || "").trim()
+      identity.source &&
+      identity.type &&
+      identity.externalId
     );
   }
 
@@ -507,9 +647,22 @@ const ApiClient = (() => {
       return false;
     }
 
+    const aIdentity = _normalizeCanonicalIdentity(
+      a?.source,
+      a?.type,
+      a?.externalId
+    );
+
+    const bIdentity = _normalizeCanonicalIdentity(
+      b?.source,
+      b?.type,
+      b?.externalId
+    );
+
     return (
-      String(a.source).trim().toLowerCase() === String(b.source).trim().toLowerCase() &&
-      String(a.externalId).trim() === String(b.externalId).trim()
+      aIdentity.source === bIdentity.source &&
+      aIdentity.type === bIdentity.type &&
+      aIdentity.externalId === bIdentity.externalId
     );
   }
 
@@ -1244,19 +1397,38 @@ const ApiClient = (() => {
   }
 
   // Explore: contar listas por identidad canónica.
-  async function getListsCountByLibraryMatch({ source = "", externalId = "" }) {
-    const canonical = _normalizeCanonicalIdentity(source, externalId);
+  async function getListsCountByLibraryMatch({
+    source = "",
+    type = "",
+    externalId = ""
+  }) {
+    const canonical = _normalizeCanonicalIdentity(
+      source,
+      type,
+      externalId
+    );
 
-    if (!canonical.source || !canonical.externalId) return 0;
+    if (
+      !canonical.source ||
+      !canonical.type ||
+      !canonical.externalId
+    ) {
+      return 0;
+    }
 
     const lists = await getLists();
     const library = await getLibrary();
 
     const libItem = (library || []).find((item) => {
-      const itemIdentity = _normalizeCanonicalIdentity(item?.source, item?.externalId);
+      const itemIdentity = _normalizeCanonicalIdentity(
+        item?.source,
+        item?.type,
+        item?.externalId
+      );
 
       return (
         itemIdentity.source === canonical.source &&
+        itemIdentity.type === canonical.type &&
         itemIdentity.externalId === canonical.externalId
       );
     });
@@ -1280,7 +1452,7 @@ const ApiClient = (() => {
     return count;
   }
 
-  // Devuelve un mapa de conteos por identidad canónica "source::externalId".
+  // Devuelve un mapa de conteos por identidad "source::type::externalId".
   async function getListsCountMapByLibraryKey() {
     const lists = await getLists();
     const library = await getLibrary();
@@ -1291,10 +1463,24 @@ const ApiClient = (() => {
       const itemId = _normalizeDataId(item?.id);
       if (!itemId) continue;
 
-      const identity = _normalizeCanonicalIdentity(item?.source, item?.externalId);
-      if (!identity.source || !identity.externalId) continue;
+      const identity = _normalizeCanonicalIdentity(
+        item?.source,
+        item?.type,
+        item?.externalId
+      );
 
-      idToKey.set(itemId, `${identity.source}::${identity.externalId}`);
+      if (
+        !identity.source ||
+        !identity.type ||
+        !identity.externalId
+      ) {
+        continue;
+      }
+
+      idToKey.set(
+        itemId,
+        `${identity.source}::${identity.type}::${identity.externalId}`
+      );
     }
 
     const counts = Object.create(null);
@@ -2940,22 +3126,30 @@ const ApiClient = (() => {
       next.type = type;
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(patch, "source") ||
+    const canonicalIdentity = _normalizeCanonicalIdentity(
+      Object.prototype.hasOwnProperty.call(patch, "source")
+        ? patch.source
+        : prev.source,
+      next.type,
       Object.prototype.hasOwnProperty.call(patch, "externalId")
-    ) {
-      const canonicalIdentity = _normalizeCanonicalIdentity(
-        Object.prototype.hasOwnProperty.call(patch, "source") ? patch.source : prev.source,
-        Object.prototype.hasOwnProperty.call(patch, "externalId") ? patch.externalId : prev.externalId
-      );
+        ? patch.externalId
+        : prev.externalId
+    );
 
-      next.source = canonicalIdentity.source;
-      next.externalId = canonicalIdentity.externalId;
-    } else {
-      const canonicalIdentity = _normalizeCanonicalIdentity(prev.source, prev.externalId);
-      next.source = canonicalIdentity.source;
-      next.externalId = canonicalIdentity.externalId;
+    if (
+      canonicalIdentity.error ||
+      !canonicalIdentity.source ||
+      !canonicalIdentity.type ||
+      !canonicalIdentity.externalId
+    ) {
+      throw _makeApiError(
+        canonicalIdentity.error || "missing_identity",
+        400
+      );
     }
+
+    next.source = canonicalIdentity.source;
+    next.externalId = canonicalIdentity.externalId;
 
     if (Object.prototype.hasOwnProperty.call(patch, "status")) {
       const status = String(patch.status || "").trim().toLowerCase();
@@ -3151,12 +3345,28 @@ const ApiClient = (() => {
     const state = _safeState();
     state.library = state.library || [];
 
-    const exists = state.library.find((i) => _normalizeDataId(i?.id) === restoredItemId);
-    if (exists) return { ok: true, already: true, item: exists };
+    const exists = state.library.find(
+      (i) => _normalizeDataId(i?.id) === restoredItemId
+    );
+
+    if (exists) {
+      return {
+        ok: true,
+        already: true,
+        item: {
+          ...exists,
+          alreadyExists: true
+        }
+      };
+    }
 
     const title = _normalizeContentText(item.title);
     const type = String(item.type || "pelicula").trim().toLowerCase();
-    const canonicalIdentity = _normalizeCanonicalIdentity(item.source, item.externalId);
+    const canonicalIdentity = _normalizeCanonicalIdentity(
+      item.source,
+      type,
+      item.externalId
+    );
     const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
     const allowedStatuses = new Set([
       "pending",
@@ -3209,7 +3419,14 @@ const ApiClient = (() => {
     );
 
     if (duplicate) {
-      throw _makeApiError("duplicate_item", 409);
+      return {
+        ok: true,
+        already: true,
+        item: {
+          ...duplicate,
+          alreadyExists: true
+        }
+      };
     }
 
     const rawProgress = Number(item.progress ?? 0);
@@ -3462,6 +3679,7 @@ const ApiClient = (() => {
     const type = String(data.type || "pelicula").trim().toLowerCase();
     const canonicalIdentity = _normalizeCanonicalIdentity(
       data.source,
+      type,
       data.externalId
     );
     const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
@@ -3516,7 +3734,10 @@ const ApiClient = (() => {
     );
 
     if (duplicate) {
-      throw _makeApiError("duplicate_item", 409);
+      return {
+        ...duplicate,
+        alreadyExists: true
+      };
     }
 
     const rawProgress = Number(data.progress ?? 0);
