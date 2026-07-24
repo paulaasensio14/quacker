@@ -2635,8 +2635,17 @@ app.post("/api/library/restore", _requireAuth, (req, res) => {
   bucket.library = Array.isArray(bucket.library) ? bucket.library : [];
 
   const existing = bucket.library.find((it) => String(it.id) === id);
+
   if (existing) {
-    return res.json({ ok: true, already: true, item: existing });
+    return res.json({
+      ok: true,
+      already: true,
+      alreadyExists: true,
+      item: {
+        ...existing,
+        alreadyExists: true
+      }
+    });
   }
 
   const duplicate = bucket.library.find((it) =>
@@ -2647,8 +2656,17 @@ app.post("/api/library/restore", _requireAuth, (req, res) => {
       externalId: canonicalIdentity.externalId
     })
   );
+
   if (duplicate) {
-    return res.status(409).json({ error: "duplicate_item" });
+    return res.json({
+      ok: true,
+      already: true,
+      alreadyExists: true,
+      item: {
+        ...duplicate,
+        alreadyExists: true
+      }
+    });
   }
 
   const nowIso = new Date().toISOString();
