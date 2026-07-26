@@ -78,7 +78,7 @@ Users can discover content, save items to their library, track progress, organiz
 - Search and discovery across multiple content sources
 - Weekly featured content
 - Movies and TV shows from TMDB
-- Books from Google Books
+- Books from Open Library
 - Video games from RAWG
 - Type filters and sorting
 - Detail preview drawer
@@ -178,7 +178,7 @@ The architecture focuses on:
 ### External integrations
 
 - TMDB
-- Google Books
+- Open Library
 - RAWG
 
 ---
@@ -221,15 +221,16 @@ This keeps feature modules from talking directly to backend details.
 Content items use a canonical identity based on:
 
 ```text
-source + externalId
+source + type + externalId
 ```
-Examples:
+
 Examples:
 
 ```text
-tmdb + 550
-google_books + volume-id
-rawg + game-id
+tmdb + pelicula + numeric-id
+tmdb + serie + numeric-id
+rawg + game + numeric-id
+open_library + book + edition-id
 ```
 
 The project also includes identity helpers to resolve item relationships across Explore, Library, Lists, Detail, and Home.
@@ -281,7 +282,7 @@ For production, this would be replaced by a real database.
 └── server
     ├── server.js
     ├── adapters
-    │   ├── google-books.js
+    │   ├── open-library.js
     │   ├── rawg.js
     │   └── tmdb.js
     └── db.json
@@ -386,7 +387,6 @@ Expected environment variables include:
 
 ```text
 TMDB_API_KEY=
-GOOGLE_BOOKS_API_KEY=
 RAWG_API_KEY=
 SESSION_SECRET=
 ```
