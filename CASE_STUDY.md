@@ -114,7 +114,7 @@ This included:
 ### External APIs
 
 - TMDB for movies and TV shows
-- Google Books for books
+- Open Library for books
 - RAWG for video games
 
 ---
@@ -312,15 +312,16 @@ Two items can have the same or similar title but represent different content.
 Quacker uses canonical identity based on:
 
 ```text
-source + externalId
+source + type + externalId
 ```
 
 Examples:
 
 ```text
-tmdb + 550
-google_books + volume-id
-rawg + game-id
+tmdb + pelicula + numeric-id
+tmdb + serie + numeric-id
+rawg + game + numeric-id
+open_library + book + edition-id
 ```
 
 This identity model is used across:
@@ -396,7 +397,7 @@ Used for:
 * seasons
 * related content
 
-### Google Books
+### Open Library
 
 Used for:
 
@@ -404,6 +405,7 @@ Used for:
 * featured books
 * book detail
 * metadata such as author and page count
+* edition-based canonical identifiers
 
 ### RAWG
 
