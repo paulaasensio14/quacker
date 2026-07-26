@@ -35,6 +35,14 @@ import {
   sameContentIdentity
 } from "./lib/content-identity.js";
 
+import {
+  createInitialAccountHandle,
+  isAccountEmailInUse,
+  validateAccountEmail,
+  validateAccountName,
+  validateRegistrationAccount
+} from "./lib/account-validation.js";
+
 // Protect runtime files containing session or user data.
 process.umask(0o077);
 
@@ -1103,29 +1111,43 @@ app.post("/api/contact", async (req, res) => {
 // ===== AUTH =====
 app.post("/api/auth/register", (req, res) => {
   const { email, password, name, language } = req.body || {};
-  const normalizedEmail = String(email || "").trim().toLowerCase();
   const safeLanguage = language === "en" ? "en" : "es";
 
-  if (!normalizedEmail || !password || !name) {
-    return res.status(400).json({ error: "missing_fields" });
+  const validation = validateRegistrationAccount({
+    email,
+    password,
+    name
+  });
+
+  if (!validation.ok) {
+    return res.status(400).json({
+      error: validation.error
+    });
   }
+
+  const {
+    email: normalizedEmail,
+    password: validatedPassword,
+    name: normalizedName
+  } = validation.value;
 
   const db = _readDb();
 
-  const existing = Object.entries(db.users).find(([, u]) =>
-    String(u?.profile?.email || "").trim().toLowerCase() === normalizedEmail
-  );
-  if (existing) return res.status(409).json({ error: "email_in_use" });
+  if (isAccountEmailInUse(db.users, normalizedEmail)) {
+    return res.status(409).json({
+      error: "email_in_use"
+    });
+  }
 
   const userId = _uid();
-  const { salt, hash } = _hashPassword(password);
+  const { salt, hash } = _hashPassword(validatedPassword);
 
   db.users[userId] = {
     profile: {
       id: userId,
       email: normalizedEmail,
-      name,
-      handle: "@" + String(email).split("@")[0].trim().toLowerCase(),
+      name: normalizedName,
+      handle: createInitialAccountHandle(normalizedEmail),
       language: safeLanguage,
       theme: "light"
     },
@@ -1152,12 +1174,18 @@ app.post("/api/auth/register", (req, res) => {
   req.session.userId = userId;
 
   req.session.save((err) => {
-    if (err) return res.status(500).json({ error: "session_save_failed" });
+    if (err) {
+      return res.status(500).json({
+        error: "session_save_failed"
+      });
+    }
 
-    res.json({ user: db.users[userId].profile });
+    res.json({
+      user: db.users[userId].profile
+    });
 
     void _sendWelcomeEmail({
-      name,
+      name: normalizedName,
       email: normalizedEmail,
       language: safeLanguage
     }).catch((error) => {
@@ -2022,11 +2050,15 @@ app.patch("/api/user", _requireAuth, (req, res) => {
   }
 
   if (Object.prototype.hasOwnProperty.call(safePatch, "name")) {
-    const safeName = String(safePatch.name || "").replace(/\s+/g, " ").trim();
-    if (!safeName || safeName.length < 2) {
-      return res.status(400).json({ error: "invalid_name" });
+    const nameValidation = validateAccountName(safePatch.name);
+
+    if (!nameValidation.ok) {
+      return res.status(400).json({
+        error: nameValidation.error
+      });
     }
-    safePatch.name = safeName;
+
+    safePatch.name = nameValidation.value;
   }
 
   if (Object.prototype.hasOwnProperty.call(safePatch, "handle")) {
@@ -2042,11 +2074,15 @@ app.patch("/api/user", _requireAuth, (req, res) => {
   }
 
   if (Object.prototype.hasOwnProperty.call(safePatch, "email")) {
-    const safeEmail = String(safePatch.email || "").trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail)) {
-      return res.status(400).json({ error: "invalid_email" });
+    const emailValidation = validateAccountEmail(safePatch.email);
+
+    if (!emailValidation.ok) {
+      return res.status(400).json({
+        error: emailValidation.error
+      });
     }
-    safePatch.email = safeEmail;
+
+    safePatch.email = emailValidation.value;
   }
 
   if (Object.prototype.hasOwnProperty.call(safePatch, "language")) {
@@ -2084,6 +2120,21 @@ app.patch("/api/user", _requireAuth, (req, res) => {
 
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
+
+  if (
+    Object.prototype.hasOwnProperty.call(safePatch, "email") &&
+    isAccountEmailInUse(
+      db.users,
+      safePatch.email,
+      {
+        excludeUserId: req.session.userId
+      }
+    )
+  ) {
+    return res.status(409).json({
+      error: "email_in_use"
+    });
+  }
 
   bucket.profile = {
     ...(bucket.profile || {}),

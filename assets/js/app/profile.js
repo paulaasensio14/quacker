@@ -36,9 +36,9 @@ const ProfileModule = (() => {
 
   function getFormData() {
     return {
-      name: $("#profileName")?.value.trim() || "",
+      name: ($("#profileName")?.value || "").replace(/\s+/g, " ").trim(),
       handle: $("#profileHandle")?.value.trim() || "",
-      email: $("#profileEmail")?.value.trim() || "",
+      email: ($("#profileEmail")?.value || "").trim().toLowerCase(),
       language: $("#profileLanguage")?.value || "es",
       bio: $("#profileBio")?.value.trim() || "",
       // avatar: solo lo enviamos si se cambió
@@ -55,7 +55,11 @@ const ProfileModule = (() => {
   function validate(data) {
     const errors = [];
 
-    if (!data.name || data.name.length < 2) {
+    if (
+      !data.name ||
+      data.name.length < 2 ||
+      data.name.length > 80
+    ) {
       errors.push(t("profile_error_name_short"));
     }
 
@@ -71,7 +75,10 @@ const ProfileModule = (() => {
 
     if (!data.email) {
       errors.push(t("profile_error_email_required"));
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    } else if (
+      data.email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
+    ) {
       errors.push(t("profile_error_email_invalid"));
     }
 
@@ -367,7 +374,20 @@ const ProfileModule = (() => {
         });
       } catch (err) {
         console.error(err);
-        showErrors([t("profile_save_error")]);
+
+        const errorCode = String(
+          err?.error || err?.message || ""
+        ).trim();
+
+        const errorMessages = {
+          email_in_use: t("profile_error_email_in_use"),
+          invalid_email: t("profile_error_email_invalid"),
+          invalid_name: t("profile_error_name_short")
+        };
+
+        showErrors([
+          errorMessages[errorCode] || t("profile_save_error")
+        ]);
       } finally {
         if (saveBtn) {
           saveBtn.textContent = t("profile_save");

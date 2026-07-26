@@ -465,6 +465,9 @@
                 id="name"
                 name="name"
                 placeholder="Your name"
+                minlength="2"
+                maxlength="80"
+                autocomplete="name"
                 aria-describedby="nameError" 
                 aria-invalid="false"
               />
@@ -487,6 +490,8 @@
                 id="email"
                 name="email"
                 placeholder="you@email.com"
+                maxlength="254"
+                autocomplete="email"
                 aria-describedby="emailError"
                 aria-invalid="false"
                 required
@@ -510,6 +515,9 @@
                 id="password"
                 name="password"
                 placeholder="Your password"
+                minlength="8"
+                maxlength="128"
+                autocomplete="current-password"
                 aria-describedby="passwordError"
                 aria-invalid="false"
                 required
