@@ -95,8 +95,9 @@
         contact_message_placeholder: 'Tell us what\'s on your mind...',
         error_required: 'Please fill in email and password.',
         error_name: 'Please enter your name.',
-        error_password_length: 'Password must be at least 4 characters long.',
+        error_password_length: 'Password must be between 8 and 128 characters long.',
         error_email_invalid: 'Enter a valid email.',
+        error_email_in_use: 'An account with that email already exists.',
         auth_loading_login: 'Signing in...',
         auth_loading_register: 'Creating account...',
         auth_show_password: 'Show password',
@@ -195,8 +196,9 @@
         contact_message_placeholder: 'Cuéntanos qué tienes en mente...',
         error_required: 'Por favor, rellena el email y la contraseña.',
         error_name: 'Escribe tu nombre para crear la cuenta.',
-        error_password_length: 'La contraseña debe tener al menos 4 caracteres.',
+        error_password_length: 'La contraseña debe tener entre 8 y 128 caracteres.',
         error_email_invalid: 'Escribe un email válido.',
+        error_email_in_use: 'Ya existe una cuenta con ese email.',
         auth_loading_login: 'Entrando...',
         auth_loading_register: 'Creando cuenta...',
         auth_show_password: 'Mostrar contraseña',
@@ -589,16 +591,21 @@
 
     function validatePassword() {
       const dict = translations[currentLang];
-      const pass = (passwordInput?.value || '').trim();
+      const pass = passwordInput?.value || '';
 
-      if (!pass) {
+      if (!pass.length) {
         setFieldError(passwordInput, passwordErrorEl, dict.error_required);
         return false;
       }
-      if (pass.length < 4) {
+
+      if (
+        mode === 'register' &&
+        (pass.trim().length === 0 || pass.length < 8 || pass.length > 128)
+      ) {
         setFieldError(passwordInput, passwordErrorEl, dict.error_password_length);
         return false;
       }
+
       setFieldError(passwordInput, passwordErrorEl, '');
       return true;
     }
@@ -727,6 +734,21 @@
     function setMode(newMode) {
       mode = newMode;
       const dict = translations[currentLang];
+
+      if (passwordInput) {
+        if (mode === 'login') {
+          passwordInput.removeAttribute('minlength');
+          passwordInput.removeAttribute('maxlength');
+          passwordInput.setAttribute('autocomplete', 'current-password');
+        } else {
+          passwordInput.setAttribute('minlength', '8');
+          passwordInput.setAttribute('maxlength', '128');
+          passwordInput.setAttribute('autocomplete', 'new-password');
+        }
+      }
+
+      setFieldError(passwordInput, passwordErrorEl, '');
+
       if (mode === 'login') {
         tabLogin.classList.add('active');
         tabRegister.classList.remove('active');
@@ -794,23 +816,21 @@
     }
 
     function computeAuthIsValid() {
-      // Si ya tienes validateEmail/validatePassword/validateName: úsalo
       const email = (emailInput?.value || '').trim();
-      const pass = (passwordInput?.value || '').trim();
-      const name = (nameInput?.value || '').trim();
+      const pass = passwordInput?.value || '';
+      const name = (nameInput?.value || '').replace(/\s+/g, ' ').trim();
 
-      if (!email) return false;
-      if (!pass) return false;
+      if (!email || email.length > 254) return false;
+      if (!pass.length) return false;
 
-      // Validación simple de email (UI)
       const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       if (!okEmail) return false;
 
-      // Password mínimo (coherente con tu regla de 4)
-      if (pass.length < 4) return false;
-
-      // Register requiere name >= 2
-      if (mode === 'register' && name.length < 2) return false;
+      if (mode === 'register') {
+        if (pass.trim().length === 0) return false;
+        if (pass.length < 8 || pass.length > 128) return false;
+        if (name.length < 2 || name.length > 80) return false;
+      }
 
       return true;
     }
@@ -865,7 +885,7 @@
           }
         } catch (_) {}
         const email = emailInput?.value.trim();
-        const password = passwordInput?.value.trim();
+        const password = passwordInput?.value || '';
         const name = nameInput?.value.trim();
 
         if (mode === 'login') {
@@ -927,13 +947,20 @@
           : "Couldn’t sign in. Check your email/password and try again.";
 
         if (isRegister) {
-          msg = errorCode === "email_exists"
-            ? (currentLang === 'es'
-                ? "Ya existe una cuenta con ese email."
-                : "An account with that email already exists.")
-            : (currentLang === 'es'
-                ? "No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo."
-                : "Couldn’t create the account. Check your details and try again.");
+          const registerMessages = {
+            email_in_use: translations[currentLang].error_email_in_use,
+            email_exists: translations[currentLang].error_email_in_use,
+            invalid_name: translations[currentLang].error_name,
+            invalid_email: translations[currentLang].error_email_invalid,
+            invalid_password: translations[currentLang].error_password_length,
+            missing_fields: translations[currentLang].error_required
+          };
+
+          msg = registerMessages[errorCode] || (
+            currentLang === 'es'
+              ? "No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo."
+              : "Couldn’t create the account. Check your details and try again."
+          );
         }
 
         if (errorEl) {

@@ -1194,7 +1194,14 @@
             <form id="profileForm">
               <div class="profile-form-group">
                 <label for="profileName" data-i18n="profile_name_label">Nombre</label>
-                <input type="text" id="profileName" name="name"/>
+                <input
+                  type="text"
+                  id="profileName"
+                  name="name"
+                  minlength="2"
+                  maxlength="80"
+                  autocomplete="name"
+                />
               </div>
 
               <div class="profile-form-group">
@@ -1204,7 +1211,13 @@
 
               <div class="profile-form-group">
                 <label for="profileEmail" data-i18n="profile_email_label">Email</label>
-                <input type="email" id="profileEmail" name="email" />
+                <input
+                  type="email"
+                  id="profileEmail"
+                  name="email"
+                  maxlength="254"
+                  autocomplete="email"
+                />
               </div>
               <div class="profile-form-group">
                 <label for="profileLanguage" data-i18n="profile_language_label">Idioma preferido</label>
