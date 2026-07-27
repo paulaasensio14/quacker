@@ -1007,7 +1007,15 @@ function _verifyPassword(password, auth) {
   return crypto.timingSafeEqual(storedBuffer, computedHash);
 }
 
-async function _requireAuth(req, res, next) {
+function _asyncHandler(handler) {
+  return (req, res, next) => {
+    Promise.resolve(
+      handler(req, res, next)
+    ).catch(next);
+  };
+}
+
+async function _requireAuthAsync(req, res, next) {
   const db = _readDb();
 
   const userId = getAuthenticatedUserId(
@@ -1043,6 +1051,10 @@ async function _requireAuth(req, res, next) {
     error: "not_authenticated"
   });
 }
+
+const _requireAuth = _asyncHandler(
+  _requireAuthAsync
+);
 
 function _getUserBucket(db, userId) {
   db.users[userId] = db.users[userId] || {
@@ -1156,7 +1168,7 @@ app.post("/api/contact", async (req, res) => {
 });
 
 // ===== AUTH =====
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", _asyncHandler(async (req, res) => {
   const { email, password, name, language } = req.body || {};
   const safeLanguage = language === "en" ? "en" : "es";
 
@@ -1284,9 +1296,9 @@ app.post("/api/auth/register", async (req, res) => {
       missingConfig: error?.missingConfig || []
     });
   });
-});
+}));
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", _asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
@@ -1329,9 +1341,9 @@ app.post("/api/auth/login", async (req, res) => {
   res.json({
     user: userBucket.profile
   });
-});
+}));
 
-app.post("/api/auth/logout", async (req, res) => {
+app.post("/api/auth/logout", _asyncHandler(async (req, res) => {
   try {
     await destroyRequestSession(req);
   } catch (error) {
@@ -1355,7 +1367,7 @@ app.post("/api/auth/logout", async (req, res) => {
   res.json({
     ok: true
   });
-});
+}));
 
 app.get("/api/auth/me", _requireAuth, (req, res) => {
   const db = _readDb();
