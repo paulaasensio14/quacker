@@ -57,6 +57,10 @@ import {
   createAuthRateLimiters
 } from "./lib/auth-rate-limit.js";
 
+import {
+  blockSensitiveStaticPaths
+} from "./lib/static-path-security.js";
+
 // Protect runtime files containing session or user data.
 process.umask(0o077);
 
@@ -3346,8 +3350,17 @@ app.delete("/api/library/:id", _requireAuth, (req, res) => {
 });
 
 // ===== STATIC (sirve tu frontend) =====
-// Importante: esto evita CORS y hace que cookies funcionen bien.
-app.use(express.static(PROJECT_ROOT));
+// Bloquea archivos internos antes de publicar el frontend.
+app.use(blockSensitiveStaticPaths);
+
+app.use(
+  express.static(
+    PROJECT_ROOT,
+    {
+      dotfiles: "deny"
+    }
+  )
+);
 
 const PORT = Number.parseInt(
   process.env.PORT || "3000",
