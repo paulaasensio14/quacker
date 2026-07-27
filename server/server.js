@@ -53,6 +53,10 @@ import {
   regenerateAuthenticatedSession
 } from "./lib/auth-session.js";
 
+import {
+  createAuthRateLimiters
+} from "./lib/auth-rate-limit.js";
+
 // Protect runtime files containing session or user data.
 process.umask(0o077);
 
@@ -133,6 +137,10 @@ const CONTACT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const CONTACT_RATE_LIMIT_MAX = 3;
 
 const contactRateLimit = new Map();
+
+const authRateLimits =
+  createAuthRateLimiters();
+
 let mailTransporter = null;
 
 app.use(
@@ -1015,6 +1023,31 @@ function _asyncHandler(handler) {
   };
 }
 
+function _sendRateLimitResponse(
+  res,
+  error,
+  retryAfterSeconds
+) {
+  const normalizedRetryAfterSeconds =
+    Math.max(
+      1,
+      Math.ceil(
+        Number(retryAfterSeconds) || 0
+      )
+    );
+
+  res.set(
+    "Retry-After",
+    String(normalizedRetryAfterSeconds)
+  );
+
+  return res.status(429).json({
+    error,
+    retryAfterSeconds:
+      normalizedRetryAfterSeconds
+  });
+}
+
 async function _requireAuthAsync(req, res, next) {
   const db = _readDb();
 
@@ -1190,6 +1223,19 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     name: normalizedName
   } = validation.value;
 
+  const registrationRateLimit =
+    authRateLimits.consumeRegistration({
+      ip: req.ip
+    });
+
+  if (!registrationRateLimit.allowed) {
+    return _sendRateLimitResponse(
+      res,
+      "registration_rate_limited",
+      registrationRateLimit.retryAfterSeconds
+    );
+  }
+
   const db = _readDb();
 
   if (isAccountEmailInUse(db.users, normalizedEmail)) {
@@ -1306,18 +1352,50 @@ app.post("/api/auth/login", _asyncHandler(async (req, res) => {
     return res.status(400).json({ error: "missing_fields" });
   }
 
+  const loginAttempt = {
+    ip: req.ip,
+    email: normalizedEmail
+  };
+
+  const loginRateLimit =
+    authRateLimits.checkLogin(
+      loginAttempt
+    );
+
+  if (!loginRateLimit.allowed) {
+    return _sendRateLimitResponse(
+      res,
+      "login_rate_limited",
+      loginRateLimit.retryAfterSeconds
+    );
+  }
+
   const db = _readDb();
   const found = Object.entries(db.users).find(([, u]) =>
     String(u?.profile?.email || "").trim().toLowerCase() === normalizedEmail
   );
 
-  if (!found) return res.status(401).json({ error: "invalid_credentials" });
+  if (!found) {
+    authRateLimits.consumeLoginFailure(
+      loginAttempt
+    );
+
+    return res.status(401).json({
+      error: "invalid_credentials"
+    });
+  }
 
   const [userId, userBucket] = found;
   const isValidPassword = _verifyPassword(password, userBucket?.auth);
 
   if (!isValidPassword) {
-    return res.status(401).json({ error: "invalid_credentials" });
+    authRateLimits.consumeLoginFailure(
+      loginAttempt
+    );
+
+    return res.status(401).json({
+      error: "invalid_credentials"
+    });
   }
 
   try {
@@ -1337,6 +1415,10 @@ app.post("/api/auth/login", _asyncHandler(async (req, res) => {
       error: "session_save_failed"
     });
   }
+
+  authRateLimits.resetLoginAccount(
+    loginAttempt
+  );
 
   res.json({
     user: userBucket.profile
