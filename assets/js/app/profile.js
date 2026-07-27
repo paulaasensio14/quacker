@@ -380,6 +380,8 @@ const ProfileModule = (() => {
         ).trim();
 
         const errorMessages = {
+          handle_in_use: t("profile_error_handle_in_use"),
+          invalid_handle: t("profile_error_handle_invalid"),
           email_in_use: t("profile_error_email_in_use"),
           invalid_email: t("profile_error_email_invalid"),
           invalid_name: t("profile_error_name_short")
