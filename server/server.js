@@ -44,6 +44,15 @@ import {
   validateRegistrationAccount
 } from "./lib/account-validation.js";
 
+import {
+  SESSION_COOKIE_NAME,
+  createSessionClearCookieOptions,
+  createSessionCookieOptions,
+  destroyRequestSession,
+  getAuthenticatedUserId,
+  regenerateAuthenticatedSession
+} from "./lib/auth-session.js";
+
 // Protect runtime files containing session or user data.
 process.umask(0o077);
 
@@ -92,6 +101,17 @@ const FileStore = sessionFileStore(session);
 const SESSION_STORE_PATH = path.resolve(__dirname, ".sessions");
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 
+const sessionCookieOptions =
+  createSessionCookieOptions({
+    isProduction,
+    ttlSeconds: SESSION_TTL_SECONDS
+  });
+
+const sessionClearCookieOptions =
+  createSessionClearCookieOptions({
+    isProduction
+  });
+
 fs.mkdirSync(SESSION_STORE_PATH, {
   recursive: true,
   mode: 0o700
@@ -117,17 +137,13 @@ let mailTransporter = null;
 
 app.use(
   session({
+    name: SESSION_COOKIE_NAME,
     store: sessionStore,
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     rolling: true,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProduction,
-      maxAge: SESSION_TTL_SECONDS * 1000
-    }
+    cookie: sessionCookieOptions
   })
 );
 
@@ -991,11 +1007,41 @@ function _verifyPassword(password, auth) {
   return crypto.timingSafeEqual(storedBuffer, computedHash);
 }
 
-function _requireAuth(req, res, next) {
-  if (!req.session?.userId) {
-    return res.status(401).json({ error: "not_authenticated" });
+async function _requireAuth(req, res, next) {
+  const db = _readDb();
+
+  const userId = getAuthenticatedUserId(
+    req.session,
+    db.users
+  );
+
+  if (userId) {
+    req.session.userId = userId;
+    next();
+    return;
   }
-  next();
+
+  if (req.session?.userId) {
+    try {
+      await destroyRequestSession(req);
+    } catch (error) {
+      console.error(
+        "[Auth] stale session cleanup failed",
+        {
+          code: error?.code || ""
+        }
+      );
+    }
+
+    res.clearCookie(
+      SESSION_COOKIE_NAME,
+      sessionClearCookieOptions
+    );
+  }
+
+  res.status(401).json({
+    error: "not_authenticated"
+  });
 }
 
 function _getUserBucket(db, userId) {
@@ -1110,7 +1156,7 @@ app.post("/api/contact", async (req, res) => {
 });
 
 // ===== AUTH =====
-app.post("/api/auth/register", (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   const { email, password, name, language } = req.body || {};
   const safeLanguage = language === "en" ? "en" : "es";
 
@@ -1173,37 +1219,74 @@ app.post("/api/auth/register", (req, res) => {
     }
   };
 
-  _writeDb(db);
+  try {
+    await regenerateAuthenticatedSession(
+      req,
+      userId
+    );
+  } catch (error) {
+    console.error(
+      "[Auth] registration session failed",
+      {
+        code: error?.code || ""
+      }
+    );
 
-  req.session.userId = userId;
+    return res.status(500).json({
+      error: "session_save_failed"
+    });
+  }
 
-  req.session.save((err) => {
-    if (err) {
-      return res.status(500).json({
-        error: "session_save_failed"
-      });
+  try {
+    _writeDb(db);
+  } catch (error) {
+    console.error(
+      "[Auth] registration persistence failed",
+      {
+        code: error?.code || ""
+      }
+    );
+
+    try {
+      await destroyRequestSession(req);
+    } catch (cleanupError) {
+      console.error(
+        "[Auth] registration session cleanup failed",
+        {
+          code: cleanupError?.code || ""
+        }
+      );
     }
 
-    res.json({
-      user: db.users[userId].profile
-    });
+    res.clearCookie(
+      SESSION_COOKIE_NAME,
+      sessionClearCookieOptions
+    );
 
-    void _sendWelcomeEmail({
-      name: normalizedName,
-      email: normalizedEmail,
-      language: safeLanguage
-    }).catch((error) => {
-      console.error("[Auth] welcome email delivery failed", {
-        code: error?.code || "",
-        command: error?.command || "",
-        responseCode: error?.responseCode || null,
-        missingConfig: error?.missingConfig || []
-      });
+    return res.status(500).json({
+      error: "registration_save_failed"
+    });
+  }
+
+  res.json({
+    user: db.users[userId].profile
+  });
+
+  void _sendWelcomeEmail({
+    name: normalizedName,
+    email: normalizedEmail,
+    language: safeLanguage
+  }).catch((error) => {
+    console.error("[Auth] welcome email delivery failed", {
+      code: error?.code || "",
+      command: error?.command || "",
+      responseCode: error?.responseCode || null,
+      missingConfig: error?.missingConfig || []
     });
   });
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body || {};
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
@@ -1225,30 +1308,62 @@ app.post("/api/auth/login", (req, res) => {
     return res.status(401).json({ error: "invalid_credentials" });
   }
 
-  req.session.userId = userId;
+  try {
+    await regenerateAuthenticatedSession(
+      req,
+      userId
+    );
+  } catch (error) {
+    console.error(
+      "[Auth] login session failed",
+      {
+        code: error?.code || ""
+      }
+    );
 
-  req.session.save((err) => {
-    if (err) return res.status(500).json({ error: "session_save_failed" });
-    res.json({ user: userBucket.profile });
+    return res.status(500).json({
+      error: "session_save_failed"
+    });
+  }
+
+  res.json({
+    user: userBucket.profile
   });
 });
 
-app.post("/api/auth/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) return res.status(500).json({ error: "logout_failed" });
+app.post("/api/auth/logout", async (req, res) => {
+  try {
+    await destroyRequestSession(req);
+  } catch (error) {
+    console.error(
+      "[Auth] logout session failed",
+      {
+        code: error?.code || ""
+      }
+    );
 
-    res.clearCookie("connect.sid");
-    res.json({ ok: true });
+    return res.status(500).json({
+      error: "logout_failed"
+    });
+  }
+
+  res.clearCookie(
+    SESSION_COOKIE_NAME,
+    sessionClearCookieOptions
+  );
+
+  res.json({
+    ok: true
   });
 });
 
-app.get("/api/auth/me", (req, res) => {
-  const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ error: "not_authenticated" });
-
+app.get("/api/auth/me", _requireAuth, (req, res) => {
   const db = _readDb();
-  const bucket = _getUserBucket(db, userId);
-  res.json({ user: bucket.profile });
+  const bucket = db.users[req.session.userId];
+
+  res.json({
+    user: bucket.profile
+  });
 });
 
 // ===== EXPLORE =====
