@@ -36,8 +36,9 @@ import {
 } from "./lib/content-identity.js";
 
 import {
-  createInitialAccountHandle,
+  createUniqueAccountHandle,
   isAccountEmailInUse,
+  isAccountHandleInUse,
   validateAccountEmail,
   validateAccountName,
   validateRegistrationAccount
@@ -1147,7 +1148,10 @@ app.post("/api/auth/register", (req, res) => {
       id: userId,
       email: normalizedEmail,
       name: normalizedName,
-      handle: createInitialAccountHandle(normalizedEmail),
+      handle: createUniqueAccountHandle(
+        db.users,
+        normalizedEmail
+      ),
       language: safeLanguage,
       theme: "light"
     },
@@ -2120,6 +2124,21 @@ app.patch("/api/user", _requireAuth, (req, res) => {
 
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
+
+  if (
+    Object.prototype.hasOwnProperty.call(safePatch, "handle") &&
+    isAccountHandleInUse(
+      db.users,
+      safePatch.handle,
+      {
+        excludeUserId: req.session.userId
+      }
+    )
+  ) {
+    return res.status(409).json({
+      error: "handle_in_use"
+    });
+  }
 
   if (
     Object.prototype.hasOwnProperty.call(safePatch, "email") &&

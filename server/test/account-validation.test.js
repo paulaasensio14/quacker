@@ -4,13 +4,16 @@ import assert from "node:assert/strict";
 import {
   ACCOUNT_VALIDATION_LIMITS,
   createInitialAccountHandle,
+  createUniqueAccountHandle,
+  normalizeAccountHandle,
   normalizeAccountName,
   normalizeAccountEmail,
   validateAccountName,
   validateAccountEmail,
   validateRegistrationPassword,
   validateRegistrationAccount,
-  isAccountEmailInUse
+  isAccountEmailInUse,
+  isAccountHandleInUse
 } from "../lib/account-validation.js";
 
 test("normaliza espacios interiores y exteriores del nombre", () => {
@@ -74,6 +77,136 @@ test("normaliza acentos y usa un valor seguro cuando no quedan caracteres", () =
   assert.equal(
     createInitialAccountHandle("💛@example.com"),
     "@user"
+  );
+});
+
+test("normaliza el prefijo y los espacios de un alias", () => {
+  assert.equal(
+    normalizeAccountHandle("  Paula_Dev  "),
+    "@Paula_Dev"
+  );
+
+  assert.equal(
+    normalizeAccountHandle("  @Paula_Dev  "),
+    "@Paula_Dev"
+  );
+
+  assert.equal(normalizeAccountHandle(null), "");
+});
+
+test("detecta alias usados ignorando mayúsculas y el prefijo", () => {
+  const users = {
+    u_1: {
+      profile: {
+        handle: "@Paula_Dev"
+      }
+    }
+  };
+
+  assert.equal(
+    isAccountHandleInUse(users, " paula_dev "),
+    true
+  );
+});
+
+test("permite conservar el alias de la propia cuenta", () => {
+  const users = {
+    u_1: {
+      profile: {
+        handle: "@paula"
+      }
+    },
+    u_2: {
+      profile: {
+        handle: "@ana"
+      }
+    }
+  };
+
+  assert.equal(
+    isAccountHandleInUse(
+      users,
+      "@PAULA",
+      { excludeUserId: "u_1" }
+    ),
+    false
+  );
+
+  assert.equal(
+    isAccountHandleInUse(
+      users,
+      "@ana",
+      { excludeUserId: "u_1" }
+    ),
+    true
+  );
+});
+
+test("mantiene el alias inicial cuando está disponible", () => {
+  assert.equal(
+    createUniqueAccountHandle(
+      {},
+      "paula.asensio@example.com"
+    ),
+    "@paula_asensio"
+  );
+});
+
+test("añade un sufijo y salta alias ya ocupados", () => {
+  const users = {
+    u_1: {
+      profile: {
+        handle: "@paula_asensio"
+      }
+    },
+    u_2: {
+      profile: {
+        handle: "@paula_asensio_2"
+      }
+    }
+  };
+
+  assert.equal(
+    createUniqueAccountHandle(
+      users,
+      "paula.asensio@example.com"
+    ),
+    "@paula_asensio_3"
+  );
+});
+
+test("recorta el alias para mantener el límite con sufijo", () => {
+  const users = {
+    u_1: {
+      profile: {
+        handle: "@abcdefghijklmnopqrst"
+      }
+    }
+  };
+
+  const handle = createUniqueAccountHandle(
+    users,
+    "abcdefghijklmnopqrstuvwxyz@example.com"
+  );
+
+  assert.equal(handle, "@abcdefghijklmnopqr_2");
+  assert.equal(handle.slice(1).length, 20);
+});
+
+test("tolera colecciones inválidas al comprobar alias", () => {
+  assert.equal(
+    isAccountHandleInUse(null, "@paula"),
+    false
+  );
+
+  assert.equal(
+    isAccountHandleInUse([], "@paula"),
+    false
+  );
+
+  assert.equal(
+    isAccountHandleInUse({}, ""),
+    false
   );
 });
 

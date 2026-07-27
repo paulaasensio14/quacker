@@ -43,6 +43,83 @@ export function createInitialAccountHandle(value) {
   return `@${rawHandle.slice(0, 20)}`;
 }
 
+export function normalizeAccountHandle(value) {
+  if (typeof value !== "string") return "";
+
+  const trimmedHandle = value.trim();
+  if (!trimmedHandle) return "";
+
+  return trimmedHandle.startsWith("@")
+    ? trimmedHandle
+    : `@${trimmedHandle}`;
+}
+
+export function isAccountHandleInUse(
+  users,
+  handle,
+  { excludeUserId = null } = {}
+) {
+  const normalizedHandle =
+    normalizeAccountHandle(handle).toLowerCase();
+
+  if (
+    !normalizedHandle ||
+    !users ||
+    typeof users !== "object" ||
+    Array.isArray(users)
+  ) {
+    return false;
+  }
+
+  return Object.entries(users).some(([userId, userBucket]) => {
+    const isExcludedUser =
+      excludeUserId !== null &&
+      String(userId) === String(excludeUserId);
+
+    if (isExcludedUser) return false;
+
+    const storedHandle = normalizeAccountHandle(
+      userBucket?.profile?.handle
+    ).toLowerCase();
+
+    return storedHandle === normalizedHandle;
+  });
+}
+
+export function createUniqueAccountHandle(users, email) {
+  const initialHandle = createInitialAccountHandle(email);
+
+  if (!isAccountHandleInUse(users, initialHandle)) {
+    return initialHandle;
+  }
+
+  const baseHandle = initialHandle.slice(1);
+  let suffixNumber = 2;
+
+  while (true) {
+    const suffix = `_${suffixNumber}`;
+    const availableBaseLength = 20 - suffix.length;
+
+    if (availableBaseLength < 1) {
+      const error = new Error(
+        "No se pudo generar un alias único."
+      );
+
+      error.code = "ACCOUNT_HANDLE_EXHAUSTED";
+      throw error;
+    }
+
+    const candidate =
+      `@${baseHandle.slice(0, availableBaseLength)}${suffix}`;
+
+    if (!isAccountHandleInUse(users, candidate)) {
+      return candidate;
+    }
+
+    suffixNumber += 1;
+  }
+}
+
 export function validateAccountName(value) {
   const normalizedName = normalizeAccountName(value);
 
