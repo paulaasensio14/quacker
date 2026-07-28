@@ -71,6 +71,15 @@ const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const DB_PATH = path.join(__dirname, "db.json");
 
+const INDEX_HTML_PATH =
+  path.join(PROJECT_ROOT, "index.html");
+
+const DASHBOARD_HTML_PATH =
+  path.join(PROJECT_ROOT, "dashboard.html");
+
+const PUBLIC_ASSETS_ROOT =
+  path.join(PROJECT_ROOT, "assets");
+
 const app = express();
 
 app.set("trust proxy", 1);
@@ -3349,18 +3358,48 @@ app.delete("/api/library/:id", _requireAuth, (req, res) => {
   res.json({ ok: true, deleted: 1 });
 });
 
-// ===== STATIC (sirve tu frontend) =====
-// Bloquea archivos internos antes de publicar el frontend.
-app.use(blockSensitiveStaticPaths);
+// ===== STATIC (sirve únicamente el frontend público) =====
+function _createPublicHtmlHandler(filePath) {
+  return (_req, res, next) => {
+    res.sendFile(
+      filePath,
+      (error) => {
+        if (error) {
+          next(error);
+        }
+      }
+    );
+  };
+}
+
+app.get(
+  ["/", "/index.html"],
+  _createPublicHtmlHandler(
+    INDEX_HTML_PATH
+  )
+);
+
+app.get(
+  "/dashboard.html",
+  _createPublicHtmlHandler(
+    DASHBOARD_HTML_PATH
+  )
+);
 
 app.use(
+  "/assets",
   express.static(
-    PROJECT_ROOT,
+    PUBLIC_ASSETS_ROOT,
     {
-      dotfiles: "deny"
+      dotfiles: "deny",
+      index: false,
+      redirect: false
     }
   )
 );
+
+// Defensa adicional para cualquier ruta interna o oculta no reconocida.
+app.use(blockSensitiveStaticPaths);
 
 const PORT = Number.parseInt(
   process.env.PORT || "3000",
