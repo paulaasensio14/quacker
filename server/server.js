@@ -61,6 +61,10 @@ import {
   blockSensitiveStaticPaths
 } from "./lib/static-path-security.js";
 
+import {
+  applySecurityHeaders
+} from "./lib/security-headers.js";
+
 // Protect runtime files containing session or user data.
 process.umask(0o077);
 
@@ -82,7 +86,9 @@ const PUBLIC_ASSETS_ROOT =
 
 const app = express();
 
+app.disable("x-powered-by");
 app.set("trust proxy", 1);
+app.use(applySecurityHeaders);
 
 // ===== DEBUG SESIÓN (DEV) =====
 // Loguea si llega cookie, cuál es el sessionID y si hay userId en la sesión.
