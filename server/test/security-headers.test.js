@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  CONTENT_SECURITY_POLICY_REPORT_ONLY,
   SECURITY_HEADERS,
   applySecurityHeaders
 } from "../lib/security-headers.js";
@@ -32,6 +33,107 @@ test(
     assert.match(
       SECURITY_HEADERS["Permissions-Policy"],
       /microphone=\(\)/
+    );
+  }
+);
+
+test(
+  "define una política CSP restrictiva en modo report-only",
+  () => {
+    const directives = new Map(
+      CONTENT_SECURITY_POLICY_REPORT_ONLY
+        .split(";")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map((entry) => {
+          const separator = entry.indexOf(" ");
+
+          if (separator === -1) {
+            return [entry, ""];
+          }
+
+          return [
+            entry.slice(0, separator),
+            entry.slice(separator + 1)
+          ];
+        })
+    );
+
+    assert.equal(
+      SECURITY_HEADERS[
+        "Content-Security-Policy-Report-Only"
+      ],
+      CONTENT_SECURITY_POLICY_REPORT_ONLY
+    );
+
+    assert.equal(
+      directives.get("script-src"),
+      "'self' 'report-sample'"
+    );
+
+    assert.equal(
+      directives.get("script-src-attr"),
+      "'none'"
+    );
+
+    assert.match(
+      directives.get("style-src"),
+      /'unsafe-inline'/
+    );
+
+    assert.match(
+      directives.get("style-src"),
+      /https:\/\/fonts\.googleapis\.com/
+    );
+
+    assert.equal(
+      directives.get("font-src"),
+      "'self' https://fonts.gstatic.com"
+    );
+
+    assert.match(
+      directives.get("img-src"),
+      /https:\/\/image\.tmdb\.org/
+    );
+
+    assert.match(
+      directives.get("img-src"),
+      /https:\/\/media\.rawg\.io/
+    );
+
+    assert.match(
+      directives.get("img-src"),
+      /https:\/\/covers\.openlibrary\.org/
+    );
+
+    assert.match(
+      directives.get("img-src"),
+      /https:\/\/books\.google\.com/
+    );
+
+    assert.doesNotMatch(
+      directives.get("script-src"),
+      /'unsafe-inline'/
+    );
+
+    assert.doesNotMatch(
+      directives.get("img-src"),
+      /\bdata:|\bblob:/
+    );
+
+    assert.equal(
+      directives.get("object-src"),
+      "'none'"
+    );
+
+    assert.equal(
+      directives.get("frame-ancestors"),
+      "'none'"
+    );
+
+    assert.equal(
+      directives.get("connect-src"),
+      "'self'"
     );
   }
 );
