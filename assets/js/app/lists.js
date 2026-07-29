@@ -1073,14 +1073,14 @@ const ListsModule = (() => {
   function showListErrors(msg) {
     const box = document.getElementById("listModalErrors");
     if (!box) return;
-    box.style.display = "block";
+    box.classList.remove("is-initially-hidden");
     box.textContent = msg;
   }
 
   function hideListErrors() {
     const box = document.getElementById("listModalErrors");
     if (!box) return;
-    box.style.display = "none";
+    box.classList.add("is-initially-hidden");
     box.textContent = "";
   }
 
@@ -1182,7 +1182,7 @@ const ListsModule = (() => {
   function _showConfirmDeleteErrors(msg) {
     const box = document.getElementById("confirmDeleteListErrors");
     if (!box) return;
-    box.style.display = msg ? "block" : "none";
+    box.classList.toggle("is-initially-hidden", !msg);
     box.textContent = msg || "";
   }
 
