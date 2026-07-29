@@ -135,8 +135,8 @@
 
       <div class="topbar-subtitle" id="sectionSubtitle">
         <span id="sectionSubtitleText" data-i18n="home_summary">Resumen de tu actividad en Quacker</span>
-        <span id="libraryCountInline" style="display:none;"></span>
-        <span id="listsCountInline" style="display:none;"></span>
+        <span id="libraryCountInline" class="is-initially-hidden"></span>
+        <span id="listsCountInline" class="is-initially-hidden"></span>
       </div>
       </div> 
 
@@ -381,10 +381,10 @@
 
             <h3 data-i18n="home_continue_title">Continúa donde lo dejaste</h3>
 
-            <div style="display:flex;align-items:center;gap:10px;">
+            <div class="home-continue-meta">
               <span class="home-continue-count" id="continueCountLabel"></span>
 
-              <button class="btn-secondary btn-sm" id="btnGoLibraryFromContinue" type="button" style="display:none;" data-i18n="home_continue_view_all">
+              <button class="btn-secondary btn-sm is-initially-hidden" id="btnGoLibraryFromContinue" type="button" data-i18n="home_continue_view_all">
                 Ver todo
               </button>
             </div>
@@ -945,7 +945,7 @@
                 data-i18n-aria-label="lists_search_label"
               />
 
-              <div class="search-icon" style="left:9px;">
+              <div class="search-icon lists-search-icon">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="6"/>
@@ -1104,7 +1104,7 @@
 
             <div id="listDetailItemsGrid" class="list-items-grid"></div>
 
-            <p id="listDetailEmpty" class="empty-state" style="display:none;" data-i18n="lists_detail_empty">
+            <p id="listDetailEmpty" class="empty-state is-initially-hidden" data-i18n="lists_detail_empty">
               Esta lista todavía no tiene contenido.
             </p>
           </div>
@@ -1131,8 +1131,7 @@
 
             <div
               id="confirmDeleteListErrors"
-              class="form-errors"
-              style="display:none; margin-top:12px;"
+              class="form-errors form-errors--spaced is-initially-hidden"
               role="alert"
               aria-live="polite"
             ></div>
@@ -1160,7 +1159,7 @@
               </div>
 
               <div>
-                <h2 style="font-size:1.2rem;" data-i18n="profile_title">Mi perfil</h2>
+                <h2 class="profile-title" data-i18n="profile_title">Mi perfil</h2>
                 <p class="profile-meta" data-i18n="profile_summary">Configura cómo apareces en Quacker.</p>
 
                 <div class="profile-avatar-actions">
@@ -1223,7 +1222,7 @@
                 ></textarea>
               </div>
 
-              <div id="profileFormErrors" class="profile-form-errors" style="display:none;"></div>
+              <div id="profileFormErrors" class="profile-form-errors is-initially-hidden"></div>
 
               <button type="submit" class="btn-primary" id="profileSaveBtn" disabled data-i18n="profile_save">
                 Guardar cambios
@@ -1302,7 +1301,7 @@
         </select>
       </div>
 
-      <div class="modal-errors" id="listModalErrors" style="display:none;"></div>
+      <div class="modal-errors is-initially-hidden" id="listModalErrors"></div>
     </div>
 
     <div class="modal-actions">
@@ -1326,7 +1325,7 @@
       </button>
     </div>
 
-    <div id="progressModalErrors" class="modal-errors" style="display:none;"></div>
+    <div id="progressModalErrors" class="modal-errors is-initially-hidden"></div>
     <div id="progressModalBody"></div>
 
     <div class="modal-actions">
@@ -1370,7 +1369,7 @@
 
       <div id="addLib_dynamicFields"></div>
 
-      <div class="modal-errors" id="addLib_errors" style="display:none;"></div>
+      <div class="modal-errors is-initially-hidden" id="addLib_errors"></div>
     </div>
 
     <div class="modal-actions">
@@ -1396,7 +1395,7 @@
     </div>
 
     <div class="modal-content">
-      <div class="modal-errors" id="atl_errors" style="display:none;"></div>
+      <div class="modal-errors is-initially-hidden" id="atl_errors"></div>
 
       <div class="atl-options" id="atl_listOptions" aria-label="Opciones de listas" data-i18n-aria-label="library_add_to_list_options_label">
         <!-- JS: aquí se inyectan las opciones -->
