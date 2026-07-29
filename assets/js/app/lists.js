@@ -474,8 +474,8 @@ const ListsModule = (() => {
       const total = allLists.length;
       subtitleText.textContent = t("lists_subtitle");
       listsInline.textContent = _formatCreatedListsCount(total);
-      listsInline.style.display = "inline";
-      if (libraryInline) libraryInline.style.display = "none";
+      listsInline.classList.remove("is-initially-hidden");
+      if (libraryInline) libraryInline.classList.add("is-initially-hidden");
     }
 
     if (hasError) {
@@ -1240,7 +1240,7 @@ const ListsModule = (() => {
       const subtitleText = document.getElementById("sectionSubtitleText");
       const listsInline = document.getElementById("listsCountInline");
 
-      if (listsInline) listsInline.style.display = "none";
+      if (listsInline) listsInline.classList.add("is-initially-hidden");
       if (subtitleText) subtitleText.textContent = t("home_summary");
     });
 
