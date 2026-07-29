@@ -111,6 +111,16 @@ test(
       /https:\/\/books\.google\.com/
     );
 
+    assert.match(
+      directives.get("img-src"),
+      /https:\/\/archive\.org/
+    );
+
+    assert.match(
+      directives.get("img-src"),
+      /https:\/\/\*\.us\.archive\.org/
+    );
+
     assert.doesNotMatch(
       directives.get("script-src"),
       /'unsafe-inline'/
