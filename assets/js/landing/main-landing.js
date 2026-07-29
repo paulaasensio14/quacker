@@ -756,7 +756,7 @@
         subtitleEl.innerHTML = dict.auth_subtitle_login;
         groupName.classList.add('hidden');
         submitText.innerHTML = dict.auth_btn_login;
-        forgotWrapper.style.display = 'block';
+        forgotWrapper.classList.remove('hidden');
       } else {
         tabLogin.classList.remove('active');
         tabRegister.classList.add('active');
@@ -764,7 +764,7 @@
         subtitleEl.innerHTML = dict.auth_subtitle_register;
         groupName.classList.remove('hidden');
         submitText.innerHTML = dict.auth_btn_register;
-        forgotWrapper.style.display = 'none';
+        forgotWrapper.classList.add('hidden');
       }
       updateSubmitEnabled();
     }
