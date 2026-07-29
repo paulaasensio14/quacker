@@ -126,9 +126,14 @@ test(
       /'unsafe-inline'/
     );
 
+    assert.match(
+      directives.get("img-src"),
+      /\bdata:/
+    );
+
     assert.doesNotMatch(
       directives.get("img-src"),
-      /\bdata:|\bblob:/
+      /\bblob:/
     );
 
     assert.equal(
