@@ -25,12 +25,12 @@ const ProfileModule = (() => {
     if (!box) return;
 
     if (!errors || errors.length === 0) {
-      box.style.display = "none";
+      box.classList.add("is-initially-hidden");
       box.innerHTML = "";
       return;
     }
 
-    box.style.display = "block";
+    box.classList.remove("is-initially-hidden");
     box.innerHTML = `<ul>${errors.map(e => `<li>${e}</li>`).join("")}</ul>`;
   }
 
