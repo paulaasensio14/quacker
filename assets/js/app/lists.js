@@ -757,7 +757,7 @@ const ListsModule = (() => {
     const list = allLists.find(l => _normalizeId(l.id) === _normalizeId(activeListId));
     if (!list){
       grid.innerHTML = "";
-      empty.style.display = "block";
+      empty.classList.remove("is-initially-hidden");
       empty.textContent = t("lists_detail_empty");
       if (hint) hint.textContent = "";
       return;
@@ -769,13 +769,13 @@ const ListsModule = (() => {
 
     if (!ids.length){
       grid.innerHTML = "";
-      empty.style.display = "block";
+      empty.classList.remove("is-initially-hidden");
       empty.textContent = t("lists_detail_empty");
       if (hint) hint.textContent = "";
       return;
     }
 
-    empty.style.display = "none";
+    empty.classList.add("is-initially-hidden");
     if (hint) hint.textContent = t("lists_detail_hint");
 
     // Cargamos biblioteca para resolver ids -> datos reales
@@ -831,7 +831,7 @@ const ListsModule = (() => {
     // Si hay items en la lista pero los filtros no devuelven resultados
     if (!filtered.length) {
       grid.innerHTML = "";
-      empty.style.display = "block";
+      empty.classList.remove("is-initially-hidden");
       empty.textContent = t("lists_detail_empty_filtered");
       if (hint) hint.textContent = "";
       return;
