@@ -838,21 +838,32 @@ const ListsModule = (() => {
     }
 
     grid.innerHTML = filtered.map((it) => {
-      const coverStyle = it.cover ? `style="background-image:url('${it.cover}');"` : "";
+      const cover = _safeAttr(it.cover);
+      const coverMarkup = cover
+        ? `<img class="list-item-cover-image" src="${cover}" alt="" loading="lazy" decoding="async">`
+        : "";
       const title = _safeText(it.title) || t("lists_item_untitled");
       const type = _typeLabel(it.type);
-      const prog = _progressLabel(it.progress);
+      const rawProgress = Number(it.progress ?? 0);
+      const progressValue = Number.isFinite(rawProgress)
+        ? Math.max(0, Math.min(100, rawProgress))
+        : 0;
+      const prog = _progressLabel(progressValue);
 
       return `
         <article class="list-item-card" data-item-id="${_safeText(it.id)}">
-          <div class="list-item-cover" ${coverStyle}>
+          <div class="list-item-cover">
+            ${coverMarkup}
             <span class="list-item-type-badge" aria-label="${type}" title="${type}">
               ${_typeIconSvg(it.type)}
             </span>
 
-            <div class="lib-cover-progress" aria-label="${prog}">
-              <div class="lib-cover-progress-fill" style="width:${Math.max(0, Math.min(100, Number(it.progress ?? 0)))}%;"></div>
-            </div>
+            <progress
+              class="lib-cover-progress"
+              value="${progressValue}"
+              max="100"
+              aria-label="${_safeAttr(prog)}"
+            ></progress>
           </div>
 
           <div class="list-item-body">
