@@ -157,7 +157,7 @@ const Router = (() => {
     // 4) limpiar contador si NO estamos en biblioteca
     const countInline = document.querySelector("#libraryCountInline");
     if (countInline && id !== "library") {
-      countInline.style.display = "none";
+      countInline.classList.add("is-initially-hidden");
       countInline.textContent = "";
     }
   }

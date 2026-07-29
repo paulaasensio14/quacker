@@ -1172,7 +1172,7 @@ const LibraryUI = (() => {
 
     const countInline = document.getElementById("libraryCountInline");
     if (countInline) {
-      countInline.style.display = "none";
+      countInline.classList.add("is-initially-hidden");
       countInline.textContent = "";
     }
 
@@ -1238,7 +1238,7 @@ const LibraryUI = (() => {
         ? translatedLabel
         : fallbackLabel;
 
-      countInline.style.display = "inline";
+      countInline.classList.remove("is-initially-hidden");
       countInline.textContent =
         ` · ${filtered.length} ${safeLabel}`;
     }
