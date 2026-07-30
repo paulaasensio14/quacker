@@ -528,6 +528,10 @@ header.topbar {
   justify-content: center;
 }
 
+.notif-badge:not(:empty) {
+  display: inline-flex;
+}
+
 /* ===== Notificaciones: pop del badge ===== */
 @keyframes notifBadgePop {
   0%   { transform: scale(0.85); }
@@ -4288,6 +4292,13 @@ body.dark-theme #view-home .home-backlog {
   transform: translateY(-1px);
 }
 
+.notif-card .notif-mark-btn:disabled,
+.notif-card:hover .notif-mark-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .notif-icon {
   width: 28px;
   height: 28px;
@@ -4347,6 +4358,15 @@ body.dark-theme #view-home .home-backlog {
   background: #fff;
   font-size: 0.75rem;
   padding: 2px 6px;
+}
+
+#markAllBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+#markAllBtn.is-busy:disabled {
+  opacity: 0.7;
 }
 
 .close-chip {

@@ -181,8 +181,6 @@ const NotificationsUI = (() => {
     if (markAllBtn) {
       const hasAny = list.length > 0;
       markAllBtn.disabled = !hasAny;
-      markAllBtn.style.opacity = hasAny ? "1" : "0.55";
-      markAllBtn.style.cursor = hasAny ? "pointer" : "not-allowed";
       markAllBtn.textContent = hasAny
         ? window.I18n.t("notif_mark_all")
         : window.I18n.t("home_notif_none_new");
@@ -194,10 +192,8 @@ const NotificationsUI = (() => {
       const prev = Number(notifBadgeEl.dataset.count || 0);
 
       if (n <= 0) {
-        notifBadgeEl.style.display = "none";
         notifBadgeEl.textContent = "";
       } else {
-        notifBadgeEl.style.display = "inline-flex";
         notifBadgeEl.textContent = n > 99 ? "99+" : String(n);
       }
 
@@ -298,8 +294,6 @@ const NotificationsUI = (() => {
         }
 
         markBtn.disabled = true;
-        markBtn.style.opacity = "0.6";
-        markBtn.style.cursor = "not-allowed";
 
         card.classList.add("is-removing");
 
@@ -338,8 +332,6 @@ const NotificationsUI = (() => {
 
             card.classList.remove("is-removing");
             markBtn.disabled = false;
-            markBtn.style.opacity = "1";
-            markBtn.style.cursor = "pointer";
             markBtn.dataset.busy = "0";
 
             window.toast?.({
@@ -427,8 +419,7 @@ const NotificationsUI = (() => {
         const originalText = markAllBtn.textContent;
         markAllBtn.dataset.originalText = originalText || window.I18n.t("notif_mark_all");
         markAllBtn.textContent = window.I18n.t("home_notif_marking_all");
-        markAllBtn.style.cursor = "not-allowed";
-        markAllBtn.style.opacity = "0.7";
+        markAllBtn.classList.add("is-busy");
       }
 
       const cards = Array.from(notifListEl.querySelectorAll(".notif-card"));
@@ -481,8 +472,7 @@ const NotificationsUI = (() => {
           if (markAllBtn) {
             markAllBtn.disabled = false;
             markAllBtn.textContent = markAllBtn.dataset.originalText || window.I18n.t("notif_mark_all");
-            markAllBtn.style.cursor = "pointer";
-            markAllBtn.style.opacity = "1";
+            markAllBtn.classList.remove("is-busy");
           }
         }
       }, Math.min(260, cards.length * 35 + 140));
