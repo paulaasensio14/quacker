@@ -37,7 +37,7 @@ function loadLibraryFilters() {
 function _showAddLibError(msg = "") {
   const box = document.getElementById("addLib_errors");
   if (!box) return;
-  box.style.display = msg ? "block" : "none";
+  box.classList.toggle("is-initially-hidden", !msg);
   box.textContent = msg || "";
 }
 
@@ -288,7 +288,7 @@ function closeAddLibraryModal() {
 function _showAddToListError(msg = "") {
   const box = document.getElementById("atl_errors");
   if (!box) return;
-  box.style.display = msg ? "block" : "none";
+  box.classList.toggle("is-initially-hidden", !msg);
   box.textContent = msg || "";
 }
 
@@ -2944,13 +2944,13 @@ function showProgressErrors(errors) {
   if (!box || !saveBtn) return;
 
   if (!errors || errors.length === 0) {
-    box.style.display = "none";
+    box.classList.add("is-initially-hidden");
     box.innerHTML = "";
     saveBtn.disabled = false;
     return;
   }
 
-  box.style.display = "block";
+  box.classList.remove("is-initially-hidden");
   box.innerHTML = errors
     .map((error) => `<div class="error-line">&bull; ${_escapeLibraryHtml(error)}</div>`)
     .join("");
