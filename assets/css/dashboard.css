@@ -5665,6 +5665,12 @@ body.dark-theme #view-explore .explore-toolbar-right .library-sort .library-sort
   width: 100%;
   min-width: 0;
   margin-top: 14px;
+  transition: opacity 0.15s ease;
+}
+
+#view-library #libraryGrid.is-refreshing {
+  pointer-events: none;
+  opacity: 0.92;
 }
 
 /* Tipo + select en la misma fila */

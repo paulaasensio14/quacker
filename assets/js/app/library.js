@@ -1453,9 +1453,7 @@ const LibraryUI = (() => {
 
     const grid = document.getElementById("libraryGrid");
     if (grid) {
-      grid.style.pointerEvents = isRefreshing ? "none" : "";
-      grid.style.opacity = isRefreshing ? "0.92" : "";
-      grid.style.transition = "opacity 0.15s ease";
+      grid.classList.toggle("is-refreshing", isRefreshing);
     }
   }
 
