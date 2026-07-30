@@ -1325,7 +1325,10 @@ const LibraryUI = (() => {
 
     // 4) Render de cards
     grid.innerHTML = filtered.map((item) => {
-      const pct = Math.max(0, Math.min(100, Number(item.progress ?? 0)));
+      const rawPct = Number(item.progress ?? 0);
+      const pct = Number.isFinite(rawPct)
+        ? Math.max(0, Math.min(100, rawPct))
+        : 0;
       const typeName = TYPE_LABELS[item.type] || t("lists_type_content");
       const typeIcon = renderLibraryTypeIcon(item.type);
       const statusKey = logicalStatus(item);
@@ -1379,9 +1382,12 @@ const LibraryUI = (() => {
               <span aria-hidden="true">⋮</span>
             </button>
 
-            <div class="lib-cover-progress" aria-hidden="true">
-              <div class="lib-cover-progress-fill" style="width:${pct}%;"></div>
-            </div>
+            <progress
+              class="lib-cover-progress"
+              value="${pct}"
+              max="100"
+              aria-hidden="true"
+            ></progress>
           </div>
 
           <div class="lib-body">
