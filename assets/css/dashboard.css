@@ -4447,6 +4447,12 @@ body.dark-theme #view-home .home-backlog {
   margin-bottom: 10px;
 }
 
+.progress-modal-hint {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+
 .modal-field-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
