@@ -633,14 +633,14 @@ const LibraryUI = (() => {
     return "";
   }
 
-  function buildCoverStyle(cover, type) {
+  function buildCoverMarkup(cover, type) {
     const url = normalizeImageUrl(cover);
     if (!url) return "";
 
-    const fit = type === "game" ? "cover" : "contain";
-    const cssUrl = escapeHtml(JSON.stringify(url));
+    const safeUrl = escapeHtml(url);
+    const fitClass = type === "game" ? " lib-cover-image--game" : "";
 
-    return `style="background-image:url(${cssUrl}); background-size:${fit}; background-position:center; background-repeat:no-repeat; background-color:var(--surface-soft, #f8fafc);"`;
+    return `<img class="lib-cover-image${fitClass}" src="${safeUrl}" alt="" loading="lazy" decoding="async" aria-hidden="true">`;
   }
 
   function clampProgress(value) {
@@ -1342,7 +1342,7 @@ const LibraryUI = (() => {
       const safeStatusLabel = escapeHtml(statusLabel);
       const safeProgressText = escapeHtml(pText);
       const safeBtnLabel = escapeHtml(btnLabel || "");
-      const coverStyle = buildCoverStyle(item.cover, item.type);
+      const coverMarkup = buildCoverMarkup(item.cover, item.type);
       const isInAnyList = itemsInAnyList.has(itemId);
       const listLabel = isInAnyList ? t("library_card_in_lists") : t("lists_detail_title");
       const listAriaLabel = isInAnyList ? t("library_card_remove_from_lists") : t("library_card_add_to_lists");
@@ -1355,7 +1355,8 @@ const LibraryUI = (() => {
       
       return `
         <article class="lib-card ${isHighlighted ? "is-highlight" : ""}" data-id="${safeItemId}">
-          <div class="lib-cover" ${coverStyle}>
+          <div class="lib-cover">
+            ${coverMarkup}
             <button
               class="lib-cover-list-btn lib-list-btn ${isInAnyList ? "is-added" : ""}"
               type="button"
