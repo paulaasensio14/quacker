@@ -140,10 +140,10 @@ function setHomeDashboardLoading(isLoading) {
   });
 
   const lastActivityBar = $("#lastActivityProgressFill");
-  if (lastActivityBar) lastActivityBar.style.width = "0%";
+  if (lastActivityBar) lastActivityBar.value = 0;
 
   const challengeBar = $("#challengeProgressFill");
-  if (challengeBar) challengeBar.style.width = "0%";
+  if (challengeBar) challengeBar.value = 0;
 }
 
 async function renderHomeDashboard() {
@@ -331,7 +331,7 @@ async function renderHomeDashboard() {
         if (titleEl) titleEl.textContent = window.I18n.t("home_last_activity_empty_title");
         if (metaEl) metaEl.textContent = window.I18n.t("home_last_activity_empty_text");
         if (timeEl) timeEl.textContent = "";
-        if (barFill) barFill.style.width = "0%";
+        if (barFill) barFill.value = 0;
         if (labelEl) labelEl.textContent = "";
 
         if (coverEl) coverEl.style.backgroundImage = "";
@@ -341,7 +341,12 @@ async function renderHomeDashboard() {
         if (titleEl) titleEl.textContent = lastActivity.title || window.I18n.t("common_empty_value");
         if (metaEl) metaEl.textContent = lastActivity.meta || window.I18n.t("common_empty_value");
         if (timeEl) timeEl.textContent = lastActivity.timeAgo || "";
-        if (barFill) barFill.style.width = (lastActivity.progressPercent || 0) + "%";
+        if (barFill) {
+          const rawProgress = Number(lastActivity.progressPercent ?? 0);
+          barFill.value = Number.isFinite(rawProgress)
+            ? Math.max(0, Math.min(100, rawProgress))
+            : 0;
+        }
         if (labelEl) labelEl.textContent = lastActivity.progressLabel || "";
 
         if (coverEl) {
@@ -473,8 +478,7 @@ async function renderHomeDashboard() {
 
       // Barra de progreso
       if (barFill) {
-        barFill.style.width = pct + "%";
-        barFill.style.backgroundColor = isCompleted ? "#22c55e" : "";
+        barFill.value = pct;
       }
 
       // Recompensa

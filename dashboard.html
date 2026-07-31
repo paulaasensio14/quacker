@@ -454,7 +454,13 @@
 
                 <div class="last-activity-progress">
                   <div class="last-activity-progress-bar">
-                    <div class="last-activity-progress-bar-fill" id="lastActivityProgressFill"></div>
+                    <progress
+                      class="last-activity-progress-bar-fill"
+                      id="lastActivityProgressFill"
+                      value="0"
+                      max="100"
+                      aria-hidden="true"
+                    ></progress>
                   </div>
 
                   <div class="last-activity-progress-footer">
@@ -503,7 +509,13 @@
 
               <div class="challenge-progress">
                 <div class="challenge-progress-bar">
-                  <div class="challenge-progress-fill" id="challengeProgressFill"></div>
+                  <progress
+                    class="challenge-progress-fill"
+                    id="challengeProgressFill"
+                    value="0"
+                    max="100"
+                    aria-hidden="true"
+                  ></progress>
                 </div>
 
                 <div class="challenge-meta-row">
