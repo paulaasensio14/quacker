@@ -5295,6 +5295,23 @@ body.dark-theme .notif-mark-btn:hover {
   overflow: hidden;
 }
 
+#view-library .lib-cover-image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  background-color: var(--surface-soft, #f8fafc);
+  pointer-events: none;
+}
+
+#view-library .lib-cover-image--game {
+  object-fit: cover;
+}
+
 #view-library .lib-cover-progress {
   position: absolute;
   left: 0;
