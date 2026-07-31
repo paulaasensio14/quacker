@@ -7173,6 +7173,12 @@ body.dark-theme #view-explore .explore-toolbar-right .library-sort .library-sort
 .cw-card--skeleton .cw-skel-chip { height: 22px; width: 110px; border-radius: 999px; }
 .cw-card--skeleton .cw-skel-btn { height: 34px; width: 140px; border-radius: 12px; }
 
+.cw-card--skeleton .cw-skel-title { width: 78%; }
+.cw-card--skeleton .cw-skel-line-primary { width: 92%; }
+.cw-card--skeleton .cw-skel-line-secondary { width: 88%; }
+.cw-card--skeleton .cw-skel-footer { gap: 10px; }
+.cw-card--skeleton .cw-skel-line.cw-skel-footer-count { width: 48px; }
+
 /* Backlog skeleton */
 .backlog-card--skeleton {
   pointer-events: none;
@@ -7196,6 +7202,18 @@ body.dark-theme #view-explore .explore-toolbar-right .library-sort .library-sort
 .backlog-card--skeleton .bg-skel-line.sm { height: 10px; width: 65%; }
 .backlog-card--skeleton .bg-skel-chip { height: 22px; width: 120px; border-radius: 999px; }
 .backlog-card--skeleton .bg-skel-btn { height: 34px; width: 120px; border-radius: 12px; }
+
+.backlog-card--skeleton .backlog-skel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.backlog-card--skeleton .bg-skel-line.bg-skel-count { width: 64px; }
+.backlog-card--skeleton .bg-skel-title { width: 82%; }
+.backlog-card--skeleton .bg-skel-line-primary { width: 96%; }
+.backlog-card--skeleton .bg-skel-line-secondary { width: 90%; }
 
 /* ===== Home: optimistic UI (Retomar) ===== */
 

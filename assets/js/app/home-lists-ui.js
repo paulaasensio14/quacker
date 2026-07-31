@@ -771,12 +771,12 @@ async function renderHomeDashboard() {
             <div class="cw-cover skel"></div>
             <div class="cw-body">
               <div class="cw-skel-chip skel"></div>
-              <div class="cw-skel-line lg skel" style="width: 78%;"></div>
+              <div class="cw-skel-line lg skel cw-skel-title"></div>
               <div class="cw-skel-line sm skel"></div>
-              <div class="cw-skel-line skel" style="width: 92%;"></div>
-              <div class="cw-skel-line skel" style="width: 88%;"></div>
-              <div class="cw-footer-row" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                <div class="cw-skel-line sm skel" style="width: 48px;"></div>
+              <div class="cw-skel-line skel cw-skel-line-primary"></div>
+              <div class="cw-skel-line skel cw-skel-line-secondary"></div>
+              <div class="cw-footer-row cw-skel-footer">
+                <div class="cw-skel-line sm skel cw-skel-footer-count"></div>
                 <div class="cw-skel-btn skel"></div>
               </div>
             </div>
@@ -798,16 +798,16 @@ async function renderHomeDashboard() {
           <article class="backlog-card backlog-card--skeleton" aria-hidden="true">
             <div class="backlog-card-cover skel"></div>
             <div class="backlog-card-body">
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <div class="backlog-skel-head">
                 <div class="bg-skel-chip skel"></div>
-                <div class="bg-skel-line sm skel" style="width: 64px;"></div>
+                <div class="bg-skel-line sm skel bg-skel-count"></div>
               </div>
 
-              <div class="bg-skel-line lg skel" style="width: 82%;"></div>
+              <div class="bg-skel-line lg skel bg-skel-title"></div>
               <div class="bg-skel-line sm skel"></div>
 
-              <div class="bg-skel-line skel" style="width: 96%;"></div>
-              <div class="bg-skel-line skel" style="width: 90%;"></div>
+              <div class="bg-skel-line skel bg-skel-line-primary"></div>
+              <div class="bg-skel-line skel bg-skel-line-secondary"></div>
 
               <div class="bg-skel-btn skel"></div>
             </div>
