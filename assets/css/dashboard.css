@@ -1463,7 +1463,7 @@ main.app-main {
 .explore-cover-img--game {
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: center top;
 }
 
 .explore-cover-initial {
