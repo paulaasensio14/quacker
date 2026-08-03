@@ -1643,8 +1643,12 @@ body.dark-theme #view-home .pill-filter-sm.active {
   opacity: 0.9;
 }
 
-.cw-card--completed .cw-progress-fill {
-  background: #22c55e; /* verde, puedes cambiarlo por var(--accent) si prefieres */
+.cw-card--completed .cw-progress-fill::-webkit-progress-value {
+  background: #22c55e;
+}
+
+.cw-card--completed .cw-progress-fill::-moz-progress-bar {
+  background: #22c55e;
 }
 
 .cw-card--completed .cw-tick-btn {
@@ -1655,8 +1659,17 @@ body.dark-theme #view-home .pill-filter-sm.active {
   position: relative;
   height: 220px;
   background: #111827;
-  background-size: cover;
-  background-position: center;
+  overflow: hidden;
+}
+
+.cw-cover-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .cw-cover-type-badge {
@@ -1763,9 +1776,27 @@ body.dark-theme #view-home .pill-filter-sm.active {
 }
 
 .cw-progress-fill {
+  display: block;
+  width: 100%;
   height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--bg-yellow);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.cw-progress-fill::-webkit-progress-bar {
+  background: transparent;
+}
+
+.cw-progress-fill::-webkit-progress-value {
   background: var(--bg-yellow);
-  width: 0;
+  transition: width 0.35s ease;
+}
+
+.cw-progress-fill::-moz-progress-bar {
+  background: var(--bg-yellow);
   transition: width 0.35s ease;
 }
 
@@ -1976,10 +2007,20 @@ body.dark-theme #view-home .home-backlog {
 }
 
 .backlog-card-cover {
+  position: relative;
   height: 120px;
   background: #111827;
-  background-size: cover;
-  background-position: center;
+  overflow: hidden;
+}
+
+.backlog-card-cover-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .backlog-card-body {
@@ -2017,8 +2058,26 @@ body.dark-theme #view-home .home-backlog {
 }
 
 .backlog-card-progress-fill {
+  display: block;
+  width: 100%;
   height: 100%;
-  width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--bg-yellow);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.backlog-card-progress-fill::-webkit-progress-bar {
+  background: transparent;
+}
+
+.backlog-card-progress-fill::-webkit-progress-value {
+  background: var(--bg-yellow);
+  transition: width 0.35s ease;
+}
+
+.backlog-card-progress-fill::-moz-progress-bar {
   background: var(--bg-yellow);
   transition: width 0.35s ease;
 }

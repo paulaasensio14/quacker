@@ -152,6 +152,14 @@ function _normalizeHomeCoverUrl(value) {
   return /^https:\/\//i.test(url) ? url : "";
 }
 
+function _escapeHomeAttribute(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 async function renderHomeDashboard() {
   setHomeDashboardLoading(true);
 
@@ -670,13 +678,14 @@ async function renderHomeDashboard() {
               ? window.I18n.t("home_continue_completed")
               : `${pct}% · ${item.progressLabel || ""}`;
 
-            const coverStyle = item.cover
-              ? `style="background-image:url('${item.cover}');"`
+            const coverUrl = _normalizeHomeCoverUrl(item.cover);
+            const coverHtml = coverUrl
+              ? `<img class="backlog-card-cover-image" src="${_escapeHomeAttribute(coverUrl)}" alt="" loading="lazy" decoding="async" aria-hidden="true">`
               : "";
 
             return `
               <article class="backlog-card" data-id="${itemId}" data-type="${item.type || ""}">
-                <div class="backlog-card-cover" ${coverStyle}></div>
+                <div class="backlog-card-cover">${coverHtml}</div>
                   <div class="backlog-card-body">
                     <div class="backlog-card-type-row">
                       <span class="backlog-type-chip">
@@ -690,7 +699,12 @@ async function renderHomeDashboard() {
                     <div class="backlog-meta">${formatMetaLine(item)}</div>
                     <div class="backlog-card-progress-text">${progressText}</div>
                     <div class="backlog-card-progress-bar">
-                      <div class="backlog-card-progress-fill" style="width:${pct}%;"></div>
+                      <progress
+                        class="backlog-card-progress-fill"
+                        value="${pct}"
+                        max="100"
+                        aria-label="${pct}%"
+                      ></progress>
                     </div>
         
                     <button class="btn-retomar" data-id="${itemId}">
@@ -1269,7 +1283,7 @@ async function renderHomeDashboard() {
 
     // Botón "Ver todo"
     if (showAllBtn) {
-      showAllBtn.style.display = hasMoreThanLimit ? "inline-flex" : "none";
+      showAllBtn.hidden = !hasMoreThanLimit;
     }
 
     if (!total) {
@@ -1387,9 +1401,15 @@ async function renderHomeDashboard() {
         ? window.I18n.t("home_continue_completed")
         : `  ${window.I18n.t("home_continue_progress_done")} `;;
 
+      const coverUrl = _normalizeHomeCoverUrl(item.cover);
+      const coverHtml = coverUrl
+        ? `<img class="cw-cover-image" src="${_escapeHomeAttribute(coverUrl)}" alt="" loading="lazy" decoding="async" aria-hidden="true">`
+        : "";
+
       return `
       <article class="cw-card${completedClass}" data-id="${itemId}">
-        <div class="cw-cover" style="background-image:url('${item.cover || ""}');">
+        <div class="cw-cover">
+          ${coverHtml}
           <span class="cw-cover-type-badge" role="img" aria-label="${typeIconLabel}" title="${typeIconLabel}">
             ${typeIconSvg}
           </span>
@@ -1404,7 +1424,12 @@ async function renderHomeDashboard() {
           <div class="cw-meta">${formatMetaLine(item)}</div>
           <div class="cw-progress-label">${item.progressLabel}</div>
           <div class="cw-progress-bar">
-            <div class="cw-progress-fill" style="width:${pct}%;"></div>
+            <progress
+              class="cw-progress-fill"
+              value="${pct}"
+              max="100"
+              aria-label="${pct}%"
+            ></progress>
           </div>
           <div class="cw-footer-row">
             <span>${footerLabel}</span>
