@@ -146,6 +146,12 @@ function setHomeDashboardLoading(isLoading) {
   if (challengeBar) challengeBar.value = 0;
 }
 
+function _normalizeHomeCoverUrl(value) {
+  const url = String(value || "").trim();
+  if (!url || /[\u0000-\u001f]/.test(url)) return "";
+  return /^https:\/\//i.test(url) ? url : "";
+}
+
 async function renderHomeDashboard() {
   setHomeDashboardLoading(true);
 
@@ -322,7 +328,7 @@ async function renderHomeDashboard() {
       const timeEl = $("#lastActivityTime");
       const barFill = $("#lastActivityProgressFill");
       const labelEl = $("#lastActivityProgressLabel");
-      const coverEl = document.querySelector(".last-activity-cover");
+      const coverImg = $("#lastActivityCoverImage");
       const typeIconEl = $("#lastActivityTypeIcon");
 
       const hasLast = !!(lastActivity && typeof lastActivity === "object" && lastActivity.id);
@@ -334,7 +340,10 @@ async function renderHomeDashboard() {
         if (barFill) barFill.value = 0;
         if (labelEl) labelEl.textContent = "";
 
-        if (coverEl) coverEl.style.backgroundImage = "";
+        if (coverImg) {
+          coverImg.removeAttribute("src");
+          coverImg.hidden = true;
+        }
         if (typeIconEl) typeIconEl.innerHTML = getTypeIconSvg("book"); // icono neutro
 
       } else {
@@ -349,8 +358,15 @@ async function renderHomeDashboard() {
         }
         if (labelEl) labelEl.textContent = lastActivity.progressLabel || "";
 
-        if (coverEl) {
-          coverEl.style.backgroundImage = lastActivity.cover ? `url('${lastActivity.cover}')` : "";
+        if (coverImg) {
+          const coverUrl = _normalizeHomeCoverUrl(lastActivity.cover);
+          if (coverUrl) {
+            coverImg.src = coverUrl;
+            coverImg.hidden = false;
+          } else {
+            coverImg.removeAttribute("src");
+            coverImg.hidden = true;
+          }
         }
 
         if (typeIconEl) {
