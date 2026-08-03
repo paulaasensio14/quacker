@@ -370,8 +370,6 @@ const ExploreModule = (() => {
             alt="${imageAlt}"
             loading="lazy"
             referrerpolicy="no-referrer"
-            onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback');"
-            ${isGame ? 'style="object-fit: cover; object-position: center top;"' : ""}
           />
           <span class="explore-cover-initial">${initials}</span>
         </div>
@@ -3794,6 +3792,19 @@ const ExploreModule = (() => {
     // Evita doble binding
     if (bind._bound) return;
     bind._bound = true;
+
+    document.addEventListener(
+      "error",
+      (event) => {
+        const image = event.target;
+        if (!(image instanceof HTMLImageElement)) return;
+        if (!image.matches(".explore-cover-img")) return;
+
+        image.hidden = true;
+        image.closest(".explore-cover")?.classList.add("is-fallback");
+      },
+      true
+    );
 
     // CLICK "+"
 
