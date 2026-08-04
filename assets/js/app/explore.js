@@ -751,7 +751,6 @@ const ExploreModule = (() => {
       details.hidden = false;
     }
 
-    _syncExploreDrawerViewport();
     document.body.classList.add("modal-open");
 
     if (!wasOpen) {
@@ -809,18 +808,9 @@ const ExploreModule = (() => {
     const coverEl = document.getElementById("exploreDrawerCover");
     if (coverEl) {
       coverEl.classList.remove("is-fallback");
-      coverEl.style.backgroundImage = "none";
-      coverEl.style.backgroundSize = "";
-      coverEl.style.backgroundPosition = "";
-      coverEl.style.backgroundRepeat = "";
     }
 
     _setExploreDrawerExpanded(false);
-
-    document.documentElement.style.removeProperty("--explore-expanded-left");
-    document.documentElement.style.removeProperty("--explore-expanded-top");
-    document.documentElement.style.removeProperty("--explore-expanded-right");
-    document.documentElement.style.removeProperty("--explore-expanded-bottom");
 
     const { picker, select } = _getExploreListPickerRefs("drawer");
     if (picker) picker.hidden = true;
@@ -1219,12 +1209,17 @@ const ExploreModule = (() => {
                 >
                   <div
                     class="content-detail-episode-still${episodeStill ? "" : " is-fallback"}"
-                    ${episodeStill ? `style="background-image: url('${_escapeHtml(episodeStill)}');"` : ""}
                     aria-hidden="true"
                   >
                     ${
                       episodeStill
-                        ? ""
+                        ? `<img
+                            class="content-detail-episode-still-image"
+                            src="${_escapeHtml(episodeStill)}"
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />`
                         : `<span class="content-detail-episode-still-fallback">E${episodeNumber}</span>`
                     }
                   </div>
@@ -1537,20 +1532,23 @@ const ExploreModule = (() => {
     const backdrop = _safeText(item?.backdrop).trim();
     const cover = _safeText(item?.cover).trim();
     const heroImage = backdrop || cover;
+    const imageEl = coverEl.querySelector(
+      ".content-detail-hero-image, .explore-drawer-cover-img"
+    );
 
-    if (heroImage) {
-      coverEl.style.backgroundImage = `url("${heroImage}")`;
-      coverEl.style.backgroundSize = "cover";
-      coverEl.style.backgroundPosition = "center";
-      coverEl.style.backgroundRepeat = "no-repeat";
+    if (heroImage && imageEl) {
+      imageEl.setAttribute("src", heroImage);
+      imageEl.hidden = false;
       coverEl.classList.remove("is-fallback");
-    } else {
-      coverEl.style.backgroundImage = "none";
-      coverEl.style.backgroundSize = "";
-      coverEl.style.backgroundPosition = "";
-      coverEl.style.backgroundRepeat = "";
-      coverEl.classList.add("is-fallback");
+      return;
     }
+
+    if (imageEl) {
+      imageEl.removeAttribute("src");
+      imageEl.hidden = true;
+    }
+
+    coverEl.classList.add("is-fallback");
   }
 
   function _buildExploreRatingMarkup(item, { compact = false } = {}) {
@@ -1619,10 +1617,19 @@ const ExploreModule = (() => {
           <article class="content-detail-cast-person">
             <div
               class="content-detail-cast-avatar${profile ? "" : " is-fallback"}"
-              ${profile ? `style="background-image: url('${_escapeHtml(profile)}');"` : ""}
               aria-hidden="true"
             >
-              ${profile ? "" : `<span class="content-detail-cast-avatar-initial">${initial}</span>`}
+              ${
+                profile
+                  ? `<img
+                      class="content-detail-cast-avatar-image"
+                      src="${_escapeHtml(profile)}"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />`
+                  : `<span class="content-detail-cast-avatar-initial">${initial}</span>`
+              }
             </div>
 
             <div class="content-detail-cast-copy">
@@ -1738,10 +1745,19 @@ const ExploreModule = (() => {
           <article class="content-detail-provider-chip">
             <div
               class="content-detail-provider-logo${provider.logo ? "" : " is-fallback"}"
-              ${provider.logo ? `style="background-image: url('${_escapeHtml(provider.logo)}');"` : ""}
               aria-hidden="true"
             >
-              ${provider.logo ? "" : `<span class="content-detail-provider-initial">${initial}</span>`}
+              ${
+                provider.logo
+                  ? `<img
+                      class="content-detail-provider-logo-image"
+                      src="${_escapeHtml(provider.logo)}"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />`
+                  : `<span class="content-detail-provider-initial">${initial}</span>`
+              }
             </div>
 
             <div class="content-detail-provider-copy">
@@ -2076,9 +2092,18 @@ const ExploreModule = (() => {
           >
             <div
               class="content-detail-season-poster${poster ? "" : " is-fallback"}"
-              ${poster ? `style="background-image: url('${_escapeHtml(poster)}');"` : ""}
             >
-              ${poster ? "" : `<span class="content-detail-season-initial">T${seasonNumber}</span>`}
+              ${
+                poster
+                  ? `<img
+                      class="content-detail-season-poster-image"
+                      src="${_escapeHtml(poster)}"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />`
+                  : `<span class="content-detail-season-initial">T${seasonNumber}</span>`
+              }
             </div>
 
             <div class="content-detail-season-copy">
@@ -2095,12 +2120,12 @@ const ExploreModule = (() => {
                           : ""
                       }
                     </span>
-                    <span class="content-detail-season-progressbar" aria-hidden="true">
-                      <span
-                        class="content-detail-season-progressbar-fill"
-                        style="width: ${watchedProgressPercent.toFixed(2)}%;"
-                      ></span>
-                    </span>
+                    <progress
+                      class="content-detail-season-progressbar"
+                      value="${watchedProgressPercent.toFixed(2)}"
+                      max="100"
+                      aria-hidden="true"
+                    ></progress>
                   `
                   : ""
               }
@@ -2800,20 +2825,6 @@ const ExploreModule = (() => {
 
   document.addEventListener("quacker:data-changed", _handleExploreDataChanged);
 
-  function _syncExploreDrawerViewport() {
-    if (!__drawerExpanded) return;
-
-    const root = document.documentElement;
-    if (!root) return;
-
-    const inset = window.innerWidth <= 980 ? 16 : 20;
-
-    root.style.setProperty("--explore-expanded-left", `${inset}px`);
-    root.style.setProperty("--explore-expanded-top", `${inset}px`);
-    root.style.setProperty("--explore-expanded-right", `${inset}px`);
-    root.style.setProperty("--explore-expanded-bottom", `${inset}px`);
-  }
-
   function _buildExploreDrawerTextModel(item) {
     const count = Number(item?.__listsCount || 0);
     const normalizedType = _norm(item?.type);
@@ -3232,9 +3243,6 @@ const ExploreModule = (() => {
       expandBtn.textContent = expandLabel;
     }
 
-    if (__drawerExpanded) {
-      _syncExploreDrawerViewport();
-    }
   }
 
   async function _syncInLibraryFlags() {

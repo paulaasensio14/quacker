@@ -8038,10 +8038,21 @@ body.dark-theme .content-detail-top-actions .btn-secondary:hover {
   box-shadow: 0 22px 44px rgba(15, 23, 42, 0.08);
 }
 
+.content-detail-hero-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .content-detail-hero::before {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 1;
   background:
     linear-gradient(180deg, rgba(15, 23, 42, 0.16) 0%, rgba(15, 23, 42, 0.5) 56%, rgba(15, 23, 42, 0.88) 100%);
   opacity: 0;
@@ -8055,7 +8066,7 @@ body.dark-theme .content-detail-top-actions .btn-secondary:hover {
 
 .content-detail-head {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   min-height: 232px;
   display: flex;
   flex-direction: column;
@@ -8509,6 +8520,13 @@ body.dark-theme .content-detail-cast-role {
   overflow: hidden;
 }
 
+.content-detail-provider-logo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .content-detail-provider-logo.is-fallback {
   display: flex;
   align-items: center;
@@ -8629,6 +8647,13 @@ body.dark-theme .content-detail-cast-role {
   background-repeat: no-repeat;
   border: 2px solid var(--border-soft);
   overflow: hidden;
+}
+
+.content-detail-cast-avatar-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .content-detail-cast-avatar.is-fallback {
@@ -8940,6 +8965,13 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
   overflow: hidden;
 }
 
+.content-detail-season-poster-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .content-detail-season-poster.is-fallback {
   display: flex;
   align-items: center;
@@ -9007,20 +9039,31 @@ body.dark-theme .content-detail-related-nav-btn:disabled {
 }
 
 .content-detail-season-progressbar {
-  position: relative;
   display: block;
   width: 100%;
   height: 6px;
+  border: 0;
   border-radius: 999px;
   overflow: hidden;
   background: rgba(15, 23, 42, 0.08);
+  color: #0f766e;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-.content-detail-season-progressbar-fill {
-  display: block;
-  height: 100%;
+.content-detail-season-progressbar::-webkit-progress-bar {
+  background: rgba(15, 23, 42, 0.08);
   border-radius: inherit;
+}
+
+.content-detail-season-progressbar::-webkit-progress-value {
   background: linear-gradient(90deg, #34d399 0%, #0f766e 100%);
+  border-radius: inherit;
+}
+
+.content-detail-season-progressbar::-moz-progress-bar {
+  background: linear-gradient(90deg, #34d399 0%, #0f766e 100%);
+  border-radius: inherit;
 }
 
 .content-detail-season-chevron {
@@ -9087,6 +9130,10 @@ body.dark-theme .content-detail-season-progressbar {
   background: rgba(248, 250, 252, 0.1);
 }
 
+body.dark-theme .content-detail-season-progressbar::-webkit-progress-bar {
+  background: rgba(248, 250, 252, 0.1);
+}
+
 body.dark-theme .content-detail-season-chevron {
   color: rgba(249, 250, 251, 0.72);
 }
@@ -9095,7 +9142,10 @@ body.dark-theme .content-detail-season-body {
   border-top-color: #010b16;
 }
 
-.content-detail-season-card.is-complete .content-detail-season-progressbar-fill {
+.content-detail-season-card.is-complete
+  .content-detail-season-progressbar::-webkit-progress-value,
+.content-detail-season-card.is-complete
+  .content-detail-season-progressbar::-moz-progress-bar {
   background: linear-gradient(90deg, #facc15 0%, #f59e0b 100%);
 }
 
@@ -9181,6 +9231,13 @@ body.dark-theme .content-detail-season-progress-done {
   background-position: center;
   background-repeat: no-repeat;
   overflow: hidden;
+}
+
+.content-detail-episode-still-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .content-detail-episode-still.is-fallback {
