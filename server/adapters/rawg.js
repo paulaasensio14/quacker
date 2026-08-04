@@ -1,6 +1,7 @@
 import { ENV } from "../config/env.js";
 
 const RAWG_BASE_URL = "https://api.rawg.io/api";
+const RAWG_REQUEST_TIMEOUT_MS = 5000;
 
 function _getRawgApiKey() {
   const fromEnv =
@@ -27,7 +28,21 @@ async function _rawgGet(path, params = {}) {
     url.searchParams.set(k, String(v));
   });
 
-  const res = await fetch(url.toString());
+  const signal = AbortSignal.timeout(RAWG_REQUEST_TIMEOUT_MS);
+
+  let res;
+
+  try {
+    res = await fetch(url.toString(), { signal });
+  } catch (error) {
+    if (signal.aborted && signal.reason?.name === "TimeoutError") {
+      const timeoutError = new Error("rawg_request_timeout");
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+
+    throw error;
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
