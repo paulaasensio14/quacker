@@ -21,6 +21,7 @@ const ExploreModule = (() => {
 
   let __applyTimer = null;
   let __toolbarBound = false;
+  let __loadReqSeq = 0;
 
   let __drawerOpen = false;
   let __drawerExpanded = false;
@@ -3336,6 +3337,8 @@ const ExploreModule = (() => {
   }
 
   async function load() {
+    const requestSeq = ++__loadReqSeq;
+
     _bindExploreToolbar();
 
     const globalSearch = document.getElementById("globalSearch");
@@ -3356,6 +3359,8 @@ const ExploreModule = (() => {
         searchTerm ? Promise.resolve([]) : ApiClient.getWeeklyFeaturedExploreFeed()
       ]);
 
+      if (requestSeq !== __loadReqSeq) return;
+
       const safeFeed = Array.isArray(rawFeed) ? rawFeed : [];
       const safeFeaturedFeed = Array.isArray(rawFeaturedFeed) ? rawFeaturedFeed : [];
 
@@ -3368,6 +3373,8 @@ const ExploreModule = (() => {
       featuredFeed = normalizedFeatured;
 
     } catch (e) {
+      if (requestSeq !== __loadReqSeq) return;
+
       console.error("ExploreModule.load error", e);
 
       feed = [];
@@ -3376,13 +3383,22 @@ const ExploreModule = (() => {
 
     try {
       const arr = await ApiClient.getExploreDismissed();
+
+      if (requestSeq !== __loadReqSeq) return;
+
       dismissed = new Set((arr || []).map((entry) => _normalizeId(entry)).filter(Boolean));
     } catch (e) {
+      if (requestSeq !== __loadReqSeq) return;
+
       console.error(e);
       dismissed = new Set();
     }
 
+    if (requestSeq !== __loadReqSeq) return;
+
     await _syncInLibraryFlags();
+
+    if (requestSeq !== __loadReqSeq) return;
 
     _syncExploreToolbarUI();
     _applyFilters();

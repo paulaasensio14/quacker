@@ -1,6 +1,7 @@
 const OPEN_LIBRARY_BASE_URL = "https://openlibrary.org";
 const OPEN_LIBRARY_USER_AGENT = "Quacker (hello@quacker.es)";
 const OPEN_LIBRARY_SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+const OPEN_LIBRARY_REQUEST_TIMEOUT_MS = 5000;
 
 const OPEN_LIBRARY_SEARCH_FIELDS = [
   "key",
@@ -221,15 +222,37 @@ async function _openLibraryGet(path, params = {}) {
 
   const maxAttempts = 2;
   const retryableStatuses = new Set([429, 500, 502, 503, 504]);
+  const signal = AbortSignal.timeout(
+    OPEN_LIBRARY_REQUEST_TIMEOUT_MS
+  );
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "User-Agent": OPEN_LIBRARY_USER_AGENT
+    let response;
+
+    try {
+      response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "User-Agent": OPEN_LIBRARY_USER_AGENT
+        },
+        signal
+      });
+    } catch (error) {
+      if (
+        signal.aborted &&
+        signal.reason?.name === "TimeoutError"
+      ) {
+        const timeoutError = new Error(
+          "open_library_request_timeout"
+        );
+
+        timeoutError.status = 504;
+        throw timeoutError;
       }
-    });
+
+      throw error;
+    }
 
     if (response.ok) {
       return response.json();

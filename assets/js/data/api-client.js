@@ -76,6 +76,13 @@ const ApiClient = (() => {
           signal: ctrl.signal
         });
       } catch (e) {
+        if (
+          ctrl.signal.aborted ||
+          e?.name === "AbortError"
+        ) {
+          throw e;
+        }
+
         const err = new Error("network_error");
         err.status = 0;
         err.error = "network_error";
@@ -126,7 +133,10 @@ const ApiClient = (() => {
     
     } catch (err) {
 
-      if (err?.name === "AbortError") {
+      if (
+        ctrl.signal.aborted ||
+        err?.name === "AbortError"
+      ) {
         const timeoutErr = new Error("timeout");
         timeoutErr.status = 0;
         timeoutErr.body = { error: "timeout" };
