@@ -36,6 +36,10 @@ import {
 } from "./lib/content-identity.js";
 
 import {
+  buildExploreFallbackItems
+} from "./lib/explore-fallback.js";
+
+import {
   createUniqueAccountHandle,
   isAccountEmailInUse,
   isAccountHandleInUse,
@@ -2123,12 +2127,18 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
   const openLibraryItems =
   openLibraryResult.status === "fulfilled" && Array.isArray(openLibraryResult.value)
   ? openLibraryResult.value
-  : [];
+  : buildExploreFallbackItems(EXPLORE_FEED, {
+      query: q,
+      type: "book"
+    });
 
   const rawgItems =
   rawgResult.status === "fulfilled" && Array.isArray(rawgResult.value)
   ? rawgResult.value
-  : [];
+  : buildExploreFallbackItems(EXPLORE_FEED, {
+      query: q,
+      type: "game"
+    });
 
   let rankedItems = _rankAndMixExploreItems(q, tmdbItems, openLibraryItems, rawgItems);
 
@@ -2151,13 +2161,50 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
   }
 
   if (type === "game") {
-  const items = await getWeeklyFeaturedRawg(weeklyLimit);
-  return res.json({ items });
+    try {
+      const items = await getWeeklyFeaturedRawg(weeklyLimit);
+      return res.json({ items });
+    } catch (error) {
+      console.error(
+        "[/api/explore] RAWG weekly failed:",
+        error
+      );
+
+      const items = buildExploreFallbackItems(
+        EXPLORE_FEED,
+        {
+          type: "game",
+          limit: weeklyLimit
+        }
+      );
+
+      return res.json({ items });
+    }
   }
 
   if (type === "book") {
-  const items = await getWeeklyFeaturedOpenLibrary(weeklyLimit);
-  return res.json({ items });
+    try {
+      const items = await getWeeklyFeaturedOpenLibrary(
+        weeklyLimit
+      );
+
+      return res.json({ items });
+    } catch (error) {
+      console.error(
+        "[/api/explore] Open Library weekly failed:",
+        error
+      );
+
+      const items = buildExploreFallbackItems(
+        EXPLORE_FEED,
+        {
+          type: "book",
+          limit: weeklyLimit
+        }
+      );
+
+      return res.json({ items });
+    }
   }
 
   const [seriesResult, moviesResult, booksResult, gamesResult] = await Promise.allSettled([
@@ -2167,11 +2214,35 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
   getWeeklyFeaturedRawg(weeklyLimit)
   ]);
 
+  if (booksResult.status === "rejected") {
+    console.error(
+      "[/api/explore] Open Library weekly failed:",
+      booksResult.reason
+    );
+  }
+
+  if (gamesResult.status === "rejected") {
+    console.error(
+      "[/api/explore] RAWG weekly failed:",
+      gamesResult.reason
+    );
+  }
+
   const items = [
   ...(seriesResult.status === "fulfilled" ? seriesResult.value : []),
   ...(moviesResult.status === "fulfilled" ? moviesResult.value : []),
-  ...(booksResult.status === "fulfilled" ? booksResult.value : []),
-  ...(gamesResult.status === "fulfilled" ? gamesResult.value : [])
+  ...(booksResult.status === "fulfilled"
+    ? booksResult.value
+    : buildExploreFallbackItems(EXPLORE_FEED, {
+        type: "book",
+        limit: weeklyLimit
+      })),
+  ...(gamesResult.status === "fulfilled"
+    ? gamesResult.value
+    : buildExploreFallbackItems(EXPLORE_FEED, {
+        type: "game",
+        limit: weeklyLimit
+      }))
   ];
 
   return res.json({ items });
