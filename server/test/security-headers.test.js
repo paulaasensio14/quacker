@@ -108,6 +108,11 @@ test(
 
     assert.match(
       directives.get("img-src"),
+      /https:\/\/upload\.wikimedia\.org/
+    );
+
+    assert.match(
+      directives.get("img-src"),
       /https:\/\/books\.google\.com/
     );
 

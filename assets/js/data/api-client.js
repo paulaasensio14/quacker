@@ -499,6 +499,7 @@ const ApiClient = (() => {
     "tmdb::pelicula",
     "tmdb::serie",
     "rawg::game",
+    "wikipedia_game::game",
     "open_library::book",
     "manual::pelicula",
     "manual::serie",
@@ -592,6 +593,10 @@ const ApiClient = (() => {
     } else if (safeSource === "rawg") {
       safeExternalId = _normalizePositiveIdentityId(
         rawExternalId.replace(/^rawg:/i, "")
+      );
+    } else if (safeSource === "wikipedia_game") {
+      safeExternalId = _normalizePositiveIdentityId(
+        rawExternalId.replace(/^wikipedia_game:/i, "")
       );
     } else if (safeSource === "open_library") {
       safeExternalId = rawExternalId

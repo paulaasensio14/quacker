@@ -9,6 +9,7 @@ const ALLOWED_SOURCE_TYPE_PAIRS = new Set([
   "tmdb::pelicula",
   "tmdb::serie",
   "rawg::game",
+  "wikipedia_game::game",
   "open_library::book",
   "manual::pelicula",
   "manual::serie",
@@ -119,6 +120,22 @@ function normalizeRawgExternalId(value) {
       };
 }
 
+function normalizeWikipediaGameExternalId(value) {
+  const raw = normalizeText(value)
+    .replace(/^wikipedia_game:/i, "");
+
+  const externalId = normalizePositiveIntegerId(raw);
+
+  return externalId
+    ? { externalId, error: "" }
+    : {
+        externalId: "",
+        error: raw
+          ? "invalid_external_id"
+          : "missing_external_id"
+      };
+}
+
 function normalizeOpenLibraryEditionId(value) {
   const raw = normalizeText(value)
     .replace(/^https?:\/\/openlibrary\.org/i, "")
@@ -178,6 +195,10 @@ function normalizeExternalId(source, type, value) {
 
   if (source === "rawg") {
     return normalizeRawgExternalId(value);
+  }
+
+  if (source === "wikipedia_game") {
+    return normalizeWikipediaGameExternalId(value);
   }
 
   if (source === "open_library") {
