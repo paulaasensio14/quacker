@@ -72,6 +72,23 @@ test("normaliza un videojuego de RAWG", () => {
   });
 });
 
+test("normaliza un videojuego de Wikipedia mediante pageid", () => {
+  const identity = normalizeContentIdentity({
+    source: " Wikipedia_Game ",
+    type: "game",
+    externalId: "wikipedia_game:0051310184"
+  });
+
+  assert.deepEqual(identity, {
+    ok: true,
+    error: "",
+    source: "wikipedia_game",
+    type: "game",
+    externalId: "51310184",
+    key: "wikipedia_game::game::51310184"
+  });
+});
+
 test("normaliza una edición de Open Library desde una URL", () => {
   const identity = normalizeContentIdentity({
     source: "openlibrary",
@@ -190,6 +207,24 @@ const invalidCases = [
       externalId: ""
     },
     expectedError: "missing_external_id"
+  },
+  {
+    name: "rechaza un pageid inválido de Wikipedia",
+    input: {
+      source: "wikipedia_game",
+      type: "game",
+      externalId: "little-nightmares"
+    },
+    expectedError: "invalid_external_id"
+  },
+  {
+    name: "rechaza Wikipedia para un tipo que no sea videojuego",
+    input: {
+      source: "wikipedia_game",
+      type: "book",
+      externalId: "51310184"
+    },
+    expectedError: "invalid_source_type"
   },
   {
     name: "rechaza una obra usada como edición de Open Library",

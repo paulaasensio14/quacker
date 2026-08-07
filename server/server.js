@@ -22,6 +22,10 @@ import {
  getRawgDetail,
  getWeeklyFeaturedRawg
 } from "./adapters/rawg.js";
+import {
+  searchWikipediaGames,
+  getWikipediaGameDetail
+} from "./adapters/wikipedia-game.js";
 import nodemailer from "nodemailer";
 import { ENV } from "./config/env.js";
 
@@ -2132,13 +2136,31 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
       type: "book"
     });
 
-  const rawgItems =
-  rawgResult.status === "fulfilled" && Array.isArray(rawgResult.value)
-  ? rawgResult.value
-  : buildExploreFallbackItems(EXPLORE_FEED, {
-      query: q,
-      type: "game"
-    });
+  let rawgItems = [];
+
+  if (
+    rawgResult.status === "fulfilled" &&
+    Array.isArray(rawgResult.value)
+  ) {
+    rawgItems = rawgResult.value;
+  } else {
+    try {
+      rawgItems = await searchWikipediaGames(q);
+    } catch (error) {
+      console.error(
+        "[/api/explore] Wikipedia game fallback failed:",
+        error
+      );
+
+      rawgItems = buildExploreFallbackItems(
+        EXPLORE_FEED,
+        {
+          query: q,
+          type: "game"
+        }
+      );
+    }
+  }
 
   let rankedItems = _rankAndMixExploreItems(q, tmdbItems, openLibraryItems, rawgItems);
 
@@ -2303,6 +2325,16 @@ app.get("/api/explore/item/:source/:type/:externalId", _requireAuth, async (req,
 
     if (source === "rawg") {
       const item = await getRawgDetail(externalId);
+      return res.json(item);
+    }
+
+    if (
+      source === "wikipedia_game" &&
+      type === "game"
+    ) {
+      const item =
+        await getWikipediaGameDetail(externalId);
+
       return res.json(item);
     }
 
