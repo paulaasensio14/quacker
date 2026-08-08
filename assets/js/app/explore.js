@@ -3087,9 +3087,6 @@ const ExploreModule = (() => {
       } else if (_norm(item?.type) === "book" && totalPagesNumber > 0) {
         tertiaryLabel = window.I18n.t("explore_detail_label_pages");
         tertiaryValue = `${totalPagesNumber} ${window.I18n.t("library_pages")}`;
-      } else if (_norm(item?.type) === "game" && yearNumber > 0) {
-        tertiaryLabel = window.I18n.t("explore_detail_label_year");
-        tertiaryValue = String(yearNumber);
       } else if (statusLabel) {
         tertiaryLabel = window.I18n.t("explore_detail_label_status");
         tertiaryValue = statusLabel;
