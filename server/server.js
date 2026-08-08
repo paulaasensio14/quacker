@@ -44,6 +44,10 @@ import {
 } from "./lib/explore-fallback.js";
 
 import {
+  buildExploreDedupKey
+} from "./lib/explore-dedup.js";
+
+import {
   createUniqueAccountHandle,
   isAccountEmailInUse,
   isAccountHandleInUse,
@@ -1791,21 +1795,8 @@ function _rankAndMixExploreItems(
 ) {
   const seen = new Set();
 
-  const normalizeDedupTitle = (value) =>
-    String(value || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\([^)]*\)/g, " ")
-      .replace(/[:\-–—]/g, " ")
-      .replace(/\b(part|episode|season|temporada|episodio)\b\s*\d*/gi, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
   const deduped = [...tmdbItems, ...openLibraryItems, ...rawgItems].filter((item) => {
-    const normalizedTitle = normalizeDedupTitle(item?.title);
-    const year = String(item?.meta?.year || "");
-    const key = `${normalizedTitle}|${year}`;
+    const key = buildExploreDedupKey(item);
 
     if (seen.has(key)) return false;
     seen.add(key);
