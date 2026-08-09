@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  CONTENT_SECURITY_POLICY_REPORT_ONLY,
+  CONTENT_SECURITY_POLICY,
   SECURITY_HEADERS,
   applySecurityHeaders
 } from "../lib/security-headers.js";
@@ -38,10 +38,10 @@ test(
 );
 
 test(
-  "define una política CSP restrictiva en modo report-only",
+  "define una política CSP restrictiva en modo enforcement",
   () => {
     const directives = new Map(
-      CONTENT_SECURITY_POLICY_REPORT_ONLY
+      CONTENT_SECURITY_POLICY
         .split(";")
         .map((entry) => entry.trim())
         .filter(Boolean)
@@ -60,10 +60,15 @@ test(
     );
 
     assert.equal(
+      SECURITY_HEADERS["Content-Security-Policy"],
+      CONTENT_SECURITY_POLICY
+    );
+
+    assert.equal(
       SECURITY_HEADERS[
         "Content-Security-Policy-Report-Only"
       ],
-      CONTENT_SECURITY_POLICY_REPORT_ONLY
+      undefined
     );
 
     assert.equal(

@@ -1,4 +1,4 @@
-export const CONTENT_SECURITY_POLICY_REPORT_ONLY = [
+export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
@@ -31,8 +31,8 @@ export const SECURITY_HEADERS = Object.freeze({
     "payment=()",
     "usb=()"
   ].join(", "),
-  "Content-Security-Policy-Report-Only":
-    CONTENT_SECURITY_POLICY_REPORT_ONLY
+  "Content-Security-Policy":
+    CONTENT_SECURITY_POLICY
 });
 
 export function applySecurityHeaders(
