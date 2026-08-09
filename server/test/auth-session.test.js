@@ -313,3 +313,121 @@ test("propaga un fallo al destruir la sesión", async () => {
       error?.cause?.message === "fallo de destrucción"
   );
 });
+
+test(
+  "acepta una sesión cuando authVersion coincide con el usuario",
+  () => {
+    const users = {
+      user_1: {
+        profile: {
+          id: "user_1"
+        },
+        auth: {
+          authVersion: 3
+        }
+      }
+    };
+
+    assert.equal(
+      getAuthenticatedUserId(
+        {
+          userId: "user_1",
+          authVersion: 3
+        },
+        users
+      ),
+      "user_1"
+    );
+  }
+);
+
+test(
+  "rechaza una sesión con authVersion anterior al usuario",
+  () => {
+    const users = {
+      user_1: {
+        profile: {
+          id: "user_1"
+        },
+        auth: {
+          authVersion: 3
+        }
+      }
+    };
+
+    assert.equal(
+      getAuthenticatedUserId(
+        {
+          userId: "user_1",
+          authVersion: 2
+        },
+        users
+      ),
+      null
+    );
+  }
+);
+
+test(
+  "una sesión legacy sin authVersion equivale a versión 1",
+  () => {
+    const users = {
+      user_1: {
+        profile: {
+          id: "user_1"
+        },
+        auth: {
+          authVersion: 2
+        }
+      }
+    };
+
+    assert.equal(
+      getAuthenticatedUserId(
+        {
+          userId: "user_1"
+        },
+        users
+      ),
+      null
+    );
+  }
+);
+
+test(
+  "guarda authVersion al regenerar una sesión autenticada",
+  async () => {
+    const previousSession = {};
+
+    const req = {
+      session: previousSession
+    };
+
+    previousSession.regenerate = (callback) => {
+      req.session = {
+        save(saveCallback) {
+          saveCallback();
+        }
+      };
+
+      callback();
+    };
+
+    const result =
+      await regenerateAuthenticatedSession(
+        req,
+        "user_1",
+        4
+      );
+
+    assert.equal(result, "user_1");
+    assert.equal(
+      req.session.userId,
+      "user_1"
+    );
+    assert.equal(
+      req.session.authVersion,
+      4
+    );
+  }
+);

@@ -1201,6 +1201,43 @@ const ApiClient = (() => {
     };
   }
 
+  async function requestPasswordReset(email) {
+    if (_isHttp()) {
+      return _httpJson(
+        "POST",
+        "/auth/password-reset/request",
+        {
+          email
+        }
+      );
+    }
+
+    return {
+      ok: true
+    };
+  }
+
+  async function confirmPasswordReset(
+    token,
+    password
+  ) {
+    if (_isHttp()) {
+      return _httpJson(
+        "POST",
+        "/auth/password-reset/confirm",
+        {
+          token,
+          password
+        }
+      );
+    }
+
+    return {
+      ok: true
+    };
+  }
+
+
   async function logout() {
     if (_isHttp()) {
       await _httpJson("POST", "/auth/logout");
@@ -4694,6 +4731,8 @@ const ApiClient = (() => {
   return {
     login,
     register,
+    requestPasswordReset,
+    confirmPasswordReset,
     logout,
     // transport (local/http)
     setTransport,

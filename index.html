@@ -427,7 +427,7 @@
           Access your personal library
         </p>
 
-        <div class="auth-tabs">
+        <div class="auth-tabs" id="authTabs">
           <button class="auth-tab active" data-mode="login" id="tabLogin" data-i18n="tab_login">
             Sign In
           </button>
@@ -462,7 +462,7 @@
             <p class="field-error-auth hidden" id="nameError"></p>
           </div>
 
-          <div class="form-group-auth">
+          <div class="form-group-auth" id="groupEmail">
             <label class="form-label-auth" for="email" data-i18n="auth_email_label">Email</label>
             <div class="input-wrapper-auth">
               <span class="input-icon-auth" aria-hidden="true">
@@ -487,7 +487,7 @@
             <p class="field-error-auth hidden" id="emailError"></p>
           </div>
 
-          <div class="form-group-auth">
+          <div class="form-group-auth" id="groupPassword">
             <label class="form-label-auth" for="password" data-i18n="auth_password_label">Password</label>
             <div class="input-wrapper-auth">
               <span class="input-icon-auth" aria-hidden="true">
@@ -520,8 +520,12 @@
             </div>
             <p class="field-error-auth hidden" id="passwordError"></p>
             <div class="forgot-link-auth" id="forgotWrapper">
-              <a href="#" data-i18n="auth_forgot">Forgot your password?</a>
+              <a href="#" id="forgotPasswordLink" data-i18n="auth_forgot">Forgot your password?</a>
             </div>
+          </div>
+
+          <div class="forgot-link-auth hidden" id="backLoginWrapper">
+            <a href="#" id="backLoginLink" data-i18n="auth_back_login">Back to sign in</a>
           </div>
 
           <button type="submit" class="btn-primary-auth" id="authSubmitBtn">

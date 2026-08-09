@@ -17,6 +17,21 @@ export const AUTH_REGISTER_WINDOW_MS =
 export const AUTH_REGISTER_IP_MAX_ATTEMPTS =
   5;
 
+export const AUTH_PASSWORD_RESET_REQUEST_WINDOW_MS =
+  60 * 60 * 1000;
+
+export const AUTH_PASSWORD_RESET_REQUEST_EMAIL_MAX_ATTEMPTS =
+  3;
+
+export const AUTH_PASSWORD_RESET_REQUEST_IP_MAX_ATTEMPTS =
+  10;
+
+export const AUTH_PASSWORD_RESET_CONFIRM_WINDOW_MS =
+  15 * 60 * 1000;
+
+export const AUTH_PASSWORD_RESET_CONFIRM_IP_MAX_ATTEMPTS =
+  10;
+
 function _normalizeIp(value) {
   return (
     String(value ?? "")
@@ -47,6 +62,10 @@ function _createLoginAccountKey({
 
 function _createIpKey(ip) {
   return _normalizeIp(ip);
+}
+
+function _createEmailKey(email) {
+  return _normalizeEmail(email);
 }
 
 function _combineRateLimitStatuses(
@@ -98,6 +117,36 @@ export function createAuthRateLimiters({
       windowMs: AUTH_REGISTER_WINDOW_MS,
       maxAttempts:
         AUTH_REGISTER_IP_MAX_ATTEMPTS,
+      maxEntries: 2000,
+      now
+    });
+
+  const passwordResetRequestByEmail =
+    createSlidingWindowRateLimiter({
+      windowMs:
+        AUTH_PASSWORD_RESET_REQUEST_WINDOW_MS,
+      maxAttempts:
+        AUTH_PASSWORD_RESET_REQUEST_EMAIL_MAX_ATTEMPTS,
+      maxEntries: 5000,
+      now
+    });
+
+  const passwordResetRequestByIp =
+    createSlidingWindowRateLimiter({
+      windowMs:
+        AUTH_PASSWORD_RESET_REQUEST_WINDOW_MS,
+      maxAttempts:
+        AUTH_PASSWORD_RESET_REQUEST_IP_MAX_ATTEMPTS,
+      maxEntries: 2000,
+      now
+    });
+
+  const passwordResetConfirmByIp =
+    createSlidingWindowRateLimiter({
+      windowMs:
+        AUTH_PASSWORD_RESET_CONFIRM_WINDOW_MS,
+      maxAttempts:
+        AUTH_PASSWORD_RESET_CONFIRM_IP_MAX_ATTEMPTS,
       maxEntries: 2000,
       now
     });
@@ -164,10 +213,57 @@ export function createAuthRateLimiters({
     );
   }
 
+  function checkPasswordResetRequest({
+    ip,
+    email
+  } = {}) {
+    return _combineRateLimitStatuses([
+      passwordResetRequestByEmail.check(
+        _createEmailKey(email)
+      ),
+      passwordResetRequestByIp.check(
+        _createIpKey(ip)
+      )
+    ]);
+  }
+
+  function consumePasswordResetRequest({
+    ip,
+    email
+  } = {}) {
+    return _combineRateLimitStatuses([
+      passwordResetRequestByEmail.consume(
+        _createEmailKey(email)
+      ),
+      passwordResetRequestByIp.consume(
+        _createIpKey(ip)
+      )
+    ]);
+  }
+
+  function checkPasswordResetConfirm({
+    ip
+  } = {}) {
+    return passwordResetConfirmByIp.check(
+      _createIpKey(ip)
+    );
+  }
+
+  function consumePasswordResetConfirm({
+    ip
+  } = {}) {
+    return passwordResetConfirmByIp.consume(
+      _createIpKey(ip)
+    );
+  }
+
   function clear() {
     loginByAccount.clear();
     loginByIp.clear();
     registrationByIp.clear();
+    passwordResetRequestByEmail.clear();
+    passwordResetRequestByIp.clear();
+    passwordResetConfirmByIp.clear();
   }
 
   function size() {
@@ -188,6 +284,10 @@ export function createAuthRateLimiters({
     checkRegistration,
     consumeRegistration,
     clear,
-    size
+    size,
+    checkPasswordResetRequest,
+    consumePasswordResetRequest,
+    checkPasswordResetConfirm,
+    consumePasswordResetConfirm
   });
 }

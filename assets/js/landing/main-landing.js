@@ -87,6 +87,21 @@
         auth_name_placeholder: 'Your name',
         auth_password_placeholder: 'Your password',
         auth_forgot: 'Forgot your password?',
+        auth_title_forgot: 'Reset your password',
+        auth_subtitle_forgot: 'Enter your email and we’ll send you a secure reset link.',
+        auth_btn_forgot: 'Send reset link',
+        auth_loading_forgot: 'Sending link...',
+        auth_forgot_success: 'If an account exists with that email, we’ve sent a reset link.',
+        auth_title_reset: 'Choose a new password',
+        auth_subtitle_reset: 'Enter your new password to regain access to your account.',
+        auth_btn_reset: 'Save new password',
+        auth_loading_reset: 'Updating password...',
+        auth_reset_success: 'Your password has been updated. You can now sign in.',
+        auth_back_login: 'Back to sign in',
+        error_reset_invalid: 'This reset link is invalid or has expired.',
+        error_reset_rate_limit: 'Too many attempts. Please wait and try again.',
+        error_reset_request_failed: 'We couldn’t send the reset link. Please try again.',
+        error_reset_confirm_failed: 'We couldn’t update your password. Please try again.',
         auth_btn_login: 'Sign In',
         auth_btn_register: 'Sign Up',
         auth_legal: 'By signing in you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.',
@@ -188,6 +203,21 @@
         auth_name_placeholder: 'Tu nombre',
         auth_password_placeholder: 'Tu contraseña',
         auth_forgot: '¿Olvidaste tu contraseña?',
+        auth_title_forgot: 'Recupera tu contraseña',
+        auth_subtitle_forgot: 'Introduce tu email y te enviaremos un enlace seguro para restablecerla.',
+        auth_btn_forgot: 'Enviar enlace',
+        auth_loading_forgot: 'Enviando enlace...',
+        auth_forgot_success: 'Si existe una cuenta con ese email, hemos enviado un enlace de recuperación.',
+        auth_title_reset: 'Elige una nueva contraseña',
+        auth_subtitle_reset: 'Introduce tu nueva contraseña para recuperar el acceso a tu cuenta.',
+        auth_btn_reset: 'Guardar nueva contraseña',
+        auth_loading_reset: 'Actualizando contraseña...',
+        auth_reset_success: 'Tu contraseña se ha actualizado. Ya puedes iniciar sesión.',
+        auth_back_login: 'Volver a iniciar sesión',
+        error_reset_invalid: 'Este enlace de recuperación no es válido o ha caducado.',
+        error_reset_rate_limit: 'Has realizado demasiados intentos. Espera un poco y vuelve a intentarlo.',
+        error_reset_request_failed: 'No hemos podido enviar el enlace de recuperación. Vuelve a intentarlo.',
+        error_reset_confirm_failed: 'No hemos podido actualizar tu contraseña. Vuelve a intentarlo.',
         auth_btn_login: 'Iniciar sesión',
         auth_btn_register: 'Registrarse',
         auth_legal: 'Al iniciar sesión aceptas nuestros <a href="#">Términos de servicio</a> y <a href="#">Política de privacidad</a>.',
@@ -238,6 +268,7 @@
         btn.classList.toggle('active', btn.dataset.lang === lang);
       });
       applyTranslations();
+      setMode(mode);
     }
 
     /* ---------- Tema oscuro ---------- */
@@ -499,11 +530,17 @@
 
     const tabLogin = document.getElementById('tabLogin');
     const tabRegister = document.getElementById('tabRegister');
+    const authTabs = document.getElementById('authTabs');
     const titleEl = document.getElementById('authTitle');
     const subtitleEl = document.getElementById('authSubtitle');
     const groupName = document.getElementById('groupName');
+    const groupEmail = document.getElementById('groupEmail');
+    const groupPassword = document.getElementById('groupPassword');
     const submitText = document.getElementById('submitText');
     const forgotWrapper = document.getElementById('forgotWrapper');
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    const backLoginWrapper = document.getElementById('backLoginWrapper');
+    const backLoginLink = document.getElementById('backLoginLink');
     const form = document.getElementById('authForm');
     const passwordInput = document.getElementById('password');
     const togglePassword = document.getElementById('togglePassword');
@@ -515,6 +552,39 @@
     const submitSpinner = document.getElementById('authSubmitSpinner');
 
     let __authSubmitting = false;
+
+    function capturePasswordResetTokenFromHash() {
+      const hash =
+        String(window.location.hash || "");
+
+      if (!hash.startsWith("#reset=")) {
+        return "";
+      }
+
+      const params =
+        new URLSearchParams(
+          hash.slice(1)
+        );
+
+      const token =
+        String(
+          params.get("reset") || ""
+        ).trim();
+
+      const cleanUrl =
+        `${window.location.pathname}${window.location.search}`;
+
+      window.history.replaceState(
+        null,
+        document.title,
+        cleanUrl
+      );
+
+      return token;
+    }
+
+    let passwordResetToken =
+      capturePasswordResetTokenFromHash();
 
     const nameErrorEl = document.getElementById('nameError');
     const emailErrorEl = document.getElementById('emailError');
@@ -594,13 +664,28 @@
       const pass = passwordInput?.value || '';
 
       if (!pass.length) {
-        setFieldError(passwordInput, passwordErrorEl, dict.error_required);
+        const emptyPasswordMessage =
+          mode === 'reset'
+            ? dict.error_password_length
+            : dict.error_required;
+
+        setFieldError(
+          passwordInput,
+          passwordErrorEl,
+          emptyPasswordMessage
+        );
+
         return false;
       }
 
       if (
-        mode === 'register' &&
-        (pass.trim().length === 0 || pass.length < 8 || pass.length > 128)
+        (mode === 'register' ||
+          mode === 'reset') &&
+        (
+          pass.trim().length === 0 ||
+          pass.length < 8 ||
+          pass.length > 128
+        )
       ) {
         setFieldError(passwordInput, passwordErrorEl, dict.error_password_length);
         return false;
@@ -610,21 +695,71 @@
       return true;
     }
 
+    const authFieldTouched = {
+      email: false,
+      password: false,
+      name: false
+    };
+
+    function resetAuthFieldTouched() {
+      authFieldTouched.email = false;
+      authFieldTouched.password = false;
+      authFieldTouched.name = false;
+    }
+
     // Validación al escribir (sin molestar demasiado)
     emailInput?.addEventListener('input', () => {
-      if (emailErrorEl && !emailErrorEl.classList.contains('hidden')) validateEmail();
-    });
-    passwordInput?.addEventListener('input', () => {
-      if (passwordErrorEl && !passwordErrorEl.classList.contains('hidden')) validatePassword();
-    });
-    nameInput?.addEventListener('input', () => {
-      if (nameErrorEl && !nameErrorEl.classList.contains('hidden')) validateName();
+      authFieldTouched.email = true;
+
+      if (
+        emailErrorEl &&
+        !emailErrorEl.classList.contains('hidden')
+      ) {
+        validateEmail();
+      }
     });
 
-    // Validación al salir del campo
-    emailInput?.addEventListener('blur', validateEmail);
-    passwordInput?.addEventListener('blur', validatePassword);
-    nameInput?.addEventListener('blur', validateName);
+    passwordInput?.addEventListener('input', () => {
+      authFieldTouched.password = true;
+
+      if (
+        passwordErrorEl &&
+        !passwordErrorEl.classList.contains('hidden')
+      ) {
+        validatePassword();
+      }
+    });
+
+    nameInput?.addEventListener('input', () => {
+      authFieldTouched.name = true;
+
+      if (
+        nameErrorEl &&
+        !nameErrorEl.classList.contains('hidden')
+      ) {
+        validateName();
+      }
+    });
+
+    // Evita errores provocados por cambios de foco automáticos
+    // antes de que la persona haya interactuado con el campo.
+    emailInput?.addEventListener('blur', () => {
+      if (authFieldTouched.email) {
+        validateEmail();
+      }
+    });
+
+    passwordInput?.addEventListener('blur', () => {
+      if (authFieldTouched.password) {
+        validatePassword();
+      }
+    });
+
+    nameInput?.addEventListener('blur', () => {
+      if (authFieldTouched.name) {
+        validateName();
+      }
+    });
 
 
     let mode = 'login';
@@ -639,10 +774,24 @@
 
       document.body.classList.add('no-scroll');
 
-      // Focus al primer input útil
+      // Focus al primer input útil según el modo
       window.setTimeout(() => {
-        if (emailInput) emailInput.focus();
-        else authDialog?.focus();
+        const focusTarget =
+          mode === 'register'
+            ? nameInput
+            : mode === 'reset'
+              ? passwordInput
+              : emailInput;
+
+        if (
+          focusTarget &&
+          typeof focusTarget.focus ===
+            'function'
+        ) {
+          focusTarget.focus();
+        } else {
+          authDialog?.focus();
+        }
       }, 0);
     }
 
@@ -654,6 +803,11 @@
 
       errorEl.classList.add('hidden');
       errorEl.textContent = '';
+
+      if (mode === 'reset') {
+        passwordResetToken = '';
+      }
+
       form.reset();
       setMode('login');
 
@@ -732,75 +886,273 @@
     document.addEventListener('keydown', trapTabInAuth);
 
     function setMode(newMode) {
-      mode = newMode;
+      const allowedModes = [
+        'login',
+        'register',
+        'forgot',
+        'reset'
+      ];
+
+      mode = allowedModes.includes(newMode)
+        ? newMode
+        : 'login';
+
       const dict = translations[currentLang];
 
+      const isLogin = mode === 'login';
+      const isRegister = mode === 'register';
+      const isForgot = mode === 'forgot';
+      const isReset = mode === 'reset';
+      const isRecovery =
+        isForgot || isReset;
+
+      resetAuthFieldTouched();
+      setPasswordVisibility(false);
+
+      authTabs?.classList.toggle(
+        'hidden',
+        isRecovery
+      );
+
+      groupName?.classList.toggle(
+        'hidden',
+        !isRegister
+      );
+
+      groupEmail?.classList.toggle(
+        'hidden',
+        isReset
+      );
+
+      groupPassword?.classList.toggle(
+        'hidden',
+        isForgot
+      );
+
+      forgotWrapper?.classList.toggle(
+        'hidden',
+        !isLogin
+      );
+
+      backLoginWrapper?.classList.toggle(
+        'hidden',
+        !isRecovery
+      );
+
+      tabLogin?.classList.toggle(
+        'active',
+        isLogin
+      );
+
+      tabRegister?.classList.toggle(
+        'active',
+        isRegister
+      );
+
+      if (nameInput) {
+        nameInput.required = isRegister;
+      }
+
+      if (emailInput) {
+        emailInput.required =
+          !isReset;
+      }
+
       if (passwordInput) {
-        if (mode === 'login') {
-          passwordInput.removeAttribute('minlength');
-          passwordInput.removeAttribute('maxlength');
-          passwordInput.setAttribute('autocomplete', 'current-password');
-        } else {
-          passwordInput.setAttribute('minlength', '8');
-          passwordInput.setAttribute('maxlength', '128');
-          passwordInput.setAttribute('autocomplete', 'new-password');
+        passwordInput.required =
+          !isForgot;
+
+        if (isLogin) {
+          passwordInput.removeAttribute(
+            'minlength'
+          );
+          passwordInput.removeAttribute(
+            'maxlength'
+          );
+          passwordInput.setAttribute(
+            'autocomplete',
+            'current-password'
+          );
+        } else if (
+          isRegister ||
+          isReset
+        ) {
+          passwordInput.setAttribute(
+            'minlength',
+            '8'
+          );
+          passwordInput.setAttribute(
+            'maxlength',
+            '128'
+          );
+          passwordInput.setAttribute(
+            'autocomplete',
+            'new-password'
+          );
         }
       }
 
-      setFieldError(passwordInput, passwordErrorEl, '');
+      setFieldError(
+        nameInput,
+        nameErrorEl,
+        ''
+      );
 
-      if (mode === 'login') {
-        tabLogin.classList.add('active');
-        tabRegister.classList.remove('active');
-        titleEl.innerHTML = dict.auth_title_login;
-        subtitleEl.innerHTML = dict.auth_subtitle_login;
-        groupName.classList.add('hidden');
-        submitText.innerHTML = dict.auth_btn_login;
-        forgotWrapper.classList.remove('hidden');
+      setFieldError(
+        emailInput,
+        emailErrorEl,
+        ''
+      );
+
+      setFieldError(
+        passwordInput,
+        passwordErrorEl,
+        ''
+      );
+
+      if (isLogin) {
+        titleEl.innerHTML =
+          dict.auth_title_login;
+
+        subtitleEl.innerHTML =
+          dict.auth_subtitle_login;
+
+        submitText.innerHTML =
+          dict.auth_btn_login;
+      } else if (isRegister) {
+        titleEl.innerHTML =
+          dict.auth_title_register;
+
+        subtitleEl.innerHTML =
+          dict.auth_subtitle_register;
+
+        submitText.innerHTML =
+          dict.auth_btn_register;
+      } else if (isForgot) {
+        titleEl.innerHTML =
+          dict.auth_title_forgot;
+
+        subtitleEl.innerHTML =
+          dict.auth_subtitle_forgot;
+
+        submitText.innerHTML =
+          dict.auth_btn_forgot;
       } else {
-        tabLogin.classList.remove('active');
-        tabRegister.classList.add('active');
-        titleEl.innerHTML = dict.auth_title_register;
-        subtitleEl.innerHTML = dict.auth_subtitle_register;
-        groupName.classList.remove('hidden');
-        submitText.innerHTML = dict.auth_btn_register;
-        forgotWrapper.classList.add('hidden');
+        titleEl.innerHTML =
+          dict.auth_title_reset;
+
+        subtitleEl.innerHTML =
+          dict.auth_subtitle_reset;
+
+        submitText.innerHTML =
+          dict.auth_btn_reset;
       }
+
       updateSubmitEnabled();
     }
 
     tabLogin.addEventListener('click', () => setMode('login'));
     tabRegister.addEventListener('click', () => setMode('register'));
 
-    togglePassword.addEventListener('click', () => {
-      const isPassword = passwordInput.type === 'password';
-      passwordInput.type = isPassword ? 'text' : 'password';
-      function getEyeSvg(open = true) {
-        if (open) {
-          return `
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-          `;
+    forgotPasswordLink?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+
+        if (errorEl) {
+          errorEl.textContent = '';
+          errorEl.classList.add('hidden');
         }
+
+        setMode('forgot');
+
+        window.setTimeout(() => {
+          emailInput?.focus();
+        }, 0);
+      }
+    );
+
+    backLoginLink?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+
+        if (mode === 'reset') {
+          passwordResetToken = '';
+        }
+
+        form.reset();
+
+        if (errorEl) {
+          errorEl.textContent = '';
+          errorEl.classList.add('hidden');
+        }
+
+        setMode('login');
+
+        window.setTimeout(() => {
+          emailInput?.focus();
+        }, 0);
+      }
+    );
+
+    function getPasswordEyeSvg(open = true) {
+      if (open) {
         return `
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-6.5 0-10-7-10-7a20.2 20.2 0 0 1 5.06-6.94"></path>
-            <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c6.5 0 10 7 10 7a20.2 20.2 0 0 1-3.17 4.23"></path>
-            <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"></path>
-            <path d="M1 1l22 22"></path>
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
           </svg>
         `;
       }
 
-      togglePassword.innerHTML = getEyeSvg(!isPassword);
-      const dict = translations[currentLang];
-      togglePassword.setAttribute("aria-label", isPassword ? dict.auth_show_password : dict.auth_hide_password);
+      return `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-6.5 0-10-7-10-7a20.2 20.2 0 0 1 5.06-6.94"></path>
+          <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c6.5 0 10 7 10 7a20.2 20.2 0 0 1-3.17 4.23"></path>
+          <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"></path>
+          <path d="M1 1l22 22"></path>
+        </svg>
+      `;
+    }
 
-    });
+    function setPasswordVisibility(isVisible) {
+      if (!passwordInput) return;
+
+      passwordInput.type =
+        isVisible
+          ? 'text'
+          : 'password';
+
+      if (togglePassword) {
+        togglePassword.innerHTML =
+          getPasswordEyeSvg(
+            !isVisible
+          );
+
+        const dict =
+          translations[currentLang];
+
+        togglePassword.setAttribute(
+          'aria-label',
+          isVisible
+            ? dict.auth_hide_password
+            : dict.auth_show_password
+        );
+      }
+    }
+
+    togglePassword.addEventListener(
+      'click',
+      () => {
+        setPasswordVisibility(
+          passwordInput.type ===
+            'password'
+        );
+      }
+    );
 
     function setSubmitLoading(isLoading) {
       if (!submitBtn) return;
@@ -816,20 +1168,54 @@
     }
 
     function computeAuthIsValid() {
-      const email = (emailInput?.value || '').trim();
-      const pass = passwordInput?.value || '';
-      const name = (nameInput?.value || '').replace(/\s+/g, ' ').trim();
+      const email =
+        (emailInput?.value || '').trim();
 
-      if (!email || email.length > 254) return false;
-      if (!pass.length) return false;
+      const pass =
+        passwordInput?.value || '';
 
-      const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-      if (!okEmail) return false;
+      const name =
+        (nameInput?.value || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+      const okEmail =
+        email.length > 0 &&
+        email.length <= 254 &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          email
+        );
+
+      const okNewPassword =
+        pass.trim().length > 0 &&
+        pass.length >= 8 &&
+        pass.length <= 128;
+
+      if (mode === 'forgot') {
+        return okEmail;
+      }
+
+      if (mode === 'reset') {
+        return Boolean(
+          passwordResetToken
+        ) && okNewPassword;
+      }
+
+      if (!okEmail || !pass.length) {
+        return false;
+      }
 
       if (mode === 'register') {
-        if (pass.trim().length === 0) return false;
-        if (pass.length < 8 || pass.length > 128) return false;
-        if (name.length < 2 || name.length > 80) return false;
+        if (!okNewPassword) {
+          return false;
+        }
+
+        if (
+          name.length < 2 ||
+          name.length > 80
+        ) {
+          return false;
+        }
       }
 
       return true;
@@ -851,124 +1237,291 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
       if (__authSubmitting) return;
 
-      // Si no es válido, no hacemos submit
       updateSubmitEnabled();
-      if (submitBtn?.disabled) return;
 
-      // Limpiar error general
+      if (submitBtn?.disabled) {
+        return;
+      }
+
       if (errorEl) {
         errorEl.textContent = '';
         errorEl.classList.add('hidden');
       }
 
+      const submitMode = mode;
+
       setSubmitLoading(true);
 
-      // Texto “Cargando…” según idioma + modo
-      const dict = translations[currentLang];
-      const loadingText = mode === 'login'
-        ? dict.auth_loading_login
-        : dict.auth_loading_register;
+      const dict =
+        translations[currentLang];
 
-      const prevText = submitText?.textContent || '';
-      if (submitText) submitText.textContent = loadingText;
+      const loadingTexts = {
+        login:
+          dict.auth_loading_login,
+        register:
+          dict.auth_loading_register,
+        forgot:
+          dict.auth_loading_forgot,
+        reset:
+          dict.auth_loading_reset
+      };
+
+      const loadingText =
+        loadingTexts[submitMode] ||
+        dict.auth_loading_login;
+
+      const prevText =
+        submitText?.textContent || '';
+
+      if (submitText) {
+        submitText.textContent =
+          loadingText;
+      }
 
       try {
-        // Llamada real a ApiClient (local o http según transport)
-        // DEV server (3000): fuerza HTTP + /api antes de login/register
         try {
-          const isNodeServer = String(window.location.port) === "3000";
+          const isNodeServer =
+            String(
+              window.location.port
+            ) === "3000";
+
           if (isNodeServer) {
-            if (window.ApiClient?.setBaseUrl) ApiClient.setBaseUrl("/api");
-            if (window.ApiClient?.setTransport) ApiClient.setTransport("http");
+            if (
+              window.ApiClient?.setBaseUrl
+            ) {
+              ApiClient.setBaseUrl(
+                "/api"
+              );
+            }
+
+            if (
+              window.ApiClient?.setTransport
+            ) {
+              ApiClient.setTransport(
+                "http"
+              );
+            }
           }
         } catch (_) {}
-        const email = emailInput?.value.trim();
-        const password = passwordInput?.value || '';
-        const name = nameInput?.value.trim();
 
-        if (mode === 'login') {
-          await ApiClient.login(email, password);
-        } else {
-          await ApiClient.register(email, password, name, currentLang);
+        const email =
+          emailInput?.value.trim();
+
+        const password =
+          passwordInput?.value || '';
+
+        const name =
+          nameInput?.value.trim();
+
+        if (submitMode === 'forgot') {
+          await ApiClient.requestPasswordReset(
+            email
+          );
+
+          if (subtitleEl) {
+            subtitleEl.textContent =
+              dict.auth_forgot_success;
+          }
+
+          if (emailInput) {
+            emailInput.value = '';
+          }
+
+          setSubmitLoading(false);
+          updateSubmitEnabled();
+
+          if (submitText) {
+            submitText.textContent =
+              dict.auth_btn_forgot;
+          }
+
+          return;
         }
 
-        // Guardamos configuración de conexión (NO datos, NO tokens)
+        if (submitMode === 'reset') {
+          await ApiClient.confirmPasswordReset(
+            passwordResetToken,
+            password
+          );
+
+          passwordResetToken = '';
+
+          form.reset();
+          setMode('login');
+
+          if (subtitleEl) {
+            subtitleEl.textContent =
+              dict.auth_reset_success;
+          }
+
+          setSubmitLoading(false);
+          updateSubmitEnabled();
+
+          return;
+        }
+
+        if (submitMode === 'login') {
+          await ApiClient.login(
+            email,
+            password
+          );
+        } else {
+          await ApiClient.register(
+            email,
+            password,
+            name,
+            currentLang
+          );
+        }
+
         try {
-          sessionStorage.setItem("quacker_transport", ApiClient.getTransportInfo().transport);
-          sessionStorage.setItem("quacker_baseUrl", ApiClient.getTransportInfo().baseUrl);
+          sessionStorage.setItem(
+            "quacker_transport",
+            ApiClient
+              .getTransportInfo()
+              .transport
+          );
+
+          sessionStorage.setItem(
+            "quacker_baseUrl",
+            ApiClient
+              .getTransportInfo()
+              .baseUrl
+          );
         } catch (_) {}
 
-        // CLAVE: confirmar que la cookie de sesión ya está activa ANTES de navegar
         let session = null;
+
         try {
-          session = await ApiClient.getCurrentSession();
+          session =
+            await ApiClient
+              .getCurrentSession();
         } catch (_) {
           session = null;
         }
 
-        if (!session || !session.user) {
-          // No navegamos si la sesión no está viva (evita “flash + expulsión”)
-          const msg = currentLang === 'es'
-            ? "No se pudo validar la sesión. Reintenta. Si sigue pasando, abre Quacker siempre desde el mismo host (127.0.0.1 o localhost)."
-            : "Couldn’t validate the session. Try again. If it persists, always open Quacker from the same host (127.0.0.1 or localhost).";
+        if (
+          !session ||
+          !session.user
+        ) {
+          const msg =
+            currentLang === 'es'
+              ? "No se pudo validar la sesión. Reintenta. Si sigue pasando, abre Quacker siempre desde el mismo host (127.0.0.1 o localhost)."
+              : "Couldn’t validate the session. Try again. If it persists, always open Quacker from the same host (127.0.0.1 or localhost).";
 
           if (errorEl) {
             errorEl.textContent = msg;
-            errorEl.classList.remove('hidden');
+            errorEl.classList.remove(
+              'hidden'
+            );
           }
 
           if (window.toast) {
             window.toast({
-              title: currentLang === 'es' ? "Sesión no válida" : "Session not valid",
+              title:
+                currentLang === 'es'
+                  ? "Sesión no válida"
+                  : "Session not valid",
               message: msg,
               type: "error",
               duration: 4200
             });
           }
 
-          // Restaurar texto + liberar loading
-          if (submitText) submitText.textContent = prevText;
+          if (submitText) {
+            submitText.textContent =
+              prevText;
+          }
+
           setSubmitLoading(false);
           return;
         }
 
-        // OK: sesión viva => navegamos
-        window.location.assign("dashboard.html");
+        window.location.assign(
+          "dashboard.html"
+        );
       } catch (err) {
-        console.error(err);
+        if (
+          submitMode === 'login' ||
+          submitMode === 'register'
+        ) {
+          console.error(err);
+        }
 
-        const isRegister = mode === 'register';
-        const errorCode = String(err?.error || err?.message || "").trim();
+        const errorCode =
+          String(
+            err?.error ||
+            err?.message ||
+            ""
+          ).trim();
 
-        let msg = currentLang === 'es'
-          ? "No se pudo iniciar sesión. Revisa email/contraseña y vuelve a intentarlo."
-          : "Couldn’t sign in. Check your email/password and try again.";
+        let msg =
+          currentLang === 'es'
+            ? "No se pudo iniciar sesión. Revisa email/contraseña y vuelve a intentarlo."
+            : "Couldn’t sign in. Check your email/password and try again.";
 
-        if (isRegister) {
+        if (submitMode === 'register') {
           const registerMessages = {
-            email_in_use: translations[currentLang].error_email_in_use,
-            email_exists: translations[currentLang].error_email_in_use,
-            invalid_name: translations[currentLang].error_name,
-            invalid_email: translations[currentLang].error_email_invalid,
-            invalid_password: translations[currentLang].error_password_length,
-            missing_fields: translations[currentLang].error_required
+            email_in_use:
+              dict.error_email_in_use,
+            email_exists:
+              dict.error_email_in_use,
+            invalid_name:
+              dict.error_name,
+            invalid_email:
+              dict.error_email_invalid,
+            invalid_password:
+              dict.error_password_length,
+            missing_fields:
+              dict.error_required
           };
 
-          msg = registerMessages[errorCode] || (
-            currentLang === 'es'
-              ? "No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo."
-              : "Couldn’t create the account. Check your details and try again."
-          );
+          msg =
+            registerMessages[
+              errorCode
+            ] || (
+              currentLang === 'es'
+                ? "No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo."
+                : "Couldn’t create the account. Check your details and try again."
+            );
+        } else if (submitMode === 'forgot') {
+          msg =
+            errorCode ===
+            "password_reset_request_rate_limited"
+              ? dict.error_reset_rate_limit
+              : dict.error_reset_request_failed;
+        } else if (submitMode === 'reset') {
+          const resetMessages = {
+            invalid_or_expired_reset_token:
+              dict.error_reset_invalid,
+            password_reset_confirm_rate_limited:
+              dict.error_reset_rate_limit,
+            invalid_password:
+              dict.error_password_length
+          };
+
+          msg =
+            resetMessages[
+              errorCode
+            ] ||
+            dict.error_reset_confirm_failed;
         }
 
         if (errorEl) {
           errorEl.textContent = msg;
-          errorEl.classList.remove('hidden');
+          errorEl.classList.remove(
+            'hidden'
+          );
         }
 
-        if (submitText) submitText.textContent = prevText;
+        if (submitText) {
+          submitText.textContent =
+            prevText;
+        }
+
         setSubmitLoading(false);
       }
     });
@@ -985,3 +1538,7 @@
 
     const savedTheme = localStorage.getItem('quacker_theme') || 'light';
     applyTheme(savedTheme);
+
+    if (passwordResetToken) {
+      openAuth('reset');
+    }
