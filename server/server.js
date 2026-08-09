@@ -53,7 +53,8 @@ import {
   isAccountHandleInUse,
   validateAccountEmail,
   validateAccountName,
-  validateRegistrationAccount
+  validateRegistrationAccount,
+  validateRegistrationPassword
 } from "./lib/account-validation.js";
 
 import {
@@ -68,6 +69,15 @@ import {
 import {
   createAuthRateLimiters
 } from "./lib/auth-rate-limit.js";
+
+import {
+  PASSWORD_RESET_TOKEN_TTL_MS,
+  applyPasswordCredentialReset,
+  createPasswordResetToken,
+  createPasswordResetUrl,
+  findPasswordResetUserId,
+  storePasswordResetChallenge
+} from "./lib/password-recovery.js";
 
 import {
   blockSensitiveStaticPaths
@@ -713,6 +723,106 @@ async function _sendWelcomeEmail({ name, email, language }) {
   });
 }
 
+async function _sendPasswordResetEmail({
+  name,
+  email,
+  language,
+  token
+}) {
+  const transporter = _getMailTransporter();
+  const isEnglish = language === "en";
+
+  const safeName =
+    _normalizeContactName(name);
+
+  const resetUrl =
+    createPasswordResetUrl(token);
+
+  const safeHtmlResetUrl =
+    _escapeContactHtml(resetUrl);
+
+  const expiryMinutes =
+    Math.max(
+      1,
+      Math.round(
+        PASSWORD_RESET_TOKEN_TTL_MS /
+          (60 * 1000)
+      )
+    );
+
+  const copy = isEnglish
+    ? {
+        subject:
+          "Reset your Quacker password",
+        greeting: safeName
+          ? `Hi ${safeName},`
+          : "Hi,",
+        intro:
+          "We received a request to reset your Quacker password.",
+        action:
+          "Use this link to choose a new password:",
+        expiry:
+          `This link expires in ${expiryMinutes} minutes and can only be used once.`,
+        ignore:
+          "If you did not request a password reset, you can ignore this email."
+      }
+    : {
+        subject:
+          "Restablece tu contraseña de Quacker",
+        greeting: safeName
+          ? `Hola ${safeName},`
+          : "Hola,",
+        intro:
+          "Hemos recibido una solicitud para restablecer tu contraseña de Quacker.",
+        action:
+          "Utiliza este enlace para elegir una nueva contraseña:",
+        expiry:
+          `Este enlace caduca en ${expiryMinutes} minutos y solo puede utilizarse una vez.`,
+        ignore:
+          "Si no has solicitado un cambio de contraseña, puedes ignorar este correo."
+      };
+
+  const text = [
+    copy.greeting,
+    "",
+    copy.intro,
+    "",
+    copy.action,
+    resetUrl,
+    "",
+    copy.expiry,
+    "",
+    copy.ignore
+  ].join("\n");
+
+  const html = `
+    <p>${_escapeContactHtml(copy.greeting)}</p>
+    <p>${_escapeContactHtml(copy.intro)}</p>
+    <p>${_escapeContactHtml(copy.action)}</p>
+    <p>
+      <a href="${safeHtmlResetUrl}">
+        ${safeHtmlResetUrl}
+      </a>
+    </p>
+    <p>${_escapeContactHtml(copy.expiry)}</p>
+    <p>${_escapeContactHtml(copy.ignore)}</p>
+  `;
+
+  await transporter.sendMail({
+    from: {
+      name: "Quacker",
+      address: ENV.SMTP_USER
+    },
+    to: email,
+    replyTo:
+      ENV.CONTACT_TO ||
+      ENV.SMTP_USER,
+    subject: copy.subject,
+    text,
+    html
+  });
+}
+
 function _normalizeCanonicalIdentity(source, type, externalId) {
   const identity = normalizeContentIdentity({
     source,
@@ -1292,7 +1402,8 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     },
     auth: {
       passwordSalt: salt,
-      passwordHash: hash
+      passwordHash: hash,
+      authVersion: 1
     },
     library: [],
     lists: [],
@@ -1311,7 +1422,8 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
   try {
     await regenerateAuthenticatedSession(
       req,
-      userId
+      userId,
+      db.users[userId].auth.authVersion
     );
   } catch (error) {
     console.error(
@@ -1375,6 +1487,197 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
   });
 }));
 
+app.post(
+  "/api/auth/password-reset/request",
+  _asyncHandler(async (req, res) => {
+    const emailValidation =
+      validateAccountEmail(
+        req.body?.email
+      );
+
+    if (!emailValidation.ok) {
+      return res.status(400).json({
+        error: emailValidation.error
+      });
+    }
+
+    const normalizedEmail =
+      emailValidation.value;
+
+    const resetRateLimit =
+      authRateLimits.consumePasswordResetRequest({
+        ip: req.ip,
+        email: normalizedEmail
+      });
+
+    if (!resetRateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "password_reset_request_rate_limited",
+        resetRateLimit.retryAfterSeconds
+      );
+    }
+
+    const genericResponse = {
+      ok: true
+    };
+
+    const db = _readDb();
+
+    const found =
+      Object.entries(db.users).find(
+        ([, userBucket]) =>
+          String(
+            userBucket?.profile?.email || ""
+          )
+            .trim()
+            .toLowerCase() ===
+          normalizedEmail
+      );
+
+    if (!found) {
+      return res.json(
+        genericResponse
+      );
+    }
+
+    const [, userBucket] = found;
+
+    const recovery =
+      createPasswordResetToken();
+
+    try {
+      storePasswordResetChallenge(
+        userBucket,
+        recovery
+      );
+
+      _writeDb(db);
+    } catch (error) {
+      console.error(
+        "[Auth] password reset persistence failed",
+        {
+          code: error?.code || ""
+        }
+      );
+
+      return res.json(
+        genericResponse
+      );
+    }
+
+    void _sendPasswordResetEmail({
+      name:
+        userBucket?.profile?.name || "",
+      email: normalizedEmail,
+      language:
+        userBucket?.profile?.language ===
+        "en"
+          ? "en"
+          : "es",
+      token: recovery.token
+    }).catch((error) => {
+      console.error(
+        "[Auth] password reset email delivery failed",
+        {
+          code: error?.code || "",
+          command: error?.command || "",
+          responseCode:
+            error?.responseCode || null,
+          missingConfig:
+            error?.missingConfig || []
+        }
+      );
+    });
+
+    return res.json(
+      genericResponse
+    );
+  })
+);
+
+app.post(
+  "/api/auth/password-reset/confirm",
+  _asyncHandler(async (req, res) => {
+    const resetRateLimit =
+      authRateLimits.consumePasswordResetConfirm({
+        ip: req.ip
+      });
+
+    if (!resetRateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "password_reset_confirm_rate_limited",
+        resetRateLimit.retryAfterSeconds
+      );
+    }
+
+    const token =
+      String(req.body?.token || "").trim();
+
+    const passwordValidation =
+      validateRegistrationPassword(
+        req.body?.password
+      );
+
+    if (!passwordValidation.ok) {
+      return res.status(400).json({
+        error: passwordValidation.error
+      });
+    }
+
+    const db = _readDb();
+
+    const userId =
+      findPasswordResetUserId(
+        db.users,
+        token
+      );
+
+    if (!userId) {
+      return res.status(400).json({
+        error:
+          "invalid_or_expired_reset_token"
+      });
+    }
+
+    const userBucket =
+      db.users[userId];
+
+    const { salt, hash } =
+      _hashPassword(
+        passwordValidation.value
+      );
+
+    try {
+      applyPasswordCredentialReset(
+        userBucket,
+        {
+          passwordSalt: salt,
+          passwordHash: hash
+        }
+      );
+
+      _writeDb(db);
+    } catch (error) {
+      console.error(
+        "[Auth] password reset confirmation failed",
+        {
+          code: error?.code || ""
+        }
+      );
+
+      return res.status(500).json({
+        error: "password_reset_save_failed"
+      });
+    }
+
+    return res.json({
+      ok: true
+    });
+  })
+);
+
 app.post("/api/auth/login", _asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   const normalizedEmail = String(email || "").trim().toLowerCase();
@@ -1432,7 +1735,8 @@ app.post("/api/auth/login", _asyncHandler(async (req, res) => {
   try {
     await regenerateAuthenticatedSession(
       req,
-      userId
+      userId,
+      userBucket?.auth?.authVersion ?? 1
     );
   } catch (error) {
     console.error(

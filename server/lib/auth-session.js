@@ -11,6 +11,27 @@ function _createSessionError(message, code, cause = null) {
   return error;
 }
 
+function _normalizeAuthVersion(value) {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return 1;
+  }
+
+  const normalizedValue = Number(value);
+
+  if (
+    !Number.isInteger(normalizedValue) ||
+    normalizedValue < 1
+  ) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
 export function createSessionCookieOptions({
   isProduction = false,
   ttlSeconds = 24 * 60 * 60
@@ -81,20 +102,52 @@ export function getAuthenticatedUserId(
     return null;
   }
 
+  const sessionAuthVersion =
+    _normalizeAuthVersion(
+      sessionValue?.authVersion
+    );
+
+  const userAuthVersion =
+    _normalizeAuthVersion(
+      userBucket?.auth?.authVersion
+    );
+
+  if (
+    sessionAuthVersion === null ||
+    userAuthVersion === null ||
+    sessionAuthVersion !== userAuthVersion
+  ) {
+    return null;
+  }
+
   return userId;
 }
 
 export function regenerateAuthenticatedSession(
   req,
-  userId
+  userId,
+  authVersion = 1
 ) {
-  const normalizedUserId = String(userId || "").trim();
+  const normalizedUserId =
+    String(userId || "").trim();
 
   if (!normalizedUserId) {
     return Promise.reject(
       _createSessionError(
         "No se puede iniciar una sesión sin usuario.",
         "INVALID_SESSION_USER"
+      )
+    );
+  }
+
+  const normalizedAuthVersion =
+    _normalizeAuthVersion(authVersion);
+
+  if (normalizedAuthVersion === null) {
+    return Promise.reject(
+      _createSessionError(
+        "La versión de autenticación de la sesión no es válida.",
+        "INVALID_SESSION_AUTH_VERSION"
       )
     );
   }
@@ -114,50 +167,59 @@ export function regenerateAuthenticatedSession(
   }
 
   return new Promise((resolve, reject) => {
-    currentSession.regenerate((regenerateError) => {
-      if (regenerateError) {
-        reject(
-          _createSessionError(
-            "No se pudo regenerar la sesión.",
-            "SESSION_REGENERATE_FAILED",
-            regenerateError
-          )
-        );
-        return;
-      }
-
-      const nextSession = req?.session;
-
-      if (
-        !nextSession ||
-        typeof nextSession.save !== "function"
-      ) {
-        reject(
-          _createSessionError(
-            "La nueva sesión no se puede guardar.",
-            "SESSION_SAVE_UNAVAILABLE"
-          )
-        );
-        return;
-      }
-
-      nextSession.userId = normalizedUserId;
-
-      nextSession.save((saveError) => {
-        if (saveError) {
+    currentSession.regenerate(
+      (regenerateError) => {
+        if (regenerateError) {
           reject(
             _createSessionError(
-              "No se pudo guardar la sesión.",
-              "SESSION_SAVE_FAILED",
-              saveError
+              "No se pudo regenerar la sesión.",
+              "SESSION_REGENERATE_FAILED",
+              regenerateError
             )
           );
+
           return;
         }
 
-        resolve(normalizedUserId);
-      });
-    });
+        const nextSession = req?.session;
+
+        if (
+          !nextSession ||
+          typeof nextSession.save !== "function"
+        ) {
+          reject(
+            _createSessionError(
+              "La nueva sesión no se puede guardar.",
+              "SESSION_SAVE_UNAVAILABLE"
+            )
+          );
+
+          return;
+        }
+
+        nextSession.userId =
+          normalizedUserId;
+
+        nextSession.authVersion =
+          normalizedAuthVersion;
+
+        nextSession.save((saveError) => {
+          if (saveError) {
+            reject(
+              _createSessionError(
+                "No se pudo guardar la sesión.",
+                "SESSION_SAVE_FAILED",
+                saveError
+              )
+            );
+
+            return;
+          }
+
+          resolve(normalizedUserId);
+        });
+      }
+    );
   });
 }
 
