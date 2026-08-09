@@ -6,7 +6,7 @@ export const CONTENT_SECURITY_POLICY_REPORT_ONLY = [
   "form-action 'self'",
   "script-src 'self' 'report-sample'",
   "script-src-attr 'none'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com 'report-sample'",
+  "style-src 'self' https://fonts.googleapis.com 'report-sample'",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: https://image.tmdb.org https://media.rawg.io https://covers.openlibrary.org https://upload.wikimedia.org https://books.google.com https://archive.org https://*.us.archive.org",
   "connect-src 'self'",

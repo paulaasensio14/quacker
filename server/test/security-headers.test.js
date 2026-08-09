@@ -76,7 +76,7 @@ test(
       "'none'"
     );
 
-    assert.match(
+    assert.doesNotMatch(
       directives.get("style-src"),
       /'unsafe-inline'/
     );
