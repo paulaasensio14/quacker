@@ -754,33 +754,76 @@ async function _sendPasswordResetEmail({
     ? {
         subject:
           "Reset your Quacker password",
+        preheader:
+          `Your password reset link expires in ${expiryMinutes} minutes.`,
+        kicker:
+          "PASSWORD RECOVERY",
+        title:
+          "Reset your password",
         greeting: safeName
           ? `Hi ${safeName},`
           : "Hi,",
         intro:
           "We received a request to reset your Quacker password.",
         action:
-          "Use this link to choose a new password:",
+          "Choose a new password using the secure button below.",
+        button:
+          "Reset password",
+        securityTitle:
+          "A quick security note",
         expiry:
           `This link expires in ${expiryMinutes} minutes and can only be used once.`,
+        fallback:
+          "If the button does not work, copy and paste this link into your browser:",
         ignore:
-          "If you did not request a password reset, you can ignore this email."
+          "If you did not request a password reset, you can safely ignore this email. Your password will stay unchanged.",
+        support:
+          "Need help? Reply to this email or write to hello@quacker.es.",
+        signoff:
+          "See you back in the nest,",
+        team:
+          "The Quacker team",
+        footer:
+          "One place for everything you watch, read and play."
       }
     : {
         subject:
           "Restablece tu contraseña de Quacker",
+        preheader:
+          `Tu enlace para restablecer la contraseña caduca en ${expiryMinutes} minutos.`,
+        kicker:
+          "RECUPERACIÓN DE CONTRASEÑA",
+        title:
+          "Recupera tu contraseña",
         greeting: safeName
           ? `Hola ${safeName},`
           : "Hola,",
         intro:
           "Hemos recibido una solicitud para restablecer tu contraseña de Quacker.",
         action:
-          "Utiliza este enlace para elegir una nueva contraseña:",
+          "Elige una nueva contraseña utilizando el botón seguro que encontrarás a continuación.",
+        button:
+          "Restablecer contraseña",
+        securityTitle:
+          "Un apunte de seguridad",
         expiry:
           `Este enlace caduca en ${expiryMinutes} minutos y solo puede utilizarse una vez.`,
+        fallback:
+          "Si el botón no funciona, copia y pega este enlace en tu navegador:",
         ignore:
-          "Si no has solicitado un cambio de contraseña, puedes ignorar este correo."
+          "Si no has solicitado un cambio de contraseña, puedes ignorar este correo con tranquilidad. Tu contraseña seguirá siendo la misma.",
+        support:
+          "¿Necesitas ayuda? Responde a este correo o escríbenos a hello@quacker.es.",
+        signoff:
+          "Nos vemos de nuevo en el nido,",
+        team:
+          "El equipo de Quacker",
+        footer:
+          "Un solo sitio para todo lo que ves, lees y juegas."
       };
+
+  const safeHtmlSubject =
+    _escapeContactHtml(copy.subject);
 
   const text = [
     copy.greeting,
@@ -792,20 +835,231 @@ async function _sendPasswordResetEmail({
     "",
     copy.expiry,
     "",
-    copy.ignore
+    copy.ignore,
+    "",
+    copy.support,
+    "",
+    copy.signoff,
+    copy.team
   ].join("\n");
 
   const html = `
-    <p>${_escapeContactHtml(copy.greeting)}</p>
-    <p>${_escapeContactHtml(copy.intro)}</p>
-    <p>${_escapeContactHtml(copy.action)}</p>
-    <p>
-      <a href="${safeHtmlResetUrl}">
-        ${safeHtmlResetUrl}
-      </a>
-    </p>
-    <p>${_escapeContactHtml(copy.expiry)}</p>
-    <p>${_escapeContactHtml(copy.ignore)}</p>
+    <!doctype html>
+    <html lang="${isEnglish ? "en" : "es"}">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="color-scheme" content="light only">
+        <meta name="supported-color-schemes" content="light only">
+        <title>${safeHtmlSubject}</title>
+      </head>
+
+      <body style="margin:0;padding:0;background:#f3f0e7;font-family:Arial,Helvetica,sans-serif;color:#0d3340;">
+        <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+          ${_escapeContactHtml(copy.preheader)}
+        </div>
+
+        <table
+          role="presentation"
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          border="0"
+          style="width:100%;margin:0;padding:0;background:#f3f0e7;"
+        >
+          <tr>
+            <td align="center" style="padding:32px 14px;">
+              <table
+                role="presentation"
+                width="600"
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                style="width:100%;max-width:600px;background:#ffffff;border:2px solid #0d3340;border-radius:24px;overflow:hidden;"
+              >
+                <tr>
+                  <td style="padding:24px 28px;background:#f2c230;">
+                    <table
+                      role="presentation"
+                      cellpadding="0"
+                      cellspacing="0"
+                      border="0"
+                    >
+                      <tr>
+                        <td
+                          width="56"
+                          height="56"
+                          align="center"
+                          valign="middle"
+                          style="width:56px;height:56px;"
+                        >
+                          <img
+                            src="https://quacker.es/assets/img/logo-quacker.png"
+                            alt="Quacker"
+                            width="52"
+                            height="52"
+                            style="display:block;width:52px;height:52px;border:2px solid #0d3340;border-radius:50%;outline:none;text-decoration:none;"
+                          >
+                        </td>
+
+                        <td
+                          valign="middle"
+                          style="padding-left:14px;color:#0d3340;font-size:30px;font-weight:900;letter-spacing:-1px;"
+                        >
+                          Quacker
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding:34px 36px 18px;">
+                    <p style="margin:0 0 10px;color:#9a7410;font-size:12px;font-weight:800;letter-spacing:1.5px;">
+                      ${_escapeContactHtml(copy.kicker)}
+                    </p>
+
+                    <h1 style="margin:0 0 22px;color:#0d3340;font-size:32px;line-height:1.18;letter-spacing:-0.7px;">
+                      ${_escapeContactHtml(copy.title)}
+                    </h1>
+
+                    <p style="margin:0 0 14px;color:#0d3340;font-size:18px;line-height:1.55;font-weight:700;">
+                      ${_escapeContactHtml(copy.greeting)}
+                    </p>
+
+                    <table
+                      role="presentation"
+                      width="100%"
+                      cellpadding="0"
+                      cellspacing="0"
+                      border="0"
+                      style="width:100%;margin:0 0 22px;background:#fff7d6;border:1px solid #ead47d;border-radius:16px;"
+                    >
+                      <tr>
+                        <td style="padding:20px 22px;">
+                          <p style="margin:0;color:#0d3340;font-size:17px;line-height:1.55;font-weight:700;">
+                            ${_escapeContactHtml(copy.intro)}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin:0 0 8px;color:#405b64;font-size:16px;line-height:1.65;text-align:center;">
+                      ${_escapeContactHtml(copy.action)}
+                    </p>
+
+                    <table
+                      role="presentation"
+                      cellpadding="0"
+                      cellspacing="0"
+                      border="0"
+                      style="margin:24px auto 28px;"
+                    >
+                      <tr>
+                        <td
+                          align="center"
+                          style="border-radius:999px;background:#0d3340;"
+                        >
+                          <a
+                            href="${safeHtmlResetUrl}"
+                            style="display:inline-block;padding:16px 30px;color:#ffffff;font-size:16px;font-weight:800;line-height:1;text-decoration:none;border-radius:999px;"
+                          >
+                            ${_escapeContactHtml(copy.button)} &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <table
+                      role="presentation"
+                      width="100%"
+                      cellpadding="0"
+                      cellspacing="0"
+                      border="0"
+                      style="width:100%;margin:0 0 22px;background:#f8f6ef;border:1px solid #ded9c9;border-radius:14px;"
+                    >
+                      <tr>
+                        <td
+                          width="54"
+                          valign="top"
+                          style="width:54px;padding:18px 0 18px 18px;"
+                        >
+                          <div style="width:34px;height:34px;border-radius:50%;background:#0d3340;color:#f2c230;font-size:18px;font-weight:800;line-height:34px;text-align:center;">
+                            !
+                          </div>
+                        </td>
+
+                        <td style="padding:16px 18px 16px 10px;">
+                          <p style="margin:0 0 4px;color:#0d3340;font-size:16px;line-height:1.4;font-weight:800;">
+                            ${_escapeContactHtml(copy.securityTitle)}
+                          </p>
+
+                          <p style="margin:0;color:#526a72;font-size:14px;line-height:1.55;">
+                            ${_escapeContactHtml(copy.expiry)}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin:0 0 8px;color:#526a72;font-size:13px;line-height:1.55;">
+                      ${_escapeContactHtml(copy.fallback)}
+                    </p>
+
+                    <table
+                      role="presentation"
+                      width="100%"
+                      cellpadding="0"
+                      cellspacing="0"
+                      border="0"
+                      style="width:100%;margin:0 0 24px;background:#ffffff;border:1px solid #ded9c9;border-radius:12px;"
+                    >
+                      <tr>
+                        <td style="padding:13px 15px;">
+                          <a
+                            href="${safeHtmlResetUrl}"
+                            style="color:#0d5b72;font-size:12px;line-height:1.55;text-decoration:underline;word-break:break-all;"
+                          >
+                            ${safeHtmlResetUrl}
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin:0 0 22px;color:#526a72;font-size:14px;line-height:1.65;text-align:center;">
+                      ${_escapeContactHtml(copy.ignore)}
+                    </p>
+
+                    <p style="margin:0 0 24px;color:#526a72;font-size:14px;line-height:1.65;text-align:center;">
+                      ${_escapeContactHtml(copy.support)}
+                    </p>
+
+                    <p style="margin:0;color:#0d3340;font-size:15px;line-height:1.6;">
+                      ${_escapeContactHtml(copy.signoff)}<br>
+                      <strong>${_escapeContactHtml(copy.team)}</strong>
+                    </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td
+                    align="center"
+                    style="padding:20px 28px;background:#0d3340;"
+                  >
+                    <p style="margin:0 0 6px;color:#ffffff;font-size:13px;line-height:1.5;font-weight:700;">
+                      ${_escapeContactHtml(copy.footer)}
+                    </p>
+
+                    <p style="margin:0;color:#a9bbc0;font-size:12px;line-height:1.5;">
+                      quacker.es · hello@quacker.es
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
   `;
 
   await transporter.sendMail({
@@ -822,6 +1076,7 @@ async function _sendPasswordResetEmail({
     html
   });
 }
+
 
 function _normalizeCanonicalIdentity(source, type, externalId) {
   const identity = normalizeContentIdentity({
