@@ -7124,6 +7124,19 @@ body.dark-theme #view-explore .explore-toolbar-right .library-sort .library-sort
   width: min(760px, calc(100vw - 28px));
 }
 
+#activityModal .modal-card {
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+#activityModal .modal-content {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
 .activity-filters {
   display: flex;
   gap: 8px;
