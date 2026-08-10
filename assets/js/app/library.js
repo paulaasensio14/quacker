@@ -802,6 +802,24 @@ const LibraryUI = (() => {
 
   let allItems = [];
   let itemsInAnyList = new Set();
+
+  function buildLibraryDetailItem(item) {
+    if (!item || typeof item !== "object") return null;
+
+    const libraryItemId = _normalizeLibraryItemId(item.id);
+    if (!libraryItemId) return null;
+
+    const eid = window.ItemIdentity?.getExploreEid?.(item) || "";
+    if (!eid) return null;
+
+    return {
+      ...item,
+      eid,
+      __fromLibrary: true,
+      __inLibrary: true,
+      __libraryItemId: libraryItemId
+    };
+  }
   let typeFilter = "all";
   let statusFilter = "all";
 
@@ -2011,6 +2029,40 @@ const LibraryUI = (() => {
   }
 
   function bind() {
+    // Abrir Detail desde una tarjeta de Mi Biblioteca.
+    // Los controles internos conservan sus propias acciones.
+    document.addEventListener("click", (e) => {
+      const card = e.target.closest(".lib-card[data-id]");
+      if (!card) return;
+
+      const isLibraryActive =
+        document.querySelector("#view-library")?.classList.contains("is-active");
+      if (!isLibraryActive) return;
+
+      const interactiveTarget = e.target.closest(
+        "button, a, input, select, textarea, [data-action]"
+      );
+      if (interactiveTarget) return;
+
+      const itemId = _normalizeLibraryItemId(card.dataset.id);
+      if (!itemId) return;
+
+      const item = allItems.find(
+        (entry) => _normalizeLibraryItemId(entry?.id) === itemId
+      );
+      if (!item) return;
+
+      const detailItem = buildLibraryDetailItem(item);
+      if (!detailItem) return;
+
+      e.preventDefault();
+
+      window.DetailModule?.open?.(detailItem, {
+        originView: "library",
+        triggerEl: card
+      });
+    });
+
     // Bind modales (una sola fuente de verdad: UIModal)
     window.UIModal?.bind("progressModal", {
       closeSelectors: ["#closeProgressModal", "#cancelProgressBtn"],
