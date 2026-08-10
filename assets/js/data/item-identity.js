@@ -9,6 +9,7 @@ const ALLOWED_IDENTITY_PAIRS = new Set([
   "tmdb::pelicula",
   "tmdb::serie",
   "rawg::game",
+  "wikipedia_game::game",
   "open_library::book",
   "manual::pelicula",
   "manual::serie",
@@ -108,6 +109,17 @@ function normalizeContentIdentity(item = {}) {
     externalId = normalizePositiveIdentityId(
       rawExternalId.replace(/^rawg:/i, "")
     );
+  } else if (source === "wikipedia_game") {
+    const rawWikipediaId = rawExternalId.replace(/^wikipedia_game:/i, "");
+    externalId = normalizePositiveIdentityId(rawWikipediaId);
+
+    if (!externalId) {
+      return invalid(
+        rawWikipediaId
+          ? "invalid_external_id"
+          : "missing_external_id"
+      );
+    }
   } else if (source === "open_library") {
     externalId = rawExternalId
       .replace(/^https?:\/\/openlibrary\.org/i, "")
@@ -219,10 +231,41 @@ function resolveLibraryItemIdFromCache(item, libraryCache = []) {
   return "";
 }
 
+function getExploreEid(item) {
+  const identity = normalizeContentIdentity(item);
+  if (!identity.ok) return "";
+
+  const { source, type, externalId } = identity;
+
+  if (source === "tmdb") {
+    if (type === "pelicula") return `tmdb:movie:${externalId}`;
+    if (type === "serie") return `tmdb:series:${externalId}`;
+  }
+
+  if (source === "rawg" && type === "game") {
+    return `rawg:game:${externalId}`;
+  }
+
+  if (source === "wikipedia_game" && type === "game") {
+    return `wikipedia_game:game:${externalId}`;
+  }
+
+  if (source === "open_library" && type === "book") {
+    return `open_library:book:${externalId}`;
+  }
+
+  if (source === "manual") {
+    return `manual:${type}:${externalId}`;
+  }
+
+  return "";
+}
+
 window.ItemIdentity = {
   normalizeContentIdentity,
   getLibraryItemId,
   getCanonicalContentKey,
+  getExploreEid,
   getNormalizedContentKey,
   sameContentIdentity,
   resolveLibraryItemIdFromCache
