@@ -36,6 +36,19 @@ const DetailModule = (() => {
     if (typeof bridge.hydrate === "function") __bridge.hydrate = bridge.hydrate;
   }
 
+  function syncDetailBackLabel(originView = __detailOriginView) {
+    const backBtn = document.getElementById("contentDetailBack");
+    if (!backBtn) return;
+
+    const i18nKey =
+      originView === "library"
+        ? "detail_back_to_library"
+        : "detail_back_to_explore";
+
+    backBtn.dataset.i18n = i18nKey;
+    backBtn.textContent = window.I18n?.t?.(i18nKey) || "";
+  }
+
   function setDetailState({
     item = __detailViewItem,
     loading = __detailViewLoading,
@@ -48,6 +61,7 @@ const DetailModule = (() => {
     __detailViewError = !!error;
     __detailOriginView = originView || "explore";
     __detailViewLastFocusEl = lastFocusEl || null;
+    syncDetailBackLabel(__detailOriginView);
   }
 
   function getDetailState() {
