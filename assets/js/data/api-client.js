@@ -4155,6 +4155,19 @@ const ApiClient = (() => {
       return "";
     }
 
+    function metaForActivity(activity, item) {
+      if (item?.type === "serie") {
+        const season = Math.max(0, Number(activity?.payload?.season || 0) || 0);
+        const episode = Math.max(0, Number(activity?.payload?.episode || 0) || 0);
+
+        if (season > 0 && episode > 0) {
+          return `T${season} · E${episode}`;
+        }
+      }
+
+      return metaForItem(item);
+    }
+
     if (_isHttp()) {
       const [library, activities] = await Promise.all([
         getLibrary(),
@@ -4182,7 +4195,7 @@ const ApiClient = (() => {
               label: typeLabel(act.type),
               targetId: targetId || null,
               itemTitle: item?.title || _t("library_item_fallback_title", null, "Contenido"),
-              itemMeta: metaForItem(item),
+              itemMeta: metaForActivity(act, item),
               timeAgo: _formatTimeAgo(act.createdAt)
             };
           });
@@ -4245,7 +4258,7 @@ const ApiClient = (() => {
           label: typeLabel(act.type),
           targetId: targetId || null,
           itemTitle: item?.title || _t("library_item_fallback_title", null, "Contenido"),
-          itemMeta: metaForItem(item),
+          itemMeta: metaForActivity(act, item),
           timeAgo: _formatTimeAgo(act.createdAt)
         };
       });
