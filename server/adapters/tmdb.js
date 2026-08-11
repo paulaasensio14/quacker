@@ -3,6 +3,7 @@ const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 const TMDB_BACKDROP_BASE = "https://image.tmdb.org/t/p/w1280";
 const TMDB_STILL_BASE = "https://image.tmdb.org/t/p/w780";
 const TMDB_LOGO_BASE = "https://image.tmdb.org/t/p/w154";
+const TMDB_REQUEST_TIMEOUT_MS = 5000;
 
 import { ENV } from "../config/env.js";
 
@@ -51,10 +52,25 @@ async function _tmdbGet(path, params = {}) {
     url.searchParams.set("api_key", key);
   }
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: _tmdbHeaders()
-  });
+  const signal = AbortSignal.timeout(TMDB_REQUEST_TIMEOUT_MS);
+
+  let res;
+
+  try {
+    res = await fetch(url, {
+      method: "GET",
+      headers: _tmdbHeaders(),
+      signal
+    });
+  } catch (error) {
+    if (error?.name === "TimeoutError") {
+      const timeoutError = new Error("tmdb_request_timeout");
+      timeoutError.status = 504;
+      throw timeoutError;
+    }
+
+    throw error;
+  }
 
 if (!res.ok) {
   // Consumimos la respuesta, pero no almacenamos su contenido en logs.
