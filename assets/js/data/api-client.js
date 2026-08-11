@@ -2191,7 +2191,7 @@ const ApiClient = (() => {
     // - hot desde 7 (flame)
     const hot = achieved >= 7;
     const color = hot ? "#f97316" : "#2563eb";
-    const icon = hot ? "flame" : "check";
+    const icon = hot ? "flame" : "streak";
 
     await addNotification({
       title: `Racha de ${achieved} días`,

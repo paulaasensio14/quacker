@@ -43,7 +43,7 @@ const NotificationsUI = (() => {
 
     // Racha: alineamos con el lenguaje Home (warm desde 3, hot desde 7+)
     if (iconKind === "flame") return "hot";
-    if (iconKind === "spark" || iconKind === "streak" || iconKind === "check") return "warm";
+    if (iconKind === "spark" || iconKind === "streak") return "warm";
 
     // Si llega ya como "warm/hot", lo respetamos
     const raw = String(notif?.color || "").trim().toLowerCase();
@@ -78,6 +78,15 @@ const NotificationsUI = (() => {
           stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 12a9 9 0 1 0 3-6.7"></path>
           <path d="M3 3v6h6"></path>
+        </svg>
+      `;
+    }
+
+    if (kind === "check") {
+      return `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12l4 4 10-10"></path>
         </svg>
       `;
     }
@@ -119,7 +128,7 @@ const NotificationsUI = (() => {
 
     // ===== Orden visual (freeze si panel abierto) =====
     const isStreak = (n) =>
-      n?.icon === "flame" || n?.icon === "spark" || n?.icon === "streak" || n?.icon === "check";
+      n?.icon === "flame" || n?.icon === "spark" || n?.icon === "streak";
 
     const sortByRules = (arr) => {
       return [...arr].sort((a, b) => {
@@ -228,7 +237,7 @@ const NotificationsUI = (() => {
       card.dataset.notifId = notifId;
       card.setAttribute("data-notif-id", notifId);
 
-      const isStreakNotif = n.icon === "flame" || n.icon === "spark" || n.icon === "streak" || n.icon === "check";
+      const isStreakNotif = n.icon === "flame" || n.icon === "spark" || n.icon === "streak";
       if (isStreakNotif) card.classList.add("is-streak");
 
       // Micro-animación solo si es "nueva" respecto al render anterior (y no en el primer render)
