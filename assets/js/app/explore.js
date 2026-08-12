@@ -719,12 +719,6 @@ const ExploreModule = (() => {
 
         expandedSection = null;
 
-        if (retryBtn) {
-          retryBtn.addEventListener("click", () => {
-          load();
-        });
-     }
-
         _syncExploreToolbarUI();
 
         _applyFilters();
@@ -749,6 +743,12 @@ const ExploreModule = (() => {
 
       });
 
+    }
+
+    if (retryBtn) {
+      retryBtn.addEventListener("click", () => {
+        load();
+      });
     }
 
     _syncExploreToolbarUI();

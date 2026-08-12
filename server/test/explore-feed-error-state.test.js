@@ -87,5 +87,71 @@ test(
       exploreSource,
       /getElementById\("exploreError"\)/
     );
+
+    const bindStart = exploreSource.indexOf(
+      "function _bindExploreToolbar()"
+    );
+
+    const bindEnd = exploreSource.indexOf(
+      "function _openExploreDrawer",
+      bindStart
+    );
+
+    assert.notEqual(
+      bindStart,
+      -1,
+      "debe existir _bindExploreToolbar"
+    );
+
+    assert.notEqual(
+      bindEnd,
+      -1,
+      "debe poder aislarse _bindExploreToolbar"
+    );
+
+    const bindToolbar = exploreSource.slice(bindStart, bindEnd);
+
+    const pillsListenerStart = bindToolbar.indexOf(
+      'pillsRoot.addEventListener("click"'
+    );
+
+    const sortBlockStart = bindToolbar.indexOf(
+      "if (sortSelect)"
+    );
+
+    const retryBlockStart = bindToolbar.indexOf(
+      "if (retryBtn)"
+    );
+
+    assert.ok(
+      pillsListenerStart >= 0,
+      "debe existir el listener de filtros"
+    );
+
+    assert.ok(
+      sortBlockStart > pillsListenerStart,
+      "el bloque de orden debe ir después del listener de filtros"
+    );
+
+    assert.ok(
+      retryBlockStart > sortBlockStart,
+      "Reintentar debe registrarse fuera del listener de filtros"
+    );
+
+    const pillsListenerBlock = bindToolbar.slice(
+      pillsListenerStart,
+      sortBlockStart
+    );
+
+    assert.doesNotMatch(
+      pillsListenerBlock,
+      /retryBtn/,
+      "Reintentar no debe registrarse dentro del listener de filtros"
+    );
+
+    assert.match(
+      bindToolbar.slice(retryBlockStart),
+      /retryBtn\.addEventListener\("click",\s*\(\)\s*=>\s*\{\s*load\(\);\s*\}\);/s
+    );
   }
 );
