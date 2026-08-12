@@ -22,6 +22,7 @@ const ExploreModule = (() => {
   let __applyTimer = null;
   let __toolbarBound = false;
   let __loadReqSeq = 0;
+  let __loadError = false;
 
   let __drawerOpen = false;
   let __drawerExpanded = false;
@@ -387,11 +388,13 @@ const ExploreModule = (() => {
   function _renderExploreSkeleton() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
+    const error = document.getElementById("exploreError");
     const isActive = document.querySelector("#view-explore")?.classList.contains("is-active");
 
     if (!container || !isActive) return;
 
     if (empty) empty.hidden = true;
+    if (error) error.hidden = true;
     container.hidden = false;
 
     const renderSkeletonCard = () => `
@@ -555,10 +558,24 @@ const ExploreModule = (() => {
   function _render() {
     const container = document.querySelector("[data-explore-container]");
     const empty = document.getElementById("exploreEmpty");
+    const error = document.getElementById("exploreError");
+
     if (!container) return;
 
     const isActive = document.querySelector("#view-explore")?.classList.contains("is-active");
     if (!isActive) return;
+
+    if (__loadError) {
+      container.innerHTML = "";
+      container.hidden = true;
+
+      if (empty) empty.hidden = true;
+      if (error) error.hidden = false;
+
+      return;
+    }
+
+    if (error) error.hidden = true;
 
   // --- Secciones Explore v1.4 (con “Ver más”) ---
   const isNewItem = (it) => !!it.__isNew;
@@ -685,6 +702,7 @@ const ExploreModule = (() => {
 
     const pillsRoot = document.querySelector("[data-explore-type]");
     const sortSelect = document.getElementById("exploreSort");
+    const retryBtn = document.getElementById("exploreErrorRetry");
 
     if (pillsRoot) {
 
@@ -725,6 +743,12 @@ const ExploreModule = (() => {
 
       });
 
+    }
+
+    if (retryBtn) {
+      retryBtn.addEventListener("click", () => {
+        load();
+      });
     }
 
     _syncExploreToolbarUI();
@@ -3348,6 +3372,8 @@ const ExploreModule = (() => {
       expandedSection = null;
     }
 
+    __loadError = false;
+
     _renderExploreSkeleton();
 
     try {
@@ -3373,6 +3399,8 @@ const ExploreModule = (() => {
       if (requestSeq !== __loadReqSeq) return;
 
       console.error("ExploreModule.load error", e);
+
+      __loadError = true;
 
       feed = [];
       featuredFeed = [];

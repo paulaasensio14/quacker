@@ -609,6 +609,39 @@
           </div>
         </div>
 
+        <div class="empty-state" id="exploreError" hidden>
+          <div class="empty-state-card" role="alert" aria-live="polite">
+            <div class="empty-state-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M12 8v5"></path>
+                <path d="M12 16h.01"></path>
+              </svg>
+            </div>
+
+            <div class="empty-state-main">
+              <h3 class="empty-state-title" data-i18n="explore_error_title">
+                No se pudo cargar Explorar
+              </h3>
+              <p class="empty-state-text" data-i18n="explore_error_text">
+                Ha ocurrido un problema al obtener el contenido. Inténtalo de nuevo.
+              </p>
+
+              <div class="empty-state-actions">
+                <button
+                  type="button"
+                  class="btn-primary btn-sm"
+                  id="exploreErrorRetry"
+                  data-i18n="explore_error_cta"
+                >
+                  Reintentar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </section>
 
       <section class="view" id="view-detail" data-view-id="detail">
