@@ -2655,54 +2655,19 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
 
  try {
   if (q) {
-  const [tmdbResult, openLibraryResult, rawgResult] = await Promise.allSettled([
-  searchTmdb(q),
-  searchOpenLibrary(q),
-  searchRawg(q)
-  ]);
+const gameSearchPromise = searchRawg(q, { timeoutMs: 1500 })
+  .catch(async (error) => {
+    console.error("[/api/explore] RAWG search failed:", error);
 
-  if (tmdbResult.status === "rejected") {
-    console.error("[/api/explore] TMDB search failed:", tmdbResult.reason);
-  }
-
-  if (openLibraryResult.status === "rejected") {
-    console.error("[/api/explore] Open Library search failed:", openLibraryResult.reason);
-  }
-
-  if (rawgResult.status === "rejected") {
-    console.error("[/api/explore] RAWG search failed:", rawgResult.reason);
-  }
-
-  const tmdbItems =
-  tmdbResult.status === "fulfilled" && Array.isArray(tmdbResult.value)
-  ? tmdbResult.value
-  : [];
-
-  const openLibraryItems =
-  openLibraryResult.status === "fulfilled" && Array.isArray(openLibraryResult.value)
-  ? openLibraryResult.value
-  : buildExploreFallbackItems(EXPLORE_FEED, {
-      query: q,
-      type: "book"
-    });
-
-  let rawgItems = [];
-
-  if (
-    rawgResult.status === "fulfilled" &&
-    Array.isArray(rawgResult.value)
-  ) {
-    rawgItems = rawgResult.value;
-  } else {
     try {
-      rawgItems = await searchWikipediaGames(q);
-    } catch (error) {
+      return await searchWikipediaGames(q);
+    } catch (fallbackError) {
       console.error(
         "[/api/explore] Wikipedia game fallback failed:",
-        error
+        fallbackError
       );
 
-      rawgItems = buildExploreFallbackItems(
+      return buildExploreFallbackItems(
         EXPLORE_FEED,
         {
           query: q,
@@ -2710,7 +2675,47 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
         }
       );
     }
-  }
+  });
+
+const [tmdbResult, openLibraryResult, rawgResult] = await Promise.allSettled([
+  searchTmdb(q),
+  searchOpenLibrary(q, { timeoutMs: 2000 }),
+  gameSearchPromise
+]);
+
+if (tmdbResult.status === "rejected") {
+  console.error("[/api/explore] TMDB search failed:", tmdbResult.reason);
+}
+
+if (openLibraryResult.status === "rejected") {
+  console.error(
+    "[/api/explore] Open Library search failed:",
+    openLibraryResult.reason
+  );
+}
+
+const tmdbItems =
+  tmdbResult.status === "fulfilled" && Array.isArray(tmdbResult.value)
+    ? tmdbResult.value
+    : [];
+
+const openLibraryItems =
+  openLibraryResult.status === "fulfilled" &&
+  Array.isArray(openLibraryResult.value)
+    ? openLibraryResult.value
+    : buildExploreFallbackItems(EXPLORE_FEED, {
+        query: q,
+        type: "book"
+      });
+
+const rawgItems =
+  rawgResult.status === "fulfilled" &&
+  Array.isArray(rawgResult.value)
+    ? rawgResult.value
+    : buildExploreFallbackItems(EXPLORE_FEED, {
+        query: q,
+        type: "game"
+      });
 
   let rankedItems = _rankAndMixExploreItems(q, tmdbItems, openLibraryItems, rawgItems);
 

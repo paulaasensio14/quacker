@@ -22,6 +22,7 @@ const ExploreModule = (() => {
   let __applyTimer = null;
   let __toolbarBound = false;
   let __loadReqSeq = 0;
+  let __searchAbortController = null;
   let __loadError = false;
 
   let __drawerOpen = false;
@@ -3360,6 +3361,9 @@ const ExploreModule = (() => {
   async function load() {
     const requestSeq = ++__loadReqSeq;
 
+    __searchAbortController?.abort();
+    __searchAbortController = new AbortController();
+
     _bindExploreToolbar();
 
     const globalSearch = document.getElementById("globalSearch");
@@ -3378,7 +3382,10 @@ const ExploreModule = (() => {
 
     try {
       const [rawFeed, rawFeaturedFeed] = await Promise.all([
-        ApiClient.getExploreFeed(searchTerm),
+        ApiClient.getExploreFeed({
+        query: searchTerm,
+        signal: __searchAbortController.signal
+      }),
         searchTerm ? Promise.resolve([]) : ApiClient.getWeeklyFeaturedExploreFeed()
       ]);
 
