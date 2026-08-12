@@ -84,6 +84,10 @@ import {
 } from "./lib/static-path-security.js";
 
 import {
+  createPublicNotFoundHandler
+} from "./lib/public-not-found.js";
+
+import {
   applySecurityHeaders
 } from "./lib/security-headers.js";
 
@@ -102,6 +106,9 @@ const INDEX_HTML_PATH =
 
 const DASHBOARD_HTML_PATH =
   path.join(PROJECT_ROOT, "dashboard.html");
+
+const NOT_FOUND_HTML_PATH =
+  path.join(PROJECT_ROOT, "404.html");
 
 const PUBLIC_ASSETS_ROOT =
   path.join(PROJECT_ROOT, "assets");
@@ -4064,6 +4071,12 @@ app.use(
 
 // Defensa adicional para cualquier ruta interna o oculta no reconocida.
 app.use(blockSensitiveStaticPaths);
+
+app.use(
+  createPublicNotFoundHandler(
+    NOT_FOUND_HTML_PATH
+  )
+);
 
 const PORT = Number.parseInt(
   process.env.PORT || "3000",
