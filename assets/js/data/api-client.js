@@ -59,10 +59,42 @@ const ApiClient = (() => {
     return __cfg.transport === "http";
   }
 
-  async function _httpJson(method, path, body) {
+  async function _httpJson(method, path, body, options = {}) {
     const url = `${__cfg.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
 
     const ctrl = new AbortController();
+
+const candidateSignal = options?.signal;
+
+const externalSignal =
+  candidateSignal &&
+  typeof candidateSignal === "object" &&
+  typeof candidateSignal.addEventListener === "function" &&
+  typeof candidateSignal.removeEventListener === "function" &&
+  typeof candidateSignal.aborted === "boolean"
+    ? candidateSignal
+    : null;
+
+let abortedByExternal = false;
+
+const abortFromExternal = () => {
+  abortedByExternal = true;
+
+  if (!ctrl.signal.aborted) {
+    ctrl.abort();
+  }
+};
+
+if (externalSignal?.aborted) {
+  abortFromExternal();
+} else if (externalSignal) {
+  externalSignal.addEventListener(
+    "abort",
+    abortFromExternal,
+    { once: true }
+  );
+}
+
     const t = setTimeout(() => ctrl.abort(), __cfg.timeoutMs);
 
     try {
@@ -130,8 +162,16 @@ const ApiClient = (() => {
       }
 
       return json;
-    
+
     } catch (err) {
+
+      if (abortedByExternal) {
+        const abortErr = new Error("aborted");
+        abortErr.status = 0;
+        abortErr.body = { error: "aborted" };
+        abortErr.error = "aborted";
+        throw abortErr;
+      }
 
       if (
         ctrl.signal.aborted ||
@@ -154,7 +194,14 @@ const ApiClient = (() => {
 
       throw err;
     } finally {
-      clearTimeout(t);
+      if (externalSignal) {
+        externalSignal.removeEventListener(
+         "abort",
+         abortFromExternal
+       );
+     }
+
+     clearTimeout(t);
     }
   }
 
@@ -1275,7 +1322,13 @@ const ApiClient = (() => {
       if (sort) params.set("sort", sort);
       if (limit) params.set("limit", limit);
       const suffix = params.toString() ? `?${params.toString()}` : "";
-      const res = await _httpJson("GET", `/explore${suffix}`);
+      const res = await _httpJson(
+        "GET",
+        `/explore${suffix}`,
+        null,
+        { signal: opts.signal }
+      );
+
       if (Array.isArray(res)) return res;
       if (Array.isArray(res?.items)) return res.items;
       return [];
@@ -4806,8 +4859,8 @@ const ApiClient = (() => {
     clearNotifications,
     setNotifications,
     addNotification,
-    
-    // acciones 
+
+    // acciones
     completeLibraryItem,
     resumeLibraryItem,
     progressLibraryItem,

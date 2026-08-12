@@ -212,7 +212,7 @@ function _baseSearchItemFromWork(work = {}) {
   };
 }
 
-async function _openLibraryGet(path, params = {}) {
+async function _openLibraryGet(path, params = {}, options = {}) {
   const url = new URL(`${OPEN_LIBRARY_BASE_URL}${path}`);
 
   for (const [key, value] of Object.entries(params)) {
@@ -222,9 +222,14 @@ async function _openLibraryGet(path, params = {}) {
 
   const maxAttempts = 2;
   const retryableStatuses = new Set([429, 500, 502, 503, 504]);
-  const signal = AbortSignal.timeout(
-    OPEN_LIBRARY_REQUEST_TIMEOUT_MS
-  );
+const requestedTimeout = Number(options?.timeoutMs);
+
+const timeoutMs =
+  Number.isFinite(requestedTimeout) && requestedTimeout > 0
+    ? requestedTimeout
+    : OPEN_LIBRARY_REQUEST_TIMEOUT_MS;
+
+const signal = AbortSignal.timeout(timeoutMs);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let response;
@@ -279,7 +284,7 @@ async function _openLibraryGet(path, params = {}) {
   return null;
 }
 
-async function _searchOpenLibrary(params = {}) {
+async function _searchOpenLibrary(params = {}, options = {}) {
   const cacheKey = JSON.stringify(params);
   const cached = searchCache.get(cacheKey);
 
@@ -290,10 +295,14 @@ async function _searchOpenLibrary(params = {}) {
     return cached.data;
   }
 
-  const data = await _openLibraryGet("/search.json", {
+const data = await _openLibraryGet(
+  "/search.json",
+  {
     ...params,
     fields: OPEN_LIBRARY_SEARCH_FIELDS
-  });
+  },
+  options
+);
 
   searchCache.set(cacheKey, {
     createdAt: Date.now(),
@@ -303,7 +312,7 @@ async function _searchOpenLibrary(params = {}) {
   return data;
 }
 
-export async function searchOpenLibrary(query) {
+export async function searchOpenLibrary(query, options = {}) {
   const q = _normalizeText(query);
 
   if (!q) {
@@ -329,11 +338,14 @@ export async function searchOpenLibrary(query) {
   let data;
 
   try {
-    data = await _searchOpenLibrary({
-      q,
-      lang: "es",
-      limit: 40
-    });
+data = await _searchOpenLibrary(
+  {
+    q,
+    lang: "es",
+    limit: 40
+  },
+  options
+);
   } catch (error) {
     const message = String(error?.message || "");
 

@@ -12,7 +12,7 @@ function _getRawgApiKey() {
   return String(fromEnv || "").trim();
 }
 
-async function _rawgGet(path, params = {}) {
+async function _rawgGet(path, params = {}, options = {}) {
   const apiKey = _getRawgApiKey();
 
   if (!apiKey) {
@@ -28,7 +28,14 @@ async function _rawgGet(path, params = {}) {
     url.searchParams.set(k, String(v));
   });
 
-  const signal = AbortSignal.timeout(RAWG_REQUEST_TIMEOUT_MS);
+  const requestedTimeout = Number(options?.timeoutMs);
+
+  const timeoutMs =
+    Number.isFinite(requestedTimeout) && requestedTimeout > 0
+      ? requestedTimeout
+      : RAWG_REQUEST_TIMEOUT_MS;
+
+  const signal = AbortSignal.timeout(timeoutMs);
 
   let res;
 
@@ -91,17 +98,20 @@ function _baseSearchItemFromRawgGame(item) {
   };
 }
 
-export async function searchRawg(query) {
-
+export async function searchRawg(query, options = {}) {
  const q = _safeText(query);
 
  if (!q) return [];
 
- const data = await _rawgGet("/games", {
-  search: q,
-  page: 1,
-  page_size: 20
- });
+ const data = await _rawgGet(
+   "/games",
+   {
+     search: q,
+     page: 1,
+     page_size: 20
+   },
+   options
+ );
 
  const results = Array.isArray(data?.results) ? data.results : [];
  const normalizedQuery = String(q).trim().toLowerCase();
