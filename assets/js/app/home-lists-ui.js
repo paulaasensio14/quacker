@@ -1677,14 +1677,16 @@ async function renderHomeDashboard() {
 async function __renderActivityModal({ preserveScroll = false, soft = false } = {}) {
   const activityList = document.getElementById("activityList");
   const activityEmpty = document.getElementById("activityEmpty");
+  const activityError = document.getElementById("activityError");
   const activityLoading = document.getElementById("activityLoading");
 
-  if (!activityList || !activityEmpty) return;
+  if (!activityList || !activityEmpty || !activityError) return;
 
   if (typeof ApiClient === "undefined" || typeof ApiClient.getRecentActivitiesDetailed !== "function") {
     if (activityLoading) activityLoading.hidden = true;
     activityList.innerHTML = "";
-    activityEmpty.hidden = false;
+    activityEmpty.hidden = true;
+    activityError.hidden = false;
     return;
   }
 
@@ -1697,6 +1699,7 @@ async function __renderActivityModal({ preserveScroll = false, soft = false } = 
     // Estado: loading suave
     if (activityLoading) activityLoading.hidden = false;
     activityEmpty.hidden = true;
+    activityError.hidden = true;
 
     // Soft refresh: NO vaciamos la lista al inicio (evita parpadeo)
     if (soft) {
@@ -1710,12 +1713,14 @@ async function __renderActivityModal({ preserveScroll = false, soft = false } = 
     if (!items || items.length === 0) {
       activityList.innerHTML = "";
       activityEmpty.hidden = false;
+      activityError.hidden = true;
       if (activityLoading) activityLoading.hidden = true;
       activityList.classList.remove("is-loading");
       return;
     }
 
     activityEmpty.hidden = true;
+    activityError.hidden = true;
     if (activityLoading) activityLoading.hidden = true;
 
     activityList.innerHTML = items
@@ -1748,7 +1753,8 @@ async function __renderActivityModal({ preserveScroll = false, soft = false } = 
 
     activityList.classList.remove("is-loading");
     activityList.innerHTML = "";
-    activityEmpty.hidden = false;
+    activityEmpty.hidden = true;
+    activityError.hidden = false;
   }
 }
 
@@ -1933,6 +1939,11 @@ window.HomeUI = {
       // Cierres del modal
       document.getElementById("closeActivityModal")?.addEventListener("click", () => __closeActivityModal());
       document.getElementById("closeActivityModalFooter")?.addEventListener("click", () => __closeActivityModal());
+
+      // Reintentar una carga fallida de actividad
+      document.getElementById("activityErrorRetry")?.addEventListener("click", () => {
+        __renderActivityModal().catch(console.error);
+      });
 
       // Click fuera
       document.getElementById("activityModal")?.addEventListener("click", (e) => {

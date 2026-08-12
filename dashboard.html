@@ -1504,6 +1504,39 @@
         <div class="activity-empty-title" data-i18n="home_activity_empty_title">Sin actividad aún</div>
         <div class="activity-empty-desc" data-i18n="home_activity_empty_text">Haz progreso o completa algo para ver tu historial aquí.</div>
       </div>
+
+      <div
+        class="activity-empty"
+        id="activityError"
+        role="alert"
+        aria-live="polite"
+        hidden
+      >
+        <div
+          class="activity-empty-title"
+          data-i18n="home_activity_error_title"
+        >
+          No se pudo cargar la actividad
+        </div>
+
+        <div
+          class="activity-empty-desc"
+          data-i18n="home_activity_error_text"
+        >
+          Ha ocurrido un problema al cargar tu historial.
+        </div>
+
+        <div class="empty-state-actions">
+          <button
+            type="button"
+            class="btn-primary btn-sm"
+            id="activityErrorRetry"
+            data-i18n="home_activity_error_cta"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="modal-actions">
