@@ -461,6 +461,9 @@
       lists_detail_hint: "Puedes quitar contenido desde aquí",
       lists_detail_showing: "Mostrando {shown} de {total}",
       lists_detail_empty_filtered: "No hay resultados con los filtros actuales.",
+      lists_detail_load_error_title: "No se pudo cargar la lista",
+      lists_detail_load_error_text: "Ha ocurrido un problema al cargar el contenido de esta lista. Inténtalo de nuevo.",
+      lists_detail_load_error_cta: "Reintentar",
       lists_remove: "Quitar",
 
       lists_remove_error_title: "No se pudo quitar",
@@ -1099,6 +1102,9 @@
       lists_detail_hint: "You can remove content from here",
       lists_detail_showing: "Showing {shown} of {total}",
       lists_detail_empty_filtered: "No results for the current filters.",
+      lists_detail_load_error_title: "List could not be loaded",
+      lists_detail_load_error_text: "There was a problem loading this list's content. Please try again.",
+      lists_detail_load_error_cta: "Retry",
       lists_remove: "Remove",
 
       lists_remove_error_title: "Couldn't remove item",

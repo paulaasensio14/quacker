@@ -751,12 +751,15 @@ const ListsModule = (() => {
   async function renderActiveListItems(){
     const grid = _getEl("listDetailItemsGrid");
     const empty = _getEl("listDetailEmpty");
+    const error = _getEl("listDetailError");
     const hint = _getEl("listDetailHint");
-    if (!grid || !empty) return;
+    if (!grid || !empty || !error) return;
 
     const list = allLists.find(l => _normalizeId(l.id) === _normalizeId(activeListId));
     if (!list){
       grid.innerHTML = "";
+      error.hidden = true;
+      error.classList.add("is-initially-hidden");
       empty.classList.remove("is-initially-hidden");
       empty.textContent = t("lists_detail_empty");
       if (hint) hint.textContent = "";
@@ -769,6 +772,8 @@ const ListsModule = (() => {
 
     if (!ids.length){
       grid.innerHTML = "";
+      error.hidden = true;
+      error.classList.add("is-initially-hidden");
       empty.classList.remove("is-initially-hidden");
       empty.textContent = t("lists_detail_empty");
       if (hint) hint.textContent = "";
@@ -776,6 +781,8 @@ const ListsModule = (() => {
     }
 
     empty.classList.add("is-initially-hidden");
+    error.hidden = true;
+    error.classList.add("is-initially-hidden");
     if (hint) hint.textContent = t("lists_detail_hint");
 
     // Cargamos biblioteca para resolver ids -> datos reales
@@ -784,7 +791,16 @@ const ListsModule = (() => {
       library = await ApiClient.getLibrary();
     }catch(e){
       console.error(e);
-      library = [];
+      grid.innerHTML = "";
+      empty.classList.add("is-initially-hidden");
+      error.hidden = false;
+      error.classList.remove("is-initially-hidden");
+      if (hint) hint.textContent = "";
+
+      const showing = _getEl("listDetailShowing");
+      if (showing) showing.textContent = "";
+
+      return;
     }
 
     const byId = new Map((library || []).map((it) => [_normalizeId(it.id), it]));
@@ -1372,6 +1388,10 @@ const ListsModule = (() => {
 
     document.getElementById("btnBackToLists")?.addEventListener("click", () => {
       closeListDetail();
+    });
+
+    document.getElementById("listDetailErrorRetry")?.addEventListener("click", () => {
+      renderActiveListItems().catch(console.error);
     });
 
     // Filtros del detalle (búsqueda / tipo / estado)

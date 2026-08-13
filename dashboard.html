@@ -1168,6 +1168,41 @@
             <p id="listDetailEmpty" class="empty-state is-initially-hidden" data-i18n="lists_detail_empty">
               Esta lista todavía no tiene contenido.
             </p>
+
+            <div
+              id="listDetailError"
+              class="lib-empty-state is-initially-hidden"
+              role="alert"
+              aria-live="polite"
+              hidden
+            >
+              <div class="lib-empty-state-card lib-empty-state-card--error">
+                <div
+                  class="lib-empty-state-title"
+                  data-i18n="lists_detail_load_error_title"
+                >
+                  No se pudo cargar la lista
+                </div>
+
+                <div
+                  class="lib-empty-state-text"
+                  data-i18n="lists_detail_load_error_text"
+                >
+                  Ha ocurrido un problema al cargar el contenido de esta lista.
+                </div>
+
+                <div class="lib-empty-state-actions">
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    id="listDetailErrorRetry"
+                    data-i18n="lists_detail_load_error_cta"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </section>
