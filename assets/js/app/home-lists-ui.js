@@ -146,6 +146,57 @@ function setHomeDashboardLoading(isLoading) {
   if (challengeBar) challengeBar.value = 0;
 }
 
+function setHomeDashboardError(hasError) {
+  const t = window.I18n?.t?.bind(window.I18n) || ((key) => key);
+  const errorState = document.getElementById("homeDashboardError");
+
+  if (errorState) errorState.hidden = !hasError;
+  if (!hasError) return;
+
+  const metricTargets = [
+    "#metricWeeklyTime",
+    "#metricInProgress",
+    "#metricCompletedYear",
+    "#metricStreak"
+  ];
+
+  metricTargets.forEach((selector) => {
+    const el = $(selector);
+    if (el) el.textContent = "–";
+  });
+
+  const lastActivityTitle = $("#lastActivityTitle");
+  const lastActivityMeta = $("#lastActivityMeta");
+  const challengeTitle = $("#challengeTitle");
+  const challengeDescription = $("#challengeDescription");
+
+  if (lastActivityTitle) {
+    lastActivityTitle.textContent = t("home_dashboard_error_title");
+  }
+
+  if (lastActivityMeta) {
+    lastActivityMeta.textContent = t("home_dashboard_error_text");
+  }
+
+  if (challengeTitle) {
+    challengeTitle.textContent = t("home_dashboard_error_title");
+  }
+
+  if (challengeDescription) {
+    challengeDescription.textContent = t("home_dashboard_error_text");
+  }
+
+  const backlogContainer = $("#backlogList");
+  if (backlogContainer) {
+    backlogContainer.innerHTML = `
+      <article class="home-empty-card home-empty-card--compact" aria-live="polite">
+        <h3>${t("home_dashboard_error_title")}</h3>
+        <p>${t("home_dashboard_error_text")}</p>
+      </article>
+    `;
+  }
+}
+
 function _normalizeHomeCoverUrl(value) {
   const url = String(value || "").trim();
   if (!url || /[\u0000-\u001f]/.test(url)) return "";
@@ -161,6 +212,7 @@ function _escapeHomeAttribute(value) {
 }
 
 async function renderHomeDashboard() {
+  setHomeDashboardError(false);
   setHomeDashboardLoading(true);
 
   try {
@@ -756,6 +808,7 @@ async function renderHomeDashboard() {
     }
   } catch (err) {
     console.error("Error al renderizar el dashboard de inicio", err);
+    setHomeDashboardError(true);
   } finally {
     setHomeDashboardLoading(false);
   }
@@ -1836,6 +1889,10 @@ window.HomeUI = {
     document.addEventListener("quacker:lang-change", () => {
       refreshHomeIfActive({ silent: true });
       __refreshActivityModalIfOpen();
+    });
+
+    document.getElementById("homeDashboardRetry")?.addEventListener("click", () => {
+      refreshHomeIfActive().catch(console.error);
     });
 
     // Render inicial defensivo (por si el router aún no disparó el primer view-change)
