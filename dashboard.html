@@ -216,6 +216,12 @@
         </div>
         <div class="notif-list" id="notifList"></div>
 
+        <div id="notifErrorState" class="notif-empty-state" role="alert" aria-live="polite" hidden>
+          <div class="notif-empty-title" data-i18n="notif_load_error_title">No se pudieron cargar las notificaciones</div>
+          <div class="notif-empty-desc" data-i18n="notif_load_error_text">Ha ocurrido un problema al cargar tus notificaciones.</div>
+          <button type="button" class="chip-small" id="notifRetryLoadBtn" data-i18n="notif_load_error_cta">Reintentar</button>
+        </div>
+
         <div id="notifEmptyState" class="notif-empty-state" hidden>
           <div class="notif-empty-icon" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24">

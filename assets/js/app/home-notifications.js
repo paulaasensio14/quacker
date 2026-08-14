@@ -102,7 +102,32 @@ const NotificationsUI = (() => {
   }
 
   async function renderNotifications() {
-    const rawList = await ApiClient.getNotifications();
+    const errorStateEl = document.getElementById("notifErrorState");
+    const emptyStateEl = document.getElementById("notifEmptyState");
+
+    let rawList;
+
+    try {
+      rawList = await ApiClient.getNotifications();
+    } catch (error) {
+      console.error("NotificationsUI.render error", error);
+
+      notifListEl.innerHTML = "";
+      notifCountEl.textContent = "—";
+
+      if (emptyStateEl) emptyStateEl.hidden = true;
+      if (errorStateEl) errorStateEl.hidden = false;
+
+      if (markAllBtn) {
+        markAllBtn.disabled = true;
+        markAllBtn.textContent = window.I18n.t("notif_mark_all");
+      }
+
+      return;
+    }
+
+    if (errorStateEl) errorStateEl.hidden = true;
+
     const list = Array.isArray(rawList) ? rawList : [];
 
     const panelOpen = !!panel && panel.classList.contains("is-open");
@@ -220,7 +245,6 @@ const NotificationsUI = (() => {
       notifButtonEl.setAttribute("aria-label", window.I18n.t("notif_title"));
     }
 
-    const emptyStateEl = document.getElementById("notifEmptyState");
     if (!list.length) {
       if (emptyStateEl) emptyStateEl.hidden = false;
       __prevNotifIds = nextIds;
@@ -487,6 +511,10 @@ const NotificationsUI = (() => {
       }, Math.min(260, cards.length * 35 + 140));
     });
   }
+
+  document.getElementById("notifRetryLoadBtn")?.addEventListener("click", () => {
+    renderNotifications().catch(console.error);
+  });
 
   // Render inicial al cargar el archivo
   renderNotifications().catch(console.error);

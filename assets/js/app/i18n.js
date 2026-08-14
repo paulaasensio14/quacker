@@ -485,6 +485,9 @@
       notif_mark_all: "Marcar todas",
       notif_empty_title: "Sin notificaciones",
       notif_empty_text: "No tienes notificaciones nuevas.",
+      notif_load_error_title: "No se pudieron cargar las notificaciones",
+      notif_load_error_text: "Ha ocurrido un problema al cargar tus notificaciones.",
+      notif_load_error_cta: "Reintentar",
 
       profile_menu_settings: "Ajustes",
       profile_menu_theme: "Cambiar tema",
@@ -1127,6 +1130,9 @@
       notif_mark_all: "Mark all",
       notif_empty_title: "No notifications",
       notif_empty_text: "You have no new notifications.",
+      notif_load_error_title: "Notifications couldn't be loaded",
+      notif_load_error_text: "There was a problem loading your notifications.",
+      notif_load_error_cta: "Retry",
 
       profile_menu_settings: "Settings",
       profile_menu_theme: "Change theme",
