@@ -484,6 +484,7 @@
       language_switcher_label: "Selector de idioma",
       notif_button_label: "Notificaciones",
 
+      notif_close_label: "Cerrar notificaciones",
       notif_title: "Notificaciones",
       notif_mark_all: "Marcar todas",
       notif_empty_title: "Sin notificaciones",
@@ -498,6 +499,7 @@
       list_detail_add_content: "Añadir contenido",
       lists_detail_title: "Lista",
       lists_detail_search_placeholder: "Buscar en la lista",
+      lists_detail_search_label: "Buscar contenidos dentro de la lista",
       lists_detail_filters_label: "Filtros de la lista",
       lists_detail_type_filter_label: "Filtrar por tipo",
       lists_filter_all_status: "Todos",
@@ -1132,6 +1134,7 @@
       language_switcher_label: "Language switcher",
       notif_button_label: "Notifications",
 
+      notif_close_label: "Close notifications",
       notif_title: "Notifications",
       notif_mark_all: "Mark all",
       notif_empty_title: "No notifications",
@@ -1146,6 +1149,7 @@
       list_detail_add_content: "Add content",
       lists_detail_title: "List",
       lists_detail_search_placeholder: "Search in list",
+      lists_detail_search_label: "Search content within the list",
       lists_detail_filters_label: "List filters",
       lists_detail_type_filter_label: "Filter by type",
       lists_filter_all_status: "All",
