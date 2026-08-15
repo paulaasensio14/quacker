@@ -964,11 +964,11 @@
 
       <!-- MODAL CONFIRMAR VACIAR NOTIFICACIONES -->
       <div class="modal-overlay" id="confirmClearNotifsModal" aria-hidden="true">
-        <div class="modal-card">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmClearNotifsTitle">
 
           <div class="modal-header">
 
-            <h3 data-i18n="notif_title">Notificaciones</h3>
+            <h3 id="confirmClearNotifsTitle" data-i18n="notif_title">Notificaciones</h3>
 
             <button class="modal-close" id="closeConfirmClearNotifs" aria-label="Cerrar" data-i18n-aria-label="common_close">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -1223,9 +1223,9 @@
 
       <!-- MODAL CONFIRMAR ELIMINAR LISTA -->
       <div class="modal-overlay" id="confirmDeleteListModal" aria-hidden="true">
-        <div class="modal-card">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmDeleteListTitle">
           <div class="modal-header">
-            <h3 data-i18n="modal_delete_list_title">Eliminar lista</h3>
+            <h3 id="confirmDeleteListTitle" data-i18n="modal_delete_list_title">Eliminar lista</h3>
             <button class="modal-close" id="closeConfirmDeleteList" aria-label="Cerrar" data-i18n-aria-label="common_close">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M18 6L6 18"></path>
@@ -1380,7 +1380,7 @@
 
 <!-- MODAL NUEVA / EDITAR LISTA -->
 <div class="modal-overlay" id="listModal" aria-hidden="true">
-  <div class="modal-card">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="listModalTitle">
     <div class="modal-header">
       <h3 id="listModalTitle" data-i18n="lists_modal_create_title">Nueva lista</h3>
       <button class="modal-close" id="closeListModal" aria-label="Cerrar" data-i18n-aria-label="common_close">
@@ -1423,7 +1423,7 @@
 
 <!-- MODAL EDITAR PROGRESO -->
 <div class="modal-overlay" id="progressModal" aria-hidden="true">
-  <div class="modal-card">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="progressModalTitle">
     <div class="modal-header">
       <h3 id="progressModalTitle" data-i18n="library_edit_progress">Editar progreso</h3>
       <button class="modal-close" id="closeProgressModal" aria-label="Cerrar" data-i18n-aria-label="common_close">
@@ -1448,9 +1448,9 @@
 
 <!-- MODAL AÑADIR A BIBLIOTECA -->
 <div class="modal-overlay" id="addLibraryModal" aria-hidden="true">
-  <div class="modal-card">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addLibraryModalTitle">
     <div class="modal-header">
-      <h3 data-i18n="library_add_modal_title">Añadir a mi biblioteca</h3>
+      <h3 id="addLibraryModalTitle" data-i18n="library_add_modal_title">Añadir a mi biblioteca</h3>
 
       <button class="modal-close" id="closeAddLibraryModal" aria-label="Cerrar" data-i18n-aria-label="common_close">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -1491,9 +1491,9 @@
 
 <!-- MODAL AÑADIR A LISTAS (selección múltiple) -->
 <div class="modal-overlay" id="addToListModal" aria-hidden="true">
-  <div class="modal-card">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addToListModalTitle">
     <div class="modal-header">
-      <h3 data-i18n="library_card_add_to_lists">Añadir a listas</h3>
+      <h3 id="addToListModalTitle" data-i18n="library_card_add_to_lists">Añadir a listas</h3>
 
       <button class="modal-close" id="closeAddToListModal" aria-label="Cerrar" data-i18n-aria-label="common_close">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
