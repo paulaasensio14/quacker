@@ -18,7 +18,6 @@ const ProfileModule = (() => {
   let initialData = null;
   let isBound = false;
   let pendingAvatarDataUrl = null;
-  let lastAvatarPickerFocus = null;
 
   function showErrors(errors) {
     const box = $("#profileFormErrors");
@@ -163,25 +162,17 @@ const ProfileModule = (() => {
     const modal = document.getElementById("avatarPickerModal");
     if (!modal) return;
 
-    lastAvatarPickerFocus = document.activeElement || null;
-
     renderAvatarGrid();
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
+    window.UIModal?.open(modal, {
+      initialFocusSelector: ".avatar-option"
+    });
   }
 
   function closeAvatarPickerModal() {
     const modal = document.getElementById("avatarPickerModal");
     if (!modal) return;
 
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-
-    if (lastAvatarPickerFocus && typeof lastAvatarPickerFocus.focus === "function") {
-      requestAnimationFrame(() => {
-        lastAvatarPickerFocus.focus();
-      });
-    }
+    window.UIModal?.close(modal);
   }
 
   function renderAvatarGrid() {
@@ -311,12 +302,6 @@ const ProfileModule = (() => {
       });
     }
 
-    // ESC para cerrar
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal?.classList.contains("is-open")) {
-        closeAvatarPickerModal();
-      }
-    });
   }
 
 
