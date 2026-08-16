@@ -4288,24 +4288,3 @@ const ExploreModule = (() => {
 })();
 
 window.ExploreModule = ExploreModule;
-
-function openAddToLibraryModal(eid) {
-  const modal = document.getElementById("addFromExploreModal");
-  if (!modal) return;
-
-  const normalizedEid = String(eid ?? "").trim();
-  if (!normalizedEid) return;
-
-  modal.dataset.eid = normalizedEid;
-  modal.classList.add("open");
-}
-
-function closeAddFromExploreModal() {
-  const modal = document.getElementById("addFromExploreModal");
-  if (!modal) return;
-
-  modal.classList.remove("open");
-  delete modal.dataset.eid;
-}
-
-window.ExploreModule = ExploreModule;
