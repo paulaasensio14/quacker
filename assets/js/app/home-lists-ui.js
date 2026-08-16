@@ -1686,7 +1686,6 @@ async function renderHomeDashboard() {
 
   // ===== Modal: Actividad (toda la actividad) =====
   let __activityFilter = "all";
-  let __activityLastFocusEl = null;
 
   function __isActivityModalOpen() {
     const modal = document.getElementById("activityModal");
@@ -1815,12 +1814,6 @@ function __openActivityModal() {
   const modal = document.getElementById("activityModal");
   if (!modal) return;
 
-  __activityLastFocusEl = document.activeElement;
-
-  modal.classList.add("is-open");
-  modal.setAttribute("aria-hidden", "false");
-  document.body.classList.add("modal-open");
-
   // Reset a "Todo" al abrir
   __activityFilter = "all";
   document.querySelectorAll("[data-activity-filter]").forEach(b => b.classList.remove("active"));
@@ -1828,23 +1821,16 @@ function __openActivityModal() {
 
   __renderActivityModal().catch(console.error);
 
-  window.setTimeout(() => {
-    document.getElementById("closeActivityModal")?.focus();
-  }, 0);
+  window.UIModal?.open(modal, {
+    initialFocusSelector: "#closeActivityModal"
+  });
 }
 
 function __closeActivityModal({ restoreFocus = true } = {}) {
   const modal = document.getElementById("activityModal");
   if (!modal) return;
 
-  modal.classList.remove("is-open");
-  modal.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("modal-open");
-
-  if (restoreFocus) {
-    const el = __activityLastFocusEl;
-    if (el && typeof el.focus === "function") window.setTimeout(() => el.focus(), 0);
-  }
+  window.UIModal?.close(modal, { restoreFocus });
 }
 
 window.HomeUI = {
@@ -2004,7 +1990,7 @@ window.HomeUI = {
 
       // Click fuera
       document.getElementById("activityModal")?.addEventListener("click", (e) => {
-        if (e.target && e.target.id === "activityModal") __closeActivityModal({ restoreFocus: false });
+        if (e.target && e.target.id === "activityModal") __closeActivityModal();
       });
 
       // Filtros
