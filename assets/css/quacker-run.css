@@ -1,0 +1,455 @@
+    :root {
+      color-scheme: light;
+      font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+      --page-bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #eef2f7;
+      --text: #17191d;
+      --muted: #69717d;
+      --border: #d9dee7;
+      --accent: #f4b942;
+      --accent-text: #17191d;
+      --track: #2c323a;
+    }
+
+    body.dark-theme {
+      color-scheme: dark;
+
+      --page-bg: #111318;
+      --surface: #191c22;
+      --surface-soft: #20242c;
+      --text: #f4f5f7;
+      --muted: #a8b0bc;
+      --border: #343a45;
+      --accent: #f4b942;
+      --accent-text: #17191d;
+      --track: #d6d9df;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page-bg);
+      color: var(--text);
+    }
+
+    a,
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(960px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .brand img {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
+
+    .hero {
+      margin: 56px 0 28px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(4rem, 14vw, 8rem);
+      line-height: 0.9;
+      letter-spacing: -0.06em;
+    }
+
+    .hero h2 {
+      margin: 18px 0 8px;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+    }
+
+    .hero p {
+      margin: 0 auto;
+      max-width: 560px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .run-card {
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+    }
+
+    .run-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .score {
+      margin: 0;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
+    .run-start {
+      min-height: 44px;
+      padding: 10px 18px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--accent);
+      color: var(--accent-text);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .run-start:focus-visible,
+    .home-link:focus-visible,
+    .brand:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .run-stage {
+      position: relative;
+      min-height: 270px;
+      overflow: hidden;
+      isolation: isolate;
+      border-radius: 14px;
+      background: var(--surface-soft);
+    }
+
+    .run-parallax-layer {
+      position: absolute;
+      right: 0;
+      bottom: 47px;
+      left: 0;
+      background-repeat: repeat-x;
+      background-position: 0 bottom;
+      background-size: auto 100%;
+      pointer-events: none;
+      will-change: background-position;
+    }
+
+    .run-parallax-layer.is-mountains {
+      z-index: 0;
+      bottom: 41px;
+      height: 72%;
+    }
+
+    .run-parallax-layer.is-hills {
+      z-index: 1;
+      height: 62%;
+    }
+
+    .run-parallax-layer.is-trees {
+      z-index: 2;
+      bottom: 42px;
+      height: 54%;
+    }
+
+    .run-stage::before {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      right: 0;
+      bottom: 53px;
+      left: 0;
+      height: 16px;
+      background:
+        linear-gradient(
+          to bottom,
+          #8bcf45,
+          #58ad3c
+        );
+      pointer-events: none;
+    }
+
+    .run-ground {
+      position: absolute;
+      z-index: 3;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 53px;
+      background-image:
+        url("/assets/img/quacker-run/tiles/ground-seamless.png");
+      background-repeat: repeat-x;
+      background-position: 0 bottom;
+      background-size: auto 140px;
+      pointer-events: none;
+      will-change: background-position;
+    }
+
+    .duck-slot {
+      z-index: 6;
+      position: absolute;
+      bottom: 47px;
+      left: clamp(28px, 8vw, 72px);
+      width: 72px;
+      height: 88px;
+    }
+
+    .duck-slot.is-crouching {
+      width: 96px;
+      height: 56px;
+    }
+
+    .duck-slot.is-crouching .duck-sprite {
+      position: absolute;
+      bottom: -20px;
+      left: 0;
+      width: 96px;
+      height: 88px;
+      object-fit: contain;
+      object-position: center bottom;
+    }
+
+    .duck-sprite {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center bottom;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .run-dust-sprite {
+  z-index: 4;
+  position: absolute;
+  bottom: 37px;
+  left: clamp(4px, calc(8vw - 18px), 54px);
+  width: 78px;
+  height: 52px;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.jump-dust-sprite {
+  z-index: 4;
+  position: absolute;
+  bottom: 37px;
+  left: clamp(4px, calc(8vw - 18px), 54px);
+  width: 88px;
+  height: 58px;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.star-hit-sprite {
+  position: absolute;
+  z-index: 7;
+  bottom: 105px;
+  left: clamp(56px, calc(8vw + 20px), 104px);
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+    .run-obstacle {
+  z-index: 5;
+  position: absolute;
+  bottom: 47px;
+  left: 0;
+  width: 30px;
+  height: 42px;
+  background: transparent;
+  will-change: transform;
+}
+
+.run-obstacle-sprite {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 68px;
+  height: 68px;
+  max-width: none;
+  object-fit: contain;
+  object-position: center bottom;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.run-obstacle-sprite[src$="/rock-small.png"] {
+  bottom: -14px;
+}
+
+.run-obstacle.is-airborne {
+  bottom: 108px;
+  height: 28px;
+  background: transparent;
+}
+
+.run-air-enemy-sprite {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 72px;
+  height: 56px;
+  max-width: none;
+  object-fit: contain;
+  object-position: center;
+  transform: translateX(-50%) scaleX(-1);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.run-touch-controls {
+  display: none;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.run-crouch {
+  min-width: 132px;
+  min-height: 48px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.run-crouch:active {
+  transform: translateY(1px);
+}
+
+.run-crouch:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.instructions {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+      text-align: center;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 28px;
+    }
+
+    .home-link {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 650;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 600px) {
+      .page {
+        width: min(100% - 20px, 960px);
+        padding-top: 20px;
+      }
+
+      .hero {
+        margin-top: 36px;
+      }
+
+      .run-card {
+        padding: 14px;
+        border-radius: 16px;
+      }
+
+      .run-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .run-start {
+        width: 100%;
+      }
+
+      .run-touch-controls {
+        display: flex;
+      }
+
+      .run-stage {
+        min-height: 190px;
+      }
+    }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .run-touch-controls {
+    display: flex;
+  }
+
+  .run-stage {
+    touch-action: manipulation;
+  }
+}

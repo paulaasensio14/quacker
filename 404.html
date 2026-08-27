@@ -6,15 +6,153 @@
     name="viewport"
     content="width=device-width, initial-scale=1"
   >
-  <title>404 · Quacker</title>
+  <meta name="color-scheme" content="light dark">
+
+  <title>404 · Quacker Run</title>
+
+  <link
+    rel="icon"
+    type="image/png"
+    href="/assets/img/logo-quacker.png"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/assets/css/quacker-run.css"
+  >
+
 </head>
+
 <body>
-  <main>
-    <h1>404</h1>
+  <main class="page">
+    <a
+      class="brand"
+      href="/"
+      aria-label="Quacker · Inicio"
+      data-i18n-aria-label="quacker_run_home_label"
+    >
+      <img
+        src="/assets/img/logo-quacker.png"
+        alt=""
+        width="40"
+        height="40"
+      >
+      <span>Quacker</span>
+    </a>
 
-    <p>Esta página no existe.</p>
+    <header class="hero">
+      <h1>404</h1>
+      <h2 data-i18n="quacker_run_hero_title">
+        Este pato se ha salido de la ruta.
+      </h2>
 
-    <a href="/">Volver al inicio</a>
+      <p data-i18n="quacker_run_hero_text">
+        La página que buscas no existe, pero mientras vuelves puedes
+        echar una partida a Quacker Run.
+      </p>
+    </header>
+
+    <section
+      class="run-card"
+      id="quackerRun"
+      aria-labelledby="quackerRunTitle"
+    >
+      <h2 id="quackerRunTitle" class="sr-only">
+        Quacker Run
+      </h2>
+
+      <div class="run-toolbar">
+        <p class="score">
+          <span data-i18n="quacker_run_score">Puntuación:</span>
+          <output id="quackerRunScore">0</output>
+          ·
+          <span data-i18n="quacker_run_best">Récord:</span>
+          <output id="quackerRunBest">0</output>
+        </p>
+
+        <button
+          class="run-start"
+          id="quackerRunStart"
+          type="button"
+        >
+          <span data-i18n="quacker_run_start">Empezar</span>
+        </button>
+      </div>
+
+      <div
+        class="run-stage"
+        id="quackerRunStage"
+        aria-describedby="quackerRunInstructions"
+      >
+        <div class="run-ground" aria-hidden="true"></div>
+
+        <div
+          class="duck-slot"
+          id="quackerRunDuck"
+          aria-hidden="true"
+        >
+          <img
+            class="duck-sprite"
+            id="quackerRunDuckSprite"
+            src="/assets/img/quacker-run/duck-idle.png"
+            alt=""
+            draggable="false"
+          >
+        </div>
+      </div>
+
+      <div
+        class="run-touch-controls"
+        aria-label="Controles táctiles de Quacker Run"
+        data-i18n-aria-label="quacker_run_touch_controls_label"
+      >
+        <button
+          class="run-crouch"
+          id="quackerRunCrouch"
+          type="button"
+          data-i18n="quacker_run_crouch"
+        >
+          ↓ Agacharse
+        </button>
+      </div>
+
+      <p
+        class="instructions"
+        id="quackerRunInstructions"
+        data-i18n="quacker_run_instructions"
+      >
+        Pulsa Espacio o ↑ para saltar y ↓ para agacharte.
+        En móvil, toca la zona para saltar y mantén Agacharse.
+      </p>
+
+      <p
+        class="sr-only"
+        id="quackerRunStatus"
+        aria-live="polite"
+        aria-atomic="true"
+        data-i18n="quacker_run_ready"
+      >
+        Quacker Run preparado.
+      </p>
+    </section>
+
+    <div class="actions">
+      <a
+        class="home-link"
+        href="/"
+        data-i18n="quacker_run_home"
+      >
+        Volver al inicio
+      </a>
+    </div>
   </main>
+  <script
+    src="/assets/js/app/i18n.js"
+    defer
+  ></script>
+  <script
+    src="/assets/js/quacker-run.js"
+    defer
+  ></script>
 </body>
 </html>
