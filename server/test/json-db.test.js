@@ -318,3 +318,101 @@ test("envuelve los fallos de serialización y elimina temporales", () => {
     removeTemporaryDirectory(directory);
   }
 });
+
+test("conserva un backup de la versión anterior antes de reemplazarla", () => {
+  const directory = createTemporaryDirectory();
+
+  try {
+    const filePath = path.join(directory, "data.json");
+
+    writeJsonFileAtomic(filePath, {
+      version: 1
+    });
+
+    writeJsonFileAtomic(
+      filePath,
+      {
+        version: 2
+      },
+      {
+        backupPrevious: true
+      }
+    );
+
+    const backups = fs
+      .readdirSync(directory)
+      .filter((name) => name.startsWith("data.json.backup-"));
+
+    assert.equal(backups.length, 1);
+
+    assert.deepEqual(
+      JSON.parse(
+        fs.readFileSync(
+          path.join(directory, backups[0]),
+          "utf8"
+        )
+      ),
+      {
+        version: 1
+      }
+    );
+
+    assert.deepEqual(
+      readJsonFile(filePath),
+      {
+        version: 2
+      }
+    );
+  } finally {
+    removeTemporaryDirectory(directory);
+  }
+});
+
+test("limita el número de backups conservados", () => {
+  const directory = createTemporaryDirectory();
+
+  try {
+    const filePath = path.join(directory, "data.json");
+
+    writeJsonFileAtomic(filePath, {
+      version: 0
+    });
+
+    for (let version = 1; version <= 4; version += 1) {
+      writeJsonFileAtomic(
+        filePath,
+        {
+          version
+        },
+        {
+          backupPrevious: true,
+          backupLimit: 3
+        }
+      );
+    }
+
+    const backups = fs
+      .readdirSync(directory)
+      .filter((name) => name.startsWith("data.json.backup-"));
+
+    assert.equal(backups.length, 3);
+
+    const backupVersions = backups
+      .map((name) =>
+        JSON.parse(
+          fs.readFileSync(
+            path.join(directory, name),
+            "utf8"
+          )
+        ).version
+      )
+      .sort((a, b) => a - b);
+
+    assert.deepEqual(
+      backupVersions,
+      [1, 2, 3]
+    );
+  } finally {
+    removeTemporaryDirectory(directory);
+  }
+});
