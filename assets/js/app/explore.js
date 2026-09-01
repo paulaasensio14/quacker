@@ -2940,6 +2940,7 @@ const ExploreModule = (() => {
 
     const author = _safeText(item?.meta?.author).trim();
     const platforms = _safeText(item?.meta?.platforms).trim();
+    const developers = _safeText(item?.meta?.developers).trim();
     const statusLabel = _translateExploreStatusLabel(item?.statusLabel);
     const runtimeNumber = Number(item?.runtime || 0);
     const totalPagesNumber = Number(item?.meta?.totalPages || 0);
@@ -3001,6 +3002,7 @@ const ExploreModule = (() => {
     const writer = _safeText(item?.meta?.writer).trim();
     const lastAirDate = _safeText(item?.meta?.lastAirDate).trim();
     const formattedLastAirDate = _formatExploreDate(lastAirDate);
+    const formattedReleaseDate = _formatExploreDate(item?.releaseDate);
     const lastWatchedInfo = _getExploreLastWatchedInfo(item);
     const durationValue =
       runtimeNumber > 0
@@ -3115,6 +3117,17 @@ const ExploreModule = (() => {
         tertiaryLabel = window.I18n.t("explore_detail_label_status");
         tertiaryValue = statusLabel;
       }
+    }
+
+    if (_norm(item?.type) === "game") {
+      primaryLabel = window.I18n.t("explore_detail_label_platforms");
+      primaryValue = platforms || noMetaValue;
+
+      secondaryLabel = window.I18n.t("explore_detail_label_release_date");
+      secondaryValue = formattedReleaseDate || noMetaValue;
+
+      tertiaryLabel = window.I18n.t("explore_detail_label_developer");
+      tertiaryValue = developers || noMetaValue;
     }
 
     const heroFacts = [];
