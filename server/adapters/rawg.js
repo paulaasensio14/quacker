@@ -122,13 +122,14 @@ export async function searchRawg(query, options = {}) {
   .filter((item) => {
     if (!item?.externalId || !item?.title) return false;
     const title = String(item.title || "").toLowerCase();
+    const exactMatch = title === normalizedQuery;
     const strongMatch =
-      title === normalizedQuery ||
+      exactMatch ||
       title.startsWith(normalizedQuery) ||
       queryTokens.every((token) => title.includes(token));
     if (!strongMatch) return false;
     const rating = Number(item?.meta?.rating || 0);
-    if (rating < 2) return false;
+    if (!exactMatch && rating < 2) return false;
     if (!item.cover && !item.backdrop) return false;
     return true;
   })
