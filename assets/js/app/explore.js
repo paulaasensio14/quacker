@@ -1462,7 +1462,6 @@ const ExploreModule = (() => {
 
     if (!eid) return null;
     if (!source || !type || !externalId) return item;
-    if (source !== "tmdb") return item;
 
     const cacheKey = `${source}:${type}:${externalId}`;
     const cachedDetail = __drawerDetailCache.get(cacheKey);
