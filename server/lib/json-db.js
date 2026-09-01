@@ -19,7 +19,14 @@ function _createWrappedError(message, code, cause) {
   return error;
 }
 
-export function writeJsonFileAtomic(filePath, value) {
+export function writeJsonFileAtomic(
+  filePath,
+  value,
+  {
+    backupPrevious = false,
+    backupLimit = null
+  } = {}
+) {
   const directory = path.dirname(filePath);
   const filename = path.basename(filePath);
 
@@ -53,6 +60,64 @@ export function writeJsonFileAtomic(filePath, value) {
     fs.fsyncSync(descriptor);
     fs.closeSync(descriptor);
     descriptor = null;
+
+    if (backupPrevious && fs.existsSync(filePath)) {
+      const backupPath = path.join(
+        directory,
+        `${filename}.backup-${Date.now()}-${crypto
+          .randomBytes(6)
+          .toString("hex")}`
+      );
+
+      fs.copyFileSync(
+        filePath,
+        backupPath,
+        fs.constants.COPYFILE_EXCL
+      );
+
+      fs.chmodSync(backupPath, 0o600);
+
+      if (
+        Number.isInteger(backupLimit) &&
+        backupLimit >= 0
+      ) {
+        const backupPrefix = `${filename}.backup-`;
+
+        const backups = fs
+          .readdirSync(directory)
+          .filter((name) => name.startsWith(backupPrefix))
+          .map((name) => {
+            const backupFilePath = path.join(directory, name);
+            const stats = fs.statSync(
+              backupFilePath,
+              {
+                bigint: true
+              }
+            );
+
+            return {
+              path: backupFilePath,
+              modifiedAt: stats.mtimeNs
+            };
+          })
+          .sort((a, b) => {
+            if (a.modifiedAt < b.modifiedAt) return -1;
+            if (a.modifiedAt > b.modifiedAt) return 1;
+            return 0;
+          });
+
+        const excessBackups =
+          backups.length - backupLimit;
+
+        if (excessBackups > 0) {
+          backups
+            .slice(0, excessBackups)
+            .forEach((backup) => {
+              fs.unlinkSync(backup.path);
+            });
+        }
+      }
+    }
 
     // El archivo definitivo nunca queda parcialmente escrito.
     fs.renameSync(temporaryPath, filePath);

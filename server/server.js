@@ -244,7 +244,15 @@ function _readDb() {
 
 function _writeDb(db) {
   _validateDb(db);
-  writeJsonFileAtomic(DB_PATH, db);
+
+  writeJsonFileAtomic(
+    DB_PATH,
+    db,
+    {
+      backupPrevious: true,
+      backupLimit: 5
+    }
+  );
 }
 
 function _uid() {
