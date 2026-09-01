@@ -246,13 +246,15 @@ const DetailModule = (() => {
       item?.relatedItems
     );
 
-    const isBookDetail = String(item?.type || "").trim() === "book";
+    const hidesCastDetail = ["book", "game"].includes(
+      String(item?.type || "").trim()
+    );
 
     if (castCardEl) {
-      castCardEl.hidden = isBookDetail;
+      castCardEl.hidden = hidesCastDetail;
     }
 
-    if (isBookDetail) {
+    if (hidesCastDetail) {
       if (castEl) castEl.textContent = "";
       if (castToggleBtn) castToggleBtn.hidden = true;
     } else {
