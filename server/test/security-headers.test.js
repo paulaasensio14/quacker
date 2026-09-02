@@ -116,7 +116,7 @@ test(
       /https:\/\/upload\.wikimedia\.org/
     );
 
-    assert.match(
+    assert.doesNotMatch(
       directives.get("img-src"),
       /https:\/\/books\.google\.com/
     );
