@@ -114,3 +114,50 @@ test("mantiene un único presupuesto de timeout durante reintentos", async (t) =
     controller.signal
   );
 });
+
+test("no envía a Open Library consultas sin tokens buscables", async (t) => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("fetch no debería ejecutarse");
+  };
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  for (const query of ["O", "Ob", "The"]) {
+    const result = await searchOpenLibrary(query);
+    assert.deepEqual(result, []);
+  }
+
+  assert.equal(fetchCalls, 0);
+});
+
+test("trata como vacío un 422 esperado de validación de Open Library", async (t) => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+
+    return {
+      ok: false,
+      status: 422,
+      text: async () => "Query too short, must be at least 3 characters"
+    };
+  };
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const result = await searchOpenLibrary(
+    "open library validation probe"
+  );
+
+  assert.deepEqual(result, []);
+  assert.equal(fetchCalls, 1);
+});
