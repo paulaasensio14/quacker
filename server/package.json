@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "db:restore": "node scripts/restore-db.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",
