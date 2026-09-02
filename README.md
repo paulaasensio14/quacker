@@ -254,9 +254,9 @@ Examples of synchronized flows:
 
 The backend stores user data in `server/db.json`.
 
-This is enough for a local/demo product version and keeps the project easy to run, inspect, and evolve.
+Quacker currently uses this JSON persistence model in production, with atomic writes, rotating backups, schema-validated restoration, and restricted file permissions.
 
-For production, this would be replaced by a real database.
+Operational procedures for the production deployment are documented in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ---
 
