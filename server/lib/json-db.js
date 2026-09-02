@@ -206,3 +206,108 @@ export function readJsonFile(
 
   return parsed;
 }
+
+export function restoreJsonFileBackup(
+  filePath,
+  backupPath,
+  {
+    validate,
+    backupLimit = 5
+  } = {}
+) {
+  const resolvedFilePath = path.resolve(filePath);
+  const resolvedBackupPath = path.resolve(backupPath);
+
+  const expectedDirectory = path.dirname(
+    resolvedFilePath
+  );
+
+  const expectedPrefix =
+    `${path.basename(resolvedFilePath)}.backup-`;
+
+  const isValidBackupPath =
+    path.dirname(resolvedBackupPath) ===
+      expectedDirectory &&
+    path
+      .basename(resolvedBackupPath)
+      .startsWith(expectedPrefix);
+
+  if (!isValidBackupPath) {
+    const error = new Error(
+      "El archivo indicado no es un backup válido de esta base de datos."
+    );
+
+    error.code = "INVALID_BACKUP_PATH";
+
+    throw error;
+  }
+
+  if (fs.existsSync(resolvedBackupPath)) {
+    const backupStats = fs.lstatSync(
+      resolvedBackupPath
+    );
+
+    if (!backupStats.isFile()) {
+      const error = new Error(
+        "El backup indicado no es un archivo regular válido."
+      );
+
+      error.code = "INVALID_BACKUP_FILE";
+
+      throw error;
+    }
+  }
+
+  const restoredValue = readJsonFile(
+    resolvedBackupPath,
+    {
+      validate
+    }
+  );
+
+  writeJsonFileAtomic(
+    filePath,
+    restoredValue,
+    {
+      backupPrevious: true,
+      backupLimit
+    }
+  );
+
+  return restoredValue;
+}
+
+export function listJsonFileBackups(filePath) {
+  const directory = path.dirname(filePath);
+  const filename = path.basename(filePath);
+  const backupPrefix = `${filename}.backup-`;
+
+  if (!fs.existsSync(directory)) {
+    return [];
+  }
+
+  return fs
+    .readdirSync(directory)
+    .filter((name) => name.startsWith(backupPrefix))
+    .map((name) => {
+      const backupPath = path.join(directory, name);
+      const stats = fs.lstatSync(backupPath);
+
+      if (!stats.isFile()) {
+        return null;
+      }
+
+      return {
+        name,
+        path: backupPath,
+        modifiedAt: stats.mtime,
+        size: stats.size
+      };
+    })
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        b.modifiedAt.getTime() -
+        a.modifiedAt.getTime()
+    );
+}

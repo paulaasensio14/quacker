@@ -33,6 +33,10 @@ import {
   readJsonFile,
   writeJsonFileAtomic
 } from "./lib/json-db.js";
+import {
+  createInitialDb,
+  validateDb
+} from "./lib/db-schema.js";
 
 import {
   normalizeContentIdentity,
@@ -204,46 +208,15 @@ app.use(
 );
 
 // ===== Helpers DB =====
-function _createInitialDb() {
-  return {
-    users: {}
-  };
-}
-
-function _validateDb(db) {
-  const isValidRoot =
-    db &&
-    typeof db === "object" &&
-    !Array.isArray(db);
-
-  const hasValidUsers =
-    isValidRoot &&
-    db.users &&
-    typeof db.users === "object" &&
-    !Array.isArray(db.users);
-
-  if (!hasValidUsers) {
-    const error = new Error(
-      "La base de datos no contiene una estructura users válida."
-    );
-
-    error.code = "INVALID_DATABASE_STRUCTURE";
-
-    throw error;
-  }
-
-  return db;
-}
-
 function _readDb() {
   return readJsonFile(DB_PATH, {
-    createDefault: _createInitialDb,
-    validate: _validateDb
+    createDefault: createInitialDb,
+    validate: validateDb
   });
 }
 
 function _writeDb(db) {
-  _validateDb(db);
+  validateDb(db);
 
   writeJsonFileAtomic(
     DB_PATH,
