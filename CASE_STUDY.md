@@ -609,11 +609,11 @@ Public profiles, shared lists, and collaborative features were kept out of v1.
 
 This avoided expanding scope before the private personal tracking experience was stable.
 
-### Manual QA
+### Manual and automated QA
 
-The project currently relies heavily on manual QA.
+The project combines manual QA with automated regression coverage.
 
-A future version should add automated tests for critical identity, progress, and API flows.
+Critical identity, progress, API, security, and data/operations flows are covered by automated tests, while manual QA remains part of release validation.
 
 ---
 
@@ -633,7 +633,6 @@ Post-v1 improvements could include:
 * collaborative lists
 * analytics
 * deployment hardening
-* automated tests
 * SaaS validation
 * pricing/freemium exploration
 

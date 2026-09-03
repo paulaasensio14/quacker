@@ -402,7 +402,7 @@ This project uses a Node/Express backend and static frontend files.
 Because the exact local scripts may differ depending on the current setup, check the repository scripts before running the app:
 
 ```bash
-cat package.json
+cat server/package.json
 ```
 
 Then start the backend using the available script or directly through the server entry point.
