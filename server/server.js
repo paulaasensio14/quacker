@@ -62,6 +62,10 @@ import {
 } from "./lib/account-validation.js";
 
 import {
+  resolveActivityCreatedAt
+} from "./lib/activity-timestamp.js";
+
+import {
   SESSION_COOKIE_NAME,
   createSessionClearCookieOptions,
   createSessionCookieOptions,
@@ -3941,7 +3945,13 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
 
   const nextProgress = Math.max(0, Math.min(100, Number(next.progress ?? 0)));
   const nextCompleted = nextProgress >= 100 || next.status === "completed";
-  const activityCreatedAt = _normalizeActivityCreatedAt(next.lastActivityAt) || nowIso;
+  const activityCreatedAt = resolveActivityCreatedAt({
+    hasExplicitLastActivityAt:
+      Object.prototype.hasOwnProperty.call(patch, "lastActivityAt"),
+    lastActivityAt: next.lastActivityAt,
+    nowIso,
+    normalize: _normalizeActivityCreatedAt
+  });
 
   let activityType = "";
 
