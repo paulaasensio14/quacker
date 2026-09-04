@@ -1,5 +1,34 @@
 # Quacker Release Notes
 
+## 1.0.0
+
+Primera versión estable de Quacker.
+
+Esta release se publica a partir del candidato validado `1.0.0-rc.3` y no introduce cambios funcionales adicionales respecto a ese RC.
+
+### Estado de la release
+
+La versión estable incorpora las correcciones y validaciones completadas durante la preparación de los Release Candidates y la Semana 7:
+
+- autenticación y sesiones;
+- Library y persistencia de progreso;
+- transición a completado;
+- reinicio de juegos a 0 % con estado `not_started`;
+- Activity con timestamps correctos;
+- conservación del progreso histórico en nuevas actividades;
+- Lists: carga, creación, añadir, retirar y eliminar;
+- seguridad, datos y operación en producción.
+
+### Validación
+
+- Suite completa: 340/340 tests.
+- `npm audit`: 0 vulnerabilidades.
+- Smoke funcional final completado.
+- PM2 estable en producción, sin reinicios inestables.
+- Versión: `1.0.0`.
+
+El tag `v1.0.0-rc.3` permanece intacto como snapshot del candidato final validado.
+
 ## 1.0.0-rc.3
 
 Release Candidate final posterior a `1.0.0-rc.2`, preparada tras completar el smoke funcional de Semana 7.
