@@ -389,9 +389,29 @@ if (externalSignal?.aborted) {
       : null;
     const payloadSeason = Math.max(0, Number(rawPayload?.season || 0) || 0);
     const payloadEpisode = Math.max(0, Number(rawPayload?.episode || 0) || 0);
+    const rawProgress = Number(rawPayload?.progress);
+    const hasProgress =
+      rawPayload &&
+      Object.prototype.hasOwnProperty.call(rawPayload, "progress") &&
+      Number.isFinite(rawProgress);
+    const payloadProgress = hasProgress
+      ? Math.max(0, Math.min(100, rawProgress))
+      : null;
+
+    const normalizedPayload = {};
+
+    if (payloadSeason > 0 && payloadEpisode > 0) {
+      normalizedPayload.season = payloadSeason;
+      normalizedPayload.episode = payloadEpisode;
+    }
+
+    if (hasProgress) {
+      normalizedPayload.progress = payloadProgress;
+    }
+
     const payload =
-      payloadSeason > 0 && payloadEpisode > 0
-        ? { season: payloadSeason, episode: payloadEpisode }
+      Object.keys(normalizedPayload).length > 0
+        ? normalizedPayload
         : null;
 
     return {
