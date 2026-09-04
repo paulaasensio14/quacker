@@ -1179,10 +1179,24 @@ function _normalizeActivityPayload(payload) {
 
   const season = Math.max(0, Number(payload.season || 0) || 0);
   const episode = Math.max(0, Number(payload.episode || 0) || 0);
+  const rawProgress = Number(payload.progress);
+  const hasProgress = Number.isFinite(rawProgress);
+  const progress = hasProgress
+    ? Math.max(0, Math.min(100, rawProgress))
+    : null;
 
-  if (season <= 0 || episode <= 0) return null;
+  const normalized = {};
 
-  return { season, episode };
+  if (season > 0 && episode > 0) {
+    normalized.season = season;
+    normalized.episode = episode;
+  }
+
+  if (hasProgress) {
+    normalized.progress = progress;
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : null;
 }
 
 function _appendUserActivity(bucket, activity) {
@@ -3966,13 +3980,16 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   if (activityType) {
     next.lastActivityAt = activityCreatedAt;
     const activityPayload = next.type === "serie"
-      ? _normalizeActivityPayload(
-        rawPatch?.activityPayload || {
+      ? _normalizeActivityPayload({
+        ...(rawPatch?.activityPayload || {
           season: next?.meta?.season,
           episode: next?.meta?.episode
-        }
-      )
-      : null;
+        }),
+        progress: nextProgress
+      })
+      : _normalizeActivityPayload({
+        progress: nextProgress
+      });
     _appendUserActivity(bucket, {
       type: activityType,
       targetId: id,

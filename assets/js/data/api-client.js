@@ -4218,6 +4218,15 @@ if (externalSignal?.aborted) {
         }
       }
 
+      if (item?.type === "pelicula" || item?.type === "game") {
+        const historicalProgress = Number(activity?.payload?.progress);
+
+        if (Number.isFinite(historicalProgress)) {
+          const pct = Math.max(0, Math.min(100, historicalProgress));
+          return `${Math.round(pct)}%`;
+        }
+      }
+
       return metaForItem(item);
     }
 
