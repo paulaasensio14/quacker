@@ -3309,6 +3309,10 @@ async function saveProgressModal() {
     const hours = rawHours === "" ? 0 : Number(rawHours);
     item.progress = Math.max(0, Math.min(100, pct));
     item.meta.hoursPlayed = Number.isFinite(hours) ? Math.max(0, hours) : 0;
+
+    if (item.progress <= 0 && item.meta.hoursPlayed <= 0) {
+      item.status = "not_started";
+    }
   } else if (item.type === "pelicula") {
     item.status = document.getElementById("pm_movieStatus")?.value || "not_started";
   } else {
