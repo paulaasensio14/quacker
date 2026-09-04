@@ -1,5 +1,46 @@
 # Quacker Release Notes
 
+## 1.0.0-rc.3
+
+Release Candidate final posterior a `1.0.0-rc.2`, preparada tras completar el smoke funcional de Semana 7.
+
+### Motivo de rc.3
+
+Durante el smoke final de `1.0.0-rc.2` se detectaron varias regresiones acotadas en el flujo manual de progreso y en el historial de Activity.
+
+Las correcciones incluidas:
+
+- restablecen un juego a `not_started` cuando progreso y horas vuelven a cero;
+- evitan reutilizar un `lastActivityAt` antiguo al guardar progreso manual;
+- guardan el porcentaje histórico de progreso dentro del payload de nuevas actividades;
+- conservan `payload.progress` durante la normalización del cliente para que Activity muestre el valor histórico real.
+
+No se ha realizado ninguna migración de datos históricos. Las actividades antiguas que no contienen `payload.progress` permanecen intactas.
+
+Los tags de Release Candidate anteriores permanecen intactos como snapshots inmutables.
+
+### Validación funcional
+
+El smoke final ha validado:
+
+- registro, login, persistencia de sesión y logout;
+- carga de Library, detalle, navegación y recarga;
+- progreso manual y persistencia;
+- transición a completado;
+- reinicio de juego a 0 % y estado `not_started`;
+- timestamps nuevos en actividades de progreso;
+- conservación independiente de progresos históricos sucesivos en Activity;
+- carga de Lists;
+- creación y eliminación de listas;
+- añadir y retirar elementos de listas.
+
+### Calidad
+
+- Suite completa: 340/340 tests.
+- `npm audit`: 0 vulnerabilidades.
+- Producción estable durante el smoke: PM2 `online`, 0 reinicios inestables.
+- Versión: `1.0.0-rc.3`.
+
 ## 1.0.0-rc.2
 
 Release Candidate corregida posterior a `1.0.0-rc.1`.
