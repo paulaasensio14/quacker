@@ -3325,6 +3325,7 @@ async function saveProgressModal() {
 
   item.updatedAt = new Date().toISOString();
   if (!item.createdAt) item.createdAt = item.updatedAt;
+  delete item.lastActivityAt;
 
   try {
     await saveLibraryItem(item);
