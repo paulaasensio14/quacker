@@ -1,5 +1,45 @@
 # Quacker Release Notes
 
+## 1.0.4
+
+Cuarta actualización correctiva posterior a `1.0.0`.
+
+### Motivo de 1.0.4
+
+Durante la verificación post-release de `1.0.3` se comprobó que las portadas legacy de Library ya se mostraban correctamente en Biblioteca, pero podían seguir apareciendo vacías en Inicio / Backlog.
+
+La causa estaba en el normalizador de portadas de Inicio: solo aceptaba URLs HTTPS absolutas y rechazaba la ruta same-origin segura utilizada por el proxy legacy existente.
+
+La corrección:
+
+- permite únicamente la ruta exacta `/api/library/:id/legacy-cover` en la normalización de portadas de Inicio;
+
+- mantiene intacto el soporte existente para URLs HTTPS;
+
+- continúa rechazando rutas relativas arbitrarias;
+
+- no modifica ni migra `db.json`;
+
+- no modifica la CSP;
+
+- no modifica proveedores;
+
+- no modifica el comportamiento ni las restricciones de seguridad del proxy legacy.
+
+### Validación
+
+- Regresión específica: 3/3 tests.
+
+- Suite completa: 349/349 tests.
+
+- `npm audit`: 0 vulnerabilidades.
+
+- `git diff --check`: limpio.
+
+- Versión: `1.0.4`.
+
+Los tags `v1.0.0`, `v1.0.1`, `v1.0.2` y `v1.0.3` permanecen intactos como snapshots inmutables de sus respectivas releases.
+
 ## 1.0.3
 
 Tercera actualización correctiva posterior a `1.0.0`.
