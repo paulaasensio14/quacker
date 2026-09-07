@@ -394,6 +394,14 @@ data = await _searchOpenLibrary(
     .slice(0, 20);
 }
 
+function _isWeeklyFeaturedOpenLibraryItem(item) {
+  return Boolean(
+    item?.externalId &&
+    item?.title &&
+    item?.cover
+  );
+}
+
 export async function getWeeklyFeaturedOpenLibrary(limit = 3) {
   const maxItems =
     Number.isFinite(Number(limit)) && Number(limit) > 0
@@ -434,7 +442,7 @@ export async function getWeeklyFeaturedOpenLibrary(limit = 3) {
         .map(_baseSearchItemFromWork)
         .filter(Boolean)
         .filter((item) => {
-          if (!item.externalId || !item.title) {
+          if (!_isWeeklyFeaturedOpenLibraryItem(item)) {
             return false;
           }
 
@@ -444,12 +452,7 @@ export async function getWeeklyFeaturedOpenLibrary(limit = 3) {
 
           seen.add(item.externalId);
 
-          return Boolean(
-            item.cover ||
-            item.releaseDate ||
-            item.summary ||
-            item?.meta?.author
-          );
+          return true;
         })
         .sort((a, b) =>
           String(b.releaseDate || "").localeCompare(
