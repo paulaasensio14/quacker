@@ -1,5 +1,34 @@
 # Quacker Release Notes
 
+## 1.0.1
+
+Primera actualización correctiva posterior a `1.0.0`.
+
+### Motivo de 1.0.1
+
+Durante la verificación post-release de Semana 7 se detectó que algunos libros antiguos de Library no mostraban su portada.
+
+Estos registros procedían de una integración anterior y conservaban URLs de `books.google.com`, proveedor retirado de Quacker y bloqueado intencionadamente por la Content Security Policy actual.
+
+La corrección:
+
+- mantiene Google Books fuera de la CSP;
+- no modifica ni migra `db.json`;
+- detecta únicamente portadas legacy de Google Books asociadas a elementos `open_library`;
+- reconstruye la portada usando el OLID ya persistido y `covers.openlibrary.org`;
+- aplica la compatibilidad tanto al listado de Library como al detalle individual;
+- mantiene intactas las portadas que ya utilizan proveedores permitidos.
+
+### Validación
+
+- Suite completa: 343/343 tests.
+- `npm audit`: 0 vulnerabilidades.
+- `git diff --check`: limpio.
+- Compatibilidad validada para portadas legacy, listado de Library y detalle individual.
+- Versión: `1.0.1`.
+
+El tag `v1.0.0` permanece intacto como snapshot de la primera versión estable.
+
 ## 1.0.0
 
 Primera versión estable de Quacker.
