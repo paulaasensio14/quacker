@@ -200,6 +200,11 @@ function setHomeDashboardError(hasError) {
 function _normalizeHomeCoverUrl(value) {
   const url = String(value || "").trim();
   if (!url || /[\u0000-\u001f]/.test(url)) return "";
+
+  if (/^\/api\/library\/[^/?#]+\/legacy-cover$/.test(url)) {
+    return url;
+  }
+
   return /^https:\/\//i.test(url) ? url : "";
 }
 
