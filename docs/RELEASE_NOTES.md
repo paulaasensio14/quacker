@@ -1,5 +1,45 @@
 # Quacker Release Notes
 
+## 1.0.3
+
+Tercera actualización correctiva posterior a `1.0.0`.
+
+### Motivo de 1.0.3
+
+Durante la verificación post-release de Semana 7 se detectó que algunos libros mostrados en “Destacados esta semana” dentro de Explorar podían aparecer sin portada.
+
+La causa estaba en el filtro de resultados semanales de Open Library: un elemento podía considerarse elegible aunque no tuviera portada, siempre que dispusiera de otros metadatos como fecha, resumen o autor.
+
+La corrección:
+
+- exige `externalId`, `title` y `cover` para que un libro de Open Library pueda aparecer como destacado semanal;
+
+- mantiene intacta la deduplicación existente;
+
+- no modifica Library;
+
+- no modifica ni migra `db.json`;
+
+- no modifica la CSP;
+
+- no añade nuevos proveedores de contenido.
+
+### Validación
+
+- Regresión específica: 2/2 tests.
+
+- Suite completa: 346/346 tests.
+
+- `npm audit`: 0 vulnerabilidades.
+
+- `git diff --check`: limpio.
+
+- Validación real con 15 candidatos semanales: 15 con portada y 0 sin portada.
+
+- Versión: `1.0.3`.
+
+Los tags `v1.0.0`, `v1.0.1` y `v1.0.2` permanecen intactos como snapshots inmutables de sus respectivas releases.
+
 ## 1.0.2
 
 Segunda actualización correctiva posterior a `1.0.0`.
