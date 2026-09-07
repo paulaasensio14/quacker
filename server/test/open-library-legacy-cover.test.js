@@ -36,7 +36,7 @@ function extractFunction(source, name) {
 }
 
 test(
-  "convierte portadas legacy de Google Books a Open Library usando el OLID",
+  "convierte portadas legacy de Google Books a una ruta same-origin del item",
   () => {
     const fnSource = extractFunction(
       serverSource,
@@ -49,12 +49,13 @@ test(
 
     assert.equal(
       normalizeLibraryCover({
+        id: "u_legacy_book",
         source: "open_library",
         externalId: "OL34156823M",
         cover:
           "https://books.google.com/books/content?id=-Ff2DwAAQBAJ&printsec=frontcover&img=1&zoom=1"
       }),
-      "https://covers.openlibrary.org/b/olid/OL34156823M-L.jpg"
+      "/api/library/u_legacy_book/legacy-cover"
     );
 
     assert.equal(
@@ -123,6 +124,53 @@ test(
       getLibraryItemBlock,
       /_normalizeLibraryCover/,
       "GET /api/library/:id debe normalizar la portada antes de enviarla"
+    );
+  }
+);
+
+
+test(
+  "existe una ruta autenticada y acotada para servir la portada legacy",
+  () => {
+    const start = serverSource.indexOf(
+      '"/api/library/:id/legacy-cover"'
+    );
+
+    assert.notEqual(
+      start,
+      -1,
+      "debe existir GET /api/library/:id/legacy-cover"
+    );
+
+    const end = serverSource.indexOf(
+      'app.get("/api/library/:id"',
+      start + 1
+    );
+
+    assert.notEqual(
+      end,
+      -1,
+      "debe poder aislarse la ruta legacy-cover"
+    );
+
+    const routeBlock = serverSource.slice(start, end);
+
+    assert.match(
+      routeBlock,
+      /_requireAuth/,
+      "la portada legacy debe requerir autenticación"
+    );
+
+    assert.match(
+      routeBlock,
+      /books\.google\.com/,
+      "la ruta debe validar explícitamente el host legacy permitido"
+    );
+
+    assert.match(
+      routeBlock,
+      /redirect:\s*"error"/,
+      "la descarga legacy no debe seguir redirecciones"
     );
   }
 );

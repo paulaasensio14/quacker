@@ -1328,14 +1328,14 @@ function _normalizeExploreDismissedIds(list) {
 function _normalizeLibraryCover(item) {
   const cover = String(item?.cover || "").trim().slice(0, 500);
   const source = String(item?.source || "").trim().toLowerCase();
-  const externalId = String(item?.externalId || "").trim();
+  const id = String(item?.id || "").trim();
 
   if (
     source === "open_library" &&
-    /^OL\d+M$/i.test(externalId) &&
+    id &&
     /^https:\/\/books\.google\.com\/books\/content(?:\?|$)/i.test(cover)
   ) {
-    return `https://covers.openlibrary.org/b/olid/${externalId.toUpperCase()}-L.jpg`;
+    return `/api/library/${encodeURIComponent(id)}/legacy-cover`;
   }
 
   return cover;
@@ -3544,6 +3544,136 @@ app.put("/api/notifications", _requireAuth, (req, res) => {
 });
 
 // ===== LIBRARY =====
+app.get(
+  "/api/library/:id/legacy-cover",
+  _requireAuth,
+  _asyncHandler(async (req, res) => {
+    const db = _readDb();
+    const bucket = _getUserBucket(db, req.session.userId);
+    const id = String(req.params.id || "").trim();
+
+    const item = bucket.library.find(
+      (entry) => String(entry?.id || "") === id
+    );
+
+    if (!item || item.source !== "open_library") {
+      return res.status(404).json({
+        error: "legacy_cover_not_found"
+      });
+    }
+
+    const cover = String(item.cover || "").trim();
+    let coverUrl;
+
+    try {
+      coverUrl = new URL(cover);
+    } catch {
+      return res.status(404).json({
+        error: "legacy_cover_not_available"
+      });
+    }
+
+    if (
+      coverUrl.protocol !== "https:" ||
+      coverUrl.hostname !== "books.google.com" ||
+      coverUrl.port ||
+      coverUrl.username ||
+      coverUrl.password ||
+      coverUrl.pathname !== "/books/content" ||
+      !coverUrl.searchParams.get("id")
+    ) {
+      return res.status(404).json({
+        error: "legacy_cover_not_available"
+      });
+    }
+
+    const signal = AbortSignal.timeout(5000);
+    let response;
+
+    try {
+      response = await fetch(coverUrl, {
+        method: "GET",
+        headers: {
+          Accept: "image/jpeg,image/png,image/webp,image/*;q=0.8"
+        },
+        redirect: "error",
+        signal
+      });
+    } catch (error) {
+      if (
+        signal.aborted &&
+        signal.reason?.name === "TimeoutError"
+      ) {
+        return res.status(504).json({
+          error: "legacy_cover_timeout"
+        });
+      }
+
+      return res.status(502).json({
+        error: "legacy_cover_fetch_failed"
+      });
+    }
+
+    if (!response.ok) {
+      return res.status(502).json({
+        error: "legacy_cover_fetch_failed"
+      });
+    }
+
+    const contentType = String(
+      response.headers.get("content-type") || ""
+    )
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+
+    const allowedTypes = new Set([
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif"
+    ]);
+
+    if (!allowedTypes.has(contentType)) {
+      return res.status(502).json({
+        error: "legacy_cover_invalid_type"
+      });
+    }
+
+    const maxBytes = 2 * 1024 * 1024;
+    const declaredLength = Number(
+      response.headers.get("content-length") || 0
+    );
+
+    if (
+      Number.isFinite(declaredLength) &&
+      declaredLength > maxBytes
+    ) {
+      return res.status(502).json({
+        error: "legacy_cover_too_large"
+      });
+    }
+
+    const image = Buffer.from(
+      await response.arrayBuffer()
+    );
+
+    if (image.length > maxBytes) {
+      return res.status(502).json({
+        error: "legacy_cover_too_large"
+      });
+    }
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Cache-Control",
+      "private, max-age=86400"
+    );
+
+    return res.send(image);
+  })
+);
+
 app.get("/api/library", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
