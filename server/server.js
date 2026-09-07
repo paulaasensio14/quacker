@@ -1325,6 +1325,22 @@ function _normalizeExploreDismissedIds(list) {
     .slice(0, 500);
 }
 
+function _normalizeLibraryCover(item) {
+  const cover = String(item?.cover || "").trim().slice(0, 500);
+  const source = String(item?.source || "").trim().toLowerCase();
+  const externalId = String(item?.externalId || "").trim();
+
+  if (
+    source === "open_library" &&
+    /^OL\d+M$/i.test(externalId) &&
+    /^https:\/\/books\.google\.com\/books\/content(?:\?|$)/i.test(cover)
+  ) {
+    return `https://covers.openlibrary.org/b/olid/${externalId.toUpperCase()}-L.jpg`;
+  }
+
+  return cover;
+}
+
 function _getDefaultLibraryStatus(type) {
   return type === "book"
     ? "reading"
@@ -3531,7 +3547,13 @@ app.put("/api/notifications", _requireAuth, (req, res) => {
 app.get("/api/library", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
-  res.json(bucket.library);
+
+  res.json(
+    bucket.library.map((item) => ({
+      ...item,
+      cover: _normalizeLibraryCover(item)
+    }))
+  );
 });
 
 app.get("/api/library/:id", _requireAuth, (req, res) => {
@@ -3542,7 +3564,10 @@ app.get("/api/library/:id", _requireAuth, (req, res) => {
   const item = bucket.library.find((it) => String(it.id) === id);
   if (!item) return res.status(404).json({ error: "not_found" });
 
-  res.json(item);
+  res.json({
+    ...item,
+    cover: _normalizeLibraryCover(item)
+  });
 });
 
 app.post("/api/library/restore", _requireAuth, (req, res) => {
