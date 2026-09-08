@@ -5,7 +5,7 @@ import {
   searchOpenLibrary
 } from "../adapters/open-library.js";
 
-test("cancela una petición Open Library tras cinco segundos", async (t) => {
+test("cancela una petición Open Library tras ocho segundos", async (t) => {
   const originalFetch = globalThis.fetch;
   const originalTimeout = AbortSignal.timeout;
 
@@ -49,7 +49,7 @@ test("cancela una petición Open Library tras cinco segundos", async (t) => {
     }
   );
 
-  assert.equal(configuredTimeout, 5000);
+  assert.equal(configuredTimeout, 8000);
 });
 
 test("mantiene un único presupuesto de timeout durante reintentos", async (t) => {
@@ -64,7 +64,7 @@ test("mantiene un único presupuesto de timeout durante reintentos", async (t) =
   const receivedSignals = [];
 
   AbortSignal.timeout = (milliseconds) => {
-    assert.equal(milliseconds, 5000);
+    assert.equal(milliseconds, 8000);
     timeoutCalls += 1;
 
     return controller.signal;
@@ -172,7 +172,7 @@ test("reintenta una vez un ECONNRESET transitorio de Open Library", async (t) =>
   let timeoutCalls = 0;
 
   AbortSignal.timeout = (milliseconds) => {
-    assert.equal(milliseconds, 5000);
+    assert.equal(milliseconds, 8000);
     timeoutCalls += 1;
     return controller.signal;
   };
@@ -221,7 +221,7 @@ test("Open Library respeta una cancelación externa", async (t) => {
   const externalController = new AbortController();
 
   AbortSignal.timeout = (milliseconds) => {
-    assert.equal(milliseconds, 5000);
+    assert.equal(milliseconds, 8000);
     return timeoutController.signal;
   };
 
@@ -262,4 +262,53 @@ test("Open Library respeta una cancelación externa", async (t) => {
       return true;
     }
   );
+});
+
+test("la búsqueda interactiva solicita un payload ligero a Open Library", async (t) => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = null;
+
+  globalThis.fetch = async (url) => {
+    requestedUrl = new URL(String(url));
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        docs: []
+      })
+    };
+  };
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const result = await searchOpenLibrary(
+    "el principito lightweight regression probe"
+  );
+
+  assert.deepEqual(result, []);
+  assert.ok(requestedUrl);
+
+  assert.equal(
+    requestedUrl.searchParams.get("limit"),
+    "20"
+  );
+
+  const fields = String(
+    requestedUrl.searchParams.get("fields") || ""
+  )
+    .split(",")
+    .filter(Boolean);
+
+  assert.ok(fields.includes("editions"));
+  assert.ok(fields.includes("editions.key"));
+  assert.ok(fields.includes("editions.language"));
+  assert.ok(fields.includes("editions.cover_i"));
+  assert.ok(fields.includes("editions.publish_date"));
+  assert.ok(fields.includes("editions.number_of_pages"));
+
+  assert.equal(fields.includes("first_sentence"), false);
+  assert.equal(fields.includes("subject"), false);
 });

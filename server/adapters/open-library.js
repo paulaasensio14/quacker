@@ -1,7 +1,7 @@
 const OPEN_LIBRARY_BASE_URL = "https://openlibrary.org";
 const OPEN_LIBRARY_USER_AGENT = "Quacker (hello@quacker.es)";
 const OPEN_LIBRARY_SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
-const OPEN_LIBRARY_REQUEST_TIMEOUT_MS = 5000;
+const OPEN_LIBRARY_REQUEST_TIMEOUT_MS = 8000;
 
 const OPEN_LIBRARY_SEARCH_FIELDS = [
   "key",
@@ -13,8 +13,6 @@ const OPEN_LIBRARY_SEARCH_FIELDS = [
   "number_of_pages_median",
   "ratings_average",
   "ratings_count",
-  "first_sentence",
-  "subject",
   "editions",
   "editions.key",
   "editions.title",
@@ -365,7 +363,7 @@ data = await _searchOpenLibrary(
   {
     q,
     lang: "es",
-    limit: 40
+    limit: 20
   },
   options
 );

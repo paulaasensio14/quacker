@@ -2721,7 +2721,7 @@ const gameSearchPromise = searchRawg(q, { timeoutMs: 1500 })
 const [tmdbResult, openLibraryResult, rawgResult] = await Promise.allSettled([
   searchTmdb(q),
   searchOpenLibrary(q, {
-    timeoutMs: 5000,
+    timeoutMs: 8000,
     signal: clientAbortController.signal
   }),
   gameSearchPromise
