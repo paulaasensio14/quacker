@@ -2453,7 +2453,8 @@ const EXPLORE_FEED = [
     type: "book",
     title: "Project Hail Mary",
     releaseDate: "2021-05-04",
-    summary: "Ciencia ficción accesible, humor y misterio científico."
+    summary: "Ciencia ficción accesible, humor y misterio científico.",
+    cover: "https://covers.openlibrary.org/b/olid/OL34156823M-L.jpg?default=false"
   },
   {
     eid: "quacker_seed:game:ex_004",
@@ -2570,7 +2571,8 @@ const EXPLORE_FEED = [
     type: "book",
     title: "The Three-Body Problem",
     releaseDate: "2008-01-01",
-    summary: "Ciencia ficción de ideas grandes, escala histórica y misterio."
+    summary: "Ciencia ficción de ideas grandes, escala histórica y misterio.",
+    cover: "https://covers.openlibrary.org/b/olid/OL31898458M-L.jpg?default=false"
   },
   {
     eid: "quacker_seed:book:ex_017",
@@ -2579,7 +2581,8 @@ const EXPLORE_FEED = [
     type: "book",
     title: "Klara and the Sun",
     releaseDate: "2021-03-02",
-    summary: "Reflexión suave sobre humanidad, amor y observación."
+    summary: "Reflexión suave sobre humanidad, amor y observación.",
+    cover: "https://covers.openlibrary.org/b/olid/OL31860818M-L.jpg?default=false"
   },
   {
     eid: "quacker_seed:book:ex_018",

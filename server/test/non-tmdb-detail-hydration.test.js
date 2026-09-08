@@ -47,3 +47,37 @@ test(
     );
   }
 );
+
+test(
+  "Explore usa el detalle autocontenido para contenido manual",
+  () => {
+    const source = fs.readFileSync(
+      new URL("../../assets/js/app/explore.js", import.meta.url),
+      "utf8"
+    );
+
+    const fn = extractFunction(
+      source,
+      "_fetchHydratedExploreItemDetail"
+    );
+
+    const manualGuardIndex = fn.search(
+      /source\s*===\s*["']manual["']/
+    );
+
+    const remoteDetailIndex = fn.indexOf(
+      "ApiClient.getExploreItemDetail"
+    );
+
+    assert.notEqual(
+      manualGuardIndex,
+      -1,
+      "el detalle manual debe resolverse sin consultar el proveedor remoto"
+    );
+
+    assert.ok(
+      manualGuardIndex < remoteDetailIndex,
+      "el bypass manual debe ejecutarse antes de getExploreItemDetail"
+    );
+  }
+);
