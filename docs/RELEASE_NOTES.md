@@ -1,5 +1,50 @@
 # Quacker Release Notes
 
+## 1.0.5
+
+Quinta actualización correctiva posterior a `1.0.0`.
+
+### Motivo de 1.0.5
+
+Durante la verificación post-release de `1.0.4` se detectó que la búsqueda de libros en Explorar podía no devolver resultados de Open Library cuando coincidían latencia elevada, desconexiones transitorias o varias peticiones simultáneas.
+
+La corrección:
+
+- amplía de 2 a 5 segundos el margen de la búsqueda interactiva de Open Library;
+
+- reintenta una vez los errores transitorios `ECONNRESET`, manteniendo un único presupuesto de timeout;
+
+- propaga la cancelación del navegador desde `/api/explore` hasta Open Library para detener peticiones abandonadas;
+
+- aumenta el debounce de Explorar de 250 ms a 600 ms para reducir consultas parciales mientras se escribe;
+
+- cancela también la carga de destacados semanales cuando comienza una nueva búsqueda, evitando que compita con la consulta interactiva;
+
+- mantiene intacto el filtro de portadas de los libros destacados semanales;
+
+- no modifica ni migra `db.json`;
+
+- no modifica la CSP;
+
+- no añade ni reactiva proveedores externos.
+
+### Validación
+
+- Tests específicos de búsqueda y cancelación: 14/14.
+
+- Tests de portadas semanales de Open Library: 2/2.
+
+- Suite completa: 354/354 tests.
+
+- `npm audit`: 0 vulnerabilidades.
+
+- `git diff --check`: limpio.
+
+- Versión: `1.0.5`.
+
+Los tags `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3` y `v1.0.4` permanecen intactos como snapshots inmutables de sus respectivas releases.
+
+
 ## 1.0.4
 
 Cuarta actualización correctiva posterior a `1.0.0`.
