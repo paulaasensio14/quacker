@@ -2667,6 +2667,25 @@ const EXPLORE_FEED = [
 app.get("/api/explore", _requireAuth, async (req, res) => {
  res.set("Cache-Control", "no-store");
 
+ const clientAbortController = new AbortController();
+
+ const abortClientWork = () => {
+   if (
+     !res.writableEnded &&
+     !clientAbortController.signal.aborted
+   ) {
+     clientAbortController.abort(
+       new DOMException(
+         "Client disconnected",
+         "AbortError"
+       )
+     );
+   }
+ };
+
+ req.once("aborted", abortClientWork);
+ res.once("close", abortClientWork);
+
  const q = String(req.query.q || "").trim();
  const type = String(req.query.type || "").trim().toLowerCase();
  const sort = String(req.query.sort || "").trim().toLowerCase();
@@ -2701,7 +2720,10 @@ const gameSearchPromise = searchRawg(q, { timeoutMs: 1500 })
 
 const [tmdbResult, openLibraryResult, rawgResult] = await Promise.allSettled([
   searchTmdb(q),
-  searchOpenLibrary(q, { timeoutMs: 2000 }),
+  searchOpenLibrary(q, {
+    timeoutMs: 5000,
+    signal: clientAbortController.signal
+  }),
   gameSearchPromise
 ]);
 

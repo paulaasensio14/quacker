@@ -135,8 +135,8 @@ test(
 
     assert.match(
       routeSource,
-      /searchOpenLibrary\(\s*q\s*,\s*\{\s*timeoutMs:\s*2000\s*\}\s*\)/s,
-      "la búsqueda interactiva debe limitar Open Library a 2000 ms"
+      /searchOpenLibrary\(\s*q\s*,\s*\{\s*timeoutMs:\s*5000(?:\s*,[\s\S]*?)?\s*\}\s*\)/s,
+      "la búsqueda interactiva debe limitar Open Library a 5000 ms"
     );
 
     const wikipediaIndex = routeSource.indexOf(
@@ -342,3 +342,150 @@ test(
   }
 );
 
+
+test(
+  "Explorar propaga la desconexión del cliente a Open Library",
+  () => {
+    const serverSource = fs.readFileSync(
+      new URL("../server.js", import.meta.url),
+      "utf8"
+    );
+
+    const routeStart = serverSource.indexOf(
+      'app.get("/api/explore",'
+    );
+
+    const routeEnd = serverSource.indexOf(
+      'app.get("/api/explore/item/',
+      routeStart
+    );
+
+    assert.notEqual(routeStart, -1, "debe existir GET /api/explore");
+    assert.notEqual(
+      routeEnd,
+      -1,
+      "debe poder aislarse GET /api/explore"
+    );
+
+    const routeSource = serverSource.slice(routeStart, routeEnd);
+
+    assert.match(
+      routeSource,
+      /new AbortController\(\)/,
+      "la ruta debe crear un AbortController para la petición del cliente"
+    );
+
+    assert.match(
+      routeSource,
+      /(?:req|res)\.(?:once|on)\(\s*["'](?:aborted|close)["']/,
+      "la ruta debe detectar que el cliente ha cerrado la petición"
+    );
+
+    assert.match(
+      routeSource,
+      /searchOpenLibrary\(\s*q\s*,\s*\{[\s\S]*?timeoutMs:\s*5000[\s\S]*?signal:\s*[^,}\n]+\.signal[\s\S]*?\}\s*\)/s,
+      "la búsqueda Open Library debe recibir la señal de cancelación del cliente"
+    );
+  }
+);
+
+test(
+  "Explorar espera 600 ms antes de lanzar una búsqueda remota",
+  () => {
+    const exploreSource = fs.readFileSync(
+      new URL("../../assets/js/app/explore.js", import.meta.url),
+      "utf8"
+    );
+
+    const scheduleStart = exploreSource.indexOf(
+      "function _scheduleApplyFilters()"
+    );
+
+    const scheduleEnd = exploreSource.indexOf(
+      "const TYPE_LABELS",
+      scheduleStart
+    );
+
+    assert.notEqual(
+      scheduleStart,
+      -1,
+      "debe existir _scheduleApplyFilters"
+    );
+
+    assert.notEqual(
+      scheduleEnd,
+      -1,
+      "debe poder aislarse el debounce de Explorar"
+    );
+
+    const scheduleSource = exploreSource.slice(
+      scheduleStart,
+      scheduleEnd
+    );
+
+    assert.match(
+      scheduleSource,
+      /setTimeout\([\s\S]*?,\s*600\s*\)/s,
+      "Explorar debe esperar 600 ms antes de lanzar la búsqueda remota"
+    );
+  }
+);
+
+test(
+  "Explorar cancela también la carga semanal al iniciar otra búsqueda",
+  () => {
+    const apiClientSource = fs.readFileSync(
+      new URL("../../assets/js/data/api-client.js", import.meta.url),
+      "utf8"
+    );
+
+    const exploreSource = fs.readFileSync(
+      new URL("../../assets/js/app/explore.js", import.meta.url),
+      "utf8"
+    );
+
+    const weeklyStart = apiClientSource.indexOf(
+      "async function getWeeklyFeaturedExploreFeed"
+    );
+
+    const weeklyEnd = apiClientSource.indexOf(
+      "async function",
+      weeklyStart + 20
+    );
+
+    assert.notEqual(
+      weeklyStart,
+      -1,
+      "debe existir getWeeklyFeaturedExploreFeed"
+    );
+
+    const weeklySource = apiClientSource.slice(
+      weeklyStart,
+      weeklyEnd === -1 ? undefined : weeklyEnd
+    );
+
+    assert.match(
+      weeklySource,
+      /getWeeklyFeaturedExploreFeed\s*\(\s*options\s*=\s*\{\}\s*\)/,
+      "la carga semanal debe aceptar opciones"
+    );
+
+    assert.match(
+      weeklySource,
+      /getExploreFeed\(\{[\s\S]*?\bsignal\b[\s\S]*?\}\)/s,
+      "las peticiones semanales deben recibir una señal de cancelación"
+    );
+
+    assert.match(
+      weeklySource,
+      /signal\?\.aborted[\s\S]*?throw/s,
+      "la carga semanal no debe continuar tras una cancelación"
+    );
+
+    assert.match(
+      exploreSource,
+      /getWeeklyFeaturedExploreFeed\(\s*\{[\s\S]*?signal:\s*__searchAbortController\.signal[\s\S]*?\}\s*\)/s,
+      "Explorar debe pasar su AbortController también a la carga semanal"
+    );
+  }
+);

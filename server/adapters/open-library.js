@@ -229,7 +229,14 @@ const timeoutMs =
     ? requestedTimeout
     : OPEN_LIBRARY_REQUEST_TIMEOUT_MS;
 
-const signal = AbortSignal.timeout(timeoutMs);
+const timeoutSignal = AbortSignal.timeout(timeoutMs);
+const externalSignal =
+  options?.signal instanceof AbortSignal
+    ? options.signal
+    : null;
+const signal = externalSignal
+  ? AbortSignal.any([timeoutSignal, externalSignal])
+  : timeoutSignal;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let response;
@@ -244,9 +251,13 @@ const signal = AbortSignal.timeout(timeoutMs);
         signal
       });
     } catch (error) {
+      if (externalSignal?.aborted) {
+        throw externalSignal.reason || error;
+      }
+
       if (
-        signal.aborted &&
-        signal.reason?.name === "TimeoutError"
+        timeoutSignal.aborted &&
+        timeoutSignal.reason?.name === "TimeoutError"
       ) {
         const timeoutError = new Error(
           "open_library_request_timeout"
@@ -254,6 +265,18 @@ const signal = AbortSignal.timeout(timeoutMs);
 
         timeoutError.status = 504;
         throw timeoutError;
+      }
+
+      const networkCode = String(
+        error?.cause?.code || error?.code || ""
+      ).toUpperCase();
+
+      if (
+        networkCode === "ECONNRESET" &&
+        attempt < maxAttempts
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
       }
 
       throw error;

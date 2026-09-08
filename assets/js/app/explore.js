@@ -70,7 +70,7 @@ const ExploreModule = (() => {
       } catch (e) {
         console.error("Explore remote search failed", e);
       }
-    }, 250);
+    }, 600);
   }
 
   const TYPE_LABELS = {
@@ -3398,7 +3398,11 @@ const ExploreModule = (() => {
         query: searchTerm,
         signal: __searchAbortController.signal
       }),
-        searchTerm ? Promise.resolve([]) : ApiClient.getWeeklyFeaturedExploreFeed()
+        searchTerm
+          ? Promise.resolve([])
+          : ApiClient.getWeeklyFeaturedExploreFeed({
+              signal: __searchAbortController.signal
+            })
       ]);
 
       if (requestSeq !== __loadReqSeq) return;
