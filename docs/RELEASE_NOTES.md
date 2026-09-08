@@ -6,21 +6,33 @@ Quinta actualización correctiva posterior a `1.0.0`.
 
 ### Motivo de 1.0.5
 
-Durante la verificación post-release de `1.0.4` se detectó que la búsqueda de libros en Explorar podía no devolver resultados de Open Library cuando coincidían latencia elevada, desconexiones transitorias o varias peticiones simultáneas.
+Durante la verificación post-release de `1.0.4` se detectaron dos problemas relacionados con los libros en Explorar: la búsqueda interactiva podía perder los resultados de Open Library cuando el proveedor sufría latencia elevada o desconexiones transitorias, y los destacados semanales podían quedarse sin libros cuando Open Library no respondía.
 
 La corrección:
 
-- amplía de 2 a 5 segundos el margen de la búsqueda interactiva de Open Library;
+- amplía a 8 segundos el presupuesto total de las peticiones a Open Library, manteniendo un único presupuesto compartido durante los reintentos;
 
-- reintenta una vez los errores transitorios `ECONNRESET`, manteniendo un único presupuesto de timeout;
+- reintenta una vez los errores transitorios `ECONNRESET`;
 
 - propaga la cancelación del navegador desde `/api/explore` hasta Open Library para detener peticiones abandonadas;
 
-- aumenta el debounce de Explorar de 250 ms a 600 ms para reducir consultas parciales mientras se escribe;
+- aumenta el debounce de búsqueda de Explorar de 250 ms a 600 ms;
 
-- cancela también la carga de destacados semanales cuando comienza una nueva búsqueda, evitando que compita con la consulta interactiva;
+- cancela la carga de destacados semanales cuando comienza una nueva búsqueda, evitando que compita con la consulta interactiva;
 
-- mantiene intacto el filtro de portadas de los libros destacados semanales;
+- reduce la búsqueda interactiva de Open Library de 40 a 20 resultados;
+
+- aligera el payload de búsqueda eliminando `first_sentence` y `subject`, conservando los campos de ediciones necesarios para obtener identificadores `OL…M`, portadas, idioma, fecha y número de páginas;
+
+- mantiene Open Library como proveedor principal de libros;
+
+- mantiene el requisito de portada en los libros destacados obtenidos desde Open Library;
+
+- añade un fallback semanal autocontenido con tres seeds de libro y portadas verificadas de Open Library cuando el proveedor no responde;
+
+- permite que los elementos `manual` del fallback abran su detalle usando los datos ya incluidos en la tarjeta, sin realizar una petición remota no soportada;
+
+- conserva intacta la hidratación remota de TMDB, Open Library, RAWG y Wikipedia;
 
 - no modifica ni migra `db.json`;
 
@@ -30,15 +42,19 @@ La corrección:
 
 ### Validación
 
-- Tests específicos de búsqueda y cancelación: 14/14.
+- Suite completa: 357/357 tests.
 
-- Tests de portadas semanales de Open Library: 2/2.
-
-- Suite completa: 354/354 tests.
+- Regresiones específicas de búsqueda, cancelación, fallback, portadas e hidratación: en verde.
 
 - `npm audit`: 0 vulnerabilidades.
 
 - `git diff --check`: limpio.
+
+- Validación real en producción: los destacados semanales muestran tres libros con portada.
+
+- Validación real en producción: la búsqueda `el principito` devuelve resultados de tipo libro con portada.
+
+- Log de errores de PM2 tras ambas comprobaciones: 0 bytes.
 
 - Versión: `1.0.5`.
 
