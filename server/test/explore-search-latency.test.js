@@ -135,8 +135,8 @@ test(
 
     assert.match(
       routeSource,
-      /searchOpenLibrary\(\s*q\s*,\s*\{\s*timeoutMs:\s*5000(?:\s*,[\s\S]*?)?\s*\}\s*\)/s,
-      "la búsqueda interactiva debe limitar Open Library a 5000 ms"
+      /searchOpenLibrary\(\s*q\s*,\s*\{\s*timeoutMs:\s*8000(?:\s*,[\s\S]*?)?\s*\}\s*\)/s,
+      "la búsqueda interactiva debe limitar Open Library a 8000 ms"
     );
 
     const wikipediaIndex = routeSource.indexOf(
@@ -383,7 +383,7 @@ test(
 
     assert.match(
       routeSource,
-      /searchOpenLibrary\(\s*q\s*,\s*\{[\s\S]*?timeoutMs:\s*5000[\s\S]*?signal:\s*[^,}\n]+\.signal[\s\S]*?\}\s*\)/s,
+      /searchOpenLibrary\(\s*q\s*,\s*\{[\s\S]*?timeoutMs:\s*8000[\s\S]*?signal:\s*[^,}\n]+\.signal[\s\S]*?\}\s*\)/s,
       "la búsqueda Open Library debe recibir la señal de cancelación del cliente"
     );
   }
