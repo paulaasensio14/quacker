@@ -1396,8 +1396,17 @@ if (externalSignal?.aborted) {
     return items;
   }
 
-  async function getWeeklyFeaturedExploreFeed() {
+  async function getWeeklyFeaturedExploreFeed(options = {}) {
     if (!_isHttp()) return [];
+
+    const signal = options?.signal;
+
+    if (signal?.aborted) {
+      throw signal.reason || new DOMException(
+        "Request aborted",
+        "AbortError"
+      );
+    }
 
     const now = Date.now();
     const cacheAge = now - _weeklyFeaturedCache.timestamp;
@@ -1420,10 +1429,26 @@ if (externalSignal?.aborted) {
     const results = [];
 
     for (const { type, limit } of FEATURED_REQUESTS) {
+      if (signal?.aborted) {
+        throw signal.reason || new DOMException(
+          "Request aborted",
+          "AbortError"
+        );
+      }
+
       try {
-        const items = await getExploreFeed({ type, sort: "weekly", limit });
+        const items = await getExploreFeed({
+          type,
+          sort: "weekly",
+          limit,
+          signal
+        });
         results.push(Array.isArray(items) ? items : []);
       } catch (e) {
+        if (signal?.aborted) {
+          throw signal.reason || e;
+        }
+
         console.warn(`[ApiClient] weekly featured failed for ${type}`, e);
         results.push([]);
       }
