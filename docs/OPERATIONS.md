@@ -581,50 +581,141 @@ After any production update, perform the health checks below.
 
 ## 11. Health checks
 
-Check that the PM2 process is online:
+Quacker expone dos endpoints de salud con responsabilidades distintas.
 
-~~~bash
+### Liveness
+
+El endpoint:
+
+```text
+/api/health
+```
+
+comprueba únicamente que el proceso HTTP de Quacker está vivo y puede responder.
+
+Comprobación local:
+
+```bash
+curl -sS -i http://127.0.0.1:3000/api/health
+```
+
+Comprobación pública:
+
+```bash
+curl -sS -i https://quacker.es/api/health
+```
+
+Una respuesta correcta devuelve HTTP 200 y:
+
+```json
+{"ok":true}
+```
+
+### Readiness
+
+El endpoint:
+
+```text
+/api/ready
+```
+
+comprueba además que la base de datos JSON de producción existe, puede leerse, contiene JSON válido y supera la validación estructural de Quacker.
+
+La comprobación es estrictamente de solo lectura: no crea, repara ni modifica `db.json`.
+
+Comprobación local:
+
+```bash
+curl -sS -i http://127.0.0.1:3000/api/ready
+```
+
+Comprobación pública:
+
+```bash
+curl -sS -i https://quacker.es/api/ready
+```
+
+Cuando Quacker está preparado para servir tráfico, devuelve HTTP 200 y:
+
+```json
+{"ok":true}
+```
+
+Si la base de datos no está disponible o no es válida, devuelve HTTP 503 con uno de estos códigos:
+
+```text
+database_not_found
+database_unreadable
+database_invalid_json
+database_invalid_structure
+```
+
+### Comprobaciones operativas manuales
+
+Comprueba que el proceso PM2 está online:
+
+```bash
 pm2 status
-~~~
+```
 
-Inspect the latest application startup output:
+Revisa el último arranque de la aplicación:
 
-~~~bash
+```bash
 tail -n 20 /home/ubuntu/.pm2/logs/quacker-out.log
-~~~
+```
 
-Inspect recent backend errors:
+Revisa errores recientes del backend:
 
-~~~bash
+```bash
 tail -n 20 /home/ubuntu/.pm2/logs/quacker-error.log
-~~~
+```
 
-Check the public HTTPS endpoint:
+Comprueba la web pública:
 
-~~~bash
+```bash
 curl -sS -o /dev/null -w 'HTTP %{http_code} · %{time_total}s\n' https://quacker.es/
-~~~
+```
 
-A healthy public response should return:
+Una respuesta pública sana debe devolver HTTP 200.
 
-~~~text
-HTTP 200
-~~~
+Comprueba también CSP y HSTS:
 
-Inspect CSP and HSTS:
-
-~~~bash
+```bash
 curl -sSI https://quacker.es/ | grep -iE '^(content-security-policy|strict-transport-security):'
-~~~
+```
 
-For a broader infrastructure check, confirm that these systemd units are healthy:
+Para una comprobación más amplia de infraestructura:
 
-~~~bash
+```bash
 systemctl status pm2-ubuntu
 systemctl status nginx
 systemctl status certbot.timer
 systemctl status logrotate.timer
-~~~
+```
+
+### Monitorización automática externa
+
+El workflow de GitHub Actions:
+
+```text
+.github/workflows/production-health.yml
+```
+
+comprueba producción desde fuera del VPS cada 15 minutos y también puede ejecutarse manualmente mediante `workflow_dispatch`.
+
+Comprueba:
+
+- `https://quacker.es/`
+- `https://quacker.es/api/health`
+- `https://quacker.es/api/ready`
+
+Cada petición tiene un tiempo máximo de 10 segundos y el workflow falla ante errores HTTP o de red.
+
+Si falla alguna comprobación, el workflow busca una incidencia abierta titulada `Alerta: salud de producción`. Si no existe, crea una. Mientras permanezca abierta no se crean duplicados.
+
+Cuando todas las comprobaciones vuelven a ser correctas, el workflow añade un comentario de recuperación y cierra automáticamente la incidencia.
+
+La programación de GitHub Actions es una comprobación periódica externa, pero no debe considerarse un sistema con garantía de ejecución exacta al minuto.
 
 ## 12. Incident diagnostics
 

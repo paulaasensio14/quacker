@@ -34,6 +34,9 @@ import {
   writeJsonFileAtomic
 } from "./lib/json-db.js";
 import {
+  checkJsonDatabaseReadiness
+} from "./lib/readiness.js";
+import {
   createInitialDb,
   validateDb
 } from "./lib/db-schema.js";
@@ -1561,6 +1564,24 @@ function _getUserBucket(db, userId) {
 // ===== API BASE =====
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/ready", (req, res) => {
+  const readiness =
+    checkJsonDatabaseReadiness(
+      DB_PATH,
+      {
+        validate: validateDb
+      }
+    );
+
+  if (!readiness.ok) {
+    return res
+      .status(503)
+      .json(readiness);
+  }
+
+  res.json(readiness);
 });
 
 app.post("/api/contact", async (req, res) => {
