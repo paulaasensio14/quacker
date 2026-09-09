@@ -119,6 +119,50 @@ The saved PM2 dump is stored at:
 
 and should remain readable only by the `ubuntu` user.
 
+### Recuperación tras reinicio del servidor
+
+El servicio `pm2-ubuntu.service` debe permanecer habilitado para que systemd restaure Quacker automáticamente durante el arranque.
+
+Antes de un reinicio planificado del VPS, guarda el estado actual de PM2:
+
+~bash
+
+pm2 save
+
+~
+
+Comprueba que el servicio está habilitado y que existe el dump:
+
+~bash
+
+systemctl is-enabled pm2-ubuntu
+stat /home/ubuntu/.pm2/dump.pm2
+
+~
+
+El arranque configurado utiliza `pm2 resurrect` y restaura el proceso `quacker` desde:
+
+~text
+
+/home/ubuntu/.pm2/dump.pm2
+
+~
+
+Después de un reinicio completo, valida:
+
+~bash
+
+uname -r
+systemctl is-active pm2-ubuntu
+pm2 status
+systemctl is-active nginx
+
+~
+
+y confirma después los endpoints de liveness y readiness.
+
+La recuperación automática fue validada mediante un reinicio completo del VPS: systemd inició PM2, PM2 restauró Quacker y Nginx volvió a quedar operativo sin intervención manual.
+
 PM2 application logs use timestamps in the following format:
 
 ~~~text
@@ -200,6 +244,67 @@ A renewal simulation can be performed with:
 ~~~bash
 sudo certbot renew --dry-run
 ~~~
+
+### Firewall y superficie de red
+
+El proceso Node.js de Quacker debe escuchar exclusivamente en:
+
+~text
+
+127.0.0.1:3000
+
+~
+
+No debe aparecer como `*:3000`, `0.0.0.0:3000` ni `[::]:3000`.
+
+Comprueba los puertos TCP en escucha con:
+
+~bash
+
+sudo ss -lntp
+
+~
+
+Los puertos TCP expuestos públicamente esperados son:
+
+~text
+
+22/tcp   SSH
+80/tcp   HTTP — Nginx
+443/tcp  HTTPS — Nginx
+
+~
+
+El puerto `3000/tcp` debe permanecer limitado a localhost y accederse públicamente únicamente a través de Nginx.
+
+UFW debe permanecer activo y habilitado al inicio con:
+
+~text
+
+entrada por defecto: deny
+salida por defecto: allow
+
+~
+
+Las únicas reglas públicas configuradas son:
+
+~text
+
+22/tcp
+80/tcp
+443/tcp
+
+~
+
+Comprueba el firewall con:
+
+~bash
+
+sudo ufw status verbose
+
+~
+
+Después de cualquier cambio de firewall, valida una conexión SSH nueva antes de cerrar la sesión administrativa existente y confirma que la web pública continúa respondiendo correctamente.
 
 The production site sends HSTS with:
 
@@ -421,6 +526,40 @@ git status --short
 git ls-files
 ~~~
 
+### Credenciales operativas del VPS
+
+La configuración de GitHub CLI se almacena en:
+
+~text
+
+/home/ubuntu/.config/gh/hosts.yml
+
+~
+
+Los permisos esperados son:
+
+~text
+
+/home/ubuntu/.config       0700
+/home/ubuntu/.config/gh    0700
+hosts.yml                  0600
+
+~
+
+No se debe mostrar el contenido de `hosts.yml` durante comprobaciones operativas.
+
+El directorio SSH debe permanecer en:
+
+~text
+
+/home/ubuntu/.ssh   0700
+
+~
+
+Las claves privadas y archivos sensibles de SSH deben usar `0600`. Las claves públicas pueden usar `0644`.
+
+Las comprobaciones de permisos deben mostrar únicamente metadatos como permisos y propietario, nunca el contenido de claves o tokens.
+
 Production requires a valid `SESSION_SECRET` of at least 32 characters.
 
 The development fallback secret must not be used in production. If the production secret is invalid, Quacker should fail during startup rather than run with an insecure fallback.
@@ -596,6 +735,69 @@ Verify the installed dependency tree when necessary with:
 ~~~bash
 npm ls express body-parser qs --all
 ~~~
+
+### Mantenimiento del sistema operativo
+
+Antes de instalar actualizaciones del VPS, revisa primero qué paquetes están pendientes:
+
+~bash
+
+apt list --upgradable
+
+~
+
+Comprueba espacio disponible, paquetes retenidos y estado de `dpkg`:
+
+~bash
+
+df -h / /boot
+apt-mark showhold
+sudo dpkg --audit
+
+~
+
+Simula el upgrade antes de aplicarlo:
+
+~bash
+
+sudo apt-get -s upgrade
+
+~
+
+La simulación no debe introducir eliminaciones inesperadas.
+
+Las actualizaciones aplazadas por `phasing` de Ubuntu no deben forzarse durante el mantenimiento rutinario.
+
+Para aplicar el lote estándar validado:
+
+~bash
+
+sudo apt-get upgrade -y
+
+~
+
+No ejecutes `apt autoremove` automáticamente como parte del mismo mantenimiento. Revisa por separado cualquier paquete marcado como ya no necesario.
+
+Después de actualizar, comprueba:
+
+~bash
+
+sudo dpkg --audit
+apt list --upgradable
+systemctl is-active pm2-ubuntu
+systemctl is-active nginx
+
+~
+
+y verifica si el sistema solicita un reinicio:
+
+~bash
+
+test -f /var/run/reboot-required && echo REBOOT_REQUIRED=SI || echo REBOOT_REQUIRED=NO
+
+~
+
+Si es necesario reiniciar, sigue el procedimiento de recuperación de PM2 documentado anteriormente y vuelve a validar Quacker después del arranque.
 
 ## 10. Updating the production checkout
 
@@ -849,5 +1051,19 @@ Use this checklist after deployments and during periodic maintenance:
 - periodically run `sudo certbot renew --dry-run`
 - confirm `logrotate.timer` is active
 - confirm sensitive file permissions remain restricted
+- confirm Quacker listens only on `127.0.0.1:3000`
+
+- confirm UFW is active with default incoming policy `deny`
+
+- confirm only SSH, HTTP and HTTPS are intentionally exposed publicly
+
+- confirm GitHub CLI and SSH credential permissions remain restricted
+
+- review pending operating-system updates without forcing phased updates
+
+- confirm `dpkg --audit` is clean after system maintenance
+
+- confirm `/var/run/reboot-required` is absent after completed maintenance or perform the validated reboot procedure
+
 - confirm database backups can be listed with the restoration CLI
 - use the validated restore procedure rather than editing `db.json` manually
