@@ -2834,7 +2834,9 @@ const rawgItems =
         error
       );
 
-      throw error;
+      return res.status(error?.status || 500).json({
+        error: error?.message || "explore_fetch_failed"
+      });
     }
   }
 
