@@ -448,6 +448,66 @@ Inspect recent application errors with:
 tail -n 50 /home/ubuntu/.pm2/logs/quacker-error.log
 ~~~
 
+### Diagnóstico de proveedores externos
+
+Los fallos de proveedores externos de contenido se registran con el prefijo:
+
+~~~text
+[Provider]
+~~~
+
+El diagnóstico se limita intencionadamente a campos controlados:
+
+~~~text
+provider
+operation
+kind
+status
+networkCode
+durationMs
+~~~
+
+`kind` puede tener uno de estos valores:
+
+~~~text
+timeout
+http
+network
+configuration
+unknown
+~~~
+
+Los diagnósticos de proveedores no deben incluir consultas de búsqueda, identificadores externos, URLs de petición, claves API, cuerpos de respuesta ni propiedades arbitrarias del error.
+
+Los proveedores utilizados actualmente por Quacker incluyen:
+
+~~~text
+tmdb
+rawg
+open_library
+wikipedia_game
+~~~
+
+Las operaciones habituales incluyen:
+
+~~~text
+search
+search_fallback
+weekly
+weekly_series
+weekly_movies
+detail
+season_detail
+~~~
+
+Para revisar rápidamente los fallos recientes de proveedores:
+
+~~~bash
+grep '\[Provider\]' /home/ubuntu/.pm2/logs/quacker-error.log | tail -n 50
+~~~
+
+El estado HTTP y el código de red son únicamente metadatos de diagnóstico. Los cuerpos de respuesta de los proveedores pueden consumirse cuando sea necesario para la lógica interna, pero no deben escribirse en los logs de la aplicación.
+
 Quacker PM2 logs are rotated through:
 
 ~~~text

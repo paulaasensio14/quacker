@@ -52,8 +52,9 @@ async function _rawgGet(path, params = {}, options = {}) {
   }
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    const err = new Error(`rawg_http_${res.status}${text ? `: ${text}` : ""}`);
+    await res.text().catch(() => "");
+
+    const err = new Error(`rawg_http_${res.status}`);
     err.status = res.status;
     throw err;
   }

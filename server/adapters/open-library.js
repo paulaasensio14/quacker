@@ -285,6 +285,7 @@ const signal = externalSignal
     }
 
     const bodyText = await response.text().catch(() => "");
+
     const shouldRetry =
       retryableStatuses.has(response.status) &&
       attempt < maxAttempts;
@@ -295,10 +296,18 @@ const signal = externalSignal
     }
 
     const error = new Error(
-      `open_library_request_failed:${response.status}:${bodyText}`
+      `open_library_request_failed:${response.status}`
     );
 
     error.status = response.status;
+
+    if (
+      response.status === 422 &&
+      /query too short|queries are not allowed/i.test(bodyText)
+    ) {
+      error.code = "open_library_query_validation";
+    }
+
     throw error;
   }
 
@@ -368,13 +377,9 @@ data = await _searchOpenLibrary(
   options
 );
   } catch (error) {
-    const message = String(error?.message || "");
-
-    const isExpectedQueryValidation =
-      error?.status === 422 &&
-      /query too short|queries are not allowed/i.test(message);
-
-    if (isExpectedQueryValidation) {
+    if (
+      error?.code === "open_library_query_validation"
+    ) {
       return [];
     }
 

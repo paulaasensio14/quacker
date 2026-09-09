@@ -53,6 +53,9 @@ import {
 import {
   buildExploreDedupKey
 } from "./lib/explore-dedup.js";
+import {
+  buildProviderDiagnostic
+} from "./lib/provider-diagnostics.js";
 
 import {
   createUniqueAccountHandle,
@@ -101,6 +104,17 @@ import {
 import {
   applySecurityHeaders
 } from "./lib/security-headers.js";
+
+function logProviderFailure(provider, operation, error) {
+  console.error(
+    "[Provider]",
+    buildProviderDiagnostic({
+      provider,
+      operation,
+      error
+    })
+  );
+}
 
 // Protect runtime files containing session or user data.
 process.umask(0o077);
@@ -2722,13 +2736,14 @@ app.get("/api/explore", _requireAuth, async (req, res) => {
   if (q) {
 const gameSearchPromise = searchRawg(q, { timeoutMs: 1500 })
   .catch(async (error) => {
-    console.error("[/api/explore] RAWG search failed:", error);
+    logProviderFailure("rawg", "search", error);
 
     try {
       return await searchWikipediaGames(q);
     } catch (fallbackError) {
-      console.error(
-        "[/api/explore] Wikipedia game fallback failed:",
+      logProviderFailure(
+        "wikipedia_game",
+        "search_fallback",
         fallbackError
       );
 
@@ -2752,12 +2767,13 @@ const [tmdbResult, openLibraryResult, rawgResult] = await Promise.allSettled([
 ]);
 
 if (tmdbResult.status === "rejected") {
-  console.error("[/api/explore] TMDB search failed:", tmdbResult.reason);
+  logProviderFailure("tmdb", "search", tmdbResult.reason);
 }
 
 if (openLibraryResult.status === "rejected") {
-  console.error(
-    "[/api/explore] Open Library search failed:",
+  logProviderFailure(
+    "open_library",
+    "search",
     openLibraryResult.reason
   );
 }
@@ -2801,8 +2817,25 @@ const rawgItems =
   const weeklyLimit = limit > 0 ? limit : 3;
 
   if (type === "serie" || type === "pelicula") {
-  const items = await getWeeklyTrendingTmdbByType(type, weeklyLimit);
-  return res.json({ items });
+    try {
+      const items =
+        await getWeeklyTrendingTmdbByType(
+          type,
+          weeklyLimit
+        );
+
+      return res.json({ items });
+    } catch (error) {
+      logProviderFailure(
+        "tmdb",
+        type === "serie"
+          ? "weekly_series"
+          : "weekly_movies",
+        error
+      );
+
+      throw error;
+    }
   }
 
   if (type === "game") {
@@ -2810,10 +2843,7 @@ const rawgItems =
       const items = await getWeeklyFeaturedRawg(weeklyLimit);
       return res.json({ items });
     } catch (error) {
-      console.error(
-        "[/api/explore] RAWG weekly failed:",
-        error
-      );
+      logProviderFailure("rawg", "weekly", error);
 
       const items = buildExploreFallbackItems(
         EXPLORE_FEED,
@@ -2835,8 +2865,9 @@ const rawgItems =
 
       return res.json({ items });
     } catch (error) {
-      console.error(
-        "[/api/explore] Open Library weekly failed:",
+      logProviderFailure(
+        "open_library",
+        "weekly",
         error
       );
 
@@ -2859,16 +2890,34 @@ const rawgItems =
   getWeeklyFeaturedRawg(weeklyLimit)
   ]);
 
+  if (seriesResult.status === "rejected") {
+    logProviderFailure(
+      "tmdb",
+      "weekly_series",
+      seriesResult.reason
+    );
+  }
+
+  if (moviesResult.status === "rejected") {
+    logProviderFailure(
+      "tmdb",
+      "weekly_movies",
+      moviesResult.reason
+    );
+  }
+
   if (booksResult.status === "rejected") {
-    console.error(
-      "[/api/explore] Open Library weekly failed:",
+    logProviderFailure(
+      "open_library",
+      "weekly",
       booksResult.reason
     );
   }
 
   if (gamesResult.status === "rejected") {
-    console.error(
-      "[/api/explore] RAWG weekly failed:",
+    logProviderFailure(
+      "rawg",
+      "weekly",
       gamesResult.reason
     );
   }
@@ -2923,7 +2972,11 @@ app.get("/api/explore/item/:source/:type/:externalId/season/:seasonNumber", _req
 
     return res.status(400).json({ error: "unsupported_season_source" });
   } catch (err) {
-    console.error("GET /api/explore/item season error", err);
+    logProviderFailure(
+      "tmdb",
+      "season_detail",
+      err
+    );
     return res.status(err?.status || 500).json({
       error: err?.message || "explore_season_detail_failed"
     });
@@ -2963,7 +3016,11 @@ app.get("/api/explore/item/:source/:type/:externalId", _requireAuth, async (req,
 
     return res.status(400).json({ error: "unsupported_source" });
   } catch (err) {
-    console.error("GET /api/explore/item error", err);
+    logProviderFailure(
+      source,
+      "detail",
+      err
+    );
     return res.status(err?.status || 500).json({
       error: err?.message || "explore_detail_failed"
     });
