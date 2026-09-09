@@ -1,0 +1,97 @@
+name: Salud de producción
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  health:
+    name: Comprobar Quacker
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Comprobar página pública
+        run: curl --fail --silent --show-error --max-time 10 --output /dev/null https://quacker.es/
+
+      - name: Comprobar liveness
+        run: curl --fail --silent --show-error --max-time 10 https://quacker.es/api/health
+
+      - name: Comprobar readiness
+        run: curl --fail --silent --show-error --max-time 10 https://quacker.es/api/ready
+
+      - name: Abrir alerta si falla producción
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Alerta: salud de producción";
+
+            const { data: issues } =
+              await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: "open",
+                per_page: 100
+              });
+
+            const existing =
+              issues.find(
+                issue =>
+                  !issue.pull_request &&
+                  issue.title === title
+              );
+
+            if (!existing) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body:
+                  "La monitorización automática ha detectado que Quacker no está respondiendo correctamente. Revisa el workflow «Salud de producción» y la infraestructura de producción."
+              });
+            }
+
+      - name: Cerrar alerta tras recuperación
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Alerta: salud de producción";
+
+            const { data: issues } =
+              await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: "open",
+                per_page: 100
+              });
+
+            const existing =
+              issues.find(
+                issue =>
+                  !issue.pull_request &&
+                  issue.title === title
+              );
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body:
+                  "Quacker vuelve a superar todas las comprobaciones automáticas de salud."
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: "closed"
+              });
+            }
