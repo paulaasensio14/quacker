@@ -395,6 +395,92 @@ The restoration system only recognizes backups located in the same directory as 
 
 Non-regular files are not accepted as valid backups.
 
+### Backup periódico independiente
+
+Además de los cinco backups rotatorios creados junto a `db.json`, producción mantiene una segunda capa de copias periódicas en:
+
+~~text
+
+/var/backups/quacker
+
+~~
+
+Este directorio debe pertenecer a `ubuntu:ubuntu` y usar permisos:
+
+~~text
+
+0700
+
+~~
+
+Las copias periódicas usan el mismo prefijo:
+
+~~text
+
+db.json.backup-
+
+~~
+
+y cada archivo se fuerza a permisos `0600`.
+
+El comando de backup es:
+
+~~bash
+
+cd /home/ubuntu/apps/quacker/server
+npm run db:backup -- --directory /var/backups/quacker --limit 30
+
+~~
+
+Antes de crear una copia, Quacker lee el archivo completo, comprueba que contiene JSON válido y aplica la misma validación estructural de base de datos utilizada por la aplicación y por la restauración.
+
+Si la lectura, el JSON o la validación fallan, no se crea ningún backup.
+
+La copia conserva exactamente los bytes validados de `db.json` y se publica mediante un renombrado atómico después de escribir y sincronizar un archivo temporal.
+
+La retención de producción es de un máximo de 30 copias periódicas.
+
+La automatización se define en el repositorio mediante:
+
+~~text
+
+deploy/systemd/quacker-backup.service
+deploy/systemd/quacker-backup.timer
+
+~~
+
+El timer ejecuta una copia diaria alrededor de las `03:15 UTC`, permite un retraso aleatorio máximo de 15 minutos y utiliza `Persistent=true` para recuperar una ejecución perdida después de un apagado.
+
+Una vez instaladas las unidades en `/etc/systemd/system`, comprueba el timer con:
+
+~~bash
+
+systemctl status quacker-backup.timer
+systemctl list-timers --all --no-pager | grep quacker-backup
+
+~~
+
+Puede ejecutarse una copia manual mediante systemd con:
+
+~~bash
+
+sudo systemctl start quacker-backup.service
+systemctl status quacker-backup.service
+
+~~
+
+Un servicio `oneshot` completado correctamente puede mostrarse posteriormente como `inactive (dead)`; el resultado de la última ejecución debe ser satisfactorio.
+
+Comprueba las copias creadas sin mostrar su contenido con:
+
+~~bash
+
+sudo ls -lh /var/backups/quacker
+
+~~
+
+Este directorio continúa estando en el mismo disco del VPS. Por tanto, esta capa protege frente a errores de aplicación y pérdidas locales accidentales, pero no sustituye un backup externo frente a pérdida completa del servidor.
+
 ## 6. Database restoration
 
 Database restoration is exposed through the npm script:
@@ -1064,6 +1150,10 @@ Use this checklist after deployments and during periodic maintenance:
 - confirm `dpkg --audit` is clean after system maintenance
 
 - confirm `/var/run/reboot-required` is absent after completed maintenance or perform the validated reboot procedure
+
+- confirm `quacker-backup.timer` is enabled and active
+
+- confirm recent periodic backups exist in `/var/backups/quacker`
 
 - confirm database backups can be listed with the restoration CLI
 - use the validated restore procedure rather than editing `db.json` manually

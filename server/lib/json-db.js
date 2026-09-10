@@ -207,6 +207,164 @@ export function readJsonFile(
   return parsed;
 }
 
+export function createJsonFileBackup(
+  filePath,
+  backupDirectory,
+  {
+    validate,
+    backupLimit = 30
+  } = {}
+) {
+  if (
+    !Number.isInteger(backupLimit) ||
+    backupLimit < 1
+  ) {
+    const error = new Error(
+      "El límite de backups debe ser un entero mayor que cero."
+    );
+    error.code = "INVALID_BACKUP_LIMIT";
+    throw error;
+  }
+
+  let raw;
+  try {
+    raw = fs.readFileSync(filePath, "utf8");
+  } catch (error) {
+    throw _createWrappedError(
+      `No se pudo leer ${filePath} para crear el backup.`,
+      "BACKUP_SOURCE_READ_FAILED",
+      error
+    );
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw _createWrappedError(
+      `El archivo ${filePath} contiene JSON inválido. No se ha creado ningún backup.`,
+      "INVALID_JSON_FILE",
+      error
+    );
+  }
+
+  if (typeof validate === "function") {
+    validate(parsed);
+  }
+
+  const resolvedBackupDirectory =
+    path.resolve(backupDirectory);
+  const filename = path.basename(filePath);
+  const backupPrefix = `${filename}.backup-`;
+
+  fs.mkdirSync(resolvedBackupDirectory, {
+    recursive: true,
+    mode: 0o700
+  });
+
+  const backupName =
+    `${backupPrefix}${Date.now()}-${crypto
+      .randomBytes(6)
+      .toString("hex")}`;
+  const backupPath = path.join(
+    resolvedBackupDirectory,
+    backupName
+  );
+  const temporaryPath = path.join(
+    resolvedBackupDirectory,
+    `.${backupName}.tmp-${process.pid}-${crypto
+      .randomBytes(6)
+      .toString("hex")}`
+  );
+
+  let descriptor = null;
+
+  try {
+    descriptor = fs.openSync(
+      temporaryPath,
+      "wx",
+      0o600
+    );
+    fs.writeFileSync(
+      descriptor,
+      raw,
+      "utf8"
+    );
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = null;
+
+    fs.renameSync(temporaryPath, backupPath);
+    fs.chmodSync(backupPath, 0o600);
+  } catch (error) {
+    if (descriptor !== null) {
+      try {
+        fs.closeSync(descriptor);
+      } catch {
+        // No ocultamos el error original.
+      }
+    }
+
+    try {
+      fs.unlinkSync(temporaryPath);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== "ENOENT") {
+        console.error(
+          "[DB] No se pudo retirar el backup temporal",
+          cleanupError
+        );
+      }
+    }
+
+    throw _createWrappedError(
+      "No se pudo crear el backup periódico de la base de datos.",
+      "DATABASE_BACKUP_FAILED",
+      error
+    );
+  }
+
+  const backups = fs
+    .readdirSync(resolvedBackupDirectory)
+    .filter((name) => name.startsWith(backupPrefix))
+    .map((name) => {
+      const candidatePath = path.join(
+        resolvedBackupDirectory,
+        name
+      );
+      const stats = fs.lstatSync(candidatePath);
+
+      if (!stats.isFile()) {
+        return null;
+      }
+
+      return {
+        path: candidatePath,
+        modifiedAt: stats.mtimeMs
+      };
+    })
+    .filter(Boolean)
+    .sort(
+      (a, b) =>
+        a.modifiedAt - b.modifiedAt
+    );
+
+  const excessBackups =
+    backups.length - backupLimit;
+
+  if (excessBackups > 0) {
+    backups
+      .slice(0, excessBackups)
+      .forEach((backup) => {
+        fs.unlinkSync(backup.path);
+      });
+  }
+
+  return {
+    name: backupName,
+    path: backupPath
+  };
+}
+
 export function restoreJsonFileBackup(
   filePath,
   backupPath,
