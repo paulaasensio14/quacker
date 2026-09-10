@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  createJsonFileBackup,
   readJsonFile,
   writeJsonFileAtomic
 } from "../lib/json-db.js";
@@ -412,6 +413,194 @@ test("limita el número de backups conservados", () => {
       backupVersions,
       [1, 2, 3]
     );
+  } finally {
+    removeTemporaryDirectory(directory);
+  }
+});
+
+
+test("crea un backup independiente validado con permisos 0600", () => {
+  const directory = createTemporaryDirectory();
+
+  try {
+    const sourceDirectory = path.join(
+      directory,
+      "source"
+    );
+    const backupDirectory = path.join(
+      directory,
+      "backups"
+    );
+    const filePath = path.join(
+      sourceDirectory,
+      "db.json"
+    );
+
+    fs.mkdirSync(sourceDirectory);
+
+    const raw =
+      '{\n  "users": {\n    "u1": {"name": "Paula"}\n  }\n}\n';
+
+    fs.writeFileSync(filePath, raw, "utf8");
+
+    const result = createJsonFileBackup(
+      filePath,
+      backupDirectory,
+      {
+        validate(value) {
+          assert.equal(
+            typeof value.users,
+            "object"
+          );
+        }
+      }
+    );
+
+    assert.equal(
+      fs.readFileSync(result.path, "utf8"),
+      raw
+    );
+
+    assert.equal(
+      fs.statSync(result.path).mode & 0o777,
+      0o600
+    );
+
+    assert.equal(
+      path.dirname(result.path),
+      backupDirectory
+    );
+  } finally {
+    removeTemporaryDirectory(directory);
+  }
+});
+
+test("no crea backup si el JSON de origen es inválido", () => {
+  const directory = createTemporaryDirectory();
+
+  try {
+    const filePath = path.join(
+      directory,
+      "db.json"
+    );
+    const backupDirectory = path.join(
+      directory,
+      "backups"
+    );
+
+    fs.writeFileSync(
+      filePath,
+      '{"users":',
+      "utf8"
+    );
+
+    assert.throws(
+      () =>
+        createJsonFileBackup(
+          filePath,
+          backupDirectory
+        ),
+      (error) =>
+        error.code === "INVALID_JSON_FILE"
+    );
+
+    assert.equal(
+      fs.existsSync(backupDirectory),
+      false
+    );
+  } finally {
+    removeTemporaryDirectory(directory);
+  }
+});
+
+test("no crea backup si la validación de la base falla", () => {
+  const directory = createTemporaryDirectory();
+
+  try {
+    const filePath = path.join(
+      directory,
+      "db.json"
+    );
+    const backupDirectory = path.join(
+      directory,
+      "backups"
+    );
+
+    fs.writeFileSync(
+      filePath,
+      '{"otro":true}\n',
+      "utf8"
+    );
+
+    assert.throws(
+      () =>
+        createJsonFileBackup(
+          filePath,
+          backupDirectory,
+          {
+            validate() {
+              const error = new Error(
+                "estructura inválida"
+              );
+              error.code =
+                "INVALID_DATABASE_STRUCTURE";
+              throw error;
+            }
+          }
+        ),
+      (error) =>
+        error.code ===
+        "INVALID_DATABASE_STRUCTURE"
+    );
+
+    assert.equal(
+      fs.existsSync(backupDirectory),
+      false
+    );
+  } finally {
+    removeTemporaryDirectory(directory);
+  }
+});
+
+test("rota los backups independientes hasta el límite indicado", () => {
+  const directory = createTemporaryDirectory();
+
+  try {
+    const filePath = path.join(
+      directory,
+      "db.json"
+    );
+    const backupDirectory = path.join(
+      directory,
+      "backups"
+    );
+
+    for (let version = 1; version <= 4; version += 1) {
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify({
+          users: {},
+          version
+        }),
+        "utf8"
+      );
+
+      createJsonFileBackup(
+        filePath,
+        backupDirectory,
+        {
+          backupLimit: 2
+        }
+      );
+    }
+
+    const backups = fs
+      .readdirSync(backupDirectory)
+      .filter((name) =>
+        name.startsWith("db.json.backup-")
+      );
+
+    assert.equal(backups.length, 2);
   } finally {
     removeTemporaryDirectory(directory);
   }
