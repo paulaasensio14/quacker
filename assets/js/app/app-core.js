@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { window.DetailModule?.init?.(); } catch (e) { console.error("DetailModule.init error", e); }
   try { window.ExploreModule?.init?.(); } catch (e) { console.error("ExploreModule.init error", e); }
   try { window.HomeUI?.init?.(); } catch (e) { console.error("HomeUI.init error", e); }
+  try { window.WhatsNewModule?.init?.(); } catch (e) { console.error("WhatsNewModule.init error", e); }
 
   let homeRefreshScheduled = false;
   let notificationsRefreshScheduled = false;
@@ -260,6 +261,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         case "settings": {
           const profileBtn = document.querySelector('.nav-item-btn[data-view="profile"]');
           if (profileBtn) profileBtn.click();
+          break;
+        }
+
+        case "whats-new": {
+          window.WhatsNewModule?.open?.();
           break;
         }
 

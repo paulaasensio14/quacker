@@ -105,6 +105,12 @@ import {
   applySecurityHeaders
 } from "./lib/security-headers.js";
 
+import {
+  getWhatsNewReleaseContent,
+  normalizeWhatsNewUiState,
+  resolveWhatsNewRelease
+} from "./lib/whats-new.js";
+
 function logProviderFailure(provider, operation, error) {
   console.error(
     "[Provider]",
@@ -121,6 +127,17 @@ process.umask(0o077);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const PACKAGE_JSON_PATH =
+  path.join(__dirname, "package.json");
+
+const APP_VERSION =
+  JSON.parse(
+    fs.readFileSync(
+      PACKAGE_JSON_PATH,
+      "utf8"
+    )
+  ).version;
 
 // Raíz del proyecto = carpeta padre de /server
 const PROJECT_ROOT = path.resolve(__dirname, "..");
@@ -1537,7 +1554,8 @@ function _getUserBucket(db, userId) {
     ui: {
       explore: _normalizeExploreUiState(),
       library: _normalizeLibraryUiState(),
-      lists: _normalizeListsUiState()
+      lists: _normalizeListsUiState(),
+      whatsNew: normalizeWhatsNewUiState()
     }
   };
 
@@ -1571,6 +1589,9 @@ function _getUserBucket(db, userId) {
   db.users[userId].ui.explore = _normalizeExploreUiState(db.users[userId].ui.explore);
   db.users[userId].ui.library = _normalizeLibraryUiState(db.users[userId].ui.library);
   db.users[userId].ui.lists = _normalizeListsUiState(db.users[userId].ui.lists);
+  db.users[userId].ui.whatsNew = normalizeWhatsNewUiState(
+    db.users[userId].ui.whatsNew
+  );
 
   return db.users[userId];
 }
@@ -1727,7 +1748,8 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     ui: {
       explore: _normalizeExploreUiState(),
       library: _normalizeLibraryUiState(),
-      lists: _normalizeListsUiState()
+      lists: _normalizeListsUiState(),
+      whatsNew: normalizeWhatsNewUiState()
     }
   };
 
@@ -3239,6 +3261,76 @@ app.patch("/api/user/ui/lists", _requireAuth, (req, res) => {
   _writeDb(db);
 
   res.json({ ok: true, ui: bucket.ui.lists });
+});
+
+app.get("/api/user/ui/whats-new", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  const release =
+    getWhatsNewReleaseContent(
+      APP_VERSION,
+      bucket.profile?.language
+    );
+
+  const state =
+    resolveWhatsNewRelease({
+      currentVersion: APP_VERSION,
+      lastSeenVersion:
+        bucket.ui.whatsNew.lastSeenVersion,
+      availableVersions:
+        release ? [APP_VERSION] : []
+    });
+
+  res.json({
+    ...state,
+    release
+  });
+});
+
+app.patch("/api/user/ui/whats-new", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  const release =
+    getWhatsNewReleaseContent(
+      APP_VERSION,
+      bucket.profile?.language
+    );
+
+  if (!release) {
+    return res.status(409).json({
+      error: "whats_new_unavailable"
+    });
+  }
+
+  bucket.ui.whatsNew =
+    normalizeWhatsNewUiState({
+      lastSeenVersion: APP_VERSION
+    });
+
+  _writeDb(db);
+
+  const state =
+    resolveWhatsNewRelease({
+      currentVersion: APP_VERSION,
+      lastSeenVersion:
+        bucket.ui.whatsNew.lastSeenVersion,
+      availableVersions: [APP_VERSION]
+    });
+
+  res.json({
+    ok: true,
+    ui: bucket.ui.whatsNew,
+    ...state,
+    release
+  });
 });
 
 app.get("/api/user/explore/dismissed", _requireAuth, (req, res) => {
