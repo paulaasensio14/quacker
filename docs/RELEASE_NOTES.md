@@ -1,5 +1,58 @@
 # Quacker Release Notes
 
+## 1.0.6
+
+Actualización de robustez operativa y preparación posterior a `1.0.5`.
+
+### Motivo de 1.0.6
+
+Tras estabilizar las correcciones funcionales de las releases anteriores, esta versión se centra en reforzar la operación de Quacker, mejorar la capacidad de recuperación y preparar con seguridad los pasos previos a futuras fases públicas, sin ampliar todavía el alcance social del producto.
+
+La actualización:
+
+- añade CI automático para ejecutar tests y auditoría de dependencias;
+
+- incorpora comprobaciones de salud y readiness para distinguir que el proceso esté activo de que la aplicación esté realmente preparada para servir tráfico;
+
+- mejora el diagnóstico de errores de proveedores externos sin exponer datos sensibles;
+
+- restringe el backend a `127.0.0.1` detrás de Nginx y documenta las medidas operativas aplicadas en producción;
+
+- añade backups periódicos independientes de `db.json`, con escritura atómica, permisos restrictivos y retención limitada;
+
+- valida una recuperación real de la base de datos en un entorno temporal aislado sin modificar la base de datos de producción;
+
+- documenta el mapa de datos de usuario, incluidas las copias históricas presentes en los backups;
+
+- añade un dry-run seguro para preparar la futura limpieza de usuarios beta y de prueba, sin incluir código de borrado ni ejecutar ninguna eliminación real;
+
+- incorpora una infraestructura versionada de “Qué hay de nuevo”, preparada para `1.0.6` pero inactiva mientras la aplicación siga declarando la versión `1.0.5`;
+
+- mejora accesibilidad e internacionalización en notificaciones y controles de vista, incluyendo el estado de proceso de la acción Deshacer/Undo;
+
+- no migra ni elimina `db.json`;
+
+- no elimina todavía usuarios beta o de prueba; esa limpieza continúa reservada para la fase previa al lanzamiento público.
+
+### Validación provisional
+
+- Suite completa: 417/417 tests.
+
+- `npm audit --omit=dev`: 0 vulnerabilidades.
+
+- `git diff --check`: limpio.
+
+- Producción validada por HTTPS con `health`, `ready` y dashboard respondiendo `200`.
+
+- Restauración temporal aislada validada sin alterar la base de datos de producción.
+
+- Backup periódico mediante systemd instalado y activo.
+
+- Versión de producción mantenida temporalmente en `1.0.5` hasta el cierre final de `1.0.6`.
+
+Los tags `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4` y `v1.0.5` permanecen intactos como snapshots inmutables de sus respectivas releases.
+
+
 ## 1.0.5
 
 Quinta actualización correctiva posterior a `1.0.0`.
