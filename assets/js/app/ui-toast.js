@@ -15,6 +15,40 @@
       .replace(/'/g, "&#39;");
   }
 
+  function getToastFallbackLanguage() {
+    try {
+      const saved = localStorage.getItem("quacker_lang");
+      if (saved === "es" || saved === "en") return saved;
+    } catch (_) {}
+
+    return (
+      typeof navigator !== "undefined" &&
+      String(navigator.language || "").toLowerCase().startsWith("es")
+    )
+      ? "es"
+      : "en";
+  }
+
+  function getToastFallbackText(key) {
+    const language = getToastFallbackLanguage();
+    const messages = {
+      es: {
+        toast_close_label: "Cerrar notificación",
+        toast_undo_busy: "Deshaciendo…",
+        toast_action_busy: "Procesando…",
+        common_undo: "Deshacer"
+      },
+      en: {
+        toast_close_label: "Close notification",
+        toast_undo_busy: "Undoing…",
+        toast_action_busy: "Processing…",
+        common_undo: "Undo"
+      }
+    };
+
+    return messages[language]?.[key] || messages.en[key] || "";
+  }
+
   function getHost() {
     let host = document.getElementById("toastHost");
     if (host) return host;
@@ -82,6 +116,13 @@
     const safeTitle = escapeHtml(title);
     const safeMessage = escapeHtml(message);
     const safeActionLabel = escapeHtml(actionLabel);
+    const closeLabel = (
+      window.I18n &&
+      typeof window.I18n.t === "function"
+    )
+      ? window.I18n.t("toast_close_label")
+      : getToastFallbackText("toast_close_label");
+    const safeCloseLabel = escapeHtml(closeLabel);
 
     toast.innerHTML = `
       ${iconSvg(type)}
@@ -90,7 +131,7 @@
         ${safeMessage ? `<div class="toast-message">${safeMessage}</div>` : ""}
       </div>
       ${safeActionLabel ? `<button class="toast-btn toast-action">${safeActionLabel}</button>` : ""}
-      <button class="toast-btn toast-close" aria-label="Cerrar notificación">
+      <button class="toast-btn toast-close" aria-label="${safeCloseLabel}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
           aria-hidden="true">
@@ -120,13 +161,31 @@
           const prevHtml = actionBtn.innerHTML;
 
           // Texto de estado (sin emojis)
-          const busyText = (String(actionLabel || "").toLowerCase() === "deshacer")
-            ? "Deshaciendo…"
-            : "Procesando…";
+          const hasSharedI18n = (
+            window.I18n &&
+            typeof window.I18n.t === "function"
+          );
+          const undoLabel = hasSharedI18n
+            ? window.I18n.t("common_undo")
+            : getToastFallbackText("common_undo");
+          const isUndo = String(actionLabel || "").trim().toLowerCase()
+            === String(undoLabel || "").trim().toLowerCase();
+          const busyText = isUndo
+            ? (
+              hasSharedI18n
+                ? window.I18n.t("toast_undo_busy")
+                : getToastFallbackText("toast_undo_busy")
+            )
+            : (
+              hasSharedI18n
+                ? window.I18n.t("toast_action_busy")
+                : getToastFallbackText("toast_action_busy")
+            );
+          const safeBusyText = escapeHtml(busyText);
 
           actionBtn.innerHTML = `
             <span class="btn-spinner" aria-hidden="true"></span>
-            <span>${busyText}</span>
+            <span>${safeBusyText}</span>
           `;
 
           try {

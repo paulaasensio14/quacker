@@ -86,3 +86,23 @@ test(
     }
   }
 );
+
+test(
+  "el selector de vista de listas traduce su nombre accesible",
+  () => {
+    assert.match(
+      dashboardSource,
+      /class="view-toggle"[^>]*role="group"[^>]*data-i18n-aria-label="lists_view_toggle_label"/
+    );
+
+    const matches =
+      i18nSource.match(
+        /lists_view_toggle_label:\s*"[^"]+"/g
+      ) || [];
+
+    assert.ok(
+      matches.length >= 2,
+      "debe existir lists_view_toggle_label en ES y EN"
+    );
+  }
+);
