@@ -216,6 +216,28 @@ Antes de ejecutarla deberá existir un procedimiento con dry-run capaz de:
 13. comprobar `health` y `ready` después de la operación;
 14. generar un registro operativo sin contraseñas, tokens ni otros secretos.
 
+### Dry-run disponible desde W9-005
+
+El análisis previo puede ejecutarse desde `server` con:
+
+`npm run db:user-cleanup-dry-run -- --user <userId>`
+
+Para analizar varios usuarios deben repetirse los argumentos:
+
+`npm run db:user-cleanup-dry-run -- --user <userId1> --user <userId2>`
+
+El comando es exclusivamente de lectura. No elimina usuarios, no modifica `db.json` y no borra sesiones.
+
+La salida está sanitizada: muestra conteos, bloques afectados y rutas estructurales, pero no imprime nombres, emails, hashes, IDs de otros usuarios ni nombres de archivos de sesión.
+
+Códigos de salida:
+
+- `0`: dry-run completado sin bloqueos detectados;
+- `1`: argumentos inválidos, usuario inexistente o error de análisis;
+- `2`: existe un bloqueo operativo, como una referencia cruzada o una sesión persistida con JSON inválido.
+
+Una sesión asociada a un usuario objetivo se informa mediante conteo, pero no se elimina durante W9.
+
 La eliminación real de usuarios beta/test no forma parte de W9.
 
 W9 únicamente debe dejar preparado y probado el procedimiento seguro.
