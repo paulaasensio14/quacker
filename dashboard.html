@@ -255,6 +255,10 @@
           <span data-i18n="profile_menu_settings">Ajustes</span>
         </button>
 
+        <button class="profile-menu-item" data-profile-action="whats-new" hidden>
+          <span data-i18n="profile_menu_whats_new">Qué hay de nuevo</span>
+        </button>
+
         <button class="profile-menu-item" data-profile-action="theme">
           <span data-i18n="profile_menu_theme">Cambiar tema</span>
         </button>
@@ -1594,6 +1598,59 @@
   </div>
 </div>
 
+<!-- MODAL QUÉ HAY DE NUEVO -->
+<div class="modal-overlay" id="whatsNewModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="whatsNewTitle">
+    <div class="modal-header">
+      <div>
+        <h3 id="whatsNewTitle" data-i18n="whats_new_title">
+          Qué hay de nuevo
+        </h3>
+        <div id="whatsNewVersion"></div>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close"
+        id="closeWhatsNewModal"
+        aria-label="Cerrar"
+        data-i18n-aria-label="common_close"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-content">
+      <h4 id="whatsNewReleaseTitle"></h4>
+      <ul id="whatsNewItems"></ul>
+    </div>
+
+    <div class="modal-actions">
+      <button
+        type="button"
+        class="btn-primary"
+        id="closeWhatsNewModalFooter"
+        data-i18n="whats_new_close"
+      >
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
   <!-- Toast container -->
   <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
 
@@ -1615,6 +1672,7 @@
 
   <script src="assets/js/app/router.js"></script>
   <script src="assets/js/app/i18n.js"></script>
+  <script src="assets/js/app/whats-new.js"></script>
   <script src="assets/js/app/app-core.js"></script>
 
   <script src="assets/js/app/library.js"></script>

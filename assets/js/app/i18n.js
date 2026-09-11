@@ -510,6 +510,9 @@
       notif_load_error_cta: "Reintentar",
 
       profile_menu_settings: "Ajustes",
+      profile_menu_whats_new: "Qué hay de nuevo",
+      whats_new_title: "Qué hay de nuevo",
+      whats_new_close: "Entendido",
       profile_menu_theme: "Cambiar tema",
 
       list_detail_add_content: "Añadir contenido",
@@ -1178,6 +1181,9 @@
       notif_load_error_cta: "Retry",
 
       profile_menu_settings: "Settings",
+      profile_menu_whats_new: "What's new",
+      whats_new_title: "What's new",
+      whats_new_close: "Got it",
       profile_menu_theme: "Change theme",
 
       list_detail_add_content: "Add content",

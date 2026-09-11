@@ -3714,6 +3714,47 @@ if (externalSignal?.aborted) {
     return { ok: true, ui: next };
   }
 
+  // === QUÉ HAY DE NUEVO: estado de versión vista ===
+
+  async function getWhatsNewUIState() {
+    if (_isHttp()) {
+      return _httpJson(
+        "GET",
+        "/user/ui/whats-new"
+      );
+    }
+
+    return {
+      currentVersion: "",
+      lastSeenVersion: "",
+      available: false,
+      unseen: false,
+      release: null
+    };
+  }
+
+  async function markWhatsNewSeen() {
+    if (_isHttp()) {
+      return _httpJson(
+        "PATCH",
+        "/user/ui/whats-new",
+        {}
+      );
+    }
+
+    return {
+      ok: true,
+      ui: {
+        lastSeenVersion: ""
+      },
+      currentVersion: "",
+      lastSeenVersion: "",
+      available: false,
+      unseen: false,
+      release: null
+    };
+  }
+
   // === LISTS: UI state (filtro + búsqueda) persistente en user ===
   function _ensureListsUIState(state) {
     state.user = state.user || {};
@@ -4881,6 +4922,8 @@ if (externalSignal?.aborted) {
     setLibraryUIState,
     getListsUIState,
     setListsUIState,
+    getWhatsNewUIState,
+    markWhatsNewSeen,
     // listas
     getLists,
     getListsContainingItem,
