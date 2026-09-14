@@ -9994,3 +9994,227 @@ body.dark-theme #avatarPickerModal .q-modal__footer .btn-secondary:hover {
 .profile-title {
   font-size: 1.2rem;
 }
+
+/* =========================================================
+   QUÉ HAY DE NUEVO
+   ========================================================= */
+
+#whatsNewModal .modal-card {
+  max-width: 560px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 26px;
+}
+
+#whatsNewModal .modal-header {
+  margin: 0;
+  padding: 20px 22px 18px;
+  align-items: center;
+  background: var(--bg-yellow-soft);
+  border-bottom: 3px solid var(--border-strong);
+}
+
+#whatsNewModal .modal-header > div {
+  min-width: 0;
+}
+
+#whatsNewModal .modal-header h3 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+#whatsNewVersion {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 10px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: 2px 2px 0 var(--border-strong);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+#whatsNewModal .modal-close {
+  width: 34px;
+  height: 34px;
+  background: var(--bg-card);
+  box-shadow: 2px 2px 0 var(--border-strong);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+#whatsNewModal .modal-close:hover {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
+  background: #fff8d6;
+}
+
+#whatsNewModal .modal-content {
+  padding: 22px;
+}
+
+#whatsNewReleaseTitle {
+  position: relative;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding-left: 58px;
+  font-size: 1.35rem;
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+#whatsNewReleaseTitle::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
+  border: 2px solid var(--border-strong);
+  border-radius: 14px;
+  background:
+    var(--bg-yellow)
+    url("../img/logo-quacker.png")
+    center / cover
+    no-repeat;
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+#whatsNewItems {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+#whatsNewItems li {
+  position: relative;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 11px 14px 11px 44px;
+  border: 2px solid var(--border-strong);
+  border-radius: 16px;
+  background: rgba(255, 201, 40, 0.08);
+  font-size: 0.94rem;
+  line-height: 1.4;
+}
+
+#whatsNewItems li::before {
+  content: "✓";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg-yellow);
+  color: #111827;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+#whatsNewModal .modal-actions {
+  margin: 0;
+  padding: 16px 22px 20px;
+  border-top: 2px dashed var(--border-soft);
+  background: rgba(15, 23, 42, 0.025);
+}
+
+#whatsNewModal .modal-actions .btn-primary {
+  min-width: 160px;
+  justify-content: center;
+}
+
+body.dark-theme #whatsNewModal .modal-header {
+  background: #102235;
+  border-color: #010b16;
+}
+
+body.dark-theme #whatsNewVersion {
+  background: var(--bg-yellow);
+  color: #111827;
+  border-color: #010b16;
+  box-shadow: 2px 2px 0 #010b16;
+}
+
+body.dark-theme #whatsNewModal .modal-close {
+  background: #102235;
+  color: var(--text-main);
+  border-color: #010b16;
+  box-shadow: 2px 2px 0 #010b16;
+}
+
+body.dark-theme #whatsNewModal .modal-close:hover {
+  background: #132b40;
+  box-shadow: 1px 1px 0 #010b16;
+}
+
+body.dark-theme #whatsNewItems li {
+  background: rgba(255, 201, 40, 0.07);
+  border-color: #010b16;
+}
+
+body.dark-theme #whatsNewItems li::before {
+  border-color: #010b16;
+}
+
+body.dark-theme #whatsNewModal .modal-actions {
+  background: rgba(255,255,255,0.025);
+  border-color: var(--border-soft);
+}
+
+body.dark-theme #whatsNewModal .modal-actions .btn-primary {
+  background: var(--bg-yellow);
+  color: #111827;
+  border-color: #010b16;
+  box-shadow: 3px 3px 0 #010b16;
+}
+
+@media (max-width: 640px) {
+  #whatsNewModal.modal-overlay {
+    padding: 14px;
+  }
+
+  #whatsNewModal .modal-card {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 22px;
+  }
+
+  #whatsNewModal .modal-header {
+    padding: 18px;
+  }
+
+  #whatsNewModal .modal-content {
+    padding: 20px 18px;
+  }
+
+  #whatsNewReleaseTitle {
+    font-size: 1.2rem;
+  }
+
+  #whatsNewModal .modal-actions {
+    padding: 14px 18px 18px;
+  }
+
+  #whatsNewModal .modal-actions .btn-primary {
+    width: 100%;
+  }
+}
