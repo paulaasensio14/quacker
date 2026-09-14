@@ -26,7 +26,7 @@ La actualización:
 
 - añade un dry-run seguro para preparar la futura limpieza de usuarios beta y de prueba, sin incluir código de borrado ni ejecutar ninguna eliminación real;
 
-- incorpora una infraestructura versionada de “Qué hay de nuevo”, preparada para `1.0.6` pero inactiva mientras la aplicación siga declarando la versión `1.0.5`;
+- incorpora una infraestructura versionada de “Qué hay de nuevo”, activa con `1.0.6` y preparada para mostrarse una vez por versión y poder consultarse posteriormente desde el perfil;
 
 - mejora accesibilidad e internacionalización en notificaciones y controles de vista, incluyendo el estado de proceso de la acción Deshacer/Undo;
 
@@ -36,21 +36,29 @@ La actualización:
 
 - no elimina todavía usuarios beta o de prueba; esa limpieza continúa reservada para la fase previa al lanzamiento público.
 
-### Validación provisional
+### Validación
 
-- Suite completa: 417/417 tests.
+- Suite completa sobre el `main` desplegado: 417/417 tests.
 
 - `npm audit --omit=dev`: 0 vulnerabilidades.
 
-- `git diff --check`: limpio.
+- `git diff --check`: limpio durante la preparación de la release.
 
-- Producción validada por HTTPS con `health`, `ready` y dashboard respondiendo `200`.
+- Producción ejecutando `1.0.6` con PM2 en estado `online` y 0 reinicios inestables tras el restart controlado.
+
+- Node directo validado con `health=200` y `ready=200`.
+
+- Producción validada por HTTPS/Nginx con `health=200`, `ready=200` y portada respondiendo `200`.
+
+- El catálogo de “Qué hay de nuevo” para `1.0.6` responde correctamente en español con el título “Quacker se ha puesto el casco”.
 
 - Restauración temporal aislada validada sin alterar la base de datos de producción.
 
-- Backup periódico mediante systemd instalado y activo.
+- Backup periódico mediante systemd instalado, habilitado y activo.
 
-- Versión de producción mantenida temporalmente en `1.0.5` hasta el cierre final de `1.0.6`.
+- Backup previo a la activación de la release validado como JSON correcto, con permisos `0600` y 16 usuarios.
+
+- Versión de producción activa: `1.0.6`.
 
 Los tags `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.4` y `v1.0.5` permanecen intactos como snapshots inmutables de sus respectivas releases.
 
