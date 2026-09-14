@@ -30,6 +30,8 @@ La actualización:
 
 - mejora accesibilidad e internacionalización en notificaciones y controles de vista, incluyendo el estado de proceso de la acción Deshacer/Undo;
 
+- documenta la comunicación pre-lanzamiento de Quacker, incluyendo tono de voz, uso controlado del humor, criterios para “Qué hay de nuevo”, estilo de capturas y estructura de futuras publicaciones, manteniendo bloqueada cualquier promoción pública hasta completar la limpieza pre-lanzamiento;
+
 - no migra ni elimina `db.json`;
 
 - no elimina todavía usuarios beta o de prueba; esa limpieza continúa reservada para la fase previa al lanzamiento público.
