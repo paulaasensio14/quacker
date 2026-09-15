@@ -103,3 +103,69 @@ test(
     );
   }
 );
+
+test(
+  "Mi perfil ofrece un acceso a Qué hay de nuevo cuando existe una release",
+  () => {
+    const profileStart =
+      dashboardSource.indexOf('id="view-profile"');
+
+    assert.notEqual(
+      profileStart,
+      -1,
+      "debe existir la vista de perfil"
+    );
+
+    const profileBlock =
+      dashboardSource.slice(profileStart);
+
+    assert.match(
+      profileBlock,
+      /id="profileWhatsNewCard"[^>]*hidden/
+    );
+
+    assert.match(
+      profileBlock,
+      /id="profileWhatsNewBtn"/
+    );
+
+    assert.match(
+      profileBlock,
+      /data-i18n="profile_whats_new_title"/
+    );
+
+    assert.match(
+      profileBlock,
+      /data-i18n="profile_whats_new_description"/
+    );
+
+    assert.match(
+      profileBlock,
+      /data-i18n="profile_whats_new_cta"/
+    );
+  }
+);
+
+test(
+  "las etiquetas del acceso de perfil a Qué hay de nuevo existen en español e inglés",
+  () => {
+    for (const key of [
+      "profile_whats_new_title",
+      "profile_whats_new_description",
+      "profile_whats_new_cta"
+    ]) {
+      const matches =
+        i18nSource.match(
+          new RegExp(
+            `${key}:\\s*"[^"]+"`,
+            "g"
+          )
+        ) || [];
+
+      assert.ok(
+        matches.length >= 2,
+        `debe existir ${key} en ES y EN`
+      );
+    }
+  }
+);
