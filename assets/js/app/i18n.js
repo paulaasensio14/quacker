@@ -543,6 +543,9 @@
 
       profile_menu_settings: "Ajustes",
       profile_menu_whats_new: "Qué hay de nuevo",
+      profile_whats_new_title: "Qué hay de nuevo",
+      profile_whats_new_description: "Consulta las últimas novedades de Quacker.",
+      profile_whats_new_cta: "Ver novedades",
       whats_new_title: "Qué hay de nuevo",
       whats_new_close: "Entendido",
       profile_menu_theme: "Cambiar tema",
@@ -1246,6 +1249,9 @@
 
       profile_menu_settings: "Settings",
       profile_menu_whats_new: "What's new",
+      profile_whats_new_title: "What's new",
+      profile_whats_new_description: "See the latest updates from Quacker.",
+      profile_whats_new_cta: "View updates",
       whats_new_title: "What's new",
       whats_new_close: "Got it",
       profile_menu_theme: "Change theme",

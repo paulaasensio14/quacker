@@ -162,3 +162,33 @@ test(
     );
   }
 );
+
+test(
+  "Qué hay de nuevo controla también el acceso de Mi perfil",
+  () => {
+    assert.match(
+      moduleSource,
+      /document\.getElementById\(\s*["']profileWhatsNewCard["']\s*\)/
+    );
+
+    assert.match(
+      moduleSource,
+      /document\.getElementById\(\s*["']profileWhatsNewBtn["']\s*\)/
+    );
+
+    assert.match(
+      moduleSource,
+      /profileCard\.hidden\s*=\s*!available/
+    );
+
+    assert.match(
+      moduleSource,
+      /profileButton\.addEventListener\(\s*["']click["']/
+    );
+
+    assert.match(
+      moduleSource,
+      /profileButton[\s\S]*?open\(\)/
+    );
+  }
+);
