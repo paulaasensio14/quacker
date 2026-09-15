@@ -4041,7 +4041,7 @@ body.dark-theme #view-home .home-backlog {
 .profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 18px;
+  gap: 24px;
 }
 
 .profile-header {
