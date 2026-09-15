@@ -122,6 +122,7 @@ const FakeBackend = (() => {
       handle: "@arnauduck"
     },
     lists: [],
+    consumptionHistory: [],
     library: [
   {
     id: "bbad",
@@ -352,7 +353,12 @@ const FakeBackend = (() => {
     library: normalizeMockLibrary(state?.library || DEFAULT_STATE.library.slice()),
     activities: normalizeMockActivities(state?.activities || DEFAULT_STATE.activities.slice()),
     goals: normalizeMockGoals(state?.goals || DEFAULT_STATE.goals.slice()),
-    notifications: normalizeMockNotifications(state?.notifications || DEFAULT_STATE.notifications.slice())
+    notifications: normalizeMockNotifications(state?.notifications || DEFAULT_STATE.notifications.slice()),
+    consumptionHistory: Array.isArray(state?.consumptionHistory)
+      ? state.consumptionHistory
+          .filter((event) => event && typeof event === "object" && !Array.isArray(event))
+          .map((event) => ({ ...event }))
+      : []
   });
 
   // ===== migración legacy (dashboard antiguos) =====

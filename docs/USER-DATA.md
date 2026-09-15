@@ -2,7 +2,7 @@
 
 Este documento describe dónde almacena y procesa Quacker los datos relacionados con sus usuarios. Sirve como referencia para mantenimiento, privacidad y para preparar la limpieza obligatoria de usuarios beta/test previa al lanzamiento público.
 
-> Estado verificado durante W9-004 de v1.0.6.
+> Estado auditado originalmente durante W9-004 de v1.0.6 y actualizado en Semana 10 al introducir el historial canónico de consumo.
 >
 > Debe revisarse cuando cambie el modelo de datos, especialmente al introducir funciones sociales o colaborativas.
 
@@ -18,13 +18,16 @@ Los buckets observados pueden contener:
 - `auth`: `passwordSalt`, `passwordHash`, `authVersion` y, cuando existe, `passwordReset`.
 - `library`: contenidos guardados, estado, progreso, metadatos y marcas temporales.
 - `lists`: listas personales y referencias a elementos de la propia biblioteca.
-- `activities`: actividad, minutos, objetivo, tipo y datos de progreso.
+- `activities`: feed reciente de actividad, minutos, objetivo, tipo y datos de progreso.
+- `consumptionHistory`: historial canónico y permanente de consumo. Sus eventos pueden contener `itemId`, `contentType`, `eventType`, `occurredAt`, `itemSnapshot` y `meta`.
 - `notifications`: notificaciones del usuario.
 - `explore`: estado personal como `dismissed`.
 - `ui`: filtros, orden, modos de vista y términos de búsqueda persistidos.
 - `goals`: bloque opcional presente solo en algunos usuarios.
 
 `passwordReset` puede contener `tokenHash`, `issuedAt` y `expiresAt`.
+
+`activities` y `consumptionHistory` tienen responsabilidades distintas: `activities` funciona como feed reciente y puede rotar, mientras que `consumptionHistory` conserva el historial canónico sin el límite de 500 actividades. Eliminar un elemento de `library` no elimina su historial de consumo; `itemSnapshot` permite conservar su identidad básica.
 
 La contraseña en texto plano no se almacena en `db.json`.
 
@@ -198,6 +201,8 @@ Estado transitorio en memoria:
 ## 10. Requisitos para la futura limpieza beta/test
 
 La limpieza obligatoria previa al lanzamiento público deberá realizarse únicamente después de un backup completo y validado.
+
+`consumptionHistory` forma parte de `db.users[userId]` y deberá eliminarse junto con el resto del bucket del usuario objetivo. No debe quedar historial canónico activo de una cuenta eliminada. Las copias históricas en backups deberán tratarse según la política específica de backups descrita en este documento.
 
 Antes de ejecutarla deberá existir un procedimiento con dry-run capaz de:
 

@@ -2382,6 +2382,336 @@ if (externalSignal?.aborted) {
     return { ok: true, removed };
   }
 
+  async function getConsumptionHistory({ itemId = "" } = {}) {
+    const normalizedItemId = _normalizeDataId(itemId);
+
+    if (_isHttp()) {
+      const path = normalizedItemId
+        ? `/consumption-history?itemId=${encodeURIComponent(normalizedItemId)}`
+        : "/consumption-history";
+
+      const res = await _httpJson("GET", path);
+      const history = Array.isArray(res)
+        ? res
+        : (
+          res && Array.isArray(res.consumptionHistory)
+            ? res.consumptionHistory
+            : []
+        );
+
+      return _cloneCollection(history);
+    }
+
+    const state = _safeState();
+    const history = Array.isArray(state.consumptionHistory)
+      ? state.consumptionHistory
+      : [];
+
+    return history
+      .filter((event) => {
+        if (!normalizedItemId) return true;
+        return _normalizeDataId(event?.itemId) === normalizedItemId;
+      })
+      .sort((a, b) => new Date(b?.occurredAt || 0) - new Date(a?.occurredAt || 0))
+      .map((event) => _cloneData(event));
+  }
+
+  function _buildSeriesConsumptionSummary(item, history = []) {
+    const meta = item?.meta && typeof item.meta === "object"
+      ? item.meta
+      : {};
+
+    let seasonBreakdown = _normalizeSeriesSeasonBreakdown(meta);
+    const declaredTotalEpisodes = Math.max(
+      0,
+      Number(meta.totalEpisodes || 0) || 0
+    );
+
+    if (!seasonBreakdown.length && declaredTotalEpisodes > 0) {
+      seasonBreakdown = [{
+        seasonNumber: Math.max(1, Number(meta.season || 1) || 1),
+        episodeCount: declaredTotalEpisodes
+      }];
+    }
+
+    const orderedEpisodes = [];
+    const allowedKeys = new Set();
+
+    seasonBreakdown.forEach((season) => {
+      for (let episode = 1; episode <= season.episodeCount; episode += 1) {
+        const key = `${season.seasonNumber}:${episode}`;
+        allowedKeys.add(key);
+        orderedEpisodes.push({
+          key,
+          season: season.seasonNumber,
+          episode
+        });
+      }
+    });
+
+    const watchedKeys = new Set();
+    const episodeHistory = [];
+
+    (Array.isArray(history) ? history : []).forEach((event) => {
+      if (event?.eventType !== "episode_watched") return;
+
+      const season = Math.max(0, Number(event?.meta?.season || 0) || 0);
+      const episode = Math.max(0, Number(event?.meta?.episode || 0) || 0);
+      const key = `${season}:${episode}`;
+
+      if (
+        season <= 0 ||
+        episode <= 0 ||
+        !allowedKeys.has(key)
+      ) {
+        return;
+      }
+
+      watchedKeys.add(key);
+      episodeHistory.push(_cloneData(event));
+    });
+
+    const totalEpisodes = orderedEpisodes.length;
+    const progress = totalEpisodes > 0
+      ? Math.round((watchedKeys.size / totalEpisodes) * 100)
+      : 0;
+
+    const nextPosition = orderedEpisodes.find(
+      (position) => !watchedKeys.has(position.key)
+    ) || null;
+
+    const nextEpisode = nextPosition
+      ? {
+        season: nextPosition.season,
+        episode: nextPosition.episode
+      }
+      : null;
+
+    return {
+      itemId: _normalizeDataId(item?.id),
+      watchedEpisodes: watchedKeys.size,
+      totalEpisodes,
+      progress: Math.max(0, Math.min(100, progress)),
+      completed: totalEpisodes > 0 && watchedKeys.size >= totalEpisodes,
+      nextEpisode,
+      episodeHistory
+    };
+  }
+
+  async function getSeriesConsumptionSummary(itemId) {
+    const normalizedItemId = _normalizeDataId(itemId);
+    if (!normalizedItemId) return null;
+
+    const item = await getLibraryItemById(normalizedItemId);
+    if (!item || item.type !== "serie") return null;
+
+    const history = await getConsumptionHistory({
+      itemId: normalizedItemId
+    });
+
+    return _buildSeriesConsumptionSummary(item, history);
+  }
+
+  async function addConsumptionHistoryEvent({
+    itemId,
+    eventType,
+    occurredAt,
+    meta = {}
+  } = {}) {
+    const normalizedItemId = _normalizeDataId(itemId);
+
+    if (!normalizedItemId || !eventType) {
+      return { ok: false, reason: "missing_params" };
+    }
+
+    const parsedOccurredAt = new Date(String(occurredAt || ""));
+
+    if (Number.isNaN(parsedOccurredAt.getTime())) {
+      return { ok: false, reason: "invalid_occurred_at" };
+    }
+
+    const payload = {
+      itemId: normalizedItemId,
+      eventType: String(eventType || "").trim(),
+      occurredAt: parsedOccurredAt.toISOString(),
+      meta: meta && typeof meta === "object" && !Array.isArray(meta)
+        ? meta
+        : {}
+    };
+
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "POST",
+        "/consumption-history",
+        payload
+      );
+
+      const event = res?.event || null;
+
+      _emitDataChanged({
+        kind: "consumptionHistory",
+        action: "create",
+        itemId: normalizedItemId
+      });
+
+      return {
+        ok: true,
+        event,
+        mode: "http"
+      };
+    }
+
+    const state = _safeState();
+
+    state.library = Array.isArray(state.library)
+      ? state.library
+      : [];
+
+    state.consumptionHistory = Array.isArray(state.consumptionHistory)
+      ? state.consumptionHistory
+      : [];
+
+    const item = state.library.find(
+      (entry) => _normalizeDataId(entry?.id) === normalizedItemId
+    );
+
+    if (!item) {
+      return { ok: false, reason: "not_found" };
+    }
+
+    const allowedEventsByType = {
+      pelicula: new Set(["watched"]),
+      serie: new Set(["episode_watched"]),
+      book: new Set(["read_completed"]),
+      game: new Set(["played", "completed"])
+    };
+
+    const allowedEvents = allowedEventsByType[item.type];
+
+    if (!allowedEvents || !allowedEvents.has(payload.eventType)) {
+      return { ok: false, reason: "invalid_consumption_event" };
+    }
+
+    const event = {
+      id: (
+        typeof crypto !== "undefined" &&
+        typeof crypto.randomUUID === "function"
+      )
+        ? crypto.randomUUID()
+        : `consumption_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+      itemId: normalizedItemId,
+      contentType: item.type,
+      itemSnapshot: {
+        title: String(item.title || "").trim().slice(0, 120),
+        source: String(item.source || "").trim().slice(0, 80),
+        externalId: String(item.externalId || "").trim().slice(0, 200)
+      },
+      eventType: payload.eventType,
+      occurredAt: payload.occurredAt,
+      meta: { ...payload.meta }
+    };
+
+    state.consumptionHistory.unshift(event);
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "consumptionHistory",
+      action: "create",
+      itemId: normalizedItemId
+    });
+
+    return {
+      ok: true,
+      event,
+      mode: "local"
+    };
+  }
+
+  async function undoConsumptionHistoryForItemSince(itemId, sinceIso) {
+    if (!itemId || !sinceIso) {
+      return { ok: false, reason: "missing_params" };
+    }
+
+    const normalizedItemId = _normalizeDataId(itemId);
+    if (!normalizedItemId) {
+      return { ok: false, reason: "missing_params" };
+    }
+
+    const safeSinceIso = String(sinceIso || "").trim();
+
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "DELETE",
+        `/consumption-history?itemId=${encodeURIComponent(normalizedItemId)}&since=${encodeURIComponent(safeSinceIso)}`
+      );
+
+      const removed = Number(res?.removed || 0);
+
+      _emitDataChanged({
+        kind: "consumptionHistory",
+        action: "undo_since",
+        itemId: normalizedItemId,
+        removed
+      });
+
+      return {
+        ok: true,
+        removed,
+        mode: "http"
+      };
+    }
+
+    const state = _safeState();
+
+    state.consumptionHistory = Array.isArray(state.consumptionHistory)
+      ? state.consumptionHistory
+      : [];
+
+    const sinceDate = new Date(safeSinceIso);
+
+    if (Number.isNaN(sinceDate.getTime())) {
+      return { ok: false, reason: "invalid_since" };
+    }
+
+    const before = state.consumptionHistory.length;
+
+    state.consumptionHistory = state.consumptionHistory.filter((event) => {
+      if (_normalizeDataId(event?.itemId) !== normalizedItemId) {
+        return true;
+      }
+
+      const occurredAt = new Date(String(event?.occurredAt || ""));
+
+      if (Number.isNaN(occurredAt.getTime())) {
+        return true;
+      }
+
+      return occurredAt < sinceDate;
+    });
+
+    const removed = before - state.consumptionHistory.length;
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "consumptionHistory",
+      action: "undo_since",
+      itemId: normalizedItemId,
+      removed
+    });
+
+    return {
+      ok: true,
+      removed,
+      mode: "local"
+    };
+  }
+
   async function resumeLibraryItem(itemId) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
     const targetId = _normalizeDataId(itemId);
@@ -2831,6 +3161,22 @@ if (externalSignal?.aborted) {
     // Guardar estado
     if (typeof FakeBackend !== "undefined") FakeBackend.saveState(state);
 
+    if (item.type === "book") {
+      await addConsumptionHistoryEvent({
+        itemId: targetId,
+        eventType: "read_completed",
+        occurredAt: nowIso
+      });
+    }
+
+    if (item.type === "game") {
+      await addConsumptionHistoryEvent({
+        itemId: targetId,
+        eventType: "completed",
+        occurredAt: nowIso
+      });
+    }
+
     // Registrar actividad
     if (typeof FakeBackend !== "undefined" && typeof FakeBackend.addActivity === "function") {
       const activityPayload = item.type === "serie"
@@ -2988,7 +3334,7 @@ if (externalSignal?.aborted) {
     };
   }
 
-  function _buildSeriesQuickProgressPatch(item) {
+  function _buildSeriesQuickProgressPatch(item, summary = null) {
     const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
     const seasonBreakdown = _normalizeSeriesSeasonBreakdown(meta);
     const totalEpisodesFromBreakdown = seasonBreakdown.reduce(
@@ -2996,6 +3342,84 @@ if (externalSignal?.aborted) {
       0
     );
     const totalEpisodes = totalEpisodesFromBreakdown || Math.max(0, Number(meta.totalEpisodes || 0) || 0);
+
+    const canonicalNextEpisode = summary?.nextEpisode || null;
+    const canonicalWatchedEpisodes = Math.max(
+      0,
+      Number(summary?.watchedEpisodes || 0) || 0
+    );
+    const canonicalTotalEpisodes = Math.max(
+      0,
+      Number(summary?.totalEpisodes || 0) || 0
+    );
+
+    if (canonicalNextEpisode && canonicalTotalEpisodes > 0) {
+      const nextPosition = {
+        season: Math.max(
+          1,
+          Number(canonicalNextEpisode.season || 1) || 1
+        ),
+        episode: Math.max(
+          1,
+          Number(canonicalNextEpisode.episode || 1) || 1
+        )
+      };
+
+      const watchedAfterThisEpisode = Math.min(
+        canonicalTotalEpisodes,
+        canonicalWatchedEpisodes + 1
+      );
+
+      const nextProgress = Math.round(
+        (watchedAfterThisEpisode / canonicalTotalEpisodes) * 100
+      );
+
+      const justCompleted =
+        watchedAfterThisEpisode >= canonicalTotalEpisodes;
+
+      return {
+        progress: justCompleted
+          ? 100
+          : Math.max(1, Math.min(99, nextProgress)),
+        status: justCompleted ? "completed" : "watching",
+        meta: {
+          ...meta,
+          season: nextPosition.season,
+          episode: nextPosition.episode,
+          totalEpisodes: canonicalTotalEpisodes
+        },
+        activityPayload: {
+          season: nextPosition.season,
+          episode: nextPosition.episode
+        },
+        deltaLabel: justCompleted
+          ? _t("library_status_completed", null, "Completado")
+          : `T${nextPosition.season} · E${nextPosition.episode}`,
+        justCompleted
+      };
+    }
+
+    if (
+      summary &&
+      canonicalTotalEpisodes > 0 &&
+      !canonicalNextEpisode
+    ) {
+      return {
+        progress: 100,
+        status: "completed",
+        meta: {
+          ...meta,
+          totalEpisodes: canonicalTotalEpisodes
+        },
+        activityPayload: null,
+        deltaLabel: _t(
+          "library_status_completed",
+          null,
+          "Completado"
+        ),
+        justCompleted: true
+      };
+    }
 
     if (!seasonBreakdown.length || totalEpisodes <= 0) {
       return null;
@@ -3018,10 +3442,6 @@ if (externalSignal?.aborted) {
       seasonBreakdown,
       nextAbsoluteEpisode
     );
-    const watchedPosition = _getSeriesPositionFromAbsoluteEpisode(
-      seasonBreakdown,
-      currentAbsoluteEpisode > 0 ? currentAbsoluteEpisode : nextAbsoluteEpisode
-    );
     const nextProgress = Math.round((nextAbsoluteEpisode / totalEpisodes) * 100);
     const justCompleted = nextAbsoluteEpisode >= totalEpisodes;
 
@@ -3035,8 +3455,8 @@ if (externalSignal?.aborted) {
         totalEpisodes
       },
       activityPayload: {
-        season: watchedPosition.season,
-        episode: watchedPosition.episode
+        season: nextPosition.season,
+        episode: nextPosition.episode
       },
       deltaLabel: justCompleted
         ? _t("library_status_completed", null, "Completado")
@@ -3053,8 +3473,15 @@ if (externalSignal?.aborted) {
     const current = await getLibraryItemById(targetId);
     if (!current) return { ok: false, reason: "not_found" };
 
+    const seriesConsumptionSummary = current.type === "serie"
+      ? await getSeriesConsumptionSummary(targetId)
+      : null;
+
     const seriesPatch = current.type === "serie"
-      ? _buildSeriesQuickProgressPatch(current)
+      ? _buildSeriesQuickProgressPatch(
+          current,
+          seriesConsumptionSummary
+        )
       : null;
 
     const prev = Math.max(0, Math.min(100, Number(current.progress ?? 0)));
@@ -3207,6 +3634,9 @@ if (externalSignal?.aborted) {
     // =========================
     const state = _safeState();
     state.library = state.library || [];
+    state.consumptionHistory = Array.isArray(state.consumptionHistory)
+      ? state.consumptionHistory
+      : [];
 
     const idx = state.library.findIndex((i) => _normalizeDataId(i?.id) === itemId);
     if (idx === -1) return { ok: false, reason: "not_found" };
@@ -3362,6 +3792,37 @@ if (externalSignal?.aborted) {
 
     state.library[idx] = next;
 
+    const prevCompleted =
+      Number(prev?.progress || 0) >= 100 ||
+      prev?.status === "completed";
+
+    const nextCompleted =
+      Number(next?.progress || 0) >= 100 ||
+      next?.status === "completed";
+
+    const explicitSeriesActivityPayload =
+      next.type === "serie" &&
+      updatedItem?.activityPayload &&
+      typeof updatedItem.activityPayload === "object" &&
+      !Array.isArray(updatedItem.activityPayload)
+        ? {
+          season: Math.max(
+            0,
+            Number(updatedItem.activityPayload.season || 0) || 0
+          ),
+          episode: Math.max(
+            0,
+            Number(updatedItem.activityPayload.episode || 0) || 0
+          )
+        }
+        : null;
+
+    const hasExplicitSeriesActivityPayload =
+      explicitSeriesActivityPayload?.season > 0 &&
+      explicitSeriesActivityPayload?.episode > 0;
+
+    const activityCreatedAt = new Date().toISOString();
+
     if (typeof FakeBackend !== "undefined") {
       FakeBackend.saveState(state);
 
@@ -3372,16 +3833,102 @@ if (externalSignal?.aborted) {
           null;
 
         if (actType) {
-          const rawActivityPayload = updatedItem?.activityPayload && typeof updatedItem.activityPayload === "object"
-            ? updatedItem.activityPayload
-            : next.type === "serie"
-              ? {
-                season: next?.meta?.season,
-                episode: next?.meta?.episode
-              }
+          if (
+            next.type === "serie" &&
+            hasExplicitSeriesActivityPayload
+          ) {
+            await addConsumptionHistoryEvent({
+              itemId,
+              eventType: "episode_watched",
+              occurredAt: activityCreatedAt,
+              meta: explicitSeriesActivityPayload
+            });
+          }
+
+          if (
+            next.type === "pelicula" &&
+            prevCompleted === false &&
+            nextCompleted === true
+          ) {
+            await addConsumptionHistoryEvent({
+              itemId,
+              eventType: "watched",
+              occurredAt: activityCreatedAt
+            });
+          }
+
+          if (
+            next.type === "book" &&
+            prevCompleted === false &&
+            nextCompleted === true
+          ) {
+            await addConsumptionHistoryEvent({
+              itemId,
+              eventType: "read_completed",
+              occurredAt: activityCreatedAt
+            });
+          }
+
+          const explicitGameConsumptionPayload =
+            next.type === "game" &&
+            updatedItem?.consumptionPayload &&
+            typeof updatedItem.consumptionPayload === "object" &&
+            !Array.isArray(updatedItem.consumptionPayload)
+              ? updatedItem.consumptionPayload
               : null;
-          const activitySeason = Math.max(0, Number(rawActivityPayload?.season || 0) || 0);
-          const activityEpisode = Math.max(0, Number(rawActivityPayload?.episode || 0) || 0);
+
+          if (
+            explicitGameConsumptionPayload?.eventType === "played" &&
+            Number.isFinite(
+              Number(explicitGameConsumptionPayload.durationHours)
+            ) &&
+            Number(explicitGameConsumptionPayload.durationHours) > 0
+          ) {
+            await addConsumptionHistoryEvent({
+              itemId,
+              eventType: "played",
+              occurredAt: activityCreatedAt,
+              meta: {
+                durationHours: Number(
+                  explicitGameConsumptionPayload.durationHours
+                )
+              }
+            });
+          }
+
+          if (
+            next.type === "game" &&
+            prevCompleted === false &&
+            nextCompleted === true
+          ) {
+            await addConsumptionHistoryEvent({
+              itemId,
+              eventType: "completed",
+              occurredAt: activityCreatedAt
+            });
+          }
+
+          const rawActivityPayload =
+            updatedItem?.activityPayload &&
+            typeof updatedItem.activityPayload === "object"
+              ? updatedItem.activityPayload
+              : next.type === "serie"
+                ? {
+                  season: next?.meta?.season,
+                  episode: next?.meta?.episode
+                }
+                : null;
+
+          const activitySeason = Math.max(
+            0,
+            Number(rawActivityPayload?.season || 0) || 0
+          );
+
+          const activityEpisode = Math.max(
+            0,
+            Number(rawActivityPayload?.episode || 0) || 0
+          );
+
           const activityPayload =
             activitySeason > 0 && activityEpisode > 0
               ? {
@@ -3389,12 +3936,14 @@ if (externalSignal?.aborted) {
                 episode: activityEpisode
               }
               : null;
+
           FakeBackend.addActivity({
             type: actType,
             targetType: "library_item",
             targetId: itemId,
             minutes: 20,
-            payload: activityPayload
+            payload: activityPayload,
+            createdAt: activityCreatedAt
           });
 
           await maybeNotifyStreak();
@@ -4963,6 +5512,10 @@ if (externalSignal?.aborted) {
     progressLibraryItem,
     applyQuickProgress,
     undoActivitiesForItemSince,
+    getConsumptionHistory,
+    getSeriesConsumptionSummary,
+    addConsumptionHistoryEvent,
+    undoConsumptionHistoryForItemSince,
     maybeNotifyStreak
   };
 })();
