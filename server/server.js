@@ -1208,6 +1208,124 @@ function _normalizeActivityCreatedAt(value) {
   return parsed.toISOString();
 }
 
+function _shouldRecordAutomaticMovieWatch({
+  contentType,
+  prevCompleted,
+  nextCompleted,
+  shouldLogActivity
+} = {}) {
+  return (
+    contentType === "pelicula" &&
+    prevCompleted === false &&
+    nextCompleted === true &&
+    shouldLogActivity === true
+  );
+}
+
+function _normalizeConsumptionItemSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    return null;
+  }
+
+  const title = String(snapshot.title || "").trim().slice(0, 120);
+
+  if (!title) {
+    return null;
+  }
+
+  return {
+    title,
+    source: String(snapshot.source || "").trim().slice(0, 80),
+    externalId: String(snapshot.externalId || "").trim().slice(0, 200)
+  };
+}
+
+function _buildConsumptionItemSnapshot(item) {
+  if (!item || typeof item !== "object") return null;
+
+  return _normalizeConsumptionItemSnapshot({
+    title: item.title,
+    source: item.source,
+    externalId: item.externalId
+  });
+}
+
+function _normalizeConsumptionEvent(event) {
+  if (!event || typeof event !== "object") return null;
+
+  const id = String(event.id || "").trim();
+  const itemId = String(event.itemId || "").trim();
+  const contentType = String(event.contentType || "").trim();
+  const eventType = String(event.eventType || "").trim();
+  const rawOccurredAt = String(event.occurredAt || "").trim();
+
+  if (!id || !itemId || !rawOccurredAt) return null;
+
+  const allowedEventsByContent = {
+    pelicula: new Set(["watched"]),
+    serie: new Set(["episode_watched"]),
+    book: new Set(["read_completed"]),
+    game: new Set(["played", "completed"])
+  };
+
+  const allowedEvents = allowedEventsByContent[contentType];
+
+  if (!allowedEvents || !allowedEvents.has(eventType)) {
+    return null;
+  }
+
+  const occurredAtDate = new Date(rawOccurredAt);
+
+  if (Number.isNaN(occurredAtDate.getTime())) {
+    return null;
+  }
+
+  const meta = {};
+
+  if (contentType === "serie") {
+    const season = Number(event?.meta?.season);
+    const episode = Number(event?.meta?.episode);
+
+    if (
+      !Number.isInteger(season) ||
+      season <= 0 ||
+      !Number.isInteger(episode) ||
+      episode <= 0
+    ) {
+      return null;
+    }
+
+    meta.season = season;
+    meta.episode = episode;
+  }
+
+  if (contentType === "game" && eventType === "played") {
+    const durationHours = Number(event?.meta?.durationHours);
+
+    if (Number.isFinite(durationHours) && durationHours > 0) {
+      meta.durationHours = durationHours;
+    }
+  }
+
+  return {
+    id,
+    itemId,
+    contentType,
+    eventType,
+    occurredAt: occurredAtDate.toISOString(),
+    itemSnapshot: _normalizeConsumptionItemSnapshot(event.itemSnapshot),
+    meta
+  };
+}
+
+function _normalizeConsumptionHistory(history) {
+  if (!Array.isArray(history)) return [];
+
+  return history
+    .map((event) => _normalizeConsumptionEvent(event))
+    .filter(Boolean);
+}
+
 function _normalizeActivityPayload(payload) {
   if (!payload || typeof payload !== "object") return null;
 
@@ -1547,6 +1665,7 @@ function _getUserBucket(db, userId) {
     library: [],
     lists: [],
     activities: [],
+    consumptionHistory: [],
     notifications: [],
     explore: {
       dismissed: []
@@ -1570,6 +1689,10 @@ function _getUserBucket(db, userId) {
   db.users[userId].activities = Array.isArray(db.users[userId].activities)
     ? db.users[userId].activities
     : [];
+
+  db.users[userId].consumptionHistory = _normalizeConsumptionHistory(
+    db.users[userId].consumptionHistory
+  );
 
   db.users[userId].notifications = _normalizeUserNotificationsList(
     db.users[userId].notifications
@@ -1741,6 +1864,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     library: [],
     lists: [],
     activities: [],
+    consumptionHistory: [],
     notifications: [],
     explore: {
       dismissed: []
@@ -3602,6 +3726,107 @@ app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
   res.json({ ok: true, removed });
 });
 
+app.get("/api/consumption-history", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const itemId = String(req.query.itemId || "").trim();
+
+  const history = [...bucket.consumptionHistory]
+    .filter((event) => {
+      if (!itemId) return true;
+      return String(event?.itemId || "").trim() === itemId;
+    })
+    .sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
+
+  res.json({
+    consumptionHistory: history
+  });
+});
+
+app.post("/api/consumption-history", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  const itemId = String(req.body?.itemId || "").trim();
+
+  if (!itemId) {
+    return res.status(400).json({
+      error: "missing_item_id"
+    });
+  }
+
+  const libraryItem = bucket.library.find(
+    (item) => String(item?.id || "").trim() === itemId
+  );
+
+  if (!libraryItem) {
+    return res.status(404).json({
+      error: "library_item_not_found"
+    });
+  }
+
+  const event = _normalizeConsumptionEvent({
+    id: _uid(),
+    itemId,
+    contentType: libraryItem.type,
+    itemSnapshot: _buildConsumptionItemSnapshot(libraryItem),
+    eventType: req.body?.eventType,
+    occurredAt: req.body?.occurredAt || new Date().toISOString(),
+    meta: req.body?.meta
+  });
+
+  if (!event) {
+    return res.status(400).json({
+      error: "invalid_consumption_event"
+    });
+  }
+
+  bucket.consumptionHistory.unshift(event);
+  _writeDb(db);
+
+  res.status(201).json({
+    event
+  });
+});
+
+app.delete("/api/consumption-history", _requireAuth, (req, res) => {
+  const itemId = String(req.query.itemId || "").trim();
+  const sinceIso = _normalizeActivityCreatedAt(req.query.since);
+
+  if (!itemId || !sinceIso) {
+    return res.status(400).json({
+      error: "missing_params"
+    });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const before = bucket.consumptionHistory.length;
+
+  bucket.consumptionHistory = bucket.consumptionHistory.filter((event) => {
+    if (String(event?.itemId || "").trim() !== itemId) {
+      return true;
+    }
+
+    const occurredAt = _normalizeActivityCreatedAt(event?.occurredAt);
+
+    if (!occurredAt) {
+      return true;
+    }
+
+    return new Date(occurredAt) < new Date(sinceIso);
+  });
+
+  const removed = before - bucket.consumptionHistory.length;
+
+  _writeDb(db);
+
+  res.json({
+    ok: true,
+    removed
+  });
+});
+
 app.get("/api/activities", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
@@ -4319,11 +4544,41 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     normalize: _normalizeActivityCreatedAt
   });
 
+  const explicitSeriesActivityPayload = (
+    next.type === "serie" &&
+    rawPatch?.activityPayload &&
+    typeof rawPatch.activityPayload === "object" &&
+    !Array.isArray(rawPatch.activityPayload)
+  )
+    ? _normalizeActivityPayload(rawPatch.activityPayload)
+    : null;
+
+  const explicitGameConsumptionPayload = (
+    next.type === "game" &&
+    rawPatch?.consumptionPayload &&
+    typeof rawPatch.consumptionPayload === "object" &&
+    !Array.isArray(rawPatch.consumptionPayload)
+  )
+    ? {
+        eventType: String(
+          rawPatch.consumptionPayload.eventType || ""
+        ).trim(),
+        durationHours: Number(
+          rawPatch.consumptionPayload.durationHours
+        )
+      }
+    : null;
+
   let activityType = "";
 
   if (shouldLogActivity) {
     if (!prevCompleted && nextCompleted) {
       activityType = "completed";
+    } else if (
+      next.type === "serie" &&
+      explicitSeriesActivityPayload
+    ) {
+      activityType = "progress";
     } else if (nextProgress > 0 && nextProgress !== prevProgress) {
       activityType = "progress";
     }
@@ -4333,7 +4588,7 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     next.lastActivityAt = activityCreatedAt;
     const activityPayload = next.type === "serie"
       ? _normalizeActivityPayload({
-        ...(rawPatch?.activityPayload || {
+        ...(explicitSeriesActivityPayload || {
           season: next?.meta?.season,
           episode: next?.meta?.episode
         }),
@@ -4349,6 +4604,117 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
       createdAt: activityCreatedAt,
       payload: activityPayload
     });
+  }
+
+  if (
+    shouldLogActivity &&
+    activityType &&
+    next.type === "serie" &&
+    explicitSeriesActivityPayload
+  ) {
+    const consumptionEvent = _normalizeConsumptionEvent({
+      id: _uid(),
+      itemId: id,
+      contentType: next.type,
+      itemSnapshot: _buildConsumptionItemSnapshot(next),
+      eventType: "episode_watched",
+      occurredAt: activityCreatedAt,
+      meta: {
+        season: explicitSeriesActivityPayload.season,
+        episode: explicitSeriesActivityPayload.episode
+      }
+    });
+
+    if (consumptionEvent) {
+      bucket.consumptionHistory.unshift(consumptionEvent);
+    }
+  }
+
+  if (_shouldRecordAutomaticMovieWatch({
+    contentType: next.type,
+    prevCompleted,
+    nextCompleted,
+    shouldLogActivity
+  })) {
+    const consumptionEvent = _normalizeConsumptionEvent({
+      id: _uid(),
+      itemId: id,
+      contentType: next.type,
+      itemSnapshot: _buildConsumptionItemSnapshot(next),
+      eventType: "watched",
+      occurredAt: activityCreatedAt,
+      meta: {}
+    });
+
+    if (consumptionEvent) {
+      bucket.consumptionHistory.unshift(consumptionEvent);
+    }
+  }
+
+  if (
+    shouldLogActivity &&
+    !prevCompleted &&
+    nextCompleted &&
+    next.type === "book"
+  ) {
+    const consumptionEvent = _normalizeConsumptionEvent({
+      id: _uid(),
+      itemId: id,
+      contentType: next.type,
+      itemSnapshot: _buildConsumptionItemSnapshot(next),
+      eventType: "read_completed",
+      occurredAt: activityCreatedAt,
+      meta: {}
+    });
+
+    if (consumptionEvent) {
+      bucket.consumptionHistory.unshift(consumptionEvent);
+    }
+  }
+
+  if (
+    shouldLogActivity &&
+    next.type === "game" &&
+    explicitGameConsumptionPayload?.eventType === "played" &&
+    Number.isFinite(explicitGameConsumptionPayload.durationHours) &&
+    explicitGameConsumptionPayload.durationHours > 0
+  ) {
+    const consumptionEvent = _normalizeConsumptionEvent({
+      id: _uid(),
+      itemId: id,
+      contentType: next.type,
+      itemSnapshot: _buildConsumptionItemSnapshot(next),
+      eventType: "played",
+      occurredAt: activityCreatedAt,
+      meta: {
+        durationHours: explicitGameConsumptionPayload.durationHours
+      }
+    });
+
+    if (consumptionEvent) {
+      bucket.consumptionHistory.unshift(consumptionEvent);
+    }
+  }
+
+  if (
+    shouldLogActivity &&
+    !prevCompleted &&
+    nextCompleted &&
+    next.type === "game"
+  ) {
+    const consumptionEvent = _normalizeConsumptionEvent({
+      id: _uid(),
+      itemId: id,
+      contentType: next.type,
+      itemSnapshot: _buildConsumptionItemSnapshot(next),
+      eventType: "completed",
+      occurredAt: activityCreatedAt,
+      meta: {}
+    });
+
+    if (consumptionEvent) {
+      bucket.consumptionHistory.unshift(consumptionEvent);
+    }
   }
 
   bucket.library[idx] = next;

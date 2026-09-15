@@ -1708,7 +1708,7 @@ const LibraryUI = (() => {
     };
   }
 
-  function buildLibrarySeriesProgressPatch(item) {
+  function buildLibrarySeriesProgressPatch(item, summary = null) {
     const meta = item?.meta && typeof item.meta === "object" ? item.meta : {};
     const seasonBreakdown = normalizeLibrarySeasonBreakdown(meta);
     const totalEpisodesFromBreakdown = seasonBreakdown.reduce(
@@ -1716,6 +1716,76 @@ const LibraryUI = (() => {
       0
     );
     const totalEpisodes = totalEpisodesFromBreakdown || Math.max(0, Number(meta.totalEpisodes || 0) || 0);
+
+    const canonicalNextEpisode = summary?.nextEpisode || null;
+    const canonicalWatchedEpisodes = Math.max(
+      0,
+      Number(summary?.watchedEpisodes || 0) || 0
+    );
+    const canonicalTotalEpisodes = Math.max(
+      0,
+      Number(summary?.totalEpisodes || 0) || 0
+    );
+
+    if (canonicalNextEpisode && canonicalTotalEpisodes > 0) {
+      const nextPosition = {
+        season: Math.max(
+          1,
+          Number(canonicalNextEpisode.season || 1) || 1
+        ),
+        episode: Math.max(
+          1,
+          Number(canonicalNextEpisode.episode || 1) || 1
+        )
+      };
+
+      const watchedAfterThisEpisode = Math.min(
+        canonicalTotalEpisodes,
+        canonicalWatchedEpisodes + 1
+      );
+
+      const nextProgress = Math.round(
+        (watchedAfterThisEpisode / canonicalTotalEpisodes) * 100
+      );
+
+      const justCompleted =
+        watchedAfterThisEpisode >= canonicalTotalEpisodes;
+
+      return {
+        progress: justCompleted
+          ? 100
+          : Math.max(1, Math.min(99, nextProgress)),
+        status: justCompleted ? "completed" : "watching",
+        meta: {
+          ...meta,
+          season: nextPosition.season,
+          episode: nextPosition.episode,
+          totalEpisodes: canonicalTotalEpisodes
+        },
+        activityPayload: {
+          season: nextPosition.season,
+          episode: nextPosition.episode
+        },
+        justCompleted
+      };
+    }
+
+    if (
+      summary &&
+      canonicalTotalEpisodes > 0 &&
+      !canonicalNextEpisode
+    ) {
+      return {
+        progress: 100,
+        status: "completed",
+        meta: {
+          ...meta,
+          totalEpisodes: canonicalTotalEpisodes
+        },
+        activityPayload: null,
+        justCompleted: true
+      };
+    }
 
     if (!seasonBreakdown.length || totalEpisodes <= 0) {
       return null;
@@ -1737,10 +1807,6 @@ const LibraryUI = (() => {
       seasonBreakdown,
       nextAbsoluteEpisode
     );
-    const watchedPosition = getLibraryEpisodePositionFromAbsolute(
-      seasonBreakdown,
-      currentAbsoluteEpisode > 0 ? currentAbsoluteEpisode : nextAbsoluteEpisode
-    );
     const nextProgress = Math.round((nextAbsoluteEpisode / totalEpisodes) * 100);
     const justCompleted = nextAbsoluteEpisode >= totalEpisodes;
 
@@ -1754,8 +1820,8 @@ const LibraryUI = (() => {
         totalEpisodes
       },
       activityPayload: {
-        season: watchedPosition.season,
-        episode: watchedPosition.episode
+        season: nextPosition.season,
+        episode: nextPosition.episode
       }
     };
   }
@@ -1791,6 +1857,20 @@ const LibraryUI = (() => {
         throw createLibraryMutationError({ ok: false, reason: "not_found" }, "not_found");
       }
 
+      let seriesConsumptionSummary = null;
+
+      if (sourceItem.type === "serie") {
+        seriesConsumptionSummary =
+          await ApiClient.getSeriesConsumptionSummary(normalizedItemId);
+
+        if (!seriesConsumptionSummary) {
+          throw createLibraryMutationError(
+            { ok: false, reason: "series_history_unavailable" },
+            "series_history_unavailable"
+          );
+        }
+      }
+
       const nowIso = new Date().toISOString();
       const nextItem = {
         ...sourceItem,
@@ -1823,7 +1903,10 @@ const LibraryUI = (() => {
 
         nextItem.status = nextProgress >= 100 ? "completed" : "reading";
       } else if (nextItem.type === "serie") {
-        const seriesPatch = buildLibrarySeriesProgressPatch(nextItem);
+        const seriesPatch = buildLibrarySeriesProgressPatch(
+          nextItem,
+          seriesConsumptionSummary
+        );
 
         if (seriesPatch) {
           nextItem.meta = seriesPatch.meta;
@@ -1838,6 +1921,10 @@ const LibraryUI = (() => {
             : currentEpisode + 1;
 
           nextItem.meta.episode = Math.max(1, nextEpisode);
+          nextItem.activityPayload = {
+            season: Math.max(1, Number(nextItem.meta.season || 1) || 1),
+            episode: Math.max(1, Number(nextItem.meta.episode || 1) || 1)
+          };
 
           if (totalEpisodes > 0) {
             nextItem.meta.totalEpisodes = totalEpisodes;
@@ -1852,6 +1939,10 @@ const LibraryUI = (() => {
         const currentHours = Math.max(0, Number(nextItem.meta.hoursPlayed || 0));
 
         nextItem.meta.hoursPlayed = currentHours + 1;
+        nextItem.consumptionPayload = {
+          eventType: "played",
+          durationHours: 1
+        };
         nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
         nextItem.status = nextProgress >= 100 ? "completed" : "playing";
       } else {
@@ -1916,6 +2007,11 @@ const LibraryUI = (() => {
                   "undo_activities_failed"
                 );
 
+                assertLibraryMutationOk(
+                  await ApiClient.undoConsumptionHistoryForItemSince(normalizedItemId, sinceIso),
+                  "undo_consumption_history_failed"
+                );
+
                 flashLibraryCard(normalizedItemId);
 
                 window.toast?.({
@@ -1969,6 +2065,8 @@ const LibraryUI = (() => {
         snapshotBefore = null;
       }
 
+      const sinceIso = new Date(Date.now() - 2000).toISOString();
+
       const res = assertLibraryMutationOk(
         await ApiClient.completeLibraryItem(normalizedItemId),
         "complete_failed"
@@ -1989,6 +2087,16 @@ const LibraryUI = (() => {
                 assertLibraryMutationOk(
                   await ApiClient.updateLibraryItem(snapshotBefore, { logActivity: false }),
                   "undo_failed"
+                );
+
+                assertLibraryMutationOk(
+                  await ApiClient.undoActivitiesForItemSince(normalizedItemId, sinceIso),
+                  "undo_activities_failed"
+                );
+
+                assertLibraryMutationOk(
+                  await ApiClient.undoConsumptionHistoryForItemSince(normalizedItemId, sinceIso),
+                  "undo_consumption_history_failed"
                 );
 
                 // FX de confirmación al restaurar
@@ -2511,6 +2619,147 @@ const LibraryUI = (() => {
     });
 
     // Cerrar/guardar modal
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest('[data-action="record-reread"]');
+      if (!btn) return;
+
+      const modal = document.getElementById("progressModal");
+      const itemId = _normalizeLibraryItemId(modal?.dataset.itemId);
+      const input = modal?.querySelector('[name="rereadAt"]');
+      const rereadAt = String(input?.value || "").trim();
+
+      if (!itemId || !rereadAt) return;
+      if (btn.dataset.busy === "1") return;
+
+      btn.dataset.busy = "1";
+      btn.disabled = true;
+
+      try {
+        const result = await recordBookReread(itemId, rereadAt);
+
+        if (!result?.ok) {
+          throw new Error(result?.reason || "record_reread_failed");
+        }
+
+        window.toast?.({
+          title: t("library_reread_success_title"),
+          message: t("library_reread_success_message"),
+          type: "success",
+          duration: 3200
+        });
+
+        closeProgressModal();
+      } catch (error) {
+        console.error("[Library] record reread failed", error);
+
+        window.toast?.({
+          title: t("library_reread_error_title"),
+          message: t("common_try_again"),
+          type: "error",
+          duration: 3600
+        });
+      } finally {
+        if (document.body.contains(btn)) {
+          btn.dataset.busy = "0";
+          btn.disabled = false;
+        }
+      }
+    });
+
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest('[data-action="record-game-completion"]');
+      if (!btn) return;
+
+      const modal = document.getElementById("progressModal");
+      const itemId = _normalizeLibraryItemId(modal?.dataset.itemId);
+      const input = modal?.querySelector('[name="gameCompletionAt"]');
+      const gameCompletionAt = String(input?.value || "").trim();
+
+      if (!itemId || !gameCompletionAt) return;
+      if (btn.dataset.busy === "1") return;
+
+      btn.dataset.busy = "1";
+      btn.disabled = true;
+
+      try {
+        const result = await recordGameCompletion(itemId, gameCompletionAt);
+
+        if (!result?.ok) {
+          throw new Error(result?.reason || "record_game_completion_failed");
+        }
+
+        window.toast?.({
+          title: t("library_game_completion_success_title"),
+          message: t("library_game_completion_success_message"),
+          type: "success",
+          duration: 3200
+        });
+
+        closeProgressModal();
+      } catch (error) {
+        console.error("[Library] record game completion failed", error);
+
+        window.toast?.({
+          title: t("library_game_completion_error_title"),
+          message: t("common_try_again"),
+          type: "error",
+          duration: 3600
+        });
+      } finally {
+        if (document.body.contains(btn)) {
+          btn.dataset.busy = "0";
+          btn.disabled = false;
+        }
+      }
+    });
+
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest('[data-action="record-rewatch"]');
+      if (!btn) return;
+
+      const modal = document.getElementById("progressModal");
+      const itemId = _normalizeLibraryItemId(modal?.dataset.itemId);
+      const input = modal?.querySelector('[name="rewatchAt"]');
+      const rewatchAt = String(input?.value || "").trim();
+
+      if (!itemId || !rewatchAt) return;
+      if (btn.dataset.busy === "1") return;
+
+      btn.dataset.busy = "1";
+      btn.disabled = true;
+
+      try {
+        const result = await recordMovieRewatch(itemId, rewatchAt);
+
+        if (!result?.ok) {
+          throw new Error(result?.reason || "record_rewatch_failed");
+        }
+
+        window.toast?.({
+          title: t("library_rewatch_success_title"),
+          message: t("library_rewatch_success_message"),
+          type: "success",
+          duration: 3200
+        });
+
+        closeProgressModal();
+      } catch (error) {
+        console.error("[Library] record rewatch failed", error);
+
+        window.toast?.({
+          title: t("library_rewatch_error_title"),
+          message: t("common_try_again"),
+          type: "error",
+          duration: 3600
+        });
+      } finally {
+        if (document.body.contains(btn)) {
+          btn.dataset.busy = "0";
+          btn.disabled = false;
+        }
+      }
+    });
+
     document.getElementById("closeProgressModal")?.addEventListener("click", closeProgressModal);
     document.getElementById("cancelProgressBtn")?.addEventListener("click", closeProgressModal);
     document.getElementById("saveProgressBtn")?.addEventListener("click", saveProgressModal);
@@ -3118,6 +3367,399 @@ function wireLiveProgressValidation(item) {
   onChange(); // validación inicial al abrir
 }
 
+function formatConsumptionHistoryDate(value) {
+  const parsed = new Date(String(value || ""));
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(parsed);
+  } catch (_) {
+    return parsed.toLocaleString();
+  }
+}
+
+function renderMovieConsumptionHistory(history = []) {
+  const watched = (Array.isArray(history) ? history : [])
+    .filter((event) => event?.eventType === "watched")
+    .sort((a, b) => new Date(b?.occurredAt || 0) - new Date(a?.occurredAt || 0));
+
+  const items = watched
+    .map((event) => {
+      const label = formatConsumptionHistoryDate(event?.occurredAt);
+
+      if (!label) return "";
+
+      return `
+        <li class="consumption-history-item">
+          <span>${_libraryHtmlT("library_progress_watched")}</span>
+          <time datetime="${_escapeLibraryHtml(event.occurredAt || "")}">
+            ${_escapeLibraryHtml(label)}
+          </time>
+        </li>
+      `;
+    })
+    .filter(Boolean)
+    .join("");
+
+  return `
+    <section class="consumption-history-panel">
+      <div class="consumption-history-head">
+        <strong>${_libraryHtmlT("library_history_title")}</strong>
+        <span>
+          ${_libraryHtmlT("library_history_movie_views", {
+            count: watched.length
+          })}
+        </span>
+      </div>
+
+      ${
+        items
+          ? `<ul class="consumption-history-list">${items}</ul>`
+          : `<p class="consumption-history-empty">${_libraryHtmlT("library_history_empty")}</p>`
+      }
+    </section>
+  `;
+}
+
+function renderSeriesConsumptionHistory(summary = null) {
+  const watchedEpisodes = Math.max(
+    0,
+    Number(summary?.watchedEpisodes || 0) || 0
+  );
+
+  const totalEpisodes = Math.max(
+    0,
+    Number(summary?.totalEpisodes || 0) || 0
+  );
+
+  const progress = Math.max(
+    0,
+    Math.min(100, Number(summary?.progress || 0) || 0)
+  );
+
+  const nextEpisode = summary?.nextEpisode || null;
+
+  const episodeHistory = Array.isArray(summary?.episodeHistory)
+    ? summary.episodeHistory
+    : [];
+
+  const items = episodeHistory
+    .map((entry) => {
+      const season = Math.max(
+        0,
+        Number(entry?.season ?? entry?.meta?.season ?? 0) || 0
+      );
+
+      const episode = Math.max(
+        0,
+        Number(entry?.episode ?? entry?.meta?.episode ?? 0) || 0
+      );
+
+      const occurredAt = entry?.occurredAt;
+      const dateLabel = formatConsumptionHistoryDate(occurredAt);
+
+      if (season <= 0 || episode <= 0) return "";
+
+      return `
+        <li class="consumption-history-item">
+          <span>
+            ${_libraryHtmlT("library_history_episode", {
+              season,
+              episode
+            })}
+          </span>
+          ${
+            dateLabel
+              ? `<time datetime="${_escapeLibraryHtml(occurredAt || "")}">
+                  ${_escapeLibraryHtml(dateLabel)}
+                </time>`
+              : ""
+          }
+        </li>
+      `;
+    })
+    .filter(Boolean)
+    .join("");
+
+  const nextLabel = nextEpisode
+    ? _libraryHtmlT("library_history_next_episode", {
+        season: nextEpisode.season,
+        episode: nextEpisode.episode
+      })
+    : "";
+
+  return `
+    <section class="consumption-history-panel">
+      <div class="consumption-history-head">
+        <strong>${_libraryHtmlT("library_history_title")}</strong>
+        <span>
+          ${_libraryHtmlT("library_history_series_progress", {
+            watched: watchedEpisodes,
+            total: totalEpisodes,
+            progress
+          })}
+        </span>
+      </div>
+
+      ${
+        nextLabel
+          ? `<p class="consumption-history-next">${nextLabel}</p>`
+          : ""
+      }
+
+      ${
+        items
+          ? `<ul class="consumption-history-list">${items}</ul>`
+          : `<p class="consumption-history-empty">${_libraryHtmlT("library_history_empty")}</p>`
+      }
+    </section>
+  `;
+}
+
+
+function renderBookConsumptionHistory(history = []) {
+  const reads = (Array.isArray(history) ? history : [])
+    .filter((event) => event?.eventType === "read_completed")
+    .sort((a, b) => new Date(b?.occurredAt || 0) - new Date(a?.occurredAt || 0));
+
+  const items = reads
+    .map((event) => {
+      const label = formatConsumptionHistoryDate(event?.occurredAt);
+
+      if (!label) return "";
+
+      return `
+        <li class="consumption-history-item">
+          <span>${_libraryHtmlT("library_history_book_read")}</span>
+          <time datetime="${_escapeLibraryHtml(event.occurredAt || "")}">
+            ${_escapeLibraryHtml(label)}
+          </time>
+        </li>
+      `;
+    })
+    .filter(Boolean)
+    .join("");
+
+  return `
+    <section class="consumption-history-panel">
+      <div class="consumption-history-head">
+        <strong>${_libraryHtmlT("library_history_title")}</strong>
+        <span>
+          ${_libraryHtmlT("library_history_book_reads", {
+            count: reads.length
+          })}
+        </span>
+      </div>
+
+      ${
+        items
+          ? `<ul class="consumption-history-list">${items}</ul>`
+          : `<p class="consumption-history-empty">${_libraryHtmlT("library_history_empty")}</p>`
+      }
+    </section>
+  `;
+}
+
+function renderGameConsumptionHistory(history = []) {
+  const events = (Array.isArray(history) ? history : [])
+    .filter((event) => (
+      event?.eventType === "played" ||
+      event?.eventType === "completed"
+    ))
+    .sort((a, b) => new Date(b?.occurredAt || 0) - new Date(a?.occurredAt || 0));
+
+  const sessions = events.filter((event) => event?.eventType === "played");
+  const completions = events.filter((event) => event?.eventType === "completed");
+
+  const totalHours = sessions.reduce((sum, event) => {
+    const durationHours = Number(event?.meta?.durationHours);
+
+    return Number.isFinite(durationHours) && durationHours > 0
+      ? sum + durationHours
+      : sum;
+  }, 0);
+
+  const items = events
+    .map((event) => {
+      const occurredAt = event?.occurredAt;
+      const dateLabel = formatConsumptionHistoryDate(occurredAt);
+
+      if (!dateLabel) return "";
+
+      if (event?.eventType === "played") {
+        const durationHours = Number(event?.meta?.durationHours);
+        const safeHours =
+          Number.isFinite(durationHours) && durationHours > 0
+            ? durationHours
+            : 0;
+
+        return `
+          <li class="consumption-history-item">
+            <span>
+              ${_libraryHtmlT("library_history_game_session", {
+                hours: safeHours
+              })}
+            </span>
+            <time datetime="${_escapeLibraryHtml(occurredAt || "")}">
+              ${_escapeLibraryHtml(dateLabel)}
+            </time>
+          </li>
+        `;
+      }
+
+      return `
+        <li class="consumption-history-item">
+          <span>${_libraryHtmlT("library_history_game_completed")}</span>
+          <time datetime="${_escapeLibraryHtml(occurredAt || "")}">
+            ${_escapeLibraryHtml(dateLabel)}
+          </time>
+        </li>
+      `;
+    })
+    .filter(Boolean)
+    .join("");
+
+  return `
+    <section class="consumption-history-panel">
+      <div class="consumption-history-head">
+        <strong>${_libraryHtmlT("library_history_title")}</strong>
+        <span>
+          ${_libraryHtmlT("library_history_game_sessions", {
+            count: sessions.length
+          })}
+        </span>
+      </div>
+
+      <p class="consumption-history-next">
+        ${_libraryHtmlT("library_history_game_hours", {
+          hours: totalHours
+        })}
+        ·
+        ${_libraryHtmlT("library_history_game_completions", {
+          count: completions.length
+        })}
+      </p>
+
+      ${
+        items
+          ? `<ul class="consumption-history-list">${items}</ul>`
+          : `<p class="consumption-history-empty">${_libraryHtmlT("library_history_empty")}</p>`
+      }
+    </section>
+  `;
+}
+
+async function recordBookReread(itemId, occurredAt) {
+  const normalizedItemId = _normalizeLibraryItemId(itemId);
+
+  if (!normalizedItemId) {
+    return { ok: false, reason: "missing_id" };
+  }
+
+  const item = await getLibraryItemById(normalizedItemId);
+
+  if (!item || item.type !== "book") {
+    return { ok: false, reason: "not_book" };
+  }
+
+  const isCompleted =
+    item.status === "completed" ||
+    Number(item.progress ?? 0) >= 100;
+
+  if (!isCompleted) {
+    return { ok: false, reason: "book_not_completed" };
+  }
+
+  const parsedOccurredAt = new Date(String(occurredAt || ""));
+
+  if (Number.isNaN(parsedOccurredAt.getTime())) {
+    return { ok: false, reason: "invalid_occurred_at" };
+  }
+
+  return ApiClient.addConsumptionHistoryEvent({
+    itemId: normalizedItemId,
+    eventType: "read_completed",
+    occurredAt: parsedOccurredAt.toISOString(),
+    meta: {}
+  });
+}
+
+async function recordGameCompletion(itemId, occurredAt) {
+  const normalizedItemId = _normalizeLibraryItemId(itemId);
+
+  if (!normalizedItemId) {
+    return { ok: false, reason: "missing_id" };
+  }
+
+  const item = await getLibraryItemById(normalizedItemId);
+
+  if (!item || item.type !== "game") {
+    return { ok: false, reason: "not_game" };
+  }
+
+  const isCompleted =
+    item.status === "completed" ||
+    Number(item.progress ?? 0) >= 100;
+
+  if (!isCompleted) {
+    return { ok: false, reason: "game_not_completed" };
+  }
+
+  const parsedOccurredAt = new Date(String(occurredAt || ""));
+
+  if (Number.isNaN(parsedOccurredAt.getTime())) {
+    return { ok: false, reason: "invalid_occurred_at" };
+  }
+
+  return ApiClient.addConsumptionHistoryEvent({
+    itemId: normalizedItemId,
+    eventType: "completed",
+    occurredAt: parsedOccurredAt.toISOString(),
+    meta: {}
+  });
+}
+
+async function recordMovieRewatch(itemId, occurredAt) {
+  const normalizedItemId = _normalizeLibraryItemId(itemId);
+
+  if (!normalizedItemId) {
+    return { ok: false, reason: "missing_id" };
+  }
+
+  const item = await getLibraryItemById(normalizedItemId);
+
+  if (!item || item.type !== "pelicula") {
+    return { ok: false, reason: "not_movie" };
+  }
+
+  const isCompleted =
+    item.status === "completed" ||
+    Number(item.progress ?? 0) >= 100;
+
+  if (!isCompleted) {
+    return { ok: false, reason: "movie_not_completed" };
+  }
+
+  const parsedOccurredAt = new Date(String(occurredAt || ""));
+
+  if (Number.isNaN(parsedOccurredAt.getTime())) {
+    return { ok: false, reason: "invalid_occurred_at" };
+  }
+
+  return ApiClient.addConsumptionHistoryEvent({
+    itemId: normalizedItemId,
+    eventType: "watched",
+    occurredAt: parsedOccurredAt.toISOString(),
+    meta: {}
+  });
+}
+
 async function openProgressModal(itemId) {
   const modal = document.getElementById("progressModal");
   const body = document.getElementById("progressModalBody");
@@ -3137,10 +3779,42 @@ async function openProgressModal(itemId) {
 
   item.meta = normalizeProgressModalMeta(item.meta);
 
+  let consumptionHistory = [];
+
+  try {
+    consumptionHistory = await ApiClient.getConsumptionHistory({
+      itemId: normalizedItemId
+    });
+  } catch (error) {
+    console.error("[Library] consumption history load failed", error);
+    consumptionHistory = [];
+  }
+
+  let seriesConsumptionSummary = null;
+
+  if (item.type === "serie") {
+    try {
+      seriesConsumptionSummary =
+        await ApiClient.getSeriesConsumptionSummary(normalizedItemId);
+    } catch (error) {
+      console.error("[Library] series consumption summary load failed", error);
+      seriesConsumptionSummary = null;
+    }
+  }
+
   // Formularios por tipo
   if (item.type === "book") {
     const read = _safeNumberInputValue(item.meta.pagesRead, 0);
     const total = _safeNumberInputValue(item.meta.totalPages, 1);
+    const isCompleted =
+      item.status === "completed" ||
+      Number(item.progress ?? 0) >= 100;
+
+    const now = new Date();
+    const localNow = new Date(
+      now.getTime() - (now.getTimezoneOffset() * 60000)
+    ).toISOString().slice(0, 16);
+
     body.innerHTML = `
       <div class="modal-field">
         <label>${_libraryHtmlT("library_progress_pages_read")}</label>
@@ -3153,6 +3827,28 @@ async function openProgressModal(itemId) {
       <p class="progress-modal-hint">
         ${_libraryHtmlT("library_progress_auto_percent")}
       </p>
+
+      ${isCompleted ? `
+        <div class="modal-field">
+          <label for="pm_rereadAt">${_libraryHtmlT("library_reread_datetime_label")}</label>
+          <input
+            id="pm_rereadAt"
+            name="rereadAt"
+            type="datetime-local"
+            value="${localNow}"
+          >
+        </div>
+
+        <button
+          type="button"
+          class="btn-secondary"
+          data-action="record-reread"
+        >
+          ${_libraryHtmlT("library_reread_action")}
+        </button>
+      ` : ""}
+
+      ${renderBookConsumptionHistory(consumptionHistory)}
     `;
   } else if (item.type === "serie") {
     const s = _safeNumberInputValue(item.meta.season, 1);
@@ -3171,10 +3867,20 @@ async function openProgressModal(itemId) {
         <label>${_libraryHtmlT("library_progress_percent_optional")}</label>
         <input id="pm_percent" name="progress" type="number" min="0" max="100" value="${pct}">
       </div>
+      ${renderSeriesConsumptionHistory(seriesConsumptionSummary)}
     `;
   } else if (item.type === "game") {
     const pct = _safeNumberInputValue(item.progress, 0);
     const hours = _safeNumberInputValue(item.meta.hoursPlayed, 0);
+    const isCompleted =
+      item.status === "completed" ||
+      Number(item.progress ?? 0) >= 100;
+
+    const now = new Date();
+    const localNow = new Date(
+      now.getTime() - (now.getTimezoneOffset() * 60000)
+    ).toISOString().slice(0, 16);
+
     body.innerHTML = `
       <div class="modal-field">
         <label>${_libraryHtmlT("library_progress_percent_completed")}</label>
@@ -3184,9 +3890,36 @@ async function openProgressModal(itemId) {
         <label>${_libraryHtmlT("library_progress_hours_played_optional")}</label>
         <input id="pm_hours" name="hoursPlayed" type="number" min="0" value="${hours}">
       </div>
+
+      ${isCompleted ? `
+        <div class="modal-field">
+          <label for="pm_gameCompletionAt">${_libraryHtmlT("library_game_completion_datetime_label")}</label>
+          <input
+            id="pm_gameCompletionAt"
+            name="gameCompletionAt"
+            type="datetime-local"
+            value="${localNow}"
+          >
+        </div>
+
+        <button
+          type="button"
+          class="btn-secondary"
+          data-action="record-game-completion"
+        >
+          ${_libraryHtmlT("library_game_completion_action")}
+        </button>
+      ` : ""}
+
+      ${renderGameConsumptionHistory(consumptionHistory)}
     `;
   } else if (item.type === "pelicula") {
     const isCompleted = item.status === "completed" || Number(item.progress ?? 0) >= 100;
+    const now = new Date();
+    const localNow = new Date(
+      now.getTime() - (now.getTimezoneOffset() * 60000)
+    ).toISOString().slice(0, 16);
+
     body.innerHTML = `
       <div class="modal-field">
         <label>${_libraryHtmlT("library_progress_status")}</label>
@@ -3195,6 +3928,27 @@ async function openProgressModal(itemId) {
           <option value="completed" ${isCompleted ? "selected" : ""}>${_libraryHtmlT("library_progress_watched")}</option>
         </select>
       </div>
+
+      ${isCompleted ? `
+        <div class="modal-field">
+          <label for="pm_rewatchAt">${_libraryHtmlT("library_rewatch_datetime_label")}</label>
+          <input
+            id="pm_rewatchAt"
+            name="rewatchAt"
+            type="datetime-local"
+            value="${localNow}"
+          >
+        </div>
+
+        <button
+          type="button"
+          class="btn-secondary"
+          data-action="record-rewatch"
+        >
+          ${_libraryHtmlT("library_rewatch_action")}
+        </button>
+      ` : ""}
+      ${renderMovieConsumptionHistory(consumptionHistory)}
     `;
   } else {
     const pct = _safeNumberInputValue(item.progress, 0);
