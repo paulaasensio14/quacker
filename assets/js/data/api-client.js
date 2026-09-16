@@ -2712,6 +2712,445 @@ if (externalSignal?.aborted) {
     };
   }
 
+  async function getOpinions({ itemId = "" } = {}) {
+    const normalizedItemId = _normalizeDataId(itemId);
+
+    if (_isHttp()) {
+      const path = normalizedItemId
+        ? `/opinions?itemId=${encodeURIComponent(normalizedItemId)}`
+        : "/opinions";
+
+      const res = await _httpJson("GET", path);
+
+      const opinions = Array.isArray(res)
+        ? res
+        : (
+          res && Array.isArray(res.opinions)
+            ? res.opinions
+            : []
+        );
+
+      return _cloneCollection(opinions);
+    }
+
+    const state = _safeState();
+
+    const opinions = Array.isArray(state.opinions)
+      ? state.opinions
+      : [];
+
+    return opinions
+      .filter((opinion) => {
+        if (!normalizedItemId) return true;
+
+        return (
+          _normalizeDataId(opinion?.itemId) ===
+          normalizedItemId
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(b?.updatedAt || 0) -
+          new Date(a?.updatedAt || 0)
+      )
+      .map((opinion) => _cloneData(opinion));
+  }
+
+  async function saveOpinion(input = {}) {
+    const safeInput =
+      input &&
+      typeof input === "object" &&
+      !Array.isArray(input)
+        ? input
+        : {};
+
+    const normalizedItemId = _normalizeDataId(
+      safeInput.itemId
+    );
+
+    if (!normalizedItemId) {
+      return {
+        ok: false,
+        reason: "missing_item_id"
+      };
+    }
+
+    const hasRating =
+      Object.prototype.hasOwnProperty.call(
+        safeInput,
+        "rating"
+      );
+
+    const hasTags =
+      Object.prototype.hasOwnProperty.call(
+        safeInput,
+        "tags"
+      );
+
+    const hasReview =
+      Object.prototype.hasOwnProperty.call(
+        safeInput,
+        "review"
+      );
+
+    const payload = {};
+
+    if (hasRating) {
+      payload.rating = safeInput.rating;
+    }
+
+    if (hasTags) {
+      payload.tags = safeInput.tags;
+    }
+
+    if (hasReview) {
+      payload.review = safeInput.review;
+    }
+
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "PUT",
+        `/opinions/${encodeURIComponent(normalizedItemId)}`,
+        payload
+      );
+
+      const opinion = res?.opinion || null;
+
+      _emitDataChanged({
+        kind: "opinions",
+        action: "save",
+        itemId: normalizedItemId
+      });
+
+      return {
+        ok: true,
+        opinion: _cloneData(opinion),
+        mode: "http"
+      };
+    }
+
+    const state = _safeState();
+
+    state.library = Array.isArray(state.library)
+      ? state.library
+      : [];
+
+    state.opinions = Array.isArray(state.opinions)
+      ? state.opinions
+      : [];
+
+    const existingIndex =
+      state.opinions.findIndex(
+        (opinion) =>
+          _normalizeDataId(opinion?.itemId) ===
+          normalizedItemId
+      );
+
+    const existingOpinion =
+      existingIndex >= 0
+        ? state.opinions[existingIndex]
+        : null;
+
+    const libraryItem = state.library.find(
+      (item) =>
+        _normalizeDataId(item?.id) ===
+        normalizedItemId
+    );
+
+    if (!existingOpinion && !libraryItem) {
+      return {
+        ok: false,
+        reason: "not_found"
+      };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    let rating =
+      existingOpinion?.rating ?? null;
+
+    if (hasRating) {
+      rating =
+        typeof safeInput.rating === "number" &&
+        Number.isInteger(safeInput.rating) &&
+        safeInput.rating >= 1 &&
+        safeInput.rating <= 5
+          ? safeInput.rating
+          : null;
+    }
+
+    const allowedTags = new Set([
+      "masterpiece",
+      "casual",
+      "surprised_me",
+      "made_me_cry",
+      "made_me_laugh",
+      "comfort",
+      "thought_provoking",
+      "overrated",
+      "underrated",
+      "would_rewatch",
+      "highly_recommended"
+    ]);
+
+    let tags = Array.isArray(existingOpinion?.tags)
+      ? [...existingOpinion.tags]
+      : [];
+
+    if (hasTags) {
+      tags = Array.isArray(safeInput.tags)
+        ? [
+          ...new Set(
+            safeInput.tags
+              .map((tag) =>
+                String(tag || "")
+                  .trim()
+                  .toLowerCase()
+              )
+              .filter((tag) =>
+                allowedTags.has(tag)
+              )
+          )
+        ]
+        : [];
+    }
+
+    let review =
+      existingOpinion?.review &&
+      typeof existingOpinion.review === "object" &&
+      !Array.isArray(existingOpinion.review)
+        ? _cloneData(existingOpinion.review)
+        : null;
+
+    if (hasReview) {
+      if (
+        safeInput.review &&
+        typeof safeInput.review === "object" &&
+        !Array.isArray(safeInput.review)
+      ) {
+        const text = String(
+          safeInput.review.text || ""
+        ).trim();
+
+        review = text
+          ? {
+            text,
+            privacy:
+              safeInput.review.privacy === "public"
+                ? "public"
+                : "private",
+            spoiler:
+              safeInput.review.spoiler === true,
+            createdAt:
+              existingOpinion?.review?.createdAt ||
+              nowIso,
+            updatedAt: nowIso
+          }
+          : null;
+      } else {
+        review = null;
+      }
+    }
+
+    const emptyOpinion =
+      Boolean(existingOpinion) &&
+      (
+        hasRating
+          ? safeInput.rating === null
+          : existingOpinion?.rating == null
+      ) &&
+      (
+        hasTags
+          ? Array.isArray(safeInput.tags) &&
+            safeInput.tags.length === 0
+          : !Array.isArray(existingOpinion?.tags) ||
+            existingOpinion.tags.length === 0
+      ) &&
+      (
+        hasReview
+          ? safeInput.review == null
+          : review === null
+      );
+
+    if (emptyOpinion) {
+      state.opinions = state.opinions.filter(
+        (storedOpinion) =>
+          _normalizeDataId(
+            storedOpinion?.itemId
+          ) !== normalizedItemId
+      );
+
+      if (typeof FakeBackend !== "undefined") {
+        FakeBackend.saveState(state);
+      }
+
+      _emitDataChanged({
+        kind: "opinions",
+        action: "delete",
+        itemId: normalizedItemId
+      });
+
+      return {
+        ok: true,
+        deleted: 1,
+        opinion: null,
+        mode: "local"
+      };
+    }
+
+    if (
+      rating === null &&
+      tags.length === 0 &&
+      review === null
+    ) {
+      return {
+        ok: false,
+        reason: "invalid_opinion"
+      };
+    }
+
+    const contentType =
+      existingOpinion?.contentType ||
+      String(libraryItem?.type || "").trim();
+
+    if (
+      !["pelicula", "serie", "book", "game"]
+        .includes(contentType)
+    ) {
+      return {
+        ok: false,
+        reason: "invalid_opinion"
+      };
+    }
+
+    const itemSnapshot =
+      existingOpinion?.itemSnapshot ||
+      (
+        libraryItem
+          ? {
+            title: String(
+              libraryItem.title || ""
+            ).trim().slice(0, 120),
+            source: String(
+              libraryItem.source || ""
+            ).trim().slice(0, 80),
+            externalId: String(
+              libraryItem.externalId || ""
+            ).trim().slice(0, 200)
+          }
+          : null
+      );
+
+    const opinion = {
+      itemId: normalizedItemId,
+      contentType,
+      itemSnapshot,
+      rating,
+      tags,
+      review,
+      createdAt:
+        existingOpinion?.createdAt ||
+        nowIso,
+      updatedAt: nowIso
+    };
+
+    if (existingIndex >= 0) {
+      state.opinions[existingIndex] =
+        opinion;
+    } else {
+      state.opinions.unshift(opinion);
+    }
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "opinions",
+      action: existingOpinion
+        ? "update"
+        : "create",
+      itemId: normalizedItemId
+    });
+
+    return {
+      ok: true,
+      opinion: _cloneData(opinion),
+      mode: "local"
+    };
+  }
+
+  async function deleteOpinion(itemId) {
+    const normalizedItemId =
+      _normalizeDataId(itemId);
+
+    if (!normalizedItemId) {
+      return {
+        ok: false,
+        reason: "missing_item_id"
+      };
+    }
+
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "DELETE",
+        `/opinions/${encodeURIComponent(normalizedItemId)}`
+      );
+
+      _emitDataChanged({
+        kind: "opinions",
+        action: "delete",
+        itemId: normalizedItemId
+      });
+
+      return {
+        ok: true,
+        deleted: Number(res?.deleted || 0),
+        mode: "http"
+      };
+    }
+
+    const state = _safeState();
+
+    state.opinions = Array.isArray(state.opinions)
+      ? state.opinions
+      : [];
+
+    const before = state.opinions.length;
+
+    state.opinions = state.opinions.filter(
+      (opinion) =>
+        _normalizeDataId(opinion?.itemId) !==
+        normalizedItemId
+    );
+
+    const deleted =
+      before - state.opinions.length;
+
+    if (!deleted) {
+      return {
+        ok: false,
+        reason: "not_found"
+      };
+    }
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "opinions",
+      action: "delete",
+      itemId: normalizedItemId
+    });
+
+    return {
+      ok: true,
+      deleted,
+      mode: "local"
+    };
+  }
+
   async function resumeLibraryItem(itemId) {
     if (itemId == null) return { ok: false, reason: "missing_id" };
     const targetId = _normalizeDataId(itemId);
@@ -5516,6 +5955,9 @@ if (externalSignal?.aborted) {
     getSeriesConsumptionSummary,
     addConsumptionHistoryEvent,
     undoConsumptionHistoryForItemSince,
+    getOpinions,
+    saveOpinion,
+    deleteOpinion,
     maybeNotifyStreak
   };
 })();
