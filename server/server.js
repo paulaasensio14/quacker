@@ -1326,6 +1326,181 @@ function _normalizeConsumptionHistory(history) {
     .filter(Boolean);
 }
 
+function _normalizeOpinion(opinion) {
+  if (
+    !opinion ||
+    typeof opinion !== "object" ||
+    Array.isArray(opinion)
+  ) {
+    return null;
+  }
+
+  const itemId = String(opinion.itemId || "").trim();
+  const contentType = String(
+    opinion.contentType || ""
+  ).trim();
+
+  const allowedContentTypes = new Set([
+    "pelicula",
+    "serie",
+    "book",
+    "game"
+  ]);
+
+  if (
+    !itemId ||
+    !allowedContentTypes.has(contentType)
+  ) {
+    return null;
+  }
+
+  const rating =
+    typeof opinion.rating === "number" &&
+    Number.isInteger(opinion.rating) &&
+    opinion.rating >= 1 &&
+    opinion.rating <= 5
+      ? opinion.rating
+      : null;
+
+  const allowedTags = new Set([
+    "masterpiece",
+    "casual",
+    "surprised_me",
+    "made_me_cry",
+    "made_me_laugh",
+    "comfort",
+    "thought_provoking",
+    "overrated",
+    "underrated",
+    "would_rewatch",
+    "highly_recommended"
+  ]);
+
+  const tags = Array.isArray(opinion.tags)
+    ? [
+        ...new Set(
+          opinion.tags
+            .map((tag) =>
+              String(tag || "")
+                .trim()
+                .toLowerCase()
+            )
+            .filter((tag) =>
+              allowedTags.has(tag)
+            )
+        )
+      ]
+    : [];
+
+  const normalizeDate = (value) => {
+    const safeValue = String(value || "").trim();
+
+    if (!safeValue) return "";
+
+    const parsed = new Date(safeValue);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return "";
+    }
+
+    return parsed.toISOString();
+  };
+
+  const createdAt = normalizeDate(
+    opinion.createdAt
+  );
+
+  const updatedAt = normalizeDate(
+    opinion.updatedAt
+  );
+
+  if (!createdAt || !updatedAt) {
+    return null;
+  }
+
+  let review = null;
+
+  if (
+    opinion.review &&
+    typeof opinion.review === "object" &&
+    !Array.isArray(opinion.review)
+  ) {
+    const text = String(
+      opinion.review.text || ""
+    ).trim();
+
+    if (text) {
+      review = {
+        text,
+        privacy:
+          opinion.review.privacy === "public"
+            ? "public"
+            : "private",
+        spoiler:
+          opinion.review.spoiler === true,
+        createdAt:
+          normalizeDate(
+            opinion.review.createdAt
+          ) || createdAt,
+        updatedAt:
+          normalizeDate(
+            opinion.review.updatedAt
+          ) || updatedAt
+      };
+    }
+  }
+
+  if (
+    rating === null &&
+    tags.length === 0 &&
+    review === null
+  ) {
+    return null;
+  }
+
+  return {
+    itemId,
+    contentType,
+    itemSnapshot:
+      _normalizeConsumptionItemSnapshot(
+        opinion.itemSnapshot
+      ),
+    rating,
+    tags,
+    review,
+    createdAt,
+    updatedAt
+  };
+}
+
+function _normalizeOpinions(opinions) {
+  if (!Array.isArray(opinions)) return [];
+
+  const canonical = new Map();
+
+  for (const rawOpinion of opinions) {
+    const opinion =
+      _normalizeOpinion(rawOpinion);
+
+    if (!opinion) continue;
+
+    const key =
+      `${opinion.contentType}::${opinion.itemId}`;
+
+    const current = canonical.get(key);
+
+    if (
+      !current ||
+      new Date(opinion.updatedAt).getTime() >=
+        new Date(current.updatedAt).getTime()
+    ) {
+      canonical.set(key, opinion);
+    }
+  }
+
+  return [...canonical.values()];
+}
+
 function _normalizeActivityPayload(payload) {
   if (!payload || typeof payload !== "object") return null;
 
@@ -1666,6 +1841,7 @@ function _getUserBucket(db, userId) {
     lists: [],
     activities: [],
     consumptionHistory: [],
+    opinions: [],
     notifications: [],
     explore: {
       dismissed: []
@@ -1692,6 +1868,10 @@ function _getUserBucket(db, userId) {
 
   db.users[userId].consumptionHistory = _normalizeConsumptionHistory(
     db.users[userId].consumptionHistory
+  );
+
+  db.users[userId].opinions = _normalizeOpinions(
+    db.users[userId].opinions
   );
 
   db.users[userId].notifications = _normalizeUserNotificationsList(
@@ -1865,6 +2045,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     lists: [],
     activities: [],
     consumptionHistory: [],
+    opinions: [],
     notifications: [],
     explore: {
       dismissed: []
@@ -3826,6 +4007,235 @@ app.delete("/api/consumption-history", _requireAuth, (req, res) => {
     removed
   });
 });
+
+app.get("/api/opinions", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const itemId = String(req.query.itemId || "").trim();
+
+  const opinions = [...bucket.opinions]
+    .filter((opinion) => {
+      if (!itemId) return true;
+
+      return (
+        String(opinion?.itemId || "").trim() ===
+        itemId
+      );
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt) -
+        new Date(a.updatedAt)
+    );
+
+  res.json({
+    opinions
+  });
+});
+
+app.put(
+  "/api/opinions/:itemId",
+  _requireAuth,
+  (req, res) => {
+    const itemId = String(
+      req.params.itemId || ""
+    ).trim();
+
+    if (!itemId) {
+      return res.status(400).json({
+        error: "missing_item_id"
+      });
+    }
+
+    const db = _readDb();
+    const bucket = _getUserBucket(
+      db,
+      req.session.userId
+    );
+
+    const existingIndex =
+      bucket.opinions.findIndex(
+        (opinion) =>
+          String(
+            opinion?.itemId || ""
+          ).trim() === itemId
+      );
+
+    const existingOpinion =
+      existingIndex >= 0
+        ? bucket.opinions[existingIndex]
+        : null;
+
+    const libraryItem = bucket.library.find(
+      (item) =>
+        String(item?.id || "").trim() ===
+        itemId
+    );
+
+    if (!existingOpinion && !libraryItem) {
+      return res.status(404).json({
+        error: "library_item_not_found"
+      });
+    }
+
+    const nowIso = new Date().toISOString();
+
+    const hasRating =
+      Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "rating"
+      );
+
+    const hasTags =
+      Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "tags"
+      );
+
+    const hasReview =
+      Object.prototype.hasOwnProperty.call(
+        req.body || {},
+        "review"
+      );
+
+    let review = existingOpinion?.review || null;
+
+    if (hasReview) {
+      if (
+        req.body?.review &&
+        typeof req.body.review === "object" &&
+        !Array.isArray(req.body.review)
+      ) {
+        review = {
+          ...req.body.review,
+          createdAt:
+            existingOpinion?.review?.createdAt ||
+            nowIso,
+          updatedAt: nowIso
+        };
+      } else {
+        review = req.body?.review ?? null;
+      }
+    }
+
+    const nextRating = hasRating
+      ? req.body?.rating
+      : existingOpinion?.rating ?? null;
+
+    const nextTags = hasTags
+      ? req.body?.tags
+      : existingOpinion?.tags ?? [];
+
+    const emptyOpinion =
+      Boolean(existingOpinion) &&
+      nextRating === null &&
+      Array.isArray(nextTags) &&
+      nextTags.length === 0 &&
+      review === null;
+
+    if (emptyOpinion) {
+      bucket.opinions = bucket.opinions.filter(
+        (storedOpinion) =>
+          String(
+            storedOpinion?.itemId || ""
+          ).trim() !== itemId
+      );
+
+      _writeDb(db);
+
+      return res.json({
+        ok: true,
+        deleted: 1,
+        opinion: null
+      });
+    }
+
+    const opinion = _normalizeOpinion({
+      itemId,
+      contentType:
+        existingOpinion?.contentType ||
+        libraryItem.type,
+      itemSnapshot:
+        existingOpinion?.itemSnapshot ||
+        _buildConsumptionItemSnapshot(
+          libraryItem
+        ),
+      rating: nextRating,
+      tags: nextTags,
+      review,
+      createdAt:
+        existingOpinion?.createdAt ||
+        nowIso,
+      updatedAt: nowIso
+    });
+
+    if (!opinion) {
+      return res.status(400).json({
+        error: "invalid_opinion"
+      });
+    }
+
+    if (existingIndex >= 0) {
+      bucket.opinions[existingIndex] =
+        opinion;
+    } else {
+      bucket.opinions.unshift(opinion);
+    }
+
+    _writeDb(db);
+
+    res
+      .status(existingOpinion ? 200 : 201)
+      .json({
+        opinion
+      });
+  }
+);
+
+app.delete(
+  "/api/opinions/:itemId",
+  _requireAuth,
+  (req, res) => {
+    const itemId = String(
+      req.params.itemId || ""
+    ).trim();
+
+    if (!itemId) {
+      return res.status(400).json({
+        error: "missing_item_id"
+      });
+    }
+
+    const db = _readDb();
+    const bucket = _getUserBucket(
+      db,
+      req.session.userId
+    );
+
+    const before = bucket.opinions.length;
+
+    bucket.opinions =
+      bucket.opinions.filter(
+        (opinion) =>
+          String(
+            opinion?.itemId || ""
+          ).trim() !== itemId
+      );
+
+    if (bucket.opinions.length === before) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    _writeDb(db);
+
+    res.json({
+      ok: true,
+      deleted: 1
+    });
+  }
+);
 
 app.get("/api/activities", _requireAuth, (req, res) => {
   const db = _readDb();
