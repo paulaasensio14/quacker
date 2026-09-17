@@ -812,6 +812,14 @@
               </article>
             </div>
 
+            <article
+              class="explore-detail-card content-detail-opinion-card"
+              id="contentDetailOpinionCard"
+              hidden
+            >
+              <div id="contentDetailOpinion"></div>
+            </article>
+
             <article class="explore-detail-card content-detail-providers-card" id="contentDetailProvidersCard" hidden>
               <div class="content-detail-card-head">
                 <div>
@@ -1344,6 +1352,48 @@
             </form>
           </div>
 
+          <div class="profile-card profile-opinions-card" id="profileOpinionsCard">
+            <h3 class="profile-title" data-i18n="profile_opinions_title">
+              Mis opiniones
+            </h3>
+
+            <p class="profile-meta" data-i18n="profile_opinions_description">
+              Un resumen de tus valoraciones y reseñas en Quacker.
+            </p>
+
+            <div class="profile-opinions-metrics">
+              <div class="profile-opinions-metric">
+                <strong id="profileOpinionsCount">0</strong>
+                <span data-i18n="profile_opinions_count_label">Opiniones</span>
+              </div>
+
+              <div class="profile-opinions-metric">
+                <strong id="profileOpinionsAverage">—</strong>
+                <span data-i18n="profile_opinions_average_label">Media</span>
+              </div>
+
+              <div class="profile-opinions-metric">
+                <strong id="profileReviewsCount">0</strong>
+                <span data-i18n="profile_reviews_count_label">Reseñas</span>
+              </div>
+            </div>
+
+            <div class="profile-opinions-latest" id="profileOpinionsLatest">
+              <span data-i18n="profile_opinions_latest_empty">
+                Aún no tienes opiniones.
+              </span>
+            </div>
+
+            <button
+              type="button"
+              class="btn-secondary"
+              id="profileOpinionsViewAll"
+              data-i18n="profile_opinions_view_all"
+            >
+              Ver todas mis opiniones
+            </button>
+          </div>
+
           <div
             class="profile-card profile-whats-new-card"
             id="profileWhatsNewCard"
@@ -1363,6 +1413,38 @@
             >
               Ver novedades
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-opinions" data-view-id="opinions">
+        <div class="profile-layout profile-opinions-view">
+          <div class="profile-card">
+            <div class="profile-opinions-view-header">
+              <button
+                type="button"
+                class="btn-secondary"
+                id="profileOpinionsBack"
+                data-i18n="profile_opinions_back"
+              >
+                Volver al perfil
+              </button>
+
+              <div>
+                <h3 class="profile-title" data-i18n="profile_opinions_title">
+                  Mis opiniones
+                </h3>
+                <p class="profile-meta" data-i18n="profile_opinions_all_summary">
+                  Todas tus valoraciones y reseñas en Quacker.
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="profile-opinions-list"
+              id="profileOpinionsAllList"
+              aria-live="polite"
+            ></div>
           </div>
         </div>
       </section>

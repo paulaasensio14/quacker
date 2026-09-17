@@ -187,6 +187,192 @@ const ProfileModule = (() => {
     `).join("");
   }
 
+  function buildOpinionsSummary(opinions = []) {
+    const safeOpinions = Array.isArray(opinions) ? opinions : [];
+
+    const ratedOpinions = safeOpinions.filter((opinion) => {
+      const rating = opinion?.rating;
+      return Number.isInteger(rating) && rating >= 1 && rating <= 5;
+    });
+
+    const reviews = safeOpinions.filter((opinion) => {
+      return String(opinion?.review?.text || "").trim().length > 0;
+    });
+
+    const average = ratedOpinions.length
+      ? ratedOpinions.reduce((sum, opinion) => sum + opinion.rating, 0) /
+        ratedOpinions.length
+      : null;
+
+    const latest = [...safeOpinions]
+      .filter(Boolean)
+      .sort((a, b) => {
+        const aDate = Date.parse(a?.updatedAt || a?.createdAt || "") || 0;
+        const bDate = Date.parse(b?.updatedAt || b?.createdAt || "") || 0;
+        return bDate - aDate;
+      })[0] || null;
+
+    return {
+      opinionsCount: safeOpinions.length,
+      average,
+      reviewsCount: reviews.length,
+      latest
+    };
+  }
+
+  function renderOpinionsSummary(summary) {
+    const countEl = $("#profileOpinionsCount");
+    const averageEl = $("#profileOpinionsAverage");
+    const reviewsEl = $("#profileReviewsCount");
+    const latestEl = $("#profileOpinionsLatest");
+
+    if (!summary) return;
+
+    if (countEl) {
+      countEl.textContent = String(summary.opinionsCount || 0);
+    }
+
+    if (averageEl) {
+      if (Number.isFinite(summary.average)) {
+        const locale = document.documentElement.lang || "es";
+        averageEl.textContent = `${new Intl.NumberFormat(locale, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 1
+        }).format(summary.average)}/5`;
+      } else {
+        averageEl.textContent = "—";
+      }
+    }
+
+    if (reviewsEl) {
+      reviewsEl.textContent = String(summary.reviewsCount || 0);
+    }
+
+    if (latestEl) {
+      const latest = summary.latest;
+
+      if (!latest) {
+        latestEl.textContent = t("profile_opinions_latest_empty");
+        return;
+      }
+
+      const title =
+        String(latest?.itemSnapshot?.title || "").trim() ||
+        t("profile_opinions_unknown_title");
+
+      const rating = latest?.rating;
+      const hasRating =
+        Number.isInteger(rating) &&
+        rating >= 1 &&
+        rating <= 5;
+
+      latestEl.textContent = hasRating
+        ? `${title} · ${rating}/5`
+        : title;
+    }
+  }
+
+  async function loadOpinionsSummary() {
+    try {
+      const opinions = await ApiClient.getOpinions();
+      renderOpinionsSummary(buildOpinionsSummary(opinions));
+    } catch (err) {
+      console.error("ProfileModule: failed to load opinions", err);
+      renderOpinionsSummary(buildOpinionsSummary([]));
+    }
+  }
+
+  function renderOpinionsList(opinions = []) {
+    const listEl = $("#profileOpinionsAllList");
+    if (!listEl) return;
+
+    const safeOpinions = Array.isArray(opinions)
+      ? opinions.filter(Boolean)
+      : [];
+
+    const sortedOpinions = [...safeOpinions].sort((a, b) => {
+      const aDate = Date.parse(a?.updatedAt || a?.createdAt || "") || 0;
+      const bDate = Date.parse(b?.updatedAt || b?.createdAt || "") || 0;
+      return bDate - aDate;
+    });
+
+    listEl.replaceChildren();
+
+    if (!sortedOpinions.length) {
+      const emptyEl = document.createElement("div");
+      emptyEl.className = "profile-opinions-list-empty";
+      emptyEl.textContent = t("profile_opinions_latest_empty");
+      listEl.append(emptyEl);
+      return;
+    }
+
+    sortedOpinions.forEach((opinion) => {
+      const itemEl = document.createElement("article");
+      itemEl.className = "profile-opinions-list-item";
+
+      const headerEl = document.createElement("div");
+      headerEl.className = "profile-opinions-list-item-header";
+
+      const titleEl = document.createElement("strong");
+      titleEl.className = "profile-opinions-list-title";
+      titleEl.textContent =
+        String(opinion?.itemSnapshot?.title || "").trim() ||
+        t("profile_opinions_unknown_title");
+
+      headerEl.append(titleEl);
+
+      const rating = opinion?.rating;
+      const hasRating =
+        Number.isInteger(rating) &&
+        rating >= 1 &&
+        rating <= 5;
+
+      if (hasRating) {
+        const ratingEl = document.createElement("div");
+        ratingEl.className = "profile-opinions-list-rating";
+        ratingEl.setAttribute(
+          "aria-label",
+          t("detail_opinion_rating_value").replace("{value}", String(rating))
+        );
+
+        const duckEl = document.createElement("img");
+        duckEl.className = "profile-opinions-list-rating-duck";
+        duckEl.src = "assets/img/quacker-rating.png";
+        duckEl.alt = "";
+        duckEl.setAttribute("aria-hidden", "true");
+
+        const ratingValueEl = document.createElement("strong");
+        ratingValueEl.textContent = `${rating}/5`;
+
+        ratingEl.append(duckEl, ratingValueEl);
+        headerEl.append(ratingEl);
+      }
+
+      itemEl.append(headerEl);
+
+      const reviewText = String(opinion?.review?.text || "").trim();
+
+      if (reviewText) {
+        const reviewEl = document.createElement("p");
+        reviewEl.className = "profile-opinions-list-review";
+        reviewEl.textContent = reviewText;
+        itemEl.append(reviewEl);
+      }
+
+      listEl.append(itemEl);
+    });
+  }
+
+  async function loadOpinionsView() {
+    try {
+      const opinions = await ApiClient.getOpinions();
+      renderOpinionsList(opinions);
+    } catch (err) {
+      console.error("ProfileModule: failed to load opinions view", err);
+      renderOpinionsList([]);
+    }
+  }
+
   async function loadProfileIntoForm() {
     const user = await ApiClient.getUser();
     if (!user) return;
@@ -305,6 +491,23 @@ const ProfileModule = (() => {
   }
 
 
+  function bindOpinionsNavigation() {
+    const viewAllBtn = $("#profileOpinionsViewAll");
+    const backBtn = $("#profileOpinionsBack");
+
+    if (viewAllBtn) {
+      viewAllBtn.addEventListener("click", () => {
+        window.Router?.showView("opinions");
+      });
+    }
+
+    if (backBtn) {
+      backBtn.addEventListener("click", () => {
+        window.Router?.showView("profile");
+      });
+    }
+  }
+
   function bindForm() {
     const form = $("#profileForm");
     const saveBtn = $("#profileSaveBtn");
@@ -390,19 +593,32 @@ const ProfileModule = (() => {
       bindAvatar();
       bindAvatarPicker();
       bindDirtyTracking();
+      bindOpinionsNavigation();
       bindForm();
       isBound = true;
     }
 
     // Cargar datos siempre que se active / cambie el usuario
-    await loadProfileIntoForm();
+    const initialLoads = [
+      loadProfileIntoForm(),
+      loadOpinionsSummary()
+    ];
+
+    if ($("#view-opinions")?.classList.contains("is-active")) {
+      initialLoads.push(loadOpinionsView());
+    }
+
+    await Promise.all(initialLoads);
   }
 
   async function load() {
-    await loadProfileIntoForm();
+    await Promise.all([
+      loadProfileIntoForm(),
+      loadOpinionsSummary()
+    ]);
   }
 
-  return { init, load };
+  return { init, load, loadOpinionsView };
 })();
 
 // Exponer al scope global

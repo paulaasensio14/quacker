@@ -40,6 +40,13 @@ const ExploreModule = (() => {
   let __detailViewItem = null;
   let __detailViewLoading = false;
   let __detailViewError = false;
+  let __detailOpinionState = {
+    itemId: "",
+    loading: false,
+    opinion: null,
+    error: false
+  };
+  let __detailOpinionMutationBusy = false;
   let __detailListsPickerOpen = false;
   let __detailOriginView = "explore";
   let __detailCastExpanded = false;
@@ -873,6 +880,87 @@ const ExploreModule = (() => {
     return detailState?.item || __detailViewItem || null;
   }
 
+  function _resetDetailOpinionState() {
+    __detailOpinionState = {
+      itemId: "",
+      loading: false,
+      opinion: null,
+      error: false
+    };
+  }
+
+  async function _loadDetailOpinion(item) {
+    const itemId = _normalizeId(item?.__libraryItemId);
+
+    if (!itemId) {
+      _resetDetailOpinionState();
+      return null;
+    }
+
+    if (
+      __detailOpinionState.itemId === itemId &&
+      __detailOpinionState.loading
+    ) {
+      return null;
+    }
+
+    if (
+      __detailOpinionState.itemId === itemId &&
+      !__detailOpinionState.error
+    ) {
+      return __detailOpinionState.opinion;
+    }
+
+    __detailOpinionState = {
+      itemId,
+      loading: true,
+      opinion: null,
+      error: false
+    };
+
+    try {
+      const opinions = await ApiClient.getOpinions({ itemId });
+
+      if (__detailOpinionState.itemId !== itemId) {
+        return null;
+      }
+
+      __detailOpinionState = {
+        itemId,
+        loading: false,
+        opinion: opinions[0] || null,
+        error: false
+      };
+
+      const activeItem = _getActiveDetailItem();
+      if (activeItem) {
+        window.DetailModule?.render?.(activeItem);
+      }
+
+      return __detailOpinionState.opinion;
+    } catch (error) {
+      if (__detailOpinionState.itemId !== itemId) {
+        return null;
+      }
+
+      __detailOpinionState = {
+        itemId,
+        loading: false,
+        opinion: null,
+        error: true
+      };
+
+      console.error("[Explore] failed to load detail opinion", error);
+
+      const activeItem = _getActiveDetailItem();
+      if (activeItem) {
+        window.DetailModule?.render?.(activeItem);
+      }
+
+      return null;
+    }
+  }
+
   function _setActiveDetailState({
     item = __detailViewItem,
     loading = undefined,
@@ -1579,29 +1667,488 @@ const ExploreModule = (() => {
   }
 
   function _buildExploreRatingMarkup(item, { compact = false } = {}) {
-    const rawRating = Number(item?.rating || 0);
-    const safeRating = Number.isFinite(rawRating) ? Math.max(0, Math.min(10, rawRating)) : 0;
-    const duckCount = Math.round(safeRating / 2);
-    const maxDucks = 5;
+    const rawRating = Number(item?.rating ?? item?.meta?.rating ?? 0);
+    const hasRating = Number.isFinite(rawRating) && rawRating > 0;
+    const source = _norm(item?.source);
 
-    const ducks = Array.from({ length: maxDucks }, (_, i) => {
-      const filled = i < duckCount;
+    const providerLabel =
+      source === "tmdb"
+        ? "TMDB"
+        : source === "rawg"
+          ? "RAWG"
+          : source === "open_library"
+            ? "Open Library"
+            : window.I18n.t("external_rating_label");
+
+    if (!hasRating) {
+      return `
+        <span class="explore-rating-external${compact ? " explore-rating-external--compact" : ""}">
+          ${_escapeHtml(window.I18n.t("explore_detail_no_rating"))}
+        </span>
+      `;
+    }
+
+    const ratingText = new Intl.NumberFormat(_getExploreLocale(), {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1
+    }).format(rawRating);
+
+    const scoreText =
+      source === "tmdb"
+        ? `${ratingText}/10`
+        : ratingText;
+
+    return `
+      <span
+        class="explore-rating-external${compact ? " explore-rating-external--compact" : ""}"
+        aria-label="${_escapeHtml(`${providerLabel} · ${scoreText}`)}"
+      >
+        <span class="explore-rating-external-source">${_escapeHtml(providerLabel)}</span>
+        <span aria-hidden="true"> · </span>
+        <strong class="explore-rating-external-value">${_escapeHtml(scoreText)}</strong>
+      </span>
+    `;
+  }
+
+  const DETAIL_OPINION_TAGS = [
+    "masterpiece",
+    "casual",
+    "surprised_me",
+    "made_me_cry",
+    "made_me_laugh",
+    "comfort",
+    "thought_provoking",
+    "overrated",
+    "underrated",
+    "would_rewatch",
+    "highly_recommended"
+  ];
+
+  function _setDetailOpinionMutationBusy(isBusy) {
+    __detailOpinionMutationBusy = isBusy === true;
+
+    const opinionEl = document.getElementById("contentDetailOpinion");
+    if (!opinionEl) return;
+
+    opinionEl.setAttribute(
+      "aria-busy",
+      __detailOpinionMutationBusy ? "true" : "false"
+    );
+
+    opinionEl
+      .querySelectorAll("button, textarea, select, input")
+      .forEach((control) => {
+        control.disabled = __detailOpinionMutationBusy;
+      });
+  }
+
+  async function _runDetailOpinionMutation(mutation) {
+    if (__detailOpinionMutationBusy) return false;
+    if (typeof mutation !== "function") return false;
+
+    _setDetailOpinionMutationBusy(true);
+
+    try {
+      return await mutation();
+    } finally {
+      _setDetailOpinionMutationBusy(false);
+    }
+  }
+
+  async function _saveDetailOpinionReview(item, review) {
+    const itemId = _normalizeId(item?.__libraryItemId);
+
+    if (!itemId) {
+      return false;
+    }
+
+    return _runDetailOpinionMutation(async () => {
+      try {
+        const result = await ApiClient.saveOpinion({
+          itemId,
+          review
+        });
+
+        if (!result?.ok) {
+          return false;
+        }
+
+        const activeItem = _getActiveDetailItem();
+
+        if (
+          _normalizeId(activeItem?.__libraryItemId) !== itemId
+        ) {
+          return true;
+        }
+
+        __detailOpinionState = {
+          itemId,
+          loading: false,
+          opinion: result.opinion || null,
+          error: false
+        };
+
+        window.DetailModule?.render?.(activeItem);
+
+        return true;
+      } catch (error) {
+        console.error(
+          "[Explore] failed to save detail opinion review",
+          error
+        );
+        return false;
+      }
+    });
+  }
+
+  async function _saveDetailOpinionTags(item, tags) {
+    const itemId = _normalizeId(item?.__libraryItemId);
+
+    if (!itemId) {
+      return false;
+    }
+
+    const normalizedTags = [
+      ...new Set(
+        (Array.isArray(tags) ? tags : [])
+          .map((tag) => _norm(tag))
+          .filter((tag) => DETAIL_OPINION_TAGS.includes(tag))
+      )
+    ];
+
+    return _runDetailOpinionMutation(async () => {
+      try {
+        const result = await ApiClient.saveOpinion({
+          itemId,
+          tags: normalizedTags
+        });
+
+        if (!result?.ok) {
+          return false;
+        }
+
+        const activeItem = _getActiveDetailItem();
+
+        if (
+          _normalizeId(activeItem?.__libraryItemId) !== itemId
+        ) {
+          return true;
+        }
+
+        __detailOpinionState = {
+          itemId,
+          loading: false,
+          opinion: result.opinion || null,
+          error: false
+        };
+
+        window.DetailModule?.render?.(activeItem);
+
+        return true;
+      } catch (error) {
+        console.error(
+          "[Explore] failed to save detail opinion tags",
+          error
+        );
+        return false;
+      }
+    });
+  }
+
+  async function _saveDetailOpinionRating(item, rating) {
+    const itemId = _normalizeId(item?.__libraryItemId);
+
+    if (
+      !itemId ||
+      (
+        rating !== null &&
+        (!Number.isInteger(rating) || rating < 1 || rating > 5)
+      )
+    ) {
+      return false;
+    }
+
+    return _runDetailOpinionMutation(async () => {
+      try {
+        const result = await ApiClient.saveOpinion({
+          itemId,
+          rating
+        });
+
+        if (!result?.ok) {
+          return false;
+        }
+
+        const activeItem = _getActiveDetailItem();
+
+        if (
+          _normalizeId(activeItem?.__libraryItemId) !== itemId
+        ) {
+          return true;
+        }
+
+        __detailOpinionState = {
+          itemId,
+          loading: false,
+          opinion: result.opinion || null,
+          error: false
+        };
+
+        window.DetailModule?.render?.(activeItem);
+
+        return true;
+      } catch (error) {
+        console.error(
+          "[Explore] failed to save detail opinion rating",
+          error
+        );
+        return false;
+      }
+    });
+  }
+
+  function _buildDetailOpinionTagControls(opinion = null) {
+    const selectedTags = new Set(
+      Array.isArray(opinion?.tags)
+        ? opinion.tags.map((tag) => _norm(tag))
+        : []
+    );
+
+    const label = window.I18n.t("detail_opinion_tags_label");
+
+    const controls = DETAIL_OPINION_TAGS.map((tag) => {
+      const selected = selectedTags.has(tag);
+      const text = window.I18n.t(`detail_opinion_tag_${tag}`);
 
       return `
-        <img
-          src="assets/img/quacker-rating.png"
-          class="explore-rating-duck${compact ? " explore-rating-duck--compact" : ""}${filled ? " is-filled" : ""}"
-          alt=""
-          aria-hidden="true"
-        />
+        <button
+          type="button"
+          class="content-detail-opinion-tag${selected ? " is-selected" : ""}"
+          data-opinion-tag="${_escapeHtml(tag)}"
+          aria-pressed="${selected ? "true" : "false"}"
+        >${_escapeHtml(text)}</button>
       `;
     }).join("");
 
     return `
-      <span class="explore-rating-ducks${compact ? " explore-rating-ducks--compact" : ""}" aria-label="${safeRating.toFixed(1)} sobre 10">
-        ${ducks}
-      </span>
-      <span class="explore-rating-number${compact ? " explore-rating-number--compact" : ""}">${safeRating.toFixed(1)}</span>
+      <div class="content-detail-opinion-tags-control">
+        <p class="content-detail-opinion-tags-label">
+          ${_escapeHtml(label)}
+        </p>
+        <div
+          class="content-detail-opinion-tags"
+          role="group"
+          aria-label="${_escapeHtml(label)}"
+        >
+          ${controls}
+        </div>
+      </div>
+    `;
+  }
+
+  function _buildDetailOpinionReviewEditor(opinion = null) {
+    const review = opinion?.review || null;
+    const text = _safeText(review?.text);
+    const privacy = review?.privacy === "public" ? "public" : "private";
+    const spoiler = review?.spoiler === true;
+    const hasReview = Boolean(_safeText(review?.text).trim());
+    const reviewDate = hasReview
+      ? _formatExploreDate(review?.updatedAt || review?.createdAt)
+      : "";
+
+    const reviewDateMarkup =
+      hasReview && reviewDate
+        ? `
+          <p class="content-detail-opinion-review-date">
+            ${_escapeHtml(
+              window.I18n
+                .t("detail_opinion_review_date")
+                .replace("{date}", reviewDate)
+            )}
+          </p>
+        `
+        : "";
+
+    const label = window.I18n.t("detail_opinion_review_label");
+    const placeholder = window.I18n.t("detail_opinion_review_placeholder");
+    const privacyLabel = window.I18n.t("detail_opinion_review_privacy");
+    const privateLabel = window.I18n.t("detail_opinion_review_private");
+    const publicLabel = window.I18n.t("detail_opinion_review_public");
+    const spoilerLabel = window.I18n.t("detail_opinion_review_spoiler");
+    const saveLabel = window.I18n.t("detail_opinion_review_save");
+    const deleteLabel = window.I18n.t("detail_opinion_review_delete");
+
+    return `
+      <div class="content-detail-opinion-review-editor">
+        <label class="content-detail-opinion-review-label">
+          <span>${_escapeHtml(label)}</span>
+          <textarea
+            class="content-detail-opinion-review-text"
+            data-opinion-review-text
+            placeholder="${_escapeHtml(placeholder)}"
+          >${_escapeHtml(text)}</textarea>
+        </label>
+
+        <label class="content-detail-opinion-review-privacy-label">
+          <span>${_escapeHtml(privacyLabel)}</span>
+          <select
+            class="content-detail-opinion-review-privacy"
+            data-opinion-review-privacy
+          >
+            <option
+              value="private"
+              ${privacy === "private" ? "selected" : ""}
+            >${_escapeHtml(privateLabel)}</option>
+            <option
+              value="public"
+              ${privacy === "public" ? "selected" : ""}
+            >${_escapeHtml(publicLabel)}</option>
+          </select>
+        </label>
+
+        <label class="content-detail-opinion-review-spoiler">
+          <input
+            type="checkbox"
+            data-opinion-review-spoiler
+            ${spoiler ? "checked" : ""}
+          />
+          <span>${_escapeHtml(spoilerLabel)}</span>
+        </label>
+
+        ${reviewDateMarkup}
+
+        <div class="content-detail-opinion-review-actions">
+          <button
+            type="button"
+            data-action="save-opinion-review"
+          >${_escapeHtml(saveLabel)}</button>
+
+          ${
+            hasReview
+              ? `
+                <button
+                  type="button"
+                  data-action="delete-opinion-review"
+                >${_escapeHtml(deleteLabel)}</button>
+              `
+              : ""
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  function _buildDetailOpinionRatingControls(opinion = null) {
+    const currentRating =
+      Number.isInteger(opinion?.rating) &&
+      opinion.rating >= 1 &&
+      opinion.rating <= 5
+        ? opinion.rating
+        : null;
+
+    const label = window.I18n.t("detail_opinion_rating_label");
+
+    const controls = Array.from({ length: 5 }, (_, index) => {
+      const value = index + 1;
+      const selected = currentRating === value;
+      const ariaLabel = window.I18n
+        .t("detail_opinion_rating_value")
+        .replace("{value}", String(value));
+
+      return `
+        <button
+          type="button"
+          class="content-detail-opinion-duck${selected ? " is-selected" : ""}"
+          data-opinion-rating="${value}"
+          aria-label="${_escapeHtml(ariaLabel)}"
+          aria-pressed="${selected ? "true" : "false"}"
+        >🦆</button>
+      `;
+    }).join("");
+
+    const removeControl =
+      currentRating !== null
+        ? `
+          <button
+            type="button"
+            class="content-detail-opinion-rating-remove"
+            data-action="clear-opinion-rating"
+          >${_escapeHtml(window.I18n.t("detail_opinion_rating_remove"))}</button>
+        `
+        : "";
+
+    return `
+      <div class="content-detail-opinion-rating-control">
+        <p class="content-detail-opinion-rating-label">
+          ${_escapeHtml(label)}
+        </p>
+        <div
+          class="content-detail-opinion-ducks"
+          role="group"
+          aria-label="${_escapeHtml(label)}"
+        >
+          ${controls}
+        </div>
+        ${removeControl}
+      </div>
+    `;
+  }
+
+  function _renderContentDetailOpinion(opinionEl, opinionCardEl, item) {
+    if (!opinionEl || !opinionCardEl) return;
+
+    const itemId = _normalizeId(item?.__libraryItemId);
+
+    if (!itemId) {
+      opinionCardEl.hidden = true;
+      opinionEl.innerHTML = "";
+      return;
+    }
+
+    opinionCardEl.hidden = false;
+
+    const title = _escapeHtml(window.I18n.t("detail_opinion_title"));
+
+    if (
+      __detailOpinionState.itemId !== itemId ||
+      __detailOpinionState.loading
+    ) {
+      opinionEl.innerHTML = `
+        <h2>${title}</h2>
+        <p>${_escapeHtml(window.I18n.t("detail_opinion_loading"))}</p>
+      `;
+      return;
+    }
+
+    if (__detailOpinionState.error) {
+      opinionEl.innerHTML = `
+        <h2>${title}</h2>
+        <p>${_escapeHtml(window.I18n.t("detail_opinion_error"))}</p>
+      `;
+      return;
+    }
+
+    const opinion = __detailOpinionState.opinion;
+    const ratingControls = _buildDetailOpinionRatingControls(opinion);
+    const tagControls = _buildDetailOpinionTagControls(opinion);
+    const reviewEditor = _buildDetailOpinionReviewEditor(opinion);
+
+    if (!opinion) {
+      opinionEl.innerHTML = `
+        <h2>${title}</h2>
+        ${ratingControls}
+        ${tagControls}
+        ${reviewEditor}
+        <p>${_escapeHtml(window.I18n.t("detail_opinion_empty"))}</p>
+      `;
+      return;
+    }
+
+    opinionEl.innerHTML = `
+      <h2>${title}</h2>
+      ${ratingControls}
+      ${tagControls}
+      ${reviewEditor}
     `;
   }
 
@@ -2297,6 +2844,7 @@ const ExploreModule = (() => {
       originView: originView || "explore",
       lastFocusEl: fallbackFocusEl
     });
+    _resetDetailOpinionState();
     __detailListsPickerOpen = false;
     __detailCastExpanded = false;
     __detailExpandedSeasonKeys.clear();
@@ -2325,10 +2873,12 @@ const ExploreModule = (() => {
           error: false
         });
         window.DetailModule?.render?.(nextItem);
+        void _loadDetailOpinion(nextItem);
         return window.DetailModule?.hydrate?.(nextItem);
       })
       .catch((error) => {
         console.error("[Explore] failed to refresh detail page state", error);
+        void _loadDetailOpinion(detailItem);
         void window.DetailModule?.hydrate?.(detailItem);
       });
   }
@@ -2345,6 +2895,7 @@ const ExploreModule = (() => {
       loading: false,
       error: false
     });
+    _resetDetailOpinionState();
     __detailListsPickerOpen = false;
     __detailCastExpanded = false;
     __detailExpandedSeasonKeys.clear();
@@ -3883,6 +4434,110 @@ const ExploreModule = (() => {
     // CLICK "+"
 
     document.addEventListener("click", async (e) => {
+      const saveReviewButton = e.target.closest('[data-action="save-opinion-review"]');
+
+      if (saveReviewButton) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const reviewEditor = saveReviewButton.closest(
+          ".content-detail-opinion-review-editor"
+        );
+
+        const textInput = reviewEditor?.querySelector("[data-opinion-review-text]");
+        const privacyInput = reviewEditor?.querySelector("[data-opinion-review-privacy]");
+        const spoilerInput = reviewEditor?.querySelector("[data-opinion-review-spoiler]");
+
+        const text = _safeText(textInput?.value).trim();
+
+        if (!text) return;
+
+        const privacy = _safeText(privacyInput?.value).trim().toLowerCase();
+        const activeDetailItem = _getActiveDetailItem();
+
+        if (!activeDetailItem) return;
+
+        const review = {
+          text,
+          privacy: privacy === "public" ? "public" : "private",
+          spoiler: spoilerInput?.checked === true
+        };
+
+        await _saveDetailOpinionReview(activeDetailItem, review);
+        return;
+      }
+
+      const deleteReviewButton = e.target.closest('[data-action="delete-opinion-review"]');
+
+      if (deleteReviewButton) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const activeDetailItem = _getActiveDetailItem();
+
+        if (!activeDetailItem) return;
+
+        await _saveDetailOpinionReview(activeDetailItem, null);
+        return;
+      }
+
+      const tagButton = e.target.closest('[data-opinion-tag]');
+
+      if (tagButton) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const tag = _norm(tagButton.dataset.opinionTag);
+
+        if (!DETAIL_OPINION_TAGS.includes(tag)) return;
+
+        const activeDetailItem = _getActiveDetailItem();
+
+        if (!activeDetailItem) return;
+
+        const currentTags = Array.isArray(__detailOpinionState.opinion?.tags)
+          ? __detailOpinionState.opinion.tags
+              .map((currentTag) => _norm(currentTag))
+              .filter((currentTag) => DETAIL_OPINION_TAGS.includes(currentTag))
+          : [];
+
+        const nextTags = currentTags.includes(tag)
+          ? currentTags.filter((currentTag) => currentTag !== tag)
+          : [...currentTags, tag];
+
+        await _saveDetailOpinionTags(activeDetailItem, nextTags);
+        return;
+      }
+
+      const clearRatingButton = e.target.closest('[data-action="clear-opinion-rating"]');
+
+      if (clearRatingButton) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const activeDetailItem = _getActiveDetailItem();
+
+        if (!activeDetailItem) return;
+
+        await _saveDetailOpinionRating(activeDetailItem, null);
+        return;
+      }
+
+      const ratingButton = e.target.closest('[data-opinion-rating]');
+
+      if (ratingButton) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rating = Number(ratingButton.dataset.opinionRating);
+        const activeDetailItem = _getActiveDetailItem();
+
+        if (!activeDetailItem) return;
+
+        await _saveDetailOpinionRating(activeDetailItem, rating);
+        return;
+      }
+
       const detailTrigger = e.target.closest(
         '[data-action="open-item-detail"][data-eid], [data-detail-related][data-eid]'
       );
@@ -4194,6 +4849,7 @@ const ExploreModule = (() => {
         applyVisualCover: _applyExploreVisualCover,
         syncTrailerLink: _syncContentDetailTrailerLink,
         renderRating: _renderExploreRating,
+      renderOpinion: _renderContentDetailOpinion,
         renderHighlights: _renderContentDetailHighlights,
         renderProviders: _renderContentDetailProviders,
         renderRelatedItems: _renderContentDetailRelatedItems,

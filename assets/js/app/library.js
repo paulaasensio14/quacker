@@ -802,6 +802,35 @@ const LibraryUI = (() => {
 
   let allItems = [];
   let itemsInAnyList = new Set();
+  let opinionsByItemId = new Map();
+
+  function buildLibraryPersonalRatingMarkup(itemId) {
+    const normalizedItemId = _normalizeLibraryItemId(itemId);
+    if (!normalizedItemId) return "";
+
+    const opinion = opinionsByItemId.get(normalizedItemId);
+    const rating = opinion?.rating;
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return "";
+    }
+
+    const ariaLabel = escapeHtml(
+      t("detail_opinion_rating_value").replace("{value}", String(rating))
+    );
+
+    return `
+      <div class="lib-personal-rating" aria-label="${ariaLabel}">
+        <img
+          class="lib-personal-rating-duck"
+          src="assets/img/quacker-rating.png"
+          alt=""
+          aria-hidden="true"
+        />
+        <strong class="lib-personal-rating-value">${rating}/5</strong>
+      </div>
+    `;
+  }
 
   function buildLibraryDetailItem(item) {
     if (!item || typeof item !== "object") return null;
@@ -1369,6 +1398,7 @@ const LibraryUI = (() => {
       const safeEditProgressLabel = escapeHtml(t("library_edit_progress"));
       const safeEditLabel = escapeHtml(t("library_edit"));
       const safeMarkCompletedLabel = escapeHtml(t("library_mark_completed"));
+      const personalRatingMarkup = buildLibraryPersonalRatingMarkup(itemId);
       const isHighlighted = _normalizeLibraryItemId(window.__lastCreatedLibraryItemId) === itemId;
       
       return `
@@ -1411,6 +1441,8 @@ const LibraryUI = (() => {
 
           <div class="lib-body">
             <div class="lib-title">${safeTitle}</div>
+
+            ${personalRatingMarkup}
 
             <div class="lib-meta-row">
               <span class="lib-status-badge is-${statusKey}">${safeStatusLabel}</span>
@@ -1496,6 +1528,21 @@ const LibraryUI = (() => {
       allItems = (await ApiClient.getLibrary())
         .map(normalizeLibraryItemForView)
         .filter(Boolean);
+
+      opinionsByItemId = new Map();
+
+      try {
+        const opinions = await ApiClient.getOpinions();
+
+        (Array.isArray(opinions) ? opinions : []).forEach((opinion) => {
+          const opinionItemId = _normalizeLibraryItemId(opinion?.itemId);
+          if (!opinionItemId) return;
+
+          opinionsByItemId.set(opinionItemId, opinion);
+        });
+      } catch (err) {
+        console.error("LibraryUI: failed to load opinions", err);
+      }
 
       // Construimos un Set con todos los itemId que ya están en alguna lista
       itemsInAnyList = new Set();
@@ -2993,6 +3040,60 @@ const LibraryUI = (() => {
     })();
   }
 
+  async function openDetailByItemId(
+    itemId,
+    { triggerEl = null } = {}
+  ) {
+    const normalizedItemId =
+      _normalizeLibraryItemId(itemId);
+
+    if (!normalizedItemId) {
+      return {
+        ok: false,
+        reason: "missing_id"
+      };
+    }
+
+    const item =
+      await getLibraryItemById(normalizedItemId);
+
+    if (!item) {
+      return {
+        ok: false,
+        reason: "not_found"
+      };
+    }
+
+    const detailItem =
+      buildLibraryDetailItem(item);
+
+    if (!detailItem) {
+      return {
+        ok: false,
+        reason: "invalid_detail_item"
+      };
+    }
+
+    if (
+      typeof window.DetailModule?.open !== "function"
+    ) {
+      return {
+        ok: false,
+        reason: "detail_unavailable"
+      };
+    }
+
+    window.DetailModule?.open?.(detailItem, {
+      originView: "library",
+      triggerEl
+    });
+
+    return {
+      ok: true,
+      item: detailItem
+    };
+  }
+
   // Nueva función para aplicar filtros desde fuera
   function setExternalFilters(filters = {}) {
     if (filters.type) typeFilter = filters.type;
@@ -3023,6 +3124,7 @@ const LibraryUI = (() => {
     init,
     load,
     render,
+    openDetailByItemId,
     setExternalFilters,
     setSearchTerm,
     showProgressErrors,

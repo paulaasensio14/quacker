@@ -1580,12 +1580,30 @@ function _normalizeUserNotification(entry) {
 
   if (!title) return null;
 
+  const action = String(entry.action || "").trim();
+  const itemId = String(entry.itemId || "").trim();
+  const contentType = String(entry.contentType || "").trim();
+
+  const allowedActions = new Set(["rate_content"]);
+  const allowedContentTypes = new Set([
+    "pelicula",
+    "serie",
+    "book",
+    "game"
+  ]);
+
+  const hasActionContext =
+    allowedActions.has(action) &&
+    Boolean(itemId) &&
+    allowedContentTypes.has(contentType);
+
   return {
     id: notificationId,
     title,
     text: String(entry.text || "").trim(),
     color: String(entry.color || "").trim() || "#2563eb",
     icon: String(entry.icon || "").trim() || "check",
+    ...(hasActionContext ? { action, itemId, contentType } : {}),
     createdAt
   };
 }
@@ -1603,6 +1621,59 @@ function _normalizeUserNotificationsList(list) {
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 200);
 }
+
+
+function _shouldCreateCompletionOpinionPrompt({
+  prevCompleted,
+  nextCompleted,
+  opinions,
+  notifications,
+  itemId,
+  contentType
+} = {}) {
+  if (prevCompleted || !nextCompleted) return false;
+
+  const normalizedItemId = String(itemId || "").trim();
+  const normalizedContentType = String(contentType || "").trim();
+  const allowedContentTypes = new Set([
+    "pelicula",
+    "serie",
+    "book",
+    "game"
+  ]);
+
+  if (
+    !normalizedItemId ||
+    !allowedContentTypes.has(normalizedContentType)
+  ) {
+    return false;
+  }
+
+  const hasRating = (Array.isArray(opinions) ? opinions : [])
+    .some((opinion) => {
+      const rating = opinion?.rating;
+
+      return (
+        String(opinion?.itemId || "").trim() === normalizedItemId &&
+        String(opinion?.contentType || "").trim() === normalizedContentType &&
+        Number.isInteger(rating) &&
+        rating >= 1 &&
+        rating <= 5
+      );
+    });
+
+  if (hasRating) return false;
+
+  const alreadyPending = (Array.isArray(notifications) ? notifications : [])
+    .some((notification) => (
+      String(notification?.action || "").trim() === "rate_content" &&
+      String(notification?.itemId || "").trim() === normalizedItemId &&
+      String(notification?.contentType || "").trim() === normalizedContentType
+    ));
+
+  return !alreadyPending;
+}
+
 
 function _normalizeExploreUiState(ui) {
   const safeUi = ui && typeof ui === "object" && !Array.isArray(ui) ? ui : {};
@@ -5124,6 +5195,46 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
 
     if (consumptionEvent) {
       bucket.consumptionHistory.unshift(consumptionEvent);
+    }
+  }
+
+  if (
+    _shouldCreateCompletionOpinionPrompt({
+      prevCompleted,
+      nextCompleted,
+      opinions: bucket.opinions,
+      notifications: bucket.notifications,
+      itemId: id,
+      contentType: next.type
+    })
+  ) {
+    const isEnglish =
+      bucket.profile?.language === "en";
+
+    const notification =
+      _normalizeUserNotification({
+        title: isEnglish
+          ? `You've finished ${next.title} 🦆`
+          : `Has terminado ${next.title} 🦆`,
+        text: isEnglish
+          ? "What did you think?"
+          : "¿Qué te ha parecido?",
+        color: "#2563eb",
+        icon: "check",
+        action: "rate_content",
+        itemId: id,
+        contentType: next.type,
+        createdAt: nowIso
+      });
+
+    if (notification) {
+      bucket.notifications =
+        _normalizeUserNotificationsList([
+          notification,
+          ...(Array.isArray(bucket.notifications)
+            ? bucket.notifications
+            : [])
+        ]);
     }
   }
 

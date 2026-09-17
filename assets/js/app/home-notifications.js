@@ -286,18 +286,29 @@ const NotificationsUI = (() => {
 
       const chipLabel = window.I18n.t("home_streak_label");
 
-      const chipHtml = isStreakNotif
-        ? `<span class="notif-chip" aria-label="${chipLabel}">${chipLabel}</span>`
-        : "";
+      const toplineEl = document.createElement("div");
+      toplineEl.className = "notif-topline";
 
-      body.innerHTML = `
-        <div class="notif-topline">
-          <strong>${n.title || ""}</strong>
-          ${chipHtml}
-        </div>
-        <div>${n.text || ""}</div>
-        <div class="notif-time">${n.time || ""}</div>
-      `;
+      const titleEl = document.createElement("strong");
+      titleEl.textContent = n.title || "";
+      toplineEl.appendChild(titleEl);
+
+      if (isStreakNotif) {
+        const chipEl = document.createElement("span");
+        chipEl.className = "notif-chip";
+        chipEl.setAttribute("aria-label", chipLabel);
+        chipEl.textContent = chipLabel;
+        toplineEl.appendChild(chipEl);
+      }
+
+      const textEl = document.createElement("div");
+      textEl.textContent = n.text || "";
+
+      const timeEl = document.createElement("div");
+      timeEl.className = "notif-time";
+      timeEl.textContent = n.time || "";
+
+      body.append(toplineEl, textEl, timeEl);
 
       const markBtn = document.createElement("button");
       markBtn.type = "button";
@@ -377,9 +388,118 @@ const NotificationsUI = (() => {
         }, 180);
       });
 
+      const isRateContentAction =
+        n.action === "rate_content" &&
+        Boolean(String(n.itemId || "").trim()) &&
+        ["pelicula", "serie", "book", "game"].includes(
+          String(n.contentType || "").trim()
+        );
+
+      if (isRateContentAction) {
+        const opinionActions = document.createElement("div");
+        opinionActions.className = "notif-opinion-actions";
+
+        const rateBtn = document.createElement("button");
+        rateBtn.type = "button";
+        rateBtn.className = "notif-opinion-rate-btn btn-primary btn-sm";
+        rateBtn.textContent =
+          window.I18n.t("completion_opinion_action_rate");
+
+        const laterBtn = document.createElement("button");
+        laterBtn.type = "button";
+        laterBtn.className = "notif-opinion-later-btn btn-secondary btn-sm";
+        laterBtn.textContent =
+          window.I18n.t("completion_opinion_action_later");
+
+        rateBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+
+          if (rateBtn.dataset.busy === "1") return;
+
+          rateBtn.dataset.busy = "1";
+          rateBtn.disabled = true;
+          laterBtn.disabled = true;
+
+          try {
+            const result =
+              await window.LibraryUI?.openDetailByItemId?.(
+                n.itemId,
+                { triggerEl: trigger || notifButtonEl }
+              );
+
+            if (!result?.ok) {
+              throw new Error(
+                `No se pudo abrir el contenido: ${result?.reason || "unknown"}`
+              );
+            }
+
+            await ApiClient.dismissNotification(n.id);
+            closePanel({ restoreFocus: false });
+          } catch (err) {
+            console.error(err);
+
+            rateBtn.dataset.busy = "0";
+            rateBtn.disabled = false;
+            laterBtn.disabled = false;
+
+            window.toast?.({
+              title: window.I18n.t(
+                "home_notif_update_error_title"
+              ),
+              message: window.I18n.t(
+                "home_notif_try_again"
+              ),
+              type: "error",
+              duration: 3000
+            });
+          }
+        });
+
+        laterBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+
+          if (laterBtn.dataset.busy === "1") return;
+
+          laterBtn.dataset.busy = "1";
+          rateBtn.disabled = true;
+          laterBtn.disabled = true;
+          card.classList.add("is-removing");
+
+          try {
+            await ApiClient.dismissNotification(n.id);
+          } catch (err) {
+            console.error(err);
+
+            card.classList.remove("is-removing");
+            laterBtn.dataset.busy = "0";
+            rateBtn.disabled = false;
+            laterBtn.disabled = false;
+
+            window.toast?.({
+              title: window.I18n.t(
+                "home_notif_update_error_title"
+              ),
+              message: window.I18n.t(
+                "home_notif_try_again"
+              ),
+              type: "error",
+              duration: 3000
+            });
+          }
+        });
+
+        opinionActions.appendChild(rateBtn);
+        opinionActions.appendChild(laterBtn);
+        body.appendChild(opinionActions);
+      }
+
       card.appendChild(icon);
       card.appendChild(body);
-      card.appendChild(markBtn);
+
+      if (!isRateContentAction) {
+        card.appendChild(markBtn);
+      }
+
       notifListEl.appendChild(card);
     });
 

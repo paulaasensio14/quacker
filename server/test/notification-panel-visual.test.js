@@ -148,3 +148,31 @@ test("el panel móvil aprovecha el viewport sin quedar comprimido", () => {
     "el panel móvil debe aprovechar el ancho disponible"
   );
 });
+
+test("las acciones de valoración forman una fila compacta dentro de la notificación", () => {
+  const actions = firstRule(".notif-opinion-actions");
+
+  assert.equal(
+    hasDeclaration(actions, "display", "flex"),
+    true,
+    ".notif-opinion-actions debe usar display: flex"
+  );
+
+  assert.equal(
+    hasDeclaration(actions, "gap", "8px"),
+    true,
+    ".notif-opinion-actions debe separar los botones 8px"
+  );
+
+  assert.equal(
+    hasDeclaration(actions, "flex-wrap", "wrap"),
+    true,
+    ".notif-opinion-actions debe permitir wrap en pantallas estrechas"
+  );
+
+  assert.equal(
+    hasDeclaration(actions, "margin-top", "8px"),
+    true,
+    ".notif-opinion-actions debe separarse del texto"
+  );
+});
