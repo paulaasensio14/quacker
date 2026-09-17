@@ -64,7 +64,8 @@ const Router = (() => {
       detail: "nav_detail",
       library: "nav_library",
       lists: "nav_lists",
-      profile: "nav_profile"
+      profile: "nav_profile",
+      opinions: "profile_opinions_title"
     };
     const titleEl = document.querySelector("#sectionTitle");
     if (titleEl) {
@@ -78,7 +79,8 @@ const Router = (() => {
       detail: "detail_summary",
       library: "library_summary",
       lists: "lists_subtitle",
-      profile: "profile_summary"
+      profile: "profile_summary",
+      opinions: "profile_opinions_all_summary"
     };
     const subtitleTextEl = document.querySelector("#sectionSubtitleText");
     if (subtitleTextEl) {

@@ -162,6 +162,8 @@ const DetailModule = (() => {
     const relatedGridEl = document.getElementById("contentDetailRelatedGrid");
     const ratingCardEl = document.getElementById("contentDetailRatingCard");
     const ratingEl = document.getElementById("contentDetailRating");
+    const opinionCardEl = document.getElementById("contentDetailOpinionCard");
+    const opinionEl = document.getElementById("contentDetailOpinion");
     const metaPrimaryCardEl = document.getElementById("contentDetailMetaPrimaryCard");
     const metaPrimaryLabelEl = document.getElementById("contentDetailMetaPrimaryLabel");
     const metaPrimaryValueEl = document.getElementById("contentDetailMetaPrimaryValue");
@@ -227,6 +229,7 @@ const DetailModule = (() => {
     }
 
     __renderDeps.renderRating?.(ratingEl, item);
+    __renderDeps.renderOpinion?.(opinionEl, opinionCardEl, item);
     __renderDeps.renderHighlights?.(highlightsEl, metaVm.heroFacts, item);
     __renderDeps.renderProviders?.(
       providersCardEl,

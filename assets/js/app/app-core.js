@@ -141,7 +141,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       kind === "lists" &&
       (action === "add_item" || action === "remove_item");
 
-    if (isLibraryActive && (kind === "library" || (kind === "lists" && !isListMembershipMutation))) {
+    if (
+      isLibraryActive &&
+      (
+        kind === "library" ||
+        kind === "opinions" ||
+        (kind === "lists" && !isListMembershipMutation)
+      )
+    ) {
       scheduleLibraryRefresh();
     }
 
@@ -177,6 +184,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (viewId === "profile") {
         window.ProfileModule?.load?.() || window.ProfileModule?.init?.();
+        return;
+      }
+
+      if (viewId === "opinions") {
+        window.ProfileModule?.loadOpinionsView?.();
       }
     } catch (err) {
       console.error("View change refresh error:", err);

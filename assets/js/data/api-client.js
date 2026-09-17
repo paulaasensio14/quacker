@@ -2201,13 +2201,39 @@ if (externalSignal?.aborted) {
   }
 
   // === NOTIFICACIONES ===
-  async function addNotification({ title, text = "", color = "#2563eb", icon = "check" } = {}) {
+  async function addNotification({
+    title,
+    text = "",
+    color = "#2563eb",
+    icon = "check",
+    action = "",
+    itemId = "",
+    contentType = ""
+  } = {}) {
+    const normalizedAction = String(action || "").trim();
+    const normalizedItemId = String(itemId || "").trim();
+    const normalizedContentType = String(contentType || "").trim();
+
+    const hasActionContext =
+      normalizedAction === "rate_content" &&
+      Boolean(normalizedItemId) &&
+      ["pelicula", "serie", "book", "game"].includes(normalizedContentType);
+
+    const actionContext = hasActionContext
+      ? {
+          action: normalizedAction,
+          itemId: normalizedItemId,
+          contentType: normalizedContentType
+        }
+      : {};
+
     if (_isHttp()) {
       const res = await _httpJson("POST", "/notifications", {
         title: title || "Notificación",
         text,
         color,
-        icon
+        icon,
+        ...actionContext
       });
 
       const notif = _normalizeNotificationsList([res?.notification || res])[0] || null;
@@ -2235,6 +2261,7 @@ if (externalSignal?.aborted) {
       text,
       color,
       icon,
+      ...actionContext,
       time: "Ahora",
       createdAt: nowIso
     };
@@ -2255,6 +2282,90 @@ if (externalSignal?.aborted) {
       ...notif,
       id: _normalizeNotificationId(notif.id)
     });
+  }
+
+  async function _maybeAddCompletionOpinionPrompt({
+    item,
+    prevCompleted = false,
+    nextCompleted = false
+  } = {}) {
+    if (prevCompleted || !nextCompleted || !item?.id) {
+      return { ok: true, notified: false };
+    }
+
+    const itemId = _normalizeDataId(item.id);
+    const contentType = String(item.type || "").trim();
+
+    if (
+      !itemId ||
+      !["pelicula", "serie", "book", "game"].includes(contentType)
+    ) {
+      return { ok: true, notified: false };
+    }
+
+    try {
+      const opinions = await getOpinions({ itemId });
+
+      const hasRating = (Array.isArray(opinions) ? opinions : [])
+        .some((opinion) => {
+          const rating = opinion?.rating;
+
+          return (
+            _normalizeDataId(opinion?.itemId) === itemId &&
+            String(opinion?.contentType || "").trim() === contentType &&
+            Number.isInteger(rating) &&
+            rating >= 1 &&
+            rating <= 5
+          );
+        });
+
+      if (hasRating) {
+        return { ok: true, notified: false };
+      }
+
+      const notifications = await getNotifications();
+
+      const alreadyPending =
+        (Array.isArray(notifications) ? notifications : [])
+          .some((notification) => (
+            String(notification?.action || "").trim() === "rate_content" &&
+            _normalizeDataId(notification?.itemId) === itemId &&
+            String(notification?.contentType || "").trim() === contentType
+          ));
+
+      if (alreadyPending) {
+        return { ok: true, notified: false };
+      }
+
+      const isEnglish = _getCurrentUiLang() === "en";
+
+      await addNotification({
+        title: isEnglish
+          ? `You've finished ${item.title || ""} 🦆`
+          : `Has terminado ${item.title || ""} 🦆`,
+        text: isEnglish
+          ? "What did you think?"
+          : "¿Qué te ha parecido?",
+        color: "#2563eb",
+        icon: "check",
+        action: "rate_content",
+        itemId,
+        contentType
+      });
+
+      return { ok: true, notified: true };
+    } catch (error) {
+      console.warn(
+        "[ApiClient] completion opinion prompt failed",
+        error
+      );
+
+      return {
+        ok: false,
+        notified: false,
+        reason: "notification_failed"
+      };
+    }
   }
 
   // === RACHA (notificación por hitos) ===
@@ -3542,17 +3653,6 @@ if (externalSignal?.aborted) {
       _emitDataChanged({ kind: "library", action: "complete", itemId: targetId });
 
       try {
-        await addNotification({
-          title: _t("library_status_completed", null, "Completado"),
-          text: item.title || current.title,
-          color: "#16a34a",
-          icon: "check"
-        });
-      } catch (error) {
-        console.warn("[ApiClient] completeLibraryItem notification failed", error);
-      }
-
-      try {
         await maybeNotifyStreak();
       } catch (error) {
         console.warn("[ApiClient] completeLibraryItem streak notification failed", error);
@@ -3634,12 +3734,10 @@ if (externalSignal?.aborted) {
       });
     }
 
-    // Notificación automática
-    await addNotification({
-      title: _t("library_status_completed", null, "Completado"),
-      text: item.title,
-      color: "#16a34a",
-      icon: "check"
+    await _maybeAddCompletionOpinionPrompt({
+      item,
+      prevCompleted: false,
+      nextCompleted: true
     });
 
     await maybeNotifyStreak();
@@ -4389,6 +4487,12 @@ if (externalSignal?.aborted) {
         }
       }
     }
+
+    await _maybeAddCompletionOpinionPrompt({
+      item: next,
+      prevCompleted,
+      nextCompleted
+    });
 
     _emitDataChanged({ kind: "library", action: "update", itemId });
 
