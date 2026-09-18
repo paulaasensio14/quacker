@@ -68,6 +68,10 @@ import {
 } from "./lib/account-validation.js";
 
 import {
+  normalizeProfilePrivacy
+} from "./lib/profile-privacy.js";
+
+import {
   resolveActivityCreatedAt
 } from "./lib/activity-timestamp.js";
 
@@ -1908,6 +1912,7 @@ const _requireAuth = _asyncHandler(
 function _getUserBucket(db, userId) {
   db.users[userId] = db.users[userId] || {
     profile: null,
+    privacy: normalizeProfilePrivacy(),
     library: [],
     lists: [],
     activities: [],
@@ -1924,6 +1929,10 @@ function _getUserBucket(db, userId) {
       whatsNew: normalizeWhatsNewUiState()
     }
   };
+
+  db.users[userId].privacy = normalizeProfilePrivacy(
+    db.users[userId].privacy
+  );
 
   db.users[userId].library = Array.isArray(db.users[userId].library)
     ? db.users[userId].library
@@ -2107,6 +2116,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
       language: safeLanguage,
       theme: "light"
     },
+    privacy: normalizeProfilePrivacy(),
     auth: {
       passwordSalt: salt,
       passwordHash: hash,
@@ -3574,6 +3584,72 @@ app.patch("/api/user", _requireAuth, (req, res) => {
   _writeDb(db);
 
   res.json({ user: bucket.profile });
+});
+
+app.get("/api/user/privacy", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  res.json(bucket.privacy);
+});
+
+app.patch("/api/user/privacy", _requireAuth, (req, res) => {
+  const patch = req.body;
+
+  if (
+    !patch ||
+    typeof patch !== "object" ||
+    Array.isArray(patch) ||
+    Object.keys(patch).length === 0
+  ) {
+    return res.status(400).json({
+      error: "empty_patch"
+    });
+  }
+
+  const allowedFields = new Set([
+    "profile",
+    "activity",
+    "library",
+    "lists",
+    "reviews",
+    "stats",
+    "favorites"
+  ]);
+
+  for (const key of Object.keys(patch)) {
+    if (!allowedFields.has(key)) {
+      return res.status(400).json({
+        error: "invalid_privacy_field"
+      });
+    }
+
+    if (typeof patch[key] !== "boolean") {
+      return res.status(400).json({
+        error: "invalid_privacy_value"
+      });
+    }
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  bucket.privacy = normalizeProfilePrivacy({
+    ...bucket.privacy,
+    ...patch
+  });
+
+  _writeDb(db);
+
+  res.json({
+    privacy: bucket.privacy
+  });
 });
 
 app.get("/api/user/ui/explore", _requireAuth, (req, res) => {
