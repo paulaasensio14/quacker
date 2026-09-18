@@ -127,3 +127,50 @@ test("las rutas locales de completado usan la invitación común", () => {
     /_maybeAddCompletionOpinionPrompt/
   );
 });
+
+test(
+  "la invitación post-completion no incrusta un emoji de pato en el título",
+  () => {
+    const patchStart = serverSource.indexOf(
+      'app.patch("/api/library/:id"'
+    );
+    const patchEnd = serverSource.indexOf(
+      '\napp.delete("/api/library/:id"',
+      patchStart
+    );
+
+    assert.notEqual(patchStart, -1);
+    assert.notEqual(patchEnd, -1);
+
+    const patchBlock = serverSource.slice(
+      patchStart,
+      patchEnd
+    );
+
+    assert.doesNotMatch(
+      patchBlock,
+      /🦆/
+    );
+
+    const localStart = apiSource.indexOf(
+      "async function _maybeAddCompletionOpinionPrompt("
+    );
+    const localEnd = apiSource.indexOf(
+      "\n  // === RACHA (notificación por hitos) ===",
+      localStart
+    );
+
+    assert.notEqual(localStart, -1);
+    assert.notEqual(localEnd, -1);
+
+    const localBlock = apiSource.slice(
+      localStart,
+      localEnd
+    );
+
+    assert.doesNotMatch(
+      localBlock,
+      /🦆/
+    );
+  }
+);

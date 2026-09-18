@@ -74,3 +74,36 @@ test(
     assert.match(i18n, /detail_opinion_rating_value:/);
   }
 );
+
+test(
+  "la valoración usa el asset de Quacker y la selección es acumulativa",
+  () => {
+    const start = source.indexOf(
+      "function _buildDetailOpinionRatingControls(opinion = null)"
+    );
+    const end = source.indexOf(
+      "\n  function _renderContentDetailOpinion",
+      start
+    );
+
+    assert.notEqual(start, -1);
+    assert.notEqual(end, -1);
+
+    const block = source.slice(start, end);
+
+    assert.match(
+      block,
+      /assets\/img\/quacker-rating\.png/
+    );
+
+    assert.doesNotMatch(
+      block,
+      /🦆/
+    );
+
+    assert.match(
+      block,
+      /value\s*<=\s*currentRating/
+    );
+  }
+);

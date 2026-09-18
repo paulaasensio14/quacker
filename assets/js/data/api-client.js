@@ -2341,8 +2341,8 @@ if (externalSignal?.aborted) {
 
       await addNotification({
         title: isEnglish
-          ? `You've finished ${item.title || ""} 🦆`
-          : `Has terminado ${item.title || ""} 🦆`,
+          ? `You've finished ${item.title || ""}`
+          : `Has terminado ${item.title || ""}`,
         text: isEnglish
           ? "What did you think?"
           : "¿Qué te ha parecido?",

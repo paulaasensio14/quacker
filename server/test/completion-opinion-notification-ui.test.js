@@ -223,3 +223,18 @@ test(
     );
   }
 );
+
+test(
+  "la invitación de valoración usa la imagen oficial de Quacker",
+  () => {
+    assert.match(
+      notificationsSource,
+      /n\.action\s*===\s*"rate_content"/
+    );
+
+    assert.match(
+      notificationsSource,
+      /assets\/img\/quacker-rating\.png/
+    );
+  }
+);
