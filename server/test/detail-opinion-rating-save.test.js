@@ -77,7 +77,7 @@ test(
 
     assert.match(
       source,
-      /await _saveDetailOpinionRating\(activeDetailItem,\s*rating\)/
+      /const ratingSaved = await _saveDetailOpinionRating\(\s*activeDetailItem,\s*rating\s*\)/
     );
   }
 );
