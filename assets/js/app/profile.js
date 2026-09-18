@@ -18,6 +18,18 @@ const ProfileModule = (() => {
   let initialData = null;
   let isBound = false;
   let pendingAvatarDataUrl = null;
+  const PRIVACY_FIELDS = Object.freeze([
+    "profile",
+    "activity",
+    "library",
+    "lists",
+    "reviews",
+    "stats",
+    "favorites"
+  ]);
+
+  let initialPrivacy = null;
+
 
   function showErrors(errors) {
     const box = $("#profileFormErrors");
@@ -111,6 +123,88 @@ const ProfileModule = (() => {
 
     const hasChanges = !sameData(initialData, current);
     btn.disabled = !hasChanges;
+  }
+
+  function showPrivacyErrors(errors) {
+    const box = $("#profilePrivacyFormErrors");
+    if (!box) return;
+
+    if (!errors || errors.length === 0) {
+      box.classList.add("is-initially-hidden");
+      box.innerHTML = "";
+      return;
+    }
+
+    box.classList.remove("is-initially-hidden");
+    box.innerHTML = `<ul>${errors.map((error) => `<li>${error}</li>`).join("")}</ul>`;
+  }
+
+  function getPrivacyFormData() {
+    return PRIVACY_FIELDS.reduce((privacy, field) => {
+      const input = document.querySelector(
+        `[data-privacy-field="${field}"]`
+      );
+
+      privacy[field] = input?.checked === true;
+      return privacy;
+    }, {});
+  }
+
+  function samePrivacy(a, b) {
+    if (!a || !b) return true;
+
+    return PRIVACY_FIELDS.every(
+      (field) => a[field] === b[field]
+    );
+  }
+
+  function updatePrivacySaveButtonState() {
+    const btn = $("#profilePrivacySaveBtn");
+    if (!btn) return;
+
+    btn.disabled = samePrivacy(
+      initialPrivacy,
+      getPrivacyFormData()
+    );
+  }
+
+  function renderPrivacyForm(privacy = {}) {
+    for (const field of PRIVACY_FIELDS) {
+      const input = document.querySelector(
+        `[data-privacy-field="${field}"]`
+      );
+
+      if (input) {
+        input.checked = privacy[field] === true;
+      }
+    }
+  }
+
+  async function loadPrivacyIntoForm() {
+    try {
+      const privacy = await ApiClient.getUserPrivacy();
+
+      initialPrivacy = PRIVACY_FIELDS.reduce(
+        (state, field) => {
+          state[field] = privacy?.[field] === true;
+          return state;
+        },
+        {}
+      );
+
+      renderPrivacyForm(initialPrivacy);
+      showPrivacyErrors([]);
+      updatePrivacySaveButtonState();
+    } catch (err) {
+      console.error(
+        "ProfileModule: failed to load privacy",
+        err
+      );
+
+      showPrivacyErrors([
+        t("profile_privacy_load_error")
+      ]);
+    }
   }
 
   function resolveAvatarSrc(avatarUrl) {
@@ -491,6 +585,73 @@ const ProfileModule = (() => {
   }
 
 
+  function bindPrivacyForm() {
+    const form = $("#profilePrivacyForm");
+    const saveBtn = $("#profilePrivacySaveBtn");
+
+    if (!form) return;
+
+    for (const field of PRIVACY_FIELDS) {
+      const input = document.querySelector(
+        `[data-privacy-field="${field}"]`
+      );
+
+      if (!input) continue;
+
+      input.addEventListener("change", () => {
+        showPrivacyErrors([]);
+        updatePrivacySaveButtonState();
+      });
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const payload = getPrivacyFormData();
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = t("profile_privacy_saving");
+      }
+
+      try {
+        const updated =
+          await ApiClient.updateUserPrivacy(payload);
+
+        initialPrivacy = PRIVACY_FIELDS.reduce(
+          (state, field) => {
+            state[field] = updated?.[field] === true;
+            return state;
+          },
+          {}
+        );
+
+        renderPrivacyForm(initialPrivacy);
+        showPrivacyErrors([]);
+
+        window.toast?.({
+          title: t("profile_privacy_saved"),
+          type: "success",
+          duration: 2200
+        });
+      } catch (err) {
+        console.error(
+          "ProfileModule: failed to save privacy",
+          err
+        );
+
+        showPrivacyErrors([
+          t("profile_privacy_save_error")
+        ]);
+      } finally {
+        if (saveBtn) {
+          saveBtn.textContent = t("profile_privacy_save");
+          updatePrivacySaveButtonState();
+        }
+      }
+    });
+  }
+
   function bindOpinionsNavigation() {
     const viewAllBtn = $("#profileOpinionsViewAll");
     const backBtn = $("#profileOpinionsBack");
@@ -593,6 +754,7 @@ const ProfileModule = (() => {
       bindAvatar();
       bindAvatarPicker();
       bindDirtyTracking();
+      bindPrivacyForm();
       bindOpinionsNavigation();
       bindForm();
       isBound = true;
@@ -601,6 +763,7 @@ const ProfileModule = (() => {
     // Cargar datos siempre que se active / cambie el usuario
     const initialLoads = [
       loadProfileIntoForm(),
+      loadPrivacyIntoForm(),
       loadOpinionsSummary()
     ];
 
@@ -614,6 +777,7 @@ const ProfileModule = (() => {
   async function load() {
     await Promise.all([
       loadProfileIntoForm(),
+      loadPrivacyIntoForm(),
       loadOpinionsSummary()
     ]);
   }
