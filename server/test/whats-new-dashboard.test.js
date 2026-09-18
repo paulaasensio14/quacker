@@ -169,3 +169,33 @@ test(
     }
   }
 );
+
+test(
+  "la tarjeta Qué hay de nuevo mantiene un espaciado vertical legible",
+  () => {
+    const cssSource = fs.readFileSync(
+      new URL("../../assets/css/dashboard.css", import.meta.url),
+      "utf8"
+    );
+
+    const cardMatch = cssSource.match(
+      /\.profile-whats-new-card\s*\{([\s\S]*?)\}/
+    );
+
+    assert.ok(
+      cardMatch,
+      "debe existir un bloque CSS específico para profile-whats-new-card"
+    );
+
+    const cardBlock = cardMatch[1];
+
+    assert.match(cardBlock, /display:\s*flex/);
+    assert.match(cardBlock, /flex-direction:\s*column/);
+    assert.match(cardBlock, /gap:\s*14px/);
+
+    assert.match(
+      cssSource,
+      /\.profile-whats-new-card\s*>\s*\.btn-secondary\s*\{[\s\S]*?align-self:\s*flex-start/
+    );
+  }
+);

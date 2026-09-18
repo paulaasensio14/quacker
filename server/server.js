@@ -5214,8 +5214,8 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
     const notification =
       _normalizeUserNotification({
         title: isEnglish
-          ? `You've finished ${next.title} 🦆`
-          : `Has terminado ${next.title} 🦆`,
+          ? `You've finished ${next.title}`
+          : `Has terminado ${next.title}`,
         text: isEnglish
           ? "What did you think?"
           : "¿Qué te ha parecido?",

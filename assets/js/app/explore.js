@@ -2051,6 +2051,9 @@ const ExploreModule = (() => {
     const controls = Array.from({ length: 5 }, (_, index) => {
       const value = index + 1;
       const selected = currentRating === value;
+      const filled =
+        currentRating !== null &&
+        value <= currentRating;
       const ariaLabel = window.I18n
         .t("detail_opinion_rating_value")
         .replace("{value}", String(value));
@@ -2058,11 +2061,18 @@ const ExploreModule = (() => {
       return `
         <button
           type="button"
-          class="content-detail-opinion-duck${selected ? " is-selected" : ""}"
+          class="content-detail-opinion-duck${filled ? " is-selected" : ""}"
           data-opinion-rating="${value}"
           aria-label="${_escapeHtml(ariaLabel)}"
           aria-pressed="${selected ? "true" : "false"}"
-        >🦆</button>
+        >
+          <img
+            class="content-detail-opinion-duck-image"
+            src="assets/img/quacker-rating.png"
+            alt=""
+            aria-hidden="true"
+          >
+        </button>
       `;
     }).join("");
 

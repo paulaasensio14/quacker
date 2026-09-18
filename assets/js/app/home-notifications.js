@@ -279,7 +279,17 @@ const NotificationsUI = (() => {
       const colorKey = normalizeNotifColor(n);
       if (colorKey) icon.classList.add(`is-${colorKey}`);
 
-      icon.innerHTML = getNotifIconSvg(n.icon);
+      if (n.action === "rate_content") {
+        icon.classList.add("notif-opinion-rating-icon");
+
+        const ratingIconEl = document.createElement("img");
+        ratingIconEl.src = "assets/img/quacker-rating.png";
+        ratingIconEl.alt = "";
+        ratingIconEl.setAttribute("aria-hidden", "true");
+        icon.appendChild(ratingIconEl);
+      } else {
+        icon.innerHTML = getNotifIconSvg(n.icon);
+      }
 
       const body = document.createElement("div");
       body.className = "notif-body";
@@ -291,6 +301,9 @@ const NotificationsUI = (() => {
 
       const titleEl = document.createElement("strong");
       titleEl.textContent = n.title || "";
+      if (n.action === "rate_content") {
+        titleEl.textContent = titleEl.textContent.replace(/\s*\u{1F986}\s*$/u, "");
+      }
       toplineEl.appendChild(titleEl);
 
       if (isStreakNotif) {

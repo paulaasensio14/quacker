@@ -4110,6 +4110,16 @@ body.dark-theme #view-home .home-backlog {
   gap: 14px;
 }
 
+.profile-whats-new-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-whats-new-card > .btn-secondary {
+  align-self: flex-start;
+}
+
 .profile-opinions-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4498,6 +4508,17 @@ body.dark-theme .profile-opinions-latest {
   flex-shrink: 0;
   background: rgba(37, 99, 235, 0.08);
   color: var(--accent-blue);
+}
+
+.notif-opinion-rating-icon {
+  background: rgba(255, 204, 0, 0.14);
+}
+
+.notif-opinion-rating-icon img {
+  display: block;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 
 .notif-icon.is-warm {
@@ -8659,6 +8680,19 @@ body.dark-theme .content-detail-top-actions .btn-secondary:hover {
     transform var(--transition-fast),
     box-shadow var(--transition-fast),
     background-color var(--transition-fast);
+}
+
+.content-detail-opinion-duck-image {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  opacity: 0.45;
+  transition: opacity var(--transition-fast);
+}
+
+.content-detail-opinion-duck.is-selected .content-detail-opinion-duck-image {
+  opacity: 1;
 }
 
 .content-detail-opinion-duck.is-selected {
