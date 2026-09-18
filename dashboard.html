@@ -1352,6 +1352,146 @@
             </form>
           </div>
 
+          <div class="profile-card profile-privacy-card" id="profilePrivacyCard">
+            <h3 class="profile-title" data-i18n="profile_privacy_title">
+              Privacidad
+            </h3>
+
+            <p class="profile-meta" data-i18n="profile_privacy_description">
+              Decide qué partes de tu perfil podrán mostrarse públicamente.
+            </p>
+
+            <p class="profile-meta profile-privacy-note" data-i18n="profile_privacy_master_note">
+              Si tu perfil está privado, ninguna de las demás secciones será visible públicamente.
+            </p>
+
+            <form id="profilePrivacyForm">
+              <div class="profile-privacy-list">
+                <label class="profile-privacy-row">
+                  <span>
+                    <strong data-i18n="profile_privacy_profile_label">Perfil público</strong>
+                    <small data-i18n="profile_privacy_profile_help">
+                      Permite que otras personas puedan acceder a tu perfil.
+                    </small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    data-privacy-field="profile"
+                    aria-label="Perfil público"
+                    data-i18n-aria-label="profile_privacy_profile_label"
+                  />
+                </label>
+
+                <label class="profile-privacy-row">
+                  <span>
+                    <strong data-i18n="profile_privacy_activity_label">Actividad</strong>
+                    <small data-i18n="profile_privacy_activity_help">
+                      Muestra tu actividad reciente.
+                    </small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    data-privacy-field="activity"
+                    aria-label="Actividad pública"
+                    data-i18n-aria-label="profile_privacy_activity_label"
+                  />
+                </label>
+
+                <label class="profile-privacy-row">
+                  <span>
+                    <strong data-i18n="profile_privacy_library_label">Biblioteca</strong>
+                    <small data-i18n="profile_privacy_library_help">
+                      Permite mostrar tu biblioteca.
+                    </small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    data-privacy-field="library"
+                    aria-label="Biblioteca pública"
+                    data-i18n-aria-label="profile_privacy_library_label"
+                  />
+                </label>
+
+                <label class="profile-privacy-row">
+                  <span>
+                    <strong data-i18n="profile_privacy_lists_label">Listas</strong>
+                    <small data-i18n="profile_privacy_lists_help">
+                      Permite mostrar tus listas públicas.
+                    </small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    data-privacy-field="lists"
+                    aria-label="Listas públicas"
+                    data-i18n-aria-label="profile_privacy_lists_label"
+                  />
+                </label>
+
+                <label class="profile-privacy-row">
+                  <span>
+                    <strong data-i18n="profile_privacy_reviews_label">Reseñas</strong>
+                    <small data-i18n="profile_privacy_reviews_help">
+                      Permite mostrar tus reseñas marcadas como públicas.
+                    </small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    data-privacy-field="reviews"
+                    aria-label="Reseñas públicas"
+                    data-i18n-aria-label="profile_privacy_reviews_label"
+                  />
+                </label>
+
+                <label class="profile-privacy-row">
+                  <span>
+                    <strong data-i18n="profile_privacy_stats_label">Estadísticas</strong>
+                    <small data-i18n="profile_privacy_stats_help">
+                      Permite mostrar tus estadísticas de consumo.
+                    </small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    data-privacy-field="stats"
+                    aria-label="Estadísticas públicas"
+                    data-i18n-aria-label="profile_privacy_stats_label"
+                  />
+                </label>
+
+                <label class="profile-privacy-row">
+                  <span>
+                    <strong data-i18n="profile_privacy_favorites_label">Favoritos</strong>
+                    <small data-i18n="profile_privacy_favorites_help">
+                      Permite mostrar tus contenidos favoritos.
+                    </small>
+                  </span>
+                  <input
+                    type="checkbox"
+                    data-privacy-field="favorites"
+                    aria-label="Favoritos públicos"
+                    data-i18n-aria-label="profile_privacy_favorites_label"
+                  />
+                </label>
+              </div>
+
+              <div
+                id="profilePrivacyFormErrors"
+                class="profile-form-errors is-initially-hidden"
+                role="alert"
+                aria-live="polite"
+              ></div>
+
+              <button
+                type="submit"
+                class="btn-primary"
+                id="profilePrivacySaveBtn"
+                disabled
+                data-i18n="profile_privacy_save"
+              >
+                Guardar privacidad
+              </button>
+            </form>
+          </div>
+
           <div class="profile-card profile-opinions-card" id="profileOpinionsCard">
             <h3 class="profile-title" data-i18n="profile_opinions_title">
               Mis opiniones

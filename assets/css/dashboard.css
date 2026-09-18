@@ -10814,3 +10814,124 @@ body.dark-theme .profile-opinions-list-empty {
     padding: 12px;
   }
 }
+
+/* ===== Perfil · Privacidad ===== */
+
+.profile-privacy-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-privacy-note {
+  padding: 10px 12px;
+  border: 2px dashed var(--border-soft);
+  border-radius: 14px;
+}
+
+.profile-privacy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.profile-privacy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 14px;
+  border: 2px solid var(--border-soft);
+  border-radius: 16px;
+  background: #f9fafb;
+}
+
+.profile-privacy-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.profile-privacy-row strong {
+  font-size: 0.95rem;
+}
+
+.profile-privacy-row small {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.profile-privacy-row input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 48px;
+  height: 26px;
+  flex: 0 0 48px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background: #e5e7eb;
+  position: relative;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.profile-privacy-row input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  top: 2px;
+  left: 3px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--border-strong);
+  transition: transform var(--transition-fast);
+}
+
+.profile-privacy-row input[type="checkbox"]:checked {
+  background: var(--bg-yellow);
+}
+
+.profile-privacy-row input[type="checkbox"]:checked::after {
+  transform: translateX(20px);
+}
+
+.profile-privacy-row input[type="checkbox"]:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 3px;
+}
+
+body.dark-theme .profile-privacy-row {
+  background: #102235;
+  border-color: #24384c;
+}
+
+body.dark-theme .profile-privacy-note {
+  border-color: #24384c;
+}
+
+body.dark-theme .profile-privacy-row input[type="checkbox"] {
+  background: #334155;
+  border-color: #010b16;
+}
+
+body.dark-theme .profile-privacy-row input[type="checkbox"]:checked {
+  background: var(--bg-yellow);
+}
+
+@media (max-width: 640px) {
+  .profile-privacy-row {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .profile-privacy-row input[type="checkbox"] {
+    margin-top: 2px;
+  }
+}

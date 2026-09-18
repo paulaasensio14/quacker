@@ -2152,6 +2152,67 @@ if (externalSignal?.aborted) {
     return state.user;
   }
 
+  function normalizeUserPrivacy(value) {
+    const source =
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+        ? value
+        : {};
+
+    return {
+      profile: source.profile === true,
+      activity: source.activity === true,
+      library: source.library === true,
+      lists: source.lists === true,
+      reviews: source.reviews === true,
+      stats: source.stats === true,
+      favorites: source.favorites === true
+    };
+  }
+
+  async function getUserPrivacy() {
+    if (_isHttp()) {
+      const res = await _httpJson("GET", "/user/privacy");
+      return normalizeUserPrivacy(res);
+    }
+
+    const state = _safeState();
+    return normalizeUserPrivacy(state.privacy);
+  }
+
+  async function updateUserPrivacy(patch = {}) {
+    if (_isHttp()) {
+      const res = await _httpJson("PATCH", "/user/privacy", patch);
+      const privacy = res?.privacy ?? res;
+
+      _emitDataChanged({
+        kind: "privacy",
+        action: "update"
+      });
+
+      return normalizeUserPrivacy(privacy);
+    }
+
+    const state = _safeState();
+
+    state.privacy = normalizeUserPrivacy({
+      ...state.privacy,
+      ...patch
+    });
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "privacy",
+      action: "update"
+    });
+
+    return { ...state.privacy };
+  }
+
   // === preferencias (dashboard) ===
   // Regla: la UI NO toca localStorage. Migraciones legacy ocurren solo en FakeBackend.
   async function getUserPreferences() {
@@ -5995,6 +6056,8 @@ if (externalSignal?.aborted) {
     // perfil
     getUser,
     updateUser,
+    getUserPrivacy,
+    updateUserPrivacy,
     getUserPreferences,
     setUserTheme,
     setUserLanguage,
