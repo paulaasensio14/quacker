@@ -4546,7 +4546,24 @@ const ExploreModule = (() => {
 
         if (!activeDetailItem) return;
 
-        await _saveDetailOpinionRating(activeDetailItem, null);
+        const ratingRemoved = await _saveDetailOpinionRating(
+          activeDetailItem,
+          null
+        );
+
+        if (ratingRemoved) {
+          window.toast?.({
+            title: window.I18n.t("detail_opinion_rating_removed"),
+            type: "success",
+            duration: 2400
+          });
+        } else {
+          window.toast?.({
+            title: window.I18n.t("detail_opinion_rating_save_error"),
+            type: "error",
+            duration: 3000
+          });
+        }
         return;
       }
 
@@ -4561,7 +4578,24 @@ const ExploreModule = (() => {
 
         if (!activeDetailItem) return;
 
-        await _saveDetailOpinionRating(activeDetailItem, rating);
+        const ratingSaved = await _saveDetailOpinionRating(
+          activeDetailItem,
+          rating
+        );
+
+        if (ratingSaved) {
+          window.toast?.({
+            title: window.I18n.t("detail_opinion_rating_saved"),
+            type: "success",
+            duration: 2400
+          });
+        } else {
+          window.toast?.({
+            title: window.I18n.t("detail_opinion_rating_save_error"),
+            type: "error",
+            duration: 3000
+          });
+        }
         return;
       }
 
