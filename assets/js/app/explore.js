@@ -4473,7 +4473,24 @@ const ExploreModule = (() => {
           spoiler: spoilerInput?.checked === true
         };
 
-        await _saveDetailOpinionReview(activeDetailItem, review);
+        const reviewSaved = await _saveDetailOpinionReview(
+          activeDetailItem,
+          review
+        );
+
+        if (reviewSaved) {
+          window.toast?.({
+            title: window.I18n.t("detail_opinion_review_saved"),
+            type: "success",
+            duration: 2400
+          });
+        } else {
+          window.toast?.({
+            title: window.I18n.t("detail_opinion_review_save_error"),
+            type: "error",
+            duration: 3000
+          });
+        }
         return;
       }
 
