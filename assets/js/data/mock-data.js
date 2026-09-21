@@ -114,6 +114,33 @@ const FakeBackend = (() => {
       .map((goal, index) => normalizeMockGoalEntry(goal, index))
       .filter(Boolean);
 
+  const normalizeMockFavorites = (favorites) => {
+    const source =
+      favorites &&
+      typeof favorites === "object" &&
+      !Array.isArray(favorites)
+        ? favorites
+        : {};
+
+    const normalizeType = (type) =>
+      (Array.isArray(source[type]) ? source[type] : [])
+        .filter(
+          (entry) =>
+            entry &&
+            typeof entry === "object" &&
+            !Array.isArray(entry)
+        )
+        .slice(0, 4)
+        .map((entry) => ({ ...entry }));
+
+    return {
+      pelicula: normalizeType("pelicula"),
+      serie: normalizeType("serie"),
+      game: normalizeType("game"),
+      book: normalizeType("book")
+    };
+  };
+
   const DEFAULT_STATE = {
     user: {
       id: "demo-user",
@@ -122,6 +149,12 @@ const FakeBackend = (() => {
       handle: "@arnauduck"
     },
     lists: [],
+    favorites: {
+      pelicula: [],
+      serie: [],
+      game: [],
+      book: []
+    },
     consumptionHistory: [],
     library: [
   {
@@ -350,6 +383,7 @@ const FakeBackend = (() => {
       ...(state?.user && typeof state.user === "object" ? state.user : {})
     },
     lists: normalizeMockLists(state?.lists || DEFAULT_STATE.lists.slice()),
+    favorites: normalizeMockFavorites(state?.favorites || DEFAULT_STATE.favorites),
     library: normalizeMockLibrary(state?.library || DEFAULT_STATE.library.slice()),
     activities: normalizeMockActivities(state?.activities || DEFAULT_STATE.activities.slice()),
     goals: normalizeMockGoals(state?.goals || DEFAULT_STATE.goals.slice()),
