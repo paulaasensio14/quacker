@@ -72,6 +72,13 @@ import {
 } from "./lib/profile-privacy.js";
 
 import {
+  addFavorite,
+  normalizeFavorites,
+  removeFavorite,
+  replaceFavorite
+} from "./lib/favorites.js";
+
+import {
   resolveActivityCreatedAt
 } from "./lib/activity-timestamp.js";
 
@@ -1918,6 +1925,7 @@ function _getUserBucket(db, userId) {
     activities: [],
     consumptionHistory: [],
     opinions: [],
+    favorites: normalizeFavorites(),
     notifications: [],
     explore: {
       dismissed: []
@@ -1952,6 +1960,10 @@ function _getUserBucket(db, userId) {
 
   db.users[userId].opinions = _normalizeOpinions(
     db.users[userId].opinions
+  );
+
+  db.users[userId].favorites = normalizeFavorites(
+    db.users[userId].favorites
   );
 
   db.users[userId].notifications = _normalizeUserNotificationsList(
@@ -2127,6 +2139,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     activities: [],
     consumptionHistory: [],
     opinions: [],
+    favorites: normalizeFavorites(),
     notifications: [],
     explore: {
       dismissed: []
@@ -3649,6 +3662,172 @@ app.patch("/api/user/privacy", _requireAuth, (req, res) => {
 
   res.json({
     privacy: bucket.privacy
+  });
+});
+
+app.get("/api/user/favorites", _requireAuth, (req, res) => {
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  res.json(bucket.favorites);
+});
+
+app.post("/api/user/favorites/:contentType", _requireAuth, (req, res) => {
+  const contentType = String(
+    req.params.contentType || ""
+  ).trim();
+
+  const body =
+    req.body &&
+    typeof req.body === "object" &&
+    !Array.isArray(req.body)
+      ? req.body
+      : {};
+
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  const result = addFavorite(
+    bucket.favorites,
+    contentType,
+    {
+      ...body,
+      contentType,
+      addedAt: new Date().toISOString()
+    }
+  );
+
+  if (!result.ok) {
+    if (
+      result.error === "favorite_already_exists" ||
+      result.error === "favorites_limit_reached"
+    ) {
+      return res.status(409).json({
+        error: result.error
+      });
+    }
+
+    return res.status(400).json({
+      error: result.error
+    });
+  }
+
+  bucket.favorites = result.favorites;
+  _writeDb(db);
+
+  res.status(201).json({
+    favorite: result.favorite,
+    favorites: bucket.favorites
+  });
+});
+
+app.patch("/api/user/favorites/:contentType/:position", _requireAuth, (req, res) => {
+  const contentType = String(
+    req.params.contentType || ""
+  ).trim();
+
+  const position = req.params.position;
+
+  const body =
+    req.body &&
+    typeof req.body === "object" &&
+    !Array.isArray(req.body)
+      ? req.body
+      : {};
+
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  const result = replaceFavorite(
+    bucket.favorites,
+    contentType,
+    position,
+    {
+      ...body,
+      contentType,
+      addedAt: new Date().toISOString()
+    }
+  );
+
+  if (!result.ok) {
+    if (result.error === "favorite_not_found") {
+      return res.status(404).json({
+        error: result.error
+      });
+    }
+
+    if (result.error === "favorite_already_exists") {
+      return res.status(409).json({
+        error: result.error
+      });
+    }
+
+    return res.status(400).json({
+      error: result.error
+    });
+  }
+
+  bucket.favorites = result.favorites;
+  _writeDb(db);
+
+  res.json({
+    favorite: result.favorite,
+    favorites: bucket.favorites
+  });
+});
+
+app.delete("/api/user/favorites/:contentType/:position", _requireAuth, (req, res) => {
+  const contentType = String(
+    req.params.contentType || ""
+  ).trim();
+
+  const position = req.params.position;
+
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  const result = removeFavorite(
+    bucket.favorites,
+    contentType,
+    position
+  );
+
+  if (!result.ok) {
+    if (result.error === "favorite_not_found") {
+      return res.status(404).json({
+        error: result.error
+      });
+    }
+
+    if (result.error === "invalid_favorite_position") {
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    return res.status(400).json({
+      error: result.error
+    });
+  }
+
+  bucket.favorites = result.favorites;
+  _writeDb(db);
+
+  res.json({
+    removed: result.removed,
+    favorites: bucket.favorites
   });
 });
 

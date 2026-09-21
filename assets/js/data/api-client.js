@@ -2213,6 +2213,467 @@ if (externalSignal?.aborted) {
     return { ...state.privacy };
   }
 
+  function normalizeUserFavorites(value) {
+    const source =
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+        ? value
+        : {};
+
+    const normalized = {
+      pelicula: [],
+      serie: [],
+      game: [],
+      book: []
+    };
+
+    for (const type of ["pelicula", "serie", "game", "book"]) {
+      const seen = new Set();
+
+      normalized[type] = (
+        Array.isArray(source[type])
+          ? source[type]
+          : []
+      )
+        .map((entry) => {
+          if (
+            !entry ||
+            typeof entry !== "object" ||
+            Array.isArray(entry)
+          ) {
+            return null;
+          }
+
+          const identity = _normalizeCanonicalIdentity(
+            entry.source,
+            entry.contentType ?? type,
+            entry.externalId
+          );
+
+          if (
+            identity.error ||
+            identity.type !== type ||
+            seen.has(identity.key)
+          ) {
+            return null;
+          }
+
+          const itemSnapshot =
+            entry.itemSnapshot &&
+            typeof entry.itemSnapshot === "object" &&
+            !Array.isArray(entry.itemSnapshot)
+              ? entry.itemSnapshot
+              : null;
+
+          const title = _normalizeContentText(
+            itemSnapshot?.title
+          ).slice(0, 120);
+
+          if (!title) return null;
+
+          const addedAtDate = new Date(
+            String(entry.addedAt || "").trim()
+          );
+
+          if (Number.isNaN(addedAtDate.getTime())) {
+            return null;
+          }
+
+          seen.add(identity.key);
+
+          return {
+            contentType: identity.type,
+            source: identity.source,
+            externalId: identity.externalId,
+            itemSnapshot: {
+              title,
+              cover: String(
+                itemSnapshot?.cover || ""
+              ).trim().slice(0, 500)
+            },
+            addedAt: addedAtDate.toISOString()
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 4);
+    }
+
+    return normalized;
+  }
+
+  async function getUserFavorites() {
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "GET",
+        "/user/favorites"
+      );
+
+      return normalizeUserFavorites(res);
+    }
+
+    const state = _safeState();
+
+    return normalizeUserFavorites(
+      state.favorites
+    );
+  }
+
+  async function addUserFavorite(type, value = {}) {
+    const safeType = String(type || "").trim();
+
+    if (
+      !["pelicula", "serie", "game", "book"].includes(
+        safeType
+      )
+    ) {
+      throw _makeApiError(
+        "invalid_favorite_type",
+        400
+      );
+    }
+
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "POST",
+        `/user/favorites/${encodeURIComponent(safeType)}`,
+        value
+      );
+
+      const result = {
+        ...res,
+        favorites: normalizeUserFavorites(
+          res?.favorites
+        )
+      };
+
+      _emitDataChanged({
+        kind: "favorites",
+        action: "add"
+      });
+
+      return result;
+    }
+
+    const state = _safeState();
+    const favorites = normalizeUserFavorites(
+      state.favorites
+    );
+
+    const identity = _normalizeCanonicalIdentity(
+      value?.source,
+      value?.contentType ?? safeType,
+      value?.externalId
+    );
+
+    const itemSnapshot =
+      value?.itemSnapshot &&
+      typeof value.itemSnapshot === "object" &&
+      !Array.isArray(value.itemSnapshot)
+        ? value.itemSnapshot
+        : null;
+
+    const title = _normalizeContentText(
+      itemSnapshot?.title
+    ).slice(0, 120);
+
+    if (
+      identity.error ||
+      identity.type !== safeType ||
+      !title
+    ) {
+      throw _makeApiError(
+        "invalid_favorite",
+        400
+      );
+    }
+
+    const duplicate = favorites[safeType].some(
+      (entry) =>
+        _normalizeCanonicalIdentity(
+          entry.source,
+          entry.contentType,
+          entry.externalId
+        ).key === identity.key
+    );
+
+    if (duplicate) {
+      throw _makeApiError(
+        "favorite_already_exists",
+        409
+      );
+    }
+
+    if (favorites[safeType].length >= 4) {
+      throw _makeApiError(
+        "favorites_limit_reached",
+        409
+      );
+    }
+
+    const favorite = {
+      contentType: identity.type,
+      source: identity.source,
+      externalId: identity.externalId,
+      itemSnapshot: {
+        title,
+        cover: String(
+          itemSnapshot?.cover || ""
+        ).trim().slice(0, 500)
+      },
+      addedAt: new Date().toISOString()
+    };
+
+    favorites[safeType].push(favorite);
+    state.favorites = favorites;
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "favorites",
+      action: "add"
+    });
+
+    return {
+      favorite: _cloneData(favorite),
+      favorites: normalizeUserFavorites(
+        state.favorites
+      )
+    };
+  }
+
+  async function replaceUserFavorite(
+    type,
+    position,
+    value = {}
+  ) {
+    const safeType = String(type || "").trim();
+    const safePosition = Number(position);
+
+    if (
+      !["pelicula", "serie", "game", "book"].includes(
+        safeType
+      )
+    ) {
+      throw _makeApiError(
+        "invalid_favorite_type",
+        400
+      );
+    }
+
+    if (
+      !Number.isInteger(safePosition) ||
+      safePosition < 1 ||
+      safePosition > 4
+    ) {
+      throw _makeApiError(
+        "invalid_favorite_position",
+        400
+      );
+    }
+
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "PATCH",
+        `/user/favorites/${encodeURIComponent(safeType)}/${safePosition}`,
+        value
+      );
+
+      const result = {
+        ...res,
+        favorites: normalizeUserFavorites(
+          res?.favorites
+        )
+      };
+
+      _emitDataChanged({
+        kind: "favorites",
+        action: "replace"
+      });
+
+      return result;
+    }
+
+    const state = _safeState();
+    const favorites = normalizeUserFavorites(
+      state.favorites
+    );
+    const index = safePosition - 1;
+
+    if (!favorites[safeType][index]) {
+      throw _makeApiError(
+        "favorite_not_found",
+        404
+      );
+    }
+
+    const identity = _normalizeCanonicalIdentity(
+      value?.source,
+      value?.contentType ?? safeType,
+      value?.externalId
+    );
+
+    const itemSnapshot =
+      value?.itemSnapshot &&
+      typeof value.itemSnapshot === "object" &&
+      !Array.isArray(value.itemSnapshot)
+        ? value.itemSnapshot
+        : null;
+
+    const title = _normalizeContentText(
+      itemSnapshot?.title
+    ).slice(0, 120);
+
+    if (
+      identity.error ||
+      identity.type !== safeType ||
+      !title
+    ) {
+      throw _makeApiError(
+        "invalid_favorite",
+        400
+      );
+    }
+
+    const duplicate = favorites[safeType].some(
+      (entry, entryIndex) =>
+        entryIndex !== index &&
+        _normalizeCanonicalIdentity(
+          entry.source,
+          entry.contentType,
+          entry.externalId
+        ).key === identity.key
+    );
+
+    if (duplicate) {
+      throw _makeApiError(
+        "favorite_already_exists",
+        409
+      );
+    }
+
+    const favorite = {
+      contentType: identity.type,
+      source: identity.source,
+      externalId: identity.externalId,
+      itemSnapshot: {
+        title,
+        cover: String(
+          itemSnapshot?.cover || ""
+        ).trim().slice(0, 500)
+      },
+      addedAt: new Date().toISOString()
+    };
+
+    favorites[safeType][index] = favorite;
+    state.favorites = favorites;
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "favorites",
+      action: "replace"
+    });
+
+    return {
+      favorite: _cloneData(favorite),
+      favorites: normalizeUserFavorites(
+        state.favorites
+      )
+    };
+  }
+
+  async function removeUserFavorite(
+    type,
+    position
+  ) {
+    const safeType = String(type || "").trim();
+    const safePosition = Number(position);
+
+    if (
+      !["pelicula", "serie", "game", "book"].includes(
+        safeType
+      )
+    ) {
+      throw _makeApiError(
+        "invalid_favorite_type",
+        400
+      );
+    }
+
+    if (
+      !Number.isInteger(safePosition) ||
+      safePosition < 1 ||
+      safePosition > 4
+    ) {
+      throw _makeApiError(
+        "invalid_favorite_position",
+        400
+      );
+    }
+
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "DELETE",
+        `/user/favorites/${encodeURIComponent(safeType)}/${safePosition}`
+      );
+
+      const result = {
+        ...res,
+        favorites: normalizeUserFavorites(
+          res?.favorites
+        )
+      };
+
+      _emitDataChanged({
+        kind: "favorites",
+        action: "remove"
+      });
+
+      return result;
+    }
+
+    const state = _safeState();
+    const favorites = normalizeUserFavorites(
+      state.favorites
+    );
+    const index = safePosition - 1;
+
+    if (!favorites[safeType][index]) {
+      throw _makeApiError(
+        "favorite_not_found",
+        404
+      );
+    }
+
+    const [removed] = favorites[safeType].splice(
+      index,
+      1
+    );
+
+    state.favorites = favorites;
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "favorites",
+      action: "remove"
+    });
+
+    return {
+      removed: _cloneData(removed),
+      favorites: normalizeUserFavorites(
+        state.favorites
+      )
+    };
+  }
+
   // === preferencias (dashboard) ===
   // Regla: la UI NO toca localStorage. Migraciones legacy ocurren solo en FakeBackend.
   async function getUserPreferences() {
@@ -6058,6 +6519,10 @@ if (externalSignal?.aborted) {
     updateUser,
     getUserPrivacy,
     updateUserPrivacy,
+    getUserFavorites,
+    addUserFavorite,
+    replaceUserFavorite,
+    removeUserFavorite,
     getUserPreferences,
     setUserTheme,
     setUserLanguage,
