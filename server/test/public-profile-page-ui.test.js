@@ -160,3 +160,82 @@ test("el HTML no necesita scripts inline", () => {
     "debe mantenerse compatible con la CSP sin unsafe-inline"
   );
 });
+
+test("la página reserva estadísticas, listas públicas, reseñas y actividad", () => {
+  const html = fs.readFileSync(
+    HTML_URL,
+    "utf8"
+  );
+
+  for (const id of [
+    "publicProfileStats",
+    "publicProfileStatsGrid",
+    "publicProfileLists",
+    "publicProfileListsGrid",
+    "publicProfileReviews",
+    "publicProfileReviewsList",
+    "publicProfileActivity",
+    "publicProfileActivityList"
+  ]) {
+    assert.match(
+      html,
+      new RegExp(`id=["']${id}["']`)
+    );
+  }
+});
+
+test("las nuevas secciones tienen estilos propios coherentes con el perfil público", () => {
+  const css = fs.readFileSync(
+    CSS_URL,
+    "utf8"
+  );
+
+  for (const selector of [
+    ".public-profile-section",
+    ".public-profile-stats-grid",
+    ".public-profile-stat",
+    ".public-profile-list-card",
+    ".public-profile-review-card",
+    ".public-profile-activity-card",
+    ".public-profile-section-empty"
+  ]) {
+    assert.match(
+      css,
+      new RegExp(
+        selector.replaceAll(".", "\\.")
+      )
+    );
+  }
+
+  assert.match(
+    css,
+    /var\(--public-border\)/
+  );
+
+  assert.match(
+    css,
+    /var\(--public-surface\)/
+  );
+
+  assert.match(
+    css,
+    /var\(--public-surface-soft\)/
+  );
+});
+
+test("las nuevas secciones contemplan adaptación responsive", () => {
+  const css = fs.readFileSync(
+    CSS_URL,
+    "utf8"
+  );
+
+  assert.match(
+    css,
+    /@media\s*\(max-width:\s*760px\)[\s\S]*?\.public-profile-section/
+  );
+
+  assert.match(
+    css,
+    /@media\s*\(max-width:\s*760px\)[\s\S]*?\.public-profile-stats-grid/
+  );
+});
