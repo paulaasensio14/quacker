@@ -79,6 +79,10 @@ import {
 } from "./lib/favorites.js";
 
 import {
+  getPublicProfileByUsername
+} from "./lib/public-profile.js";
+
+import {
   resolveActivityCreatedAt
 } from "./lib/activity-timestamp.js";
 
@@ -159,6 +163,9 @@ const INDEX_HTML_PATH =
 
 const DASHBOARD_HTML_PATH =
   path.join(PROJECT_ROOT, "dashboard.html");
+
+const PUBLIC_PROFILE_HTML_PATH =
+  path.join(PROJECT_ROOT, "public-profile.html");
 
 const NOT_FOUND_HTML_PATH =
   path.join(PROJECT_ROOT, "404.html");
@@ -1994,6 +2001,26 @@ function _getUserBucket(db, userId) {
 // ===== API BASE =====
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/public/users/:username", (req, res) => {
+  res.set("Cache-Control", "no-store");
+
+  const db = _readDb();
+
+  const publicProfile =
+    getPublicProfileByUsername(
+      db.users,
+      req.params.username
+    );
+
+  if (!publicProfile) {
+    return res.status(404).json({
+      error: "not_found"
+    });
+  }
+
+  res.json(publicProfile);
 });
 
 app.get("/api/ready", (req, res) => {
@@ -5558,6 +5585,40 @@ app.get(
     DASHBOARD_HTML_PATH
   )
 );
+
+app.get("/u/:username", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+
+  const db = _readDb();
+
+  const publicProfile =
+    getPublicProfileByUsername(
+      db.users,
+      req.params.username
+    );
+
+  if (!publicProfile) {
+    res.status(404);
+
+    return res.sendFile(
+      NOT_FOUND_HTML_PATH,
+      (error) => {
+        if (error) {
+          next(error);
+        }
+      }
+    );
+  }
+
+  return res.sendFile(
+    PUBLIC_PROFILE_HTML_PATH,
+    (error) => {
+      if (error) {
+        next(error);
+      }
+    }
+  );
+});
 
 app.use(
   "/assets",
