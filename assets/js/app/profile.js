@@ -30,6 +30,798 @@ const ProfileModule = (() => {
 
   let initialPrivacy = null;
 
+  const FAVORITE_TYPES = Object.freeze([
+    "pelicula",
+    "serie",
+    "game",
+    "book"
+  ]);
+
+  const FAVORITES_PER_TYPE = 4;
+
+  let profileFavorites = null;
+
+  let favoritePickerContext = null;
+  let favoritePickerResults = [];
+  let favoritePickerAbortController = null;
+  let favoritePickerSearchTimer = null;
+
+  function renderFavoriteSlots(
+    type,
+    favorites = []
+  ) {
+    const container = document.querySelector(
+      `[data-favorite-slots="${type}"]`
+    );
+
+    if (!container) return;
+
+    container.replaceChildren();
+
+    const safeFavorites = Array.isArray(favorites)
+      ? favorites.slice(0, FAVORITES_PER_TYPE)
+      : [];
+
+    for (
+      let index = 0;
+      index < FAVORITES_PER_TYPE;
+      index += 1
+    ) {
+      const favorite = safeFavorites[index] || null;
+      const position = index + 1;
+
+      const slot = document.createElement("div");
+      slot.className = "profile-favorite-slot";
+      slot.dataset.favoriteType = type;
+      slot.dataset.favoritePosition = String(position);
+
+      const positionEl = document.createElement("span");
+      positionEl.className =
+        "profile-favorite-slot-position";
+      positionEl.textContent = String(position);
+
+      slot.append(positionEl);
+
+      if (favorite) {
+        const titleEl = document.createElement("strong");
+        titleEl.className =
+          "profile-favorite-slot-title";
+        titleEl.textContent =
+          String(
+            favorite?.itemSnapshot?.title || ""
+          ).trim() ||
+          t("profile_favorites_unknown_title");
+
+        slot.append(titleEl);
+
+        const actionsEl = document.createElement("div");
+        actionsEl.className =
+          "profile-favorite-slot-actions";
+
+        if (index > 0) {
+          const moveUpBtn =
+            document.createElement("button");
+          moveUpBtn.type = "button";
+          moveUpBtn.className =
+            "profile-favorite-action";
+          moveUpBtn.setAttribute("data-favorite-action", "move-up");
+          moveUpBtn.setAttribute(
+            "aria-label",
+            t("profile_favorites_move_up")
+          );
+          moveUpBtn.textContent = "↑";
+          actionsEl.append(moveUpBtn);
+        }
+
+        if (index < safeFavorites.length - 1) {
+          const moveDownBtn =
+            document.createElement("button");
+          moveDownBtn.type = "button";
+          moveDownBtn.className =
+            "profile-favorite-action";
+          moveDownBtn.setAttribute("data-favorite-action", "move-down");
+          moveDownBtn.setAttribute(
+            "aria-label",
+            t("profile_favorites_move_down")
+          );
+          moveDownBtn.textContent = "↓";
+          actionsEl.append(moveDownBtn);
+        }
+
+        const replaceBtn =
+          document.createElement("button");
+        replaceBtn.type = "button";
+        replaceBtn.className =
+          "profile-favorite-action";
+        replaceBtn.setAttribute(
+          "data-favorite-action",
+          "replace"
+        );
+        replaceBtn.setAttribute(
+          "aria-label",
+          t("profile_favorites_replace")
+        );
+        replaceBtn.textContent = "↻";
+
+        actionsEl.append(replaceBtn);
+
+        const removeBtn =
+          document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className =
+          "profile-favorite-action profile-favorite-action--remove";
+        removeBtn.setAttribute("data-favorite-action", "remove");
+        removeBtn.setAttribute(
+          "aria-label",
+          t("profile_favorites_remove")
+        );
+        removeBtn.textContent = "×";
+
+        actionsEl.append(removeBtn);
+        slot.append(actionsEl);
+      } else {
+        slot.classList.add(
+          "profile-favorite-slot--empty"
+        );
+
+        if (index === safeFavorites.length) {
+          const pickBtn =
+            document.createElement("button");
+          pickBtn.type = "button";
+          pickBtn.className =
+            "profile-favorite-pick";
+          pickBtn.setAttribute("data-favorite-action", "pick");
+          pickBtn.setAttribute(
+            "aria-label",
+            t("profile_favorites_empty_slot")
+          );
+          pickBtn.textContent =
+            `+ ${t("profile_favorites_empty_slot")}`;
+
+          slot.append(pickBtn);
+        } else {
+          const emptyEl =
+            document.createElement("span");
+          emptyEl.className =
+            "profile-favorite-slot-empty";
+          emptyEl.textContent =
+            t("profile_favorites_empty_slot");
+
+          slot.append(emptyEl);
+        }
+      }
+
+      container.append(slot);
+    }
+  }
+
+  function renderFavorites(
+    favorites = {}
+  ) {
+    for (const type of FAVORITE_TYPES) {
+      renderFavoriteSlots(
+        type,
+        favorites?.[type]
+      );
+    }
+  }
+
+  async function loadFavoritesIntoProfile() {
+    const status = $("#profileFavoritesStatus");
+
+    try {
+      const favorites =
+        await ApiClient.getUserFavorites();
+
+      profileFavorites = favorites || {};
+      renderFavorites(profileFavorites);
+
+      if (status) {
+        status.textContent = "";
+      }
+    } catch (err) {
+      console.error(
+        "ProfileModule: failed to load favorites",
+        err
+      );
+
+      profileFavorites = {};
+      renderFavorites(profileFavorites);
+
+      if (status) {
+        status.textContent =
+          t("profile_favorites_load_error");
+      }
+    }
+  }
+
+
+  function renderFavoritePickerResults(
+    items = []
+  ) {
+    const resultsEl = $("#favoritePickerResults");
+
+    if (!resultsEl) return;
+
+    resultsEl.replaceChildren();
+
+    favoritePickerResults = (
+      Array.isArray(items) ? items : []
+    )
+      .filter((item) => {
+        const source = String(
+          item?.source || ""
+        ).trim();
+
+        const externalId = String(
+          item?.externalId || ""
+        ).trim();
+
+        const title = String(
+          item?.title || ""
+        ).trim();
+
+        const type = String(
+          item?.type || ""
+        ).trim();
+
+        return (
+          source &&
+          externalId &&
+          title &&
+          type === favoritePickerContext?.type
+        );
+      })
+      .slice(0, 12);
+
+    if (favoritePickerResults.length === 0) {
+      const emptyEl =
+        document.createElement("p");
+
+      emptyEl.className =
+        "favorite-picker-empty";
+
+      emptyEl.textContent =
+        t("profile_favorites_picker_empty");
+
+      resultsEl.append(emptyEl);
+      return;
+    }
+
+    favoritePickerResults.forEach(
+      (item, index) => {
+        const button =
+          document.createElement("button");
+
+        button.type = "button";
+        button.className =
+          "favorite-picker-result";
+
+        button.setAttribute(
+          "data-favorite-result",
+          String(index)
+        );
+
+        const titleEl =
+          document.createElement("strong");
+
+        titleEl.className =
+          "favorite-picker-result-title";
+
+        titleEl.textContent =
+          String(item.title || "").trim();
+
+        const sourceEl =
+          document.createElement("span");
+
+        sourceEl.className =
+          "favorite-picker-result-source";
+
+        sourceEl.textContent =
+          String(item.source || "").trim();
+
+        button.append(
+          titleEl,
+          sourceEl
+        );
+
+        resultsEl.append(button);
+      }
+    );
+  }
+
+  function closeFavoritePicker() {
+    const modal =
+      $("#favoritePickerModal");
+
+    if (!modal) return;
+
+    if (favoritePickerSearchTimer) {
+      clearTimeout(
+        favoritePickerSearchTimer
+      );
+      favoritePickerSearchTimer = null;
+    }
+
+    favoritePickerAbortController?.abort();
+    favoritePickerAbortController = null;
+
+    favoritePickerContext = null;
+    favoritePickerResults = [];
+
+    window.UIModal?.close(modal);
+  }
+
+  function openFavoritePicker(
+    type,
+    position,
+    mode = "add"
+  ) {
+    if (
+      !FAVORITE_TYPES.includes(type) ||
+      !Number.isInteger(position) ||
+      position < 1 ||
+      position > FAVORITES_PER_TYPE
+    ) {
+      return;
+    }
+
+    const modal =
+      $("#favoritePickerModal");
+
+    const searchInput =
+      $("#favoritePickerSearch");
+
+    const resultsEl =
+      $("#favoritePickerResults");
+
+    const statusEl =
+      $("#favoritePickerStatus");
+
+    if (!modal) return;
+
+    favoritePickerContext = {
+      type,
+      position,
+      mode: mode === "replace"
+        ? "replace"
+        : "add"
+    };
+
+    favoritePickerResults = [];
+
+    if (searchInput) {
+      searchInput.value = "";
+    }
+
+    if (resultsEl) {
+      resultsEl.replaceChildren();
+    }
+
+    if (statusEl) {
+      statusEl.textContent =
+        t("profile_favorites_picker_hint");
+    }
+
+    window.UIModal?.open(modal, {
+      initialFocusSelector:
+        "#favoritePickerSearch"
+    });
+  }
+
+  async function searchFavoritePicker() {
+    const searchInput =
+      $("#favoritePickerSearch");
+
+    const statusEl =
+      $("#favoritePickerStatus");
+
+    const resultsEl =
+      $("#favoritePickerResults");
+
+    const query = String(
+      searchInput?.value || ""
+    ).trim();
+
+    const type = String(
+      favoritePickerContext?.type || ""
+    ).trim();
+
+    if (
+      !query ||
+      !FAVORITE_TYPES.includes(type)
+    ) {
+      favoritePickerAbortController?.abort();
+      favoritePickerAbortController = null;
+
+      favoritePickerResults = [];
+
+      if (resultsEl) {
+        resultsEl.replaceChildren();
+      }
+
+      if (statusEl) {
+        statusEl.textContent =
+          t("profile_favorites_picker_hint");
+      }
+
+      return;
+    }
+
+    favoritePickerAbortController?.abort();
+
+    const controller =
+      new AbortController();
+
+    favoritePickerAbortController =
+      controller;
+
+    if (statusEl) {
+      statusEl.textContent =
+        t("profile_favorites_picker_loading");
+    }
+
+    try {
+      const items =
+        await ApiClient.getExploreFeed({
+          query,
+          type,
+          limit: 12,
+          signal: controller.signal
+        });
+
+      if (
+        controller.signal.aborted ||
+        favoritePickerAbortController !==
+          controller
+      ) {
+        return;
+      }
+
+      renderFavoritePickerResults(
+        items
+      );
+
+      if (statusEl) {
+        statusEl.textContent = "";
+      }
+    } catch (err) {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      console.error(
+        "ProfileModule: favorite search failed",
+        err
+      );
+
+      favoritePickerResults = [];
+
+      if (resultsEl) {
+        resultsEl.replaceChildren();
+      }
+
+      if (statusEl) {
+        statusEl.textContent =
+          t(
+            "profile_favorites_picker_search_error"
+          );
+      }
+    } finally {
+      if (
+        favoritePickerAbortController ===
+        controller
+      ) {
+        favoritePickerAbortController = null;
+      }
+    }
+  }
+
+  function bindFavoritePicker() {
+    const modal =
+      $("#favoritePickerModal");
+
+    const searchInput =
+      $("#favoritePickerSearch");
+
+    const resultsEl =
+      $("#favoritePickerResults");
+
+    if (!modal) return;
+
+    modal
+      .querySelectorAll(
+        "[data-favorite-picker-close]"
+      )
+      .forEach((button) => {
+        button.addEventListener(
+          "click",
+          closeFavoritePicker
+        );
+      });
+
+    if (searchInput) {
+      searchInput.addEventListener(
+        "input",
+        () => {
+          if (favoritePickerSearchTimer) {
+            clearTimeout(
+              favoritePickerSearchTimer
+            );
+          }
+
+          favoritePickerSearchTimer =
+            setTimeout(() => {
+              favoritePickerSearchTimer = null;
+              searchFavoritePicker();
+            }, 600);
+        }
+      );
+    }
+
+    if (resultsEl) {
+      resultsEl.addEventListener(
+        "click",
+        async (event) => {
+          const button =
+            event.target.closest(
+              "[data-favorite-result]"
+            );
+
+          if (
+            !button ||
+            !resultsEl.contains(button)
+          ) {
+            return;
+          }
+
+          const index = Number(
+            button.dataset.favoriteResult
+          );
+
+          const item =
+            favoritePickerResults[index];
+
+          const type = String(
+            favoritePickerContext?.type || ""
+          ).trim();
+
+          if (
+            !item ||
+            !FAVORITE_TYPES.includes(type)
+          ) {
+            return;
+          }
+
+          const source = String(
+            item?.source || ""
+          ).trim();
+
+          const externalId = String(
+            item?.externalId || ""
+          ).trim();
+
+          const title = String(
+            item?.title || ""
+          ).trim();
+
+          const cover = String(
+            item?.cover || ""
+          ).trim();
+
+          if (
+            !source ||
+            !externalId ||
+            !title
+          ) {
+            return;
+          }
+
+          const statusEl =
+            $("#favoritePickerStatus");
+
+          button.disabled = true;
+
+          try {
+            const payload = {
+              source,
+              contentType: type,
+              externalId,
+              itemSnapshot: {
+                title,
+                cover
+              }
+            };
+
+            const pickerPosition =
+              Number(
+                favoritePickerContext?.position
+              );
+
+            let result = null;
+
+            if (
+              favoritePickerContext?.mode ===
+              "replace"
+            ) {
+              result =
+                await ApiClient.replaceUserFavorite(
+                  type,
+                  pickerPosition,
+                  payload
+                );
+            } else {
+              result =
+                await ApiClient.addUserFavorite(
+                  type,
+                  payload
+                );
+            }
+
+            profileFavorites =
+              result?.favorites ||
+              profileFavorites ||
+              {};
+
+            renderFavorites(
+              profileFavorites
+            );
+
+            const profileStatus =
+              $("#profileFavoritesStatus");
+
+            if (profileStatus) {
+              profileStatus.textContent = "";
+            }
+
+            closeFavoritePicker();
+          } catch (err) {
+            console.error(
+              "ProfileModule: failed to add favorite",
+              err
+            );
+
+            if (statusEl) {
+              const errorCode = String(
+                err?.error ||
+                err?.message ||
+                ""
+              ).trim();
+
+              statusEl.textContent =
+                errorCode ===
+                "favorite_already_exists"
+                  ? t(
+                      "profile_favorites_duplicate"
+                    )
+                  : t(
+                      "profile_favorites_update_error"
+                    );
+            }
+          } finally {
+            button.disabled = false;
+          }
+        }
+      );
+    }
+  }
+
+
+  function bindFavoriteActions() {
+    const card = $("#profileFavoritesCard");
+
+    if (!card) return;
+
+    card.addEventListener("click", async (event) => {
+      const button = event.target.closest(
+        "[data-favorite-action]"
+      );
+
+      if (!button || !card.contains(button)) {
+        return;
+      }
+
+      const slot = button.closest(
+        ".profile-favorite-slot"
+      );
+
+      if (!slot) return;
+
+      const type = String(
+        slot.dataset.favoriteType || ""
+      ).trim();
+
+      const position = Number(
+        slot.dataset.favoritePosition
+      );
+
+      const action = String(
+        button.dataset.favoriteAction || ""
+      ).trim();
+
+      if (
+        !FAVORITE_TYPES.includes(type) ||
+        !Number.isInteger(position)
+      ) {
+        return;
+      }
+
+      if (action === "pick") {
+        openFavoritePicker(
+          type,
+          position,
+          "add"
+        );
+        return;
+      }
+
+      if (action === "replace") {
+        openFavoritePicker(
+          type,
+          position,
+          "replace"
+        );
+        return;
+      }
+
+      const status = $("#profileFavoritesStatus");
+
+      button.disabled = true;
+
+      try {
+        let result = null;
+
+        if (action === "remove") {
+          result =
+            await ApiClient.removeUserFavorite(
+              type,
+              position
+            );
+        } else if (
+          action === "move-up" ||
+          action === "move-down"
+        ) {
+          const toPosition =
+            action === "move-up"
+              ? position - 1
+              : position + 1;
+
+          result =
+            await ApiClient.moveUserFavorite(
+              type,
+              position,
+              toPosition
+            );
+        } else {
+          return;
+        }
+
+        profileFavorites =
+          result?.favorites ||
+          profileFavorites ||
+          {};
+
+        renderFavorites(profileFavorites);
+
+        if (status) {
+          status.textContent = "";
+        }
+      } catch (err) {
+        console.error(
+          "ProfileModule: failed to update favorites",
+          err
+        );
+
+        if (status) {
+          status.textContent =
+            t("profile_favorites_update_error");
+        }
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
 
   function showErrors(errors) {
     const box = $("#profileFormErrors");
@@ -755,6 +1547,8 @@ const ProfileModule = (() => {
       bindAvatarPicker();
       bindDirtyTracking();
       bindPrivacyForm();
+      bindFavoriteActions();
+      bindFavoritePicker();
       bindOpinionsNavigation();
       bindForm();
       isBound = true;
@@ -764,6 +1558,7 @@ const ProfileModule = (() => {
     const initialLoads = [
       loadProfileIntoForm(),
       loadPrivacyIntoForm(),
+      loadFavoritesIntoProfile(),
       loadOpinionsSummary()
     ];
 
@@ -778,6 +1573,7 @@ const ProfileModule = (() => {
     await Promise.all([
       loadProfileIntoForm(),
       loadPrivacyIntoForm(),
+      loadFavoritesIntoProfile(),
       loadOpinionsSummary()
     ]);
   }

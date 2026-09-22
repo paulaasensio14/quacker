@@ -2587,6 +2587,113 @@ if (externalSignal?.aborted) {
     };
   }
 
+  async function moveUserFavorite(
+    type,
+    position,
+    toPosition
+  ) {
+    const safeType = String(type || "").trim();
+    const safePosition = Number(position);
+    const safeToPosition = Number(toPosition);
+
+    if (
+      !["pelicula", "serie", "game", "book"].includes(
+        safeType
+      )
+    ) {
+      throw _makeApiError(
+        "invalid_favorite_type",
+        400
+      );
+    }
+
+    if (
+      !Number.isInteger(safePosition) ||
+      safePosition < 1 ||
+      safePosition > 4 ||
+      !Number.isInteger(safeToPosition) ||
+      safeToPosition < 1 ||
+      safeToPosition > 4
+    ) {
+      throw _makeApiError(
+        "invalid_favorite_position",
+        400
+      );
+    }
+
+    if (_isHttp()) {
+      const res = await _httpJson(
+        "PATCH",
+        `/user/favorites/${encodeURIComponent(safeType)}/${safePosition}/move`,
+        {
+          toPosition: safeToPosition
+        }
+      );
+
+      const result = {
+        ...res,
+        favorites: normalizeUserFavorites(
+          res?.favorites
+        )
+      };
+
+      _emitDataChanged({
+        kind: "favorites",
+        action: "move"
+      });
+
+      return result;
+    }
+
+    const state = _safeState();
+    const favorites = normalizeUserFavorites(
+      state.favorites
+    );
+
+    const entries = favorites[safeType];
+    const fromIndex = safePosition - 1;
+    const toIndex = safeToPosition - 1;
+
+    if (
+      !entries[fromIndex] ||
+      toIndex >= entries.length
+    ) {
+      throw _makeApiError(
+        "favorite_not_found",
+        404
+      );
+    }
+
+    const [moved] = entries.splice(
+      fromIndex,
+      1
+    );
+
+    entries.splice(
+      toIndex,
+      0,
+      moved
+    );
+
+    state.favorites = favorites;
+
+    if (typeof FakeBackend !== "undefined") {
+      FakeBackend.saveState(state);
+    }
+
+    _emitDataChanged({
+      kind: "favorites",
+      action: "move"
+    });
+
+    return {
+      favorite: _cloneData(moved),
+      favorites: normalizeUserFavorites(
+        state.favorites
+      )
+    };
+  }
+
   async function removeUserFavorite(
     type,
     position
@@ -6522,6 +6629,7 @@ if (externalSignal?.aborted) {
     getUserFavorites,
     addUserFavorite,
     replaceUserFavorite,
+    moveUserFavorite,
     removeUserFavorite,
     getUserPreferences,
     setUserTheme,
