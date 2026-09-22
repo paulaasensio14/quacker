@@ -36,6 +36,7 @@ test("server.js importa el modelo canónico de favoritos", () => {
   for (const helper of [
     "normalizeFavorites",
     "addFavorite",
+    "moveFavorite",
     "replaceFavorite",
     "removeFavorite"
   ]) {
@@ -159,6 +160,24 @@ test("DELETE /api/user/favorites/:contentType/:position elimina y persiste", () 
   assert.match(block, /removeFavorite/);
   assert.match(block, /req\.params\.contentType/);
   assert.match(block, /req\.params\.position/);
+  assert.match(block, /bucket\.favorites/);
+  assert.match(block, /_writeDb\(db\)/);
+
+  assert.match(block, /favorite_not_found/);
+  assert.match(block, /invalid_favorite_position/);
+});
+
+
+test("PATCH /api/user/favorites/:contentType/:position/move reordena y persiste", () => {
+  const block = routeBlock(
+    'app.patch("/api/user/favorites/:contentType/:position/move"'
+  );
+
+  assert.match(block, /_requireAuth/);
+  assert.match(block, /moveFavorite/);
+  assert.match(block, /req\.params\.contentType/);
+  assert.match(block, /req\.params\.position/);
+  assert.match(block, /req\.body\?\.toPosition/);
   assert.match(block, /bucket\.favorites/);
   assert.match(block, /_writeDb\(db\)/);
 

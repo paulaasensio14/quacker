@@ -73,6 +73,7 @@ import {
 
 import {
   addFavorite,
+  moveFavorite,
   normalizeFavorites,
   removeFavorite,
   replaceFavorite
@@ -3794,6 +3795,54 @@ app.patch("/api/user/favorites/:contentType/:position", _requireAuth, (req, res)
 
     if (result.error === "favorite_already_exists") {
       return res.status(409).json({
+        error: result.error
+      });
+    }
+
+    return res.status(400).json({
+      error: result.error
+    });
+  }
+
+  bucket.favorites = result.favorites;
+  _writeDb(db);
+
+  res.json({
+    favorite: result.favorite,
+    favorites: bucket.favorites
+  });
+});
+
+app.patch("/api/user/favorites/:contentType/:position/move", _requireAuth, (req, res) => {
+  const contentType = String(
+    req.params.contentType || ""
+  ).trim();
+
+  const position = req.params.position;
+  const toPosition = req.body?.toPosition;
+
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  const result = moveFavorite(
+    bucket.favorites,
+    contentType,
+    position,
+    toPosition
+  );
+
+  if (!result.ok) {
+    if (result.error === "favorite_not_found") {
+      return res.status(404).json({
+        error: result.error
+      });
+    }
+
+    if (result.error === "invalid_favorite_position") {
+      return res.status(400).json({
         error: result.error
       });
     }

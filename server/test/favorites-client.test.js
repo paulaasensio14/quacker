@@ -41,6 +41,7 @@ test(
     for (const name of [
       "getUserFavorites",
       "addUserFavorite",
+      "moveUserFavorite",
       "replaceUserFavorite",
       "removeUserFavorite"
     ]) {
@@ -247,6 +248,67 @@ test(
     assert.match(
       block,
       /action:\s*"replace"/
+    );
+  }
+);
+
+test(
+  "moveUserFavorite usa PATCH y reordena también en local",
+  () => {
+    const block = extractBlock(
+      apiSource,
+      "async function moveUserFavorite",
+      "async function removeUserFavorite"
+    );
+
+    assert.match(
+      block,
+      /_httpJson\(\s*"PATCH"/
+    );
+
+    assert.match(
+      block,
+      /\/user\/favorites\//
+    );
+
+    assert.match(
+      block,
+      /\/move/
+    );
+
+    assert.match(
+      block,
+      /toPosition/
+    );
+
+    assert.match(
+      block,
+      /invalid_favorite_position/
+    );
+
+    assert.match(
+      block,
+      /favorite_not_found/
+    );
+
+    assert.match(
+      block,
+      /\.splice\(/
+    );
+
+    assert.match(
+      block,
+      /FakeBackend\.saveState/
+    );
+
+    assert.match(
+      block,
+      /kind:\s*"favorites"/
+    );
+
+    assert.match(
+      block,
+      /action:\s*"move"/
     );
   }
 );

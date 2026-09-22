@@ -311,6 +311,58 @@ export function replaceFavorite(
   };
 }
 
+export function moveFavorite(
+  favorites,
+  type,
+  fromPosition,
+  toPosition
+) {
+  const safeType = String(type || "").trim();
+
+  if (!_isFavoriteType(safeType)) {
+    return {
+      ok: false,
+      error: "invalid_favorite_type"
+    };
+  }
+
+  const safeFromPosition =
+    _normalizePosition(fromPosition);
+  const safeToPosition =
+    _normalizePosition(toPosition);
+
+  if (!safeFromPosition || !safeToPosition) {
+    return {
+      ok: false,
+      error: "invalid_favorite_position"
+    };
+  }
+
+  const normalizedFavorites =
+    normalizeFavorites(favorites);
+
+  const entries = normalizedFavorites[safeType];
+  const fromIndex = safeFromPosition - 1;
+  const toIndex = safeToPosition - 1;
+
+  if (!entries[fromIndex] || toIndex >= entries.length) {
+    return {
+      ok: false,
+      error: "favorite_not_found"
+    };
+  }
+
+  const [moved] = entries.splice(fromIndex, 1);
+  entries.splice(toIndex, 0, moved);
+
+  return {
+    ok: true,
+    error: "",
+    favorite: moved,
+    favorites: normalizedFavorites
+  };
+}
+
 export function removeFavorite(
   favorites,
   type,

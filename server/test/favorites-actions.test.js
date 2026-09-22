@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   addFavorite,
+  moveFavorite,
   replaceFavorite,
   removeFavorite
 } from "../lib/favorites.js";
@@ -303,4 +304,44 @@ test("rechaza posiciones fuera del rango 1-4", () => {
       error: "invalid_favorite_position"
     });
   }
+});
+
+
+test("mueve un favorito a otra posición conservando el orden relativo", () => {
+  const initial = {
+    pelicula: [
+      favorite({
+        externalId: "1",
+        title: "Uno"
+      }),
+      favorite({
+        externalId: "2",
+        title: "Dos"
+      }),
+      favorite({
+        externalId: "3",
+        title: "Tres"
+      }),
+      favorite({
+        externalId: "4",
+        title: "Cuatro"
+      })
+    ]
+  };
+
+  const result = moveFavorite(
+    initial,
+    "pelicula",
+    4,
+    2
+  );
+
+  assert.equal(result.ok, true);
+
+  assert.deepEqual(
+    result.favorites.pelicula.map(
+      (entry) => entry.externalId
+    ),
+    ["1", "4", "2", "3"]
+  );
 });

@@ -1492,6 +1492,56 @@
             </form>
           </div>
 
+          <div class="profile-card profile-favorites-card" id="profileFavoritesCard">
+            <h3 class="profile-title" data-i18n="profile_favorites_title">
+              Mis favoritos
+            </h3>
+
+            <p class="profile-meta" data-i18n="profile_favorites_description">
+              Elige hasta cuatro favoritos por categoría y ordénalos como quieras.
+            </p>
+
+            <div class="profile-favorites-groups">
+              <section class="profile-favorites-group" data-favorite-type="pelicula">
+                <h4 data-i18n="profile_favorites_movies">Películas</h4>
+                <div
+                  class="profile-favorites-slots"
+                  data-favorite-slots="pelicula"
+                ></div>
+              </section>
+
+              <section class="profile-favorites-group" data-favorite-type="serie">
+                <h4 data-i18n="profile_favorites_series">Series</h4>
+                <div
+                  class="profile-favorites-slots"
+                  data-favorite-slots="serie"
+                ></div>
+              </section>
+
+              <section class="profile-favorites-group" data-favorite-type="game">
+                <h4 data-i18n="profile_favorites_games">Juegos</h4>
+                <div
+                  class="profile-favorites-slots"
+                  data-favorite-slots="game"
+                ></div>
+              </section>
+
+              <section class="profile-favorites-group" data-favorite-type="book">
+                <h4 data-i18n="profile_favorites_books">Libros</h4>
+                <div
+                  class="profile-favorites-slots"
+                  data-favorite-slots="book"
+                ></div>
+              </section>
+            </div>
+
+            <div
+              id="profileFavoritesStatus"
+              class="profile-favorites-status"
+              aria-live="polite"
+            ></div>
+          </div>
+
           <div class="profile-card profile-opinions-card" id="profileOpinionsCard">
             <h3 class="profile-title" data-i18n="profile_opinions_title">
               Mis opiniones
@@ -1589,6 +1639,92 @@
         </div>
       </section>
     </main>
+  </div>
+</div>
+
+<!-- Modal: elegir favorito -->
+<div class="q-modal" id="favoritePickerModal" aria-hidden="true">
+  <div class="q-modal__backdrop" data-favorite-picker-close></div>
+
+  <div
+    class="q-modal__panel favorite-picker-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="favoritePickerTitle"
+  >
+    <div class="q-modal__header">
+      <h3 id="favoritePickerTitle" data-i18n="profile_favorites_picker_title">
+        Elegir favorito
+      </h3>
+
+      <button
+        type="button"
+        class="icon-btn"
+        data-favorite-picker-close
+        aria-label="Cerrar"
+        data-i18n-aria-label="common_close"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <p
+      class="q-modal__subtitle"
+      data-i18n="profile_favorites_picker_description"
+    >
+      Busca contenido en Explorar y añádelo a tus favoritos.
+    </p>
+
+    <div class="favorite-picker-search">
+      <label
+        for="favoritePickerSearch"
+        data-i18n="profile_favorites_picker_search_label"
+      >
+        Buscar
+      </label>
+
+      <input
+        id="favoritePickerSearch"
+        type="search"
+        autocomplete="off"
+        data-i18n-placeholder="profile_favorites_picker_search_placeholder"
+        placeholder="Buscar contenido..."
+      />
+    </div>
+
+    <div
+      id="favoritePickerStatus"
+      class="favorite-picker-status"
+      aria-live="polite"
+    ></div>
+
+    <div
+      id="favoritePickerResults"
+      class="favorite-picker-results"
+    ></div>
+
+    <div class="q-modal__footer">
+      <button
+        type="button"
+        class="btn-secondary"
+        data-favorite-picker-close
+        data-i18n="common_cancel"
+      >
+        Cancelar
+      </button>
+    </div>
   </div>
 </div>
 
