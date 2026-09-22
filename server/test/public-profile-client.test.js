@@ -148,3 +148,134 @@ test("un fallo de red o una respuesta HTTP no válida muestra el estado de error
     /showError\(\)/
   );
 });
+
+test("el perfil público integra renderizadores para stats, listas, reseñas y actividad", () => {
+  assert.match(
+    clientSource,
+    /function renderStats/
+  );
+
+  assert.match(
+    clientSource,
+    /function renderLists/
+  );
+
+  assert.match(
+    clientSource,
+    /function renderReviews/
+  );
+
+  assert.match(
+    clientSource,
+    /function renderActivity/
+  );
+
+  assert.match(
+    clientSource,
+    /renderStats\(data\.stats\)/
+  );
+
+  assert.match(
+    clientSource,
+    /renderLists\(data\.lists\)/
+  );
+
+  assert.match(
+    clientSource,
+    /renderReviews\(data\.reviews\)/
+  );
+
+  assert.match(
+    clientSource,
+    /renderActivity\(data\.activity\)/
+  );
+});
+
+test("las nuevas secciones permanecen ocultas cuando la API no publica sus datos", () => {
+  for (const functionName of [
+    "renderStats",
+    "renderLists",
+    "renderReviews",
+    "renderActivity"
+  ]) {
+    const start = clientSource.indexOf(
+      `function ${functionName}`
+    );
+
+    assert.notEqual(
+      start,
+      -1,
+      `${functionName} debe existir`
+    );
+
+    const nextFunction = clientSource.indexOf(
+      "\n  function ",
+      start + 1
+    );
+
+    const block = clientSource.slice(
+      start,
+      nextFunction === -1
+        ? clientSource.length
+        : nextFunction
+    );
+
+    assert.match(
+      block,
+      /section\.hidden\s*=\s*true/,
+      `${functionName} debe poder ocultar su sección`
+    );
+
+    assert.match(
+      block,
+      /section\.hidden\s*=\s*false/,
+      `${functionName} debe poder mostrar su sección`
+    );
+  }
+});
+
+test("el contenido público nuevo se sigue construyendo mediante DOM seguro", () => {
+  for (const functionName of [
+    "renderStats",
+    "renderLists",
+    "renderReviews",
+    "renderActivity"
+  ]) {
+    const start = clientSource.indexOf(
+      `function ${functionName}`
+    );
+
+    assert.notEqual(
+      start,
+      -1,
+      `${functionName} debe existir`
+    );
+
+    const nextFunction = clientSource.indexOf(
+      "\n  function ",
+      start + 1
+    );
+
+    const block = clientSource.slice(
+      start,
+      nextFunction === -1
+        ? clientSource.length
+        : nextFunction
+    );
+
+    assert.match(
+      block,
+      /document\.createElement/
+    );
+
+    assert.match(
+      block,
+      /\.textContent\s*=/
+    );
+
+    assert.doesNotMatch(
+      block,
+      /\.innerHTML\s*=/
+    );
+  }
+});

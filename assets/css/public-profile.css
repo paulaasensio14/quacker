@@ -264,6 +264,159 @@ body {
   text-align: center;
 }
 
+.public-profile-section {
+  margin-top: 30px;
+  padding: 34px;
+  border: 1px solid var(--public-border);
+  border-radius: var(--public-radius-lg);
+  background: var(--public-surface);
+  box-shadow: var(--public-shadow);
+}
+
+.public-profile-stats-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.public-profile-stat {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding: 20px;
+  border: 1px solid var(--public-border);
+  border-radius: var(--public-radius-md);
+  background: var(--public-surface-soft);
+}
+
+.public-profile-stat-type {
+  background: var(--public-accent-soft);
+}
+
+.public-profile-stat-value {
+  color: var(--public-text);
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.public-profile-stat-label {
+  color: var(--public-text-soft);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.public-profile-lists-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.public-profile-list-card,
+.public-profile-review-card,
+.public-profile-activity-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--public-border);
+  border-radius: var(--public-radius-md);
+  background: var(--public-surface-soft);
+}
+
+.public-profile-list-card h3,
+.public-profile-review-card h3,
+.public-profile-activity-card h3 {
+  margin: 0;
+  color: var(--public-text);
+  font-size: 1.05rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.public-profile-list-description {
+  margin: 9px 0 0;
+  color: var(--public-text-soft);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.public-profile-list-items {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-profile-list-items li {
+  padding: 10px 12px;
+  border-radius: var(--public-radius-sm);
+  background: var(--public-surface);
+  color: var(--public-text);
+  overflow-wrap: anywhere;
+}
+
+.public-profile-reviews-list,
+.public-profile-activity-list {
+  display: grid;
+  gap: 14px;
+}
+
+.public-profile-review-rating {
+  margin: 10px 0 0;
+  color: var(--public-accent);
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+}
+
+.public-profile-review-spoiler {
+  margin: 12px 0 0;
+  color: var(--public-text-soft);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.public-profile-review-text {
+  margin: 12px 0 0;
+  color: var(--public-text-soft);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.public-profile-review-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 15px;
+}
+
+.public-profile-review-tag {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--public-surface);
+  color: var(--public-text-soft);
+  font-size: 0.8rem;
+}
+
+.public-profile-activity-meta {
+  margin: 8px 0 0;
+  color: var(--public-text-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.public-profile-section-empty {
+  margin: 0;
+  padding: 18px;
+  border-radius: var(--public-radius-sm);
+  background: var(--public-surface-soft);
+  color: var(--public-text-soft);
+  text-align: center;
+}
+
 @media (max-width: 760px) {
   .public-profile-topbar,
   .public-profile-main {
@@ -301,8 +454,18 @@ body {
     margin-right: auto;
   }
 
-  .public-profile-favorites {
+  .public-profile-favorites,
+  .public-profile-section {
     padding: 26px 20px;
+  }
+
+  .public-profile-stats-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .public-profile-lists-grid {
+    grid-template-columns: 1fr;
   }
 
   .public-profile-favorites-grid {
