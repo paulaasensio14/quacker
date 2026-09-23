@@ -11,6 +11,8 @@
     "book"
   ]);
 
+  let publicFavorites = {};
+
   function $(selector) {
     return document.querySelector(selector);
   }
@@ -159,24 +161,22 @@
     return card;
   }
 
-  function renderFavoriteGroup(
-    type,
-    items
-  ) {
-    const container = document.querySelector(
-      `[data-favorites-list="${type}"]`
-    );
+  function renderFavoritePanel(type) {
+    const container =
+      $("#publicProfileFavoritesGrid");
 
     if (!container) return;
 
     container.replaceChildren();
 
-    const safeItems = Array.isArray(items)
-      ? items
-      : [];
+    const safeItems =
+      Array.isArray(publicFavorites[type])
+        ? publicFavorites[type]
+        : [];
 
     if (!safeItems.length) {
-      const empty = document.createElement("p");
+      const empty =
+        document.createElement("p");
 
       empty.className =
         "public-profile-favorites-empty";
@@ -195,6 +195,156 @@
     }
   }
 
+  function selectFavoriteTab(
+    type,
+    { focus = false } = {}
+  ) {
+    if (!FAVORITE_TYPES.includes(type)) {
+      return;
+    }
+
+    const panel =
+      $("#publicProfileFavoritesPanel");
+
+    const tabs = [
+      ...document.querySelectorAll(
+        "[data-favorites-tab]"
+      )
+    ];
+
+
+    for (const tab of tabs) {
+      const isActive =
+        tab.dataset.favoritesTab === type;
+
+      tab.classList.toggle(
+        "is-active",
+        isActive
+      );
+
+      tab.setAttribute(
+        "aria-selected",
+        isActive ? "true" : "false"
+      );
+
+      tab.tabIndex = isActive ? 0 : -1;
+
+      if (isActive && panel && tab.id) {
+        panel.setAttribute(
+          "aria-labelledby",
+          tab.id
+        );
+
+        if (focus) {
+          tab.focus();
+        }
+      }
+    }
+
+    renderFavoritePanel(type);
+  }
+
+  function setupFavoriteTabs() {
+    const tabs =
+      $("#publicProfileFavoritesTabs");
+
+    if (
+      !tabs ||
+      tabs.dataset.tabsReady === "true"
+    ) {
+      return;
+    }
+
+    tabs.dataset.tabsReady = "true";
+
+    tabs.addEventListener(
+      "click",
+      (event) => {
+        const tab = event.target.closest(
+          "[data-favorites-tab]"
+        );
+
+        if (!tab || !tabs.contains(tab)) {
+          return;
+        }
+
+        selectFavoriteTab(
+          tab.dataset.favoritesTab
+        );
+      }
+    );
+
+    tabs.addEventListener(
+      "keydown",
+      (event) => {
+        if (
+          ![
+            "ArrowLeft",
+            "ArrowRight",
+            "Home",
+            "End"
+          ].includes(event.key)
+        ) {
+          return;
+        }
+
+        const tab = event.target.closest(
+          "[data-favorites-tab]"
+        );
+
+        if (!tab || !tabs.contains(tab)) {
+          return;
+        }
+
+        const buttons = FAVORITE_TYPES
+          .map((type) =>
+            tabs.querySelector(
+              `[data-favorites-tab="${type}"]`
+            )
+          )
+          .filter(Boolean);
+
+        const currentIndex =
+          buttons.indexOf(tab);
+
+        if (currentIndex < 0) {
+          return;
+        }
+
+        let nextIndex = currentIndex;
+
+        if (event.key === "ArrowRight") {
+          nextIndex =
+            (currentIndex + 1) %
+            buttons.length;
+        }
+
+        if (event.key === "ArrowLeft") {
+          nextIndex =
+            (currentIndex - 1 + buttons.length) %
+            buttons.length;
+        }
+
+        if (event.key === "Home") {
+          nextIndex = 0;
+        }
+
+        if (event.key === "End") {
+          nextIndex =
+            buttons.length - 1;
+        }
+
+        event.preventDefault();
+
+        selectFavoriteTab(
+          buttons[nextIndex].dataset
+            .favoritesTab,
+          { focus: true }
+        );
+      }
+    );
+  }
+
   function renderFavorites(favorites) {
     const section =
       $("#publicProfileFavorites");
@@ -205,16 +355,20 @@
       typeof favorites !== "object" ||
       Array.isArray(favorites)
     ) {
-      if (section) section.hidden = true;
+      publicFavorites = {};
+
+      if (section) {
+        section.hidden = true;
+      }
+
       return;
     }
 
-    for (const type of FAVORITE_TYPES) {
-      renderFavoriteGroup(
-        type,
-        favorites[type]
-      );
-    }
+    publicFavorites = favorites;
+
+    setupFavoriteTabs();
+
+    selectFavoriteTab("pelicula");
 
     section.hidden = false;
   }
@@ -287,10 +441,10 @@
         : {};
 
     const typeLabels = {
-      pelicula: "🎬 Películas",
-      serie: "📺 Series",
-      game: "🎮 Juegos",
-      book: "📚 Libros"
+      pelicula: "Películas",
+      serie: "Series",
+      game: "Juegos",
+      book: "Libros"
     };
 
     for (const type of FAVORITE_TYPES) {

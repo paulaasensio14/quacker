@@ -83,10 +83,15 @@ test("la cabecera pública tiene avatar, nombre, username y biografía", () => {
   }
 });
 
-test("la página reserva las cuatro categorías de favoritos", () => {
+test("Favoritos usa cuatro pestañas y un único panel de contenido", () => {
   const html = fs.readFileSync(
     HTML_URL,
     "utf8"
+  );
+
+  assert.match(
+    html,
+    /id=["']publicProfileFavoritesTabs["'][^>]*role=["']tablist["']/
   );
 
   for (const type of [
@@ -98,10 +103,26 @@ test("la página reserva las cuatro categorías de favoritos", () => {
     assert.match(
       html,
       new RegExp(
-        `data-favorites-type=["']${type}["']`
+        `data-favorites-tab=["']${type}["']`
       )
     );
   }
+
+  assert.match(
+    html,
+    /id=["']publicProfileFavoritesPanel["'][^>]*role=["']tabpanel["']/
+  );
+
+  assert.match(
+    html,
+    /id=["']publicProfileFavoritesGrid["']/
+  );
+
+  assert.doesNotMatch(
+    html,
+    /🎬|📺|🎮|📚/,
+    "Favoritos no debe usar emojis como iconografía"
+  );
 });
 
 test("la página contempla carga, error y ausencia de favoritos", () => {
