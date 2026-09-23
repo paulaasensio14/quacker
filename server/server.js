@@ -157,7 +157,15 @@ const APP_VERSION =
 
 // Raíz del proyecto = carpeta padre de /server
 const PROJECT_ROOT = path.resolve(__dirname, "..");
-const DB_PATH = path.join(__dirname, "db.json");
+const DB_PATH =
+  (
+    process.env.NODE_ENV === "test"
+      ? String(
+          process.env.QUACKER_DB_PATH || ""
+        ).trim()
+      : ""
+  ) ||
+  path.join(__dirname, "db.json");
 
 const INDEX_HTML_PATH =
   path.join(PROJECT_ROOT, "index.html");
@@ -211,7 +219,15 @@ const sessionSecret =
   "dev-secret-fallback";
 
 const FileStore = sessionFileStore(session);
-const SESSION_STORE_PATH = path.resolve(__dirname, ".sessions");
+const SESSION_STORE_PATH =
+  (
+    process.env.NODE_ENV === "test"
+      ? String(
+          process.env.QUACKER_SESSION_STORE_PATH || ""
+        ).trim()
+      : ""
+  ) ||
+  path.resolve(__dirname, ".sessions");
 const SESSION_TTL_SECONDS = 24 * 60 * 60;
 
 const sessionCookieOptions =
@@ -3581,7 +3597,25 @@ app.patch("/api/user", _requireAuth, (req, res) => {
   }
 
   if (Object.prototype.hasOwnProperty.call(safePatch, "avatar")) {
-    safePatch.avatar = String(safePatch.avatar || "").trim();
+    const safeAvatar = String(
+      safePatch.avatar || ""
+    ).trim();
+
+    const isAllowedAvatar =
+      !safeAvatar ||
+      safeAvatar.startsWith("/assets/") ||
+      safeAvatar.startsWith("assets/") ||
+      /^data:image\/(?:jpeg|png|webp|gif);/i.test(
+        safeAvatar
+      );
+
+    if (!isAllowedAvatar) {
+      return res.status(400).json({
+        error: "invalid_avatar"
+      });
+    }
+
+    safePatch.avatar = safeAvatar;
   }
 
   const db = _readDb();

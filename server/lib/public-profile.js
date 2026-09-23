@@ -34,11 +34,16 @@ function _normalizePublicMediaSource(value) {
 
   if (!source) return "";
 
+  const isAllowedDataImage =
+    /^data:image\/(?:jpeg|png|webp|gif);/i.test(
+      source
+    );
+
   if (
     source.startsWith("https://") ||
     source.startsWith("/assets/") ||
     source.startsWith("assets/") ||
-    source.startsWith("data:image/")
+    isAllowedDataImage
   ) {
     return source;
   }

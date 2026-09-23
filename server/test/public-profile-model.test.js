@@ -355,6 +355,108 @@ test("el contrato público no expone fuentes multimedia arbitrarias", () => {
   );
 });
 
+test("rechaza data SVG legacy y conserva formatos raster permitidos", () => {
+  const svgUsers = {
+    u_svg: {
+      profile: {
+        name: "SVG Legacy",
+        handle: "@svg_legacy",
+        bio: "",
+        avatar:
+          "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'></svg>"
+      },
+      privacy: {
+        profile: true,
+        favorites: true
+      },
+      favorites: {
+        pelicula: [{
+          contentType: "pelicula",
+          source: "tmdb",
+          externalId: "550",
+          itemSnapshot: {
+            title: "Fight Club",
+            cover:
+              "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'></svg>"
+          },
+          addedAt: "2026-09-23T09:00:00.000Z"
+        }],
+        serie: [],
+        game: [],
+        book: []
+      }
+    }
+  };
+
+  const svgResult =
+    getPublicProfileByUsername(
+      svgUsers,
+      "svg_legacy"
+    );
+
+  assert.equal(
+    svgResult.profile.avatar,
+    "",
+    "un avatar SVG legacy no debe salir por la API pública"
+  );
+
+  assert.equal(
+    svgResult.favorites.pelicula[0].itemSnapshot.cover,
+    "",
+    "una portada SVG legacy no debe salir por la API pública"
+  );
+
+  const rasterUsers = {
+    u_raster: {
+      profile: {
+        name: "Raster",
+        handle: "@raster",
+        bio: "",
+        avatar:
+          "data:image/png;base64,AAAA"
+      },
+      privacy: {
+        profile: true,
+        favorites: true
+      },
+      favorites: {
+        pelicula: [{
+          contentType: "pelicula",
+          source: "tmdb",
+          externalId: "550",
+          itemSnapshot: {
+            title: "Fight Club",
+            cover:
+              "data:image/webp;base64,BBBB"
+          },
+          addedAt: "2026-09-23T09:00:00.000Z"
+        }],
+        serie: [],
+        game: [],
+        book: []
+      }
+    }
+  };
+
+  const rasterResult =
+    getPublicProfileByUsername(
+      rasterUsers,
+      "raster"
+    );
+
+  assert.equal(
+    rasterResult.profile.avatar,
+    "data:image/png;base64,AAAA",
+    "PNG debe seguir permitido"
+  );
+
+  assert.equal(
+    rasterResult.favorites.pelicula[0].itemSnapshot.cover,
+    "data:image/webp;base64,BBBB",
+    "WebP debe seguir permitido"
+  );
+});
+
 test("la actividad pública solo expone eventos resolubles con identidad segura", () => {
   const users = {
     u_1: {

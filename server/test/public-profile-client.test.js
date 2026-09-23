@@ -105,31 +105,63 @@ test("la sección de favoritos permanece oculta cuando la API no los publica", (
 });
 
 test("avatar y portadas aplican listas de esquemas permitidos", () => {
+
   const avatarStart = clientSource.indexOf(
+
     "function resolveAvatarSrc"
+
   );
 
   const coverStart = clientSource.indexOf(
+
     "function resolveCoverSrc"
+
   );
 
   assert.notEqual(avatarStart, -1);
+
   assert.notEqual(coverStart, -1);
 
-  assert.match(
+  assert.equal(
+
+    clientSource.includes(
+
+      '/^data:image\\/(?:jpeg|png|webp|gif);/i'
+
+    ),
+
+    true,
+
+    "los data URL deben limitarse a formatos raster permitidos"
+
+  );
+
+  assert.doesNotMatch(
+
     clientSource,
-    /startsWith\(["']data:image\//
+
+    /startsWith\(["']data:image\//,
+
+    "no debe aceptarse cualquier data:image/*"
+
   );
 
   assert.match(
+
     clientSource,
+
     /startsWith\(["']https:\/\/["']\)/
+
   );
 
   assert.match(
+
     clientSource,
+
     /startsWith\(["']\/assets\/["']\)/
+
   );
+
 });
 
 test("un fallo de red o una respuesta HTTP no válida muestra el estado de error", () => {
