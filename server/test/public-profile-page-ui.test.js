@@ -260,3 +260,20 @@ test("las nuevas secciones contemplan adaptación responsive", () => {
     /@media\s*\(max-width:\s*760px\)[\s\S]*?\.public-profile-stats-grid/
   );
 });
+
+test("la actividad pública limita su altura con scroll interno", () => {
+  const css = fs.readFileSync(
+    CSS_URL,
+    "utf8"
+  );
+
+  assert.match(
+    css,
+    /\.public-profile-activity-list\s*\{[\s\S]*?max-height:\s*540px;[\s\S]*?overflow-y:\s*auto;[\s\S]*?overscroll-behavior:\s*contain;/
+  );
+
+  assert.match(
+    css,
+    /@media\s*\(max-width:\s*760px\)[\s\S]*?\.public-profile-activity-list\s*\{[\s\S]*?max-height:\s*420px;/
+  );
+});
