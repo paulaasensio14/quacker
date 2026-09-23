@@ -39,7 +39,11 @@
 
     if (!src) return DEFAULT_AVATAR;
 
-    if (src.startsWith("data:image/")) {
+    if (
+      /^data:image\/(?:jpeg|png|webp|gif);/i.test(
+        src
+      )
+    ) {
       return src;
     }
 
@@ -71,7 +75,11 @@
       return `/${src}`;
     }
 
-    if (src.startsWith("data:image/")) {
+    if (
+      /^data:image\/(?:jpeg|png|webp|gif);/i.test(
+        src
+      )
+    ) {
       return src;
     }
 
