@@ -74,6 +74,44 @@ test("los favoritos se construyen mediante nodos DOM seguros", () => {
   );
 });
 
+test("Favoritos funciona como pestañas accesibles sin emojis", () => {
+  assert.match(
+    clientSource,
+    /data-favorites-tab/
+  );
+
+  assert.match(
+    clientSource,
+    /aria-selected/
+  );
+
+  assert.match(
+    clientSource,
+    /tabIndex/
+  );
+
+  assert.match(
+    clientSource,
+    /keydown/
+  );
+
+  assert.match(
+    clientSource,
+    /ArrowLeft/
+  );
+
+  assert.match(
+    clientSource,
+    /ArrowRight/
+  );
+
+  assert.doesNotMatch(
+    clientSource,
+    /🎬|📺|🎮|📚/,
+    "el cliente público no debe conservar emojis de categorías"
+  );
+});
+
 test("la sección de favoritos permanece oculta cuando la API no los publica", () => {
   const start = clientSource.indexOf(
     "function renderFavorites"

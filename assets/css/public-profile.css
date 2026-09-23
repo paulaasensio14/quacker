@@ -193,19 +193,81 @@ body {
   font-size: clamp(1.65rem, 4vw, 2.2rem);
 }
 
-.public-profile-favorites-groups {
-  display: grid;
-  gap: 30px;
+.public-profile-favorites-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin: 0 0 -1px;
+  padding: 0 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
-.public-profile-favorites-group {
-  min-width: 0;
-}
-
-.public-profile-favorites-group h3 {
-  margin: 0 0 14px;
-  font-size: 1.08rem;
+.public-profile-favorites-tab {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 10px 15px;
+  border: 1px solid var(--public-border);
+  border-radius: 12px 12px 0 0;
+  background: var(--public-surface-soft);
+  color: var(--public-text-soft);
+  font: inherit;
+  font-size: 0.92rem;
   font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.public-profile-favorites-tab:hover {
+  color: var(--public-text);
+}
+
+.public-profile-favorites-tab.is-active {
+  position: relative;
+  z-index: 1;
+  border-bottom-color: var(--public-surface);
+  background: var(--public-surface);
+  color: var(--public-text);
+  box-shadow:
+    inset 0 3px 0 var(--public-accent);
+}
+
+.public-profile-favorites-tab:focus-visible {
+  position: relative;
+  z-index: 2;
+  outline: 3px solid var(--public-accent);
+  outline-offset: 2px;
+}
+
+.public-profile-favorites-tab svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.public-profile-favorites-panel {
+  padding: 16px;
+  border: 1px solid var(--public-border);
+  border-radius:
+    0 var(--public-radius-md)
+    var(--public-radius-md)
+    var(--public-radius-md);
+  background: var(--public-surface);
 }
 
 .public-profile-favorites-grid {
@@ -475,6 +537,21 @@ body {
 }
 
 @media (max-width: 420px) {
+  .public-profile-favorites-tab {
+    min-height: 42px;
+    padding: 9px 12px;
+    font-size: 0.86rem;
+  }
+
+  .public-profile-favorites-tab svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .public-profile-favorites-panel {
+    padding: 10px;
+  }
+
   .public-profile-favorites-grid {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
