@@ -80,7 +80,14 @@ import {
 } from "./lib/favorites.js";
 
 import {
-  getPublicProfileByUsername
+  addFollowing,
+  normalizeFollowing,
+  removeFollowing
+} from "./lib/following.js";
+
+import {
+  getPublicProfileByUsername,
+  normalizePublicUsername
 } from "./lib/public-profile.js";
 
 import {
@@ -1950,6 +1957,7 @@ function _getUserBucket(db, userId) {
     consumptionHistory: [],
     opinions: [],
     favorites: normalizeFavorites(),
+    following: normalizeFollowing(),
     notifications: [],
     explore: {
       dismissed: []
@@ -1990,6 +1998,13 @@ function _getUserBucket(db, userId) {
     db.users[userId].favorites
   );
 
+  db.users[userId].following = normalizeFollowing(
+    db.users[userId].following,
+    {
+      ownerUserId: userId
+    }
+  );
+
   db.users[userId].notifications = _normalizeUserNotificationsList(
     db.users[userId].notifications
   );
@@ -2019,6 +2034,52 @@ function _getUserBucket(db, userId) {
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
+
+function _findPublicFollowTarget(
+  users,
+  username
+) {
+  const normalizedUsername =
+    normalizePublicUsername(username);
+
+  if (
+    !normalizedUsername ||
+    !users ||
+    typeof users !== "object" ||
+    Array.isArray(users)
+  ) {
+    return null;
+  }
+
+  for (const [userId, bucket] of Object.entries(users)) {
+    const candidateUsername =
+      normalizePublicUsername(
+        bucket?.profile?.handle
+      );
+
+    if (
+      candidateUsername !== normalizedUsername
+    ) {
+      continue;
+    }
+
+    const privacy =
+      normalizeProfilePrivacy(
+        bucket?.privacy
+      );
+
+    if (privacy.profile !== true) {
+      return null;
+    }
+
+    return {
+      userId,
+      bucket
+    };
+  }
+
+  return null;
+}
 
 app.get("/api/public/users/:username", (req, res) => {
   res.set("Cache-Control", "no-store");
@@ -2184,6 +2245,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     consumptionHistory: [],
     opinions: [],
     favorites: normalizeFavorites(),
+    following: normalizeFollowing(),
     notifications: [],
     explore: {
       dismissed: []
@@ -3660,6 +3722,180 @@ app.patch("/api/user", _requireAuth, (req, res) => {
 
   res.json({ user: bucket.profile });
 });
+
+app.post(
+  "/api/user/following/:username",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const requestedUsername =
+      normalizePublicUsername(
+        req.params.username
+      );
+
+    const ownerUsername =
+      normalizePublicUsername(
+        ownerBucket?.profile?.handle
+      );
+
+    if (
+      requestedUsername &&
+      ownerUsername &&
+      requestedUsername === ownerUsername
+    ) {
+      return res.status(400).json({
+        error: "cannot_follow_self"
+      });
+    }
+
+    const target =
+      _findPublicFollowTarget(
+        db.users,
+        requestedUsername
+      );
+
+    if (!target) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const result =
+      addFollowing(
+        ownerBucket.following,
+        target.userId,
+        {
+          ownerUserId
+        }
+      );
+
+    if (!result.ok) {
+      if (
+        result.error ===
+        "already_following"
+      ) {
+        return res.status(409).json({
+          error: result.error
+        });
+      }
+
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    ownerBucket.following =
+      result.following;
+
+    _writeDb(db);
+
+    return res.status(201).json({
+      following: true
+    });
+  }
+);
+
+app.delete(
+  "/api/user/following/:username",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const requestedUsername =
+      normalizePublicUsername(
+        req.params.username
+      );
+
+    const ownerUsername =
+      normalizePublicUsername(
+        ownerBucket?.profile?.handle
+      );
+
+    if (
+      requestedUsername &&
+      ownerUsername &&
+      requestedUsername === ownerUsername
+    ) {
+      return res.status(400).json({
+        error: "cannot_follow_self"
+      });
+    }
+
+    const targetEntry =
+      Object.entries(db.users).find(
+        ([, candidateBucket]) =>
+          normalizePublicUsername(
+            candidateBucket?.profile?.handle
+          ) === requestedUsername
+      );
+
+    const targetUserId =
+      targetEntry
+        ? String(targetEntry[0] || "").trim()
+        : "";
+
+    if (
+      !targetUserId ||
+      !ownerBucket.following.includes(
+        targetUserId
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const result =
+      removeFollowing(
+        ownerBucket.following,
+        targetUserId,
+        {
+          ownerUserId
+        }
+      );
+
+    if (!result.ok) {
+      if (
+        result.error ===
+        "not_following"
+      ) {
+        return res.status(404).json({
+          error: result.error
+        });
+      }
+
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    ownerBucket.following =
+      result.following;
+
+    _writeDb(db);
+
+    return res.json({
+      following: false
+    });
+  }
+);
 
 app.get("/api/user/privacy", _requireAuth, (req, res) => {
   const db = _readDb();
