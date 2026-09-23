@@ -426,6 +426,13 @@ body {
   gap: 14px;
 }
 
+.public-profile-activity-list {
+  max-height: 540px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
 .public-profile-review-rating {
   margin: 10px 0 0;
   color: var(--public-accent);
@@ -533,6 +540,10 @@ body {
   .public-profile-favorites-grid {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
+  }
+
+  .public-profile-activity-list {
+    max-height: 420px;
   }
 }
 
