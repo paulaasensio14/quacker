@@ -2160,8 +2160,25 @@ if (externalSignal?.aborted) {
         ? value
         : {};
 
+    const requestedVisibility =
+      typeof source.profileVisibility === "string"
+        ? source.profileVisibility.trim().toLowerCase()
+        : "";
+
+    const profileVisibility = [
+      "public",
+      "followers",
+      "friends",
+      "hidden"
+    ].includes(requestedVisibility)
+      ? requestedVisibility
+      : source.profile === true
+        ? "public"
+        : "hidden";
+
     return {
-      profile: source.profile === true,
+      profile: profileVisibility === "public",
+      profileVisibility,
       activity: source.activity === true,
       library: source.library === true,
       lists: source.lists === true,
@@ -2211,6 +2228,95 @@ if (externalSignal?.aborted) {
     });
 
     return { ...state.privacy };
+  }
+
+  function normalizeFollowRequest(value) {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      return null;
+    }
+
+    const username = String(value.username || "")
+      .trim()
+      .replace(/^@/, "")
+      .toLowerCase();
+
+    if (!username) return null;
+
+    return {
+      name: String(value.name || "").trim(),
+      username,
+      avatar: String(value.avatar || "").trim()
+    };
+  }
+
+  async function getFollowRequests() {
+    if (!_isHttp()) return [];
+
+    const res = await _httpJson("GET", "/user/follow-requests");
+    const requests = Array.isArray(res?.requests)
+      ? res.requests
+      : [];
+
+    return requests
+      .map(normalizeFollowRequest)
+      .filter(Boolean);
+  }
+
+  async function acceptFollowRequest(username) {
+    const normalizedUsername = String(username || "")
+      .trim()
+      .replace(/^@/, "")
+      .toLowerCase();
+
+    if (!normalizedUsername) {
+      throw _makeApiError("missing_username", 400);
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError("unsupported_transport", 501);
+    }
+
+    const res = await _httpJson(
+      "POST",
+      `/user/follow-requests/${encodeURIComponent(normalizedUsername)}/accept`
+    );
+
+    _emitDataChanged({
+      kind: "follow_requests",
+      action: "accept",
+      username: normalizedUsername
+    });
+
+    return res;
+  }
+
+  async function rejectFollowRequest(username) {
+    const normalizedUsername = String(username || "")
+      .trim()
+      .replace(/^@/, "")
+      .toLowerCase();
+
+    if (!normalizedUsername) {
+      throw _makeApiError("missing_username", 400);
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError("unsupported_transport", 501);
+    }
+
+    const res = await _httpJson("DELETE", `/user/follow-requests/${encodeURIComponent(normalizedUsername)}`);
+
+    _emitDataChanged({
+      kind: "follow_requests",
+      action: "reject",
+      username: normalizedUsername
+    });
+
+    return res;
   }
 
   function normalizeUserFavorites(value) {
@@ -6626,6 +6732,9 @@ if (externalSignal?.aborted) {
     updateUser,
     getUserPrivacy,
     updateUserPrivacy,
+    getFollowRequests,
+    acceptFollowRequest,
+    rejectFollowRequest,
     getUserFavorites,
     addUserFavorite,
     replaceUserFavorite,

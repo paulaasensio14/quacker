@@ -8,6 +8,7 @@ import {
 
 const EXPECTED_PRIVATE_DEFAULTS = {
   profile: false,
+  profileVisibility: "hidden",
   activity: false,
   library: false,
   lists: false,
@@ -48,6 +49,7 @@ test("solo un true booleano hace pública una sección", () => {
     }),
     {
       profile: true,
+      profileVisibility: "public",
       activity: false,
       library: false,
       lists: false,
@@ -67,6 +69,7 @@ test("ignora propiedades de privacidad desconocidas", () => {
     }),
     {
       profile: true,
+      profileVisibility: "public",
       activity: false,
       library: false,
       lists: false,

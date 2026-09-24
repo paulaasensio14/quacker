@@ -847,6 +847,149 @@
     section.hidden = false;
   }
 
+  function renderSocialRelationship(viewer) {
+    const container =
+      $("#publicProfileSocial");
+
+    const action =
+      $("#publicProfileSocialAction");
+
+    const accessNote =
+      $("#publicProfileAccessNote");
+
+    if (!container || !action || !accessNote) {
+      return;
+    }
+
+    if (
+      !viewer ||
+      typeof viewer !== "object" ||
+      Array.isArray(viewer)
+    ) {
+      container.hidden = true;
+      action.textContent = "";
+      accessNote.textContent = "";
+      return;
+    }
+
+    const state = String(
+      viewer.state || ""
+    ).trim();
+
+    let label = "";
+
+    if (state === "none") {
+      label =
+        viewer?.access === "restricted"
+          ? "Solicitar seguir"
+          : "Seguir";
+    } else if (state === "requested") {
+      label = "Solicitud enviada";
+    } else if (
+      state === "following" ||
+      state === "friend"
+    ) {
+      label = "Dejar de seguir";
+    } else if (state === "self") {
+      label = "Tu perfil";
+    }
+
+    if (!label) {
+      container.hidden = true;
+      action.textContent = "";
+      accessNote.textContent = "";
+      return;
+    }
+
+    action.textContent = label;
+    action.dataset.socialState = state;
+
+    action.disabled =
+      ![
+        "none",
+        "following",
+        "friend"
+      ].includes(state);
+
+    accessNote.textContent =
+      viewer?.access === "restricted"
+        ? "Este perfil tiene acceso restringido."
+        : "";
+
+    container.hidden = false;
+  }
+
+  async function performSocialAction() {
+    const action =
+      $("#publicProfileSocialAction");
+
+    const accessNote =
+      $("#publicProfileAccessNote");
+
+    if (!action || action.disabled) {
+      return;
+    }
+
+    const username =
+      getUsernameFromPath();
+
+    const state =
+      String(
+        action.dataset.socialState || ""
+      ).trim();
+
+    if (!username) {
+      return;
+    }
+
+    let method = "";
+
+    if (state === "none") {
+      method = "POST";
+    } else if (
+      state === "following" ||
+      state === "friend"
+    ) {
+      method = "DELETE";
+    } else {
+      return;
+    }
+
+    action.disabled = true;
+
+    try {
+      const response = await fetch(
+        `/api/user/following/${encodeURIComponent(username)}`,
+        {
+          method,
+          headers: {
+            Accept: "application/json"
+          }
+        }
+      );
+
+      if (!response.ok) {
+        action.disabled = false;
+
+        if (accessNote) {
+          accessNote.textContent =
+            "No se ha podido actualizar la relación.";
+        }
+
+        return;
+      }
+
+      await loadPublicProfile();
+    } catch (_) {
+      action.disabled = false;
+
+      if (accessNote) {
+        accessNote.textContent =
+          "No se ha podido actualizar la relación.";
+      }
+    }
+  }
+
   function renderProfile(data) {
     const profile =
       data?.profile &&
@@ -858,6 +1001,8 @@
       showError();
       return;
     }
+
+    renderSocialRelationship(data.viewer);
 
     const name = String(
       profile.name || ""
@@ -969,6 +1114,18 @@
 
   document.addEventListener(
     "DOMContentLoaded",
-    loadPublicProfile
+    () => {
+      const action =
+        $("#publicProfileSocialAction");
+
+      if (action) {
+        action.addEventListener(
+          "click",
+          performSocialAction
+        );
+      }
+
+      loadPublicProfile();
+    }
   );
 })();

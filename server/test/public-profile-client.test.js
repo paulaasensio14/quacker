@@ -349,3 +349,116 @@ test("el contenido público nuevo se sigue construyendo mediante DOM seguro", ()
     );
   }
 });
+
+test(
+  "el cliente público renderiza los estados sociales del visitante",
+  () => {
+    assert.match(
+      clientSource,
+      /function renderSocialRelationship/
+    );
+
+    for (const state of [
+      "none",
+      "requested",
+      "following",
+      "friend",
+      "self"
+    ]) {
+      assert.match(
+        clientSource,
+        new RegExp(`["']${state}["']`),
+        `falta el estado social ${state}`
+      );
+    }
+
+    for (const label of [
+      "Seguir",
+      "Solicitar seguir",
+      "Solicitud enviada",
+      "Dejar de seguir",
+      "Tu perfil"
+    ]) {
+      assert.match(
+        clientSource,
+        new RegExp(label),
+        `falta la etiqueta ${label}`
+      );
+    }
+
+    assert.doesNotMatch(
+      clientSource,
+      /label\s*=\s*["'](?:Siguiendo|Amigos)["']/
+    );
+
+    assert.match(
+      clientSource,
+      /viewer\?\.access\s*===\s*["']restricted["']/
+    );
+
+    assert.match(
+      clientSource,
+      /renderSocialRelationship\(data\.viewer\)/
+    );
+  }
+);
+
+test(
+  "el cliente público conecta seguir y dejar de seguir con la API",
+  () => {
+    assert.match(
+      clientSource,
+      /async function performSocialAction/
+    );
+
+    assert.match(
+      clientSource,
+      /\/api\/user\/following\/\$\{encodeURIComponent\(username\)\}/
+    );
+
+    assert.match(
+      clientSource,
+      /method\s*=\s*["']POST["']/
+    );
+
+    assert.match(
+      clientSource,
+      /method\s*=\s*["']DELETE["']/
+    );
+
+    assert.match(
+      clientSource,
+      /\{\s*method,\s*headers:/
+    );
+
+    assert.match(
+      clientSource,
+      /state\s*===\s*["']none["']/
+    );
+
+    assert.match(
+      clientSource,
+      /state\s*===\s*["']following["']/
+    );
+
+    assert.match(
+      clientSource,
+      /state\s*===\s*["']friend["']/
+    );
+
+    assert.match(
+      clientSource,
+      /await loadPublicProfile\(\)/
+    );
+
+    assert.match(
+      clientSource,
+      /publicProfileSocialAction/
+    );
+
+    assert.match(
+      clientSource,
+      /addEventListener\(\s*["']click["']/
+    );
+  }
+);

@@ -205,6 +205,42 @@ test("la página reserva estadísticas, listas públicas, reseñas y actividad",
   }
 });
 
+test("el bloque social público tiene estilos accesibles y responsive", () => {
+  const css = fs.readFileSync(
+    CSS_URL,
+    "utf8"
+  );
+
+  for (const selector of [
+    ".public-profile-social",
+    ".public-profile-social-action",
+    ".public-profile-access-note"
+  ]) {
+    assert.match(
+      css,
+      new RegExp(
+        selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      ),
+      `falta el estilo ${selector}`
+    );
+  }
+
+  assert.match(
+    css,
+    /\.public-profile-social-action:focus-visible/
+  );
+
+  assert.match(
+    css,
+    /\.public-profile-social-action:disabled/
+  );
+
+  assert.match(
+    css,
+    /@media\s*\(max-width:\s*760px\)[\s\S]*\.public-profile-social/
+  );
+});
+
 test("las nuevas secciones tienen estilos propios coherentes con el perfil público", () => {
   const css = fs.readFileSync(
     CSS_URL,
@@ -277,3 +313,28 @@ test("la actividad pública limita su altura con scroll interno", () => {
     /@media\s*\(max-width:\s*760px\)[\s\S]*?\.public-profile-activity-list\s*\{[\s\S]*?max-height:\s*420px;/
   );
 });
+
+test(
+  "la cabecera pública reserva una zona accesible para la relación social",
+  () => {
+    const html = fs.readFileSync(
+      HTML_URL,
+      "utf8"
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileSocial["'][^>]*hidden/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileSocialAction["'][^>]*type=["']button["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileAccessNote["'][^>]*aria-live=["']polite["']/
+    );
+  }
+);
