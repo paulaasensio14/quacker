@@ -1362,24 +1362,28 @@
             </p>
 
             <p class="profile-meta profile-privacy-note" data-i18n="profile_privacy_master_note">
-              Si tu perfil está privado, ninguna de las demás secciones será visible públicamente.
+              Las secciones activadas solo serán visibles para quienes tengan acceso a tu perfil.
             </p>
 
             <form id="profilePrivacyForm">
               <div class="profile-privacy-list">
                 <label class="profile-privacy-row">
                   <span>
-                    <strong data-i18n="profile_privacy_profile_label">Perfil público</strong>
+                    <strong data-i18n="profile_privacy_profile_label">Visibilidad del perfil</strong>
                     <small data-i18n="profile_privacy_profile_help">
-                      Permite que otras personas puedan acceder a tu perfil.
+                      Elige quién puede acceder a tu perfil.
                     </small>
                   </span>
-                  <input
-                    type="checkbox"
-                    data-privacy-field="profile"
-                    aria-label="Perfil público"
+                  <select
+                    data-privacy-field="profileVisibility"
+                    aria-label="Visibilidad del perfil"
                     data-i18n-aria-label="profile_privacy_profile_label"
-                  />
+                  >
+                    <option value="public" data-i18n="profile_privacy_visibility_public">Público</option>
+                    <option value="followers" data-i18n="profile_privacy_visibility_followers">Seguidores</option>
+                    <option value="friends" data-i18n="profile_privacy_visibility_friends">Amigos</option>
+                    <option value="hidden" data-i18n="profile_privacy_visibility_hidden">Oculto</option>
+                  </select>
                 </label>
 
                 <label class="profile-privacy-row">
@@ -1490,6 +1494,37 @@
                 Guardar privacidad
               </button>
             </form>
+          </div>
+
+          <div class="profile-card profile-follow-requests-card" id="profileFollowRequestsCard">
+            <h3
+              class="profile-title"
+              data-i18n="profile_follow_requests_title"
+            >
+              Solicitudes de seguimiento
+            </h3>
+
+            <p
+              class="profile-meta"
+              data-i18n="profile_follow_requests_description"
+            >
+              Gestiona las personas que quieren seguirte.
+            </p>
+
+            <div
+              id="profileFollowRequestsStatus"
+              class="profile-meta"
+              role="status"
+              aria-live="polite"
+              data-i18n="profile_follow_requests_loading"
+            >
+              Cargando solicitudes...
+            </div>
+
+            <div
+              id="profileFollowRequestsList"
+              class="profile-follow-requests-list"
+            ></div>
           </div>
 
           <div class="profile-card profile-favorites-card" id="profileFavoritesCard">

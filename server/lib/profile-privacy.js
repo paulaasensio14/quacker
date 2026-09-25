@@ -1,5 +1,13 @@
+export const PROFILE_VISIBILITIES = Object.freeze([
+  "public",
+  "followers",
+  "friends",
+  "hidden"
+]);
+
 export const DEFAULT_PROFILE_PRIVACY = Object.freeze({
   profile: false,
+  profileVisibility: "hidden",
   activity: false,
   library: false,
   lists: false,
@@ -16,8 +24,21 @@ export function normalizeProfilePrivacy(value) {
       ? value
       : {};
 
+  const requestedVisibility =
+    typeof source.profileVisibility === "string"
+      ? source.profileVisibility.trim().toLowerCase()
+      : "";
+
+  const profileVisibility =
+    PROFILE_VISIBILITIES.includes(requestedVisibility)
+      ? requestedVisibility
+      : source.profile === true
+        ? "public"
+        : "hidden";
+
   return {
-    profile: source.profile === true,
+    profile: profileVisibility === "public",
+    profileVisibility,
     activity: source.activity === true,
     library: source.library === true,
     lists: source.lists === true,

@@ -915,3 +915,514 @@ test("las estadísticas se omiten por completo si su permiso no está activo", (
     false
   );
 });
+
+test(
+  "un perfil followers sin acceso devuelve solo la identidad mínima",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio que no debe mostrarse todavía",
+          avatar: "assets/img/avatars/avatar-1.png"
+        },
+        privacy: {
+          profileVisibility: "followers",
+          favorites: true,
+          activity: true,
+          lists: true,
+          reviews: true,
+          stats: true
+        },
+        favorites: {
+          pelicula: [],
+          serie: [],
+          game: [],
+          book: []
+        },
+        following: []
+      },
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: []
+      }
+    };
+
+    assert.deepEqual(
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      ),
+      {
+        profile: {
+          name: "Paula",
+          username: "paula",
+          avatar:
+            "assets/img/avatars/avatar-1.png"
+        },
+        viewer: {
+          access: "restricted",
+          state: "none"
+        }
+      }
+    );
+  }
+);
+
+test(
+  "un seguidor aceptado obtiene acceso completo a un perfil followers",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio visible para seguidores",
+          avatar: "assets/img/avatars/avatar-1.png"
+        },
+        privacy: {
+          profileVisibility: "followers",
+          favorites: false,
+          activity: false,
+          lists: false,
+          reviews: false,
+          stats: false
+        },
+        following: []
+      },
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: [
+          "u_target"
+        ]
+      }
+    };
+
+    assert.deepEqual(
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      ),
+      {
+        profile: {
+          name: "Paula",
+          username: "paula",
+          bio: "Bio visible para seguidores",
+          avatar:
+            "assets/img/avatars/avatar-1.png"
+        },
+        viewer: {
+          access: "full",
+          state: "following"
+        }
+      }
+    );
+  }
+);
+
+test(
+  "un seguimiento mutuo obtiene acceso completo a un perfil friends",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio visible solo para amigos",
+          avatar: "assets/img/avatars/avatar-1.png"
+        },
+        privacy: {
+          profileVisibility: "friends",
+          favorites: false,
+          activity: false,
+          lists: false,
+          reviews: false,
+          stats: false
+        },
+        following: [
+          "u_viewer"
+        ]
+      },
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: [
+          "u_target"
+        ]
+      }
+    };
+
+    assert.deepEqual(
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      ),
+      {
+        profile: {
+          name: "Paula",
+          username: "paula",
+          bio: "Bio visible solo para amigos",
+          avatar:
+            "assets/img/avatars/avatar-1.png"
+        },
+        viewer: {
+          access: "full",
+          state: "friend"
+        }
+      }
+    );
+  }
+);
+
+test(
+  "el propietario obtiene acceso completo a su propio perfil restringido",
+  () => {
+    const users = {
+      u_owner: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio privada para visitantes",
+          avatar: "assets/img/avatars/avatar-1.png"
+        },
+        privacy: {
+          profileVisibility: "friends",
+          favorites: false,
+          activity: false,
+          lists: false,
+          reviews: false,
+          stats: false
+        },
+        following: []
+      }
+    };
+
+    assert.deepEqual(
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_owner"
+        }
+      ),
+      {
+        profile: {
+          name: "Paula",
+          username: "paula",
+          bio: "Bio privada para visitantes",
+          avatar:
+            "assets/img/avatars/avatar-1.png"
+        },
+        viewer: {
+          access: "full",
+          state: "self"
+        }
+      }
+    );
+  }
+);
+
+test(
+  "seguir en una sola dirección no da acceso completo a un perfil friends",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio solo para amigos",
+          avatar: "assets/img/avatars/avatar-1.png"
+        },
+        privacy: {
+          profileVisibility: "friends",
+          favorites: true,
+          activity: true,
+          lists: true,
+          reviews: true,
+          stats: true
+        },
+        following: []
+      },
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: [
+          "u_target"
+        ]
+      }
+    };
+
+    assert.deepEqual(
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      ),
+      {
+        profile: {
+          name: "Paula",
+          username: "paula",
+          avatar:
+            "assets/img/avatars/avatar-1.png"
+        },
+        viewer: {
+          access: "restricted",
+          state: "following"
+        }
+      }
+    );
+  }
+);
+
+test(
+  "un perfil restringido informa de una solicitud pendiente al visitante",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio restringida",
+          avatar: "assets/img/avatars/avatar-1.png"
+        },
+        privacy: {
+          profileVisibility: "followers"
+        },
+        following: [],
+        followRequests: [
+          "u_viewer"
+        ]
+      },
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: []
+      }
+    };
+
+    assert.deepEqual(
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      ),
+      {
+        profile: {
+          name: "Paula",
+          username: "paula",
+          avatar:
+            "assets/img/avatars/avatar-1.png"
+        },
+        viewer: {
+          access: "restricted",
+          state: "requested"
+        }
+      }
+    );
+  }
+);
+
+test(
+  "un visitante autenticado sin relación recibe viewer none",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio restringida",
+          avatar: ""
+        },
+        privacy: {
+          profileVisibility: "followers"
+        },
+        following: [],
+        followRequests: []
+      },
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: []
+      }
+    };
+
+    const result =
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      );
+
+    assert.deepEqual(
+      result.viewer,
+      {
+        access: "restricted",
+        state: "none"
+      }
+    );
+  }
+);
+
+test(
+  "un seguidor aceptado recibe viewer following",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio",
+          avatar: ""
+        },
+        privacy: {
+          profileVisibility: "followers"
+        },
+        following: [],
+        followRequests: []
+      },
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: [
+          "u_target"
+        ]
+      }
+    };
+
+    const result =
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      );
+
+    assert.deepEqual(
+      result.viewer,
+      {
+        access: "full",
+        state: "following"
+      }
+    );
+  }
+);
+
+test(
+  "un seguimiento mutuo recibe viewer friend",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio",
+          avatar: ""
+        },
+        privacy: {
+          profileVisibility: "friends"
+        },
+        following: [
+          "u_viewer"
+        ],
+        followRequests: []
+      },
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: [
+          "u_target"
+        ]
+      }
+    };
+
+    const result =
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      );
+
+    assert.deepEqual(
+      result.viewer,
+      {
+        access: "full",
+        state: "friend"
+      }
+    );
+  }
+);
+
+test(
+  "el propietario recibe viewer self",
+  () => {
+    const users = {
+      u_owner: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio",
+          avatar: ""
+        },
+        privacy: {
+          profileVisibility: "friends"
+        },
+        following: [],
+        followRequests: []
+      }
+    };
+
+    const result =
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_owner"
+        }
+      );
+
+    assert.deepEqual(
+      result.viewer,
+      {
+        access: "full",
+        state: "self"
+      }
+    );
+  }
+);

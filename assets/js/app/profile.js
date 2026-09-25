@@ -19,7 +19,6 @@ const ProfileModule = (() => {
   let isBound = false;
   let pendingAvatarDataUrl = null;
   const PRIVACY_FIELDS = Object.freeze([
-    "profile",
     "activity",
     "library",
     "lists",
@@ -932,21 +931,34 @@ const ProfileModule = (() => {
   }
 
   function getPrivacyFormData() {
-    return PRIVACY_FIELDS.reduce((privacy, field) => {
-      const input = document.querySelector(
-        `[data-privacy-field="${field}"]`
-      );
+    const visibilitySelect = document.querySelector(
+      '[data-privacy-field="profileVisibility"]'
+    );
 
-      privacy[field] = input?.checked === true;
-      return privacy;
-    }, {});
+    return PRIVACY_FIELDS.reduce(
+      (privacy, field) => {
+        const input = document.querySelector(
+          `[data-privacy-field="${field}"]`
+        );
+
+        privacy[field] = input?.checked === true;
+        return privacy;
+      },
+      {
+        profileVisibility:
+          visibilitySelect?.value || "hidden"
+      }
+    );
   }
 
   function samePrivacy(a, b) {
     if (!a || !b) return true;
 
-    return PRIVACY_FIELDS.every(
-      (field) => a[field] === b[field]
+    return (
+      a.profileVisibility === b.profileVisibility &&
+      PRIVACY_FIELDS.every(
+        (field) => a[field] === b[field]
+      )
     );
   }
 
@@ -961,6 +973,15 @@ const ProfileModule = (() => {
   }
 
   function renderPrivacyForm(privacy = {}) {
+    const visibilitySelect = document.querySelector(
+      '[data-privacy-field="profileVisibility"]'
+    );
+
+    if (visibilitySelect) {
+      visibilitySelect.value =
+        privacy.profileVisibility || "hidden";
+    }
+
     for (const field of PRIVACY_FIELDS) {
       const input = document.querySelector(
         `[data-privacy-field="${field}"]`
@@ -972,17 +993,25 @@ const ProfileModule = (() => {
     }
   }
 
+  function normalizePrivacyFormState(privacy = {}) {
+    return PRIVACY_FIELDS.reduce(
+      (state, field) => {
+        state[field] = privacy?.[field] === true;
+        return state;
+      },
+      {
+        profileVisibility:
+          privacy?.profileVisibility || "hidden"
+      }
+    );
+  }
+
   async function loadPrivacyIntoForm() {
     try {
       const privacy = await ApiClient.getUserPrivacy();
 
-      initialPrivacy = PRIVACY_FIELDS.reduce(
-        (state, field) => {
-          state[field] = privacy?.[field] === true;
-          return state;
-        },
-        {}
-      );
+      initialPrivacy =
+        normalizePrivacyFormState(privacy);
 
       renderPrivacyForm(initialPrivacy);
       showPrivacyErrors([]);
@@ -1377,17 +1406,253 @@ const ProfileModule = (() => {
   }
 
 
+  function resolveFollowRequestAvatarSrc(avatarUrl) {
+    const safeAvatar = String(avatarUrl || "").trim();
+
+    if (!safeAvatar) return DEFAULT_AVATAR_SRC;
+
+    if (
+      safeAvatar.startsWith("https://") ||
+      safeAvatar.startsWith("/assets/") ||
+      safeAvatar.startsWith("assets/") ||
+      /^data:image\/(?:jpeg|png|webp|gif);/i.test(safeAvatar)
+    ) {
+      return safeAvatar;
+    }
+
+    return DEFAULT_AVATAR_SRC;
+  }
+
+  function renderFollowRequests(requests = []) {
+    const list = $("#profileFollowRequestsList");
+    const status = $("#profileFollowRequestsStatus");
+
+    if (!list) return;
+
+    list.replaceChildren();
+
+    const safeRequests = (
+      Array.isArray(requests) ? requests : []
+    ).filter((request) => {
+      return String(request?.username || "").trim();
+    });
+
+    if (safeRequests.length === 0) {
+      if (status) {
+        status.textContent =
+          t("profile_follow_requests_empty");
+      }
+      return;
+    }
+
+    if (status) {
+      status.textContent = "";
+    }
+
+    for (const request of safeRequests) {
+      const username = String(
+        request.username || ""
+      )
+        .trim()
+        .replace(/^@/, "")
+        .toLowerCase();
+
+      const row = document.createElement("article");
+      row.className = "profile-follow-request-row";
+
+      const identity = document.createElement("div");
+      identity.className =
+        "profile-follow-request-identity";
+
+      const avatar = document.createElement("img");
+      avatar.className =
+        "profile-follow-request-avatar";
+      avatar.src = resolveFollowRequestAvatarSrc(
+        request.avatar
+      );
+      avatar.alt = "";
+      avatar.setAttribute("aria-hidden", "true");
+
+      const text = document.createElement("div");
+      text.className =
+        "profile-follow-request-text";
+
+      const name = document.createElement("strong");
+      name.className =
+        "profile-follow-request-name";
+      name.textContent =
+        String(request.name || "").trim() ||
+        `@${username}`;
+
+      const handle = document.createElement("span");
+      handle.className =
+        "profile-follow-request-handle";
+      handle.textContent = `@${username}`;
+
+      text.append(name, handle);
+      identity.append(avatar, text);
+
+      const actions = document.createElement("div");
+      actions.className =
+        "profile-follow-request-actions";
+
+      const acceptButton =
+        document.createElement("button");
+      acceptButton.type = "button";
+      acceptButton.className =
+        "btn-primary profile-follow-request-action";
+      acceptButton.dataset.followRequestAction =
+        "accept";
+      acceptButton.dataset.username = username;
+      acceptButton.textContent =
+        t("profile_follow_requests_accept");
+
+      const rejectButton =
+        document.createElement("button");
+      rejectButton.type = "button";
+      rejectButton.className =
+        "profile-follow-request-action profile-follow-request-action--reject";
+      rejectButton.dataset.followRequestAction =
+        "reject";
+      rejectButton.dataset.username = username;
+      rejectButton.textContent =
+        t("profile_follow_requests_reject");
+
+      actions.append(
+        acceptButton,
+        rejectButton
+      );
+
+      row.append(identity, actions);
+      list.append(row);
+    }
+  }
+
+  async function loadFollowRequests() {
+    const status = $("#profileFollowRequestsStatus");
+
+    if (status) {
+      status.textContent =
+        t("profile_follow_requests_loading");
+    }
+
+    try {
+      const requests =
+        await ApiClient.getFollowRequests();
+
+      renderFollowRequests(requests);
+    } catch (err) {
+      console.error(
+        "ProfileModule: failed to load follow requests",
+        err
+      );
+
+      renderFollowRequests([]);
+
+      if (status) {
+        status.textContent =
+          t("profile_follow_requests_load_error");
+      }
+    }
+  }
+
+  function bindFollowRequests() {
+    const list = $("#profileFollowRequestsList");
+
+    if (!list) return;
+
+    list.addEventListener("click", async (event) => {
+      const button = event.target.closest(
+        "[data-follow-request-action]"
+      );
+
+      if (!button || !list.contains(button)) {
+        return;
+      }
+
+      const action = String(
+        button.dataset.followRequestAction || ""
+      ).trim();
+
+      const username = String(
+        button.dataset.username || ""
+      ).trim();
+
+      if (
+        !username ||
+        !["accept", "reject"].includes(action)
+      ) {
+        return;
+      }
+
+      const row = button.closest(
+        ".profile-follow-request-row"
+      );
+
+      const actionButtons = row
+        ? row.querySelectorAll(
+            "[data-follow-request-action]"
+          )
+        : [button];
+
+      for (const actionButton of actionButtons) {
+        actionButton.disabled = true;
+      }
+
+      const status = $("#profileFollowRequestsStatus");
+
+      if (status) {
+        status.textContent = "";
+      }
+
+      try {
+        if (action === "accept") {
+          await ApiClient.acceptFollowRequest(
+            username
+          );
+        } else {
+          await ApiClient.rejectFollowRequest(
+            username
+          );
+        }
+
+        await loadFollowRequests();
+      } catch (err) {
+        console.error(
+          "ProfileModule: failed to update follow request",
+          err
+        );
+
+        if (status) {
+          status.textContent =
+            t("profile_follow_requests_update_error");
+        }
+
+        for (const actionButton of actionButtons) {
+          actionButton.disabled = false;
+        }
+      }
+    });
+  }
+
   function bindPrivacyForm() {
     const form = $("#profilePrivacyForm");
     const saveBtn = $("#profilePrivacySaveBtn");
 
     if (!form) return;
 
-    for (const field of PRIVACY_FIELDS) {
-      const input = document.querySelector(
-        `[data-privacy-field="${field}"]`
-      );
+    const privacyInputs = [
+      document.querySelector(
+        '[data-privacy-field="profileVisibility"]'
+      ),
+      ...PRIVACY_FIELDS.map((field) =>
+        document.querySelector(
+          `[data-privacy-field="${field}"]`
+        )
+      )
+    ];
 
+    for (const input of privacyInputs) {
       if (!input) continue;
 
       input.addEventListener("change", () => {
@@ -1410,13 +1675,8 @@ const ProfileModule = (() => {
         const updated =
           await ApiClient.updateUserPrivacy(payload);
 
-        initialPrivacy = PRIVACY_FIELDS.reduce(
-          (state, field) => {
-            state[field] = updated?.[field] === true;
-            return state;
-          },
-          {}
-        );
+        initialPrivacy =
+          normalizePrivacyFormState(updated);
 
         renderPrivacyForm(initialPrivacy);
         showPrivacyErrors([]);
@@ -1547,6 +1807,7 @@ const ProfileModule = (() => {
       bindAvatarPicker();
       bindDirtyTracking();
       bindPrivacyForm();
+      bindFollowRequests();
       bindFavoriteActions();
       bindFavoritePicker();
       bindOpinionsNavigation();
@@ -1558,6 +1819,7 @@ const ProfileModule = (() => {
     const initialLoads = [
       loadProfileIntoForm(),
       loadPrivacyIntoForm(),
+      loadFollowRequests(),
       loadFavoritesIntoProfile(),
       loadOpinionsSummary()
     ];
@@ -1573,6 +1835,7 @@ const ProfileModule = (() => {
     await Promise.all([
       loadProfileIntoForm(),
       loadPrivacyIntoForm(),
+      loadFollowRequests(),
       loadFavoritesIntoProfile(),
       loadOpinionsSummary()
     ]);

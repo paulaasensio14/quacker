@@ -755,3 +755,1488 @@ test(
     }
   }
 );
+
+test(
+  "un perfil followers recibe una solicitud sin crear following todavía",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const followerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "week13-requester@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "Week 13 Requester",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        followerRegistration.statusCode,
+        200
+      );
+
+      const followerCookie =
+        sessionCookie(
+          followerRegistration
+        );
+
+      const followerUserId =
+        followerRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        followerUserId
+      );
+
+      const targetRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "week13-followers-target@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "Week 13 Followers Target",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        targetRegistration.statusCode,
+        200
+      );
+
+      const targetCookie =
+        sessionCookie(
+          targetRegistration
+        );
+
+      const targetUserId =
+        targetRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        targetUserId
+      );
+
+      const targetProfileUpdate =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              handle:
+                "@w13_followers"
+            }
+          }
+        );
+
+      assert.equal(
+        targetProfileUpdate.statusCode,
+        200
+      );
+
+      const targetPrivacyUpdate =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              profileVisibility:
+                "followers"
+            }
+          }
+        );
+
+      assert.equal(
+        targetPrivacyUpdate.statusCode,
+        200
+      );
+
+      const requestFollow =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_followers`,
+          {
+            method: "POST",
+            cookie:
+              followerCookie
+          }
+        );
+
+      assert.equal(
+        requestFollow.statusCode,
+        202
+      );
+
+      assert.deepEqual(
+        requestFollow.json,
+        {
+          following: false,
+          requested: true
+        }
+      );
+
+      const persistedDb =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persistedDb
+          .users[followerUserId]
+          .following,
+        [],
+        "una solicitud pendiente no debe crear following"
+      );
+
+      assert.deepEqual(
+        persistedDb
+          .users[targetUserId]
+          .followRequests,
+        [
+          followerUserId
+        ],
+        "la solicitud debe persistir en el usuario destinatario"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "un perfil friends recibe una sola solicitud pendiente",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const requesterRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-friends-requester@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Friends Requester",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterRegistration.statusCode,
+        200
+      );
+
+      const requesterCookie =
+        sessionCookie(
+          requesterRegistration
+        );
+
+      const requesterUserId =
+        requesterRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        requesterUserId
+      );
+
+      const targetRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-friends-target@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Friends Target",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        targetRegistration.statusCode,
+        200
+      );
+
+      const targetCookie =
+        sessionCookie(
+          targetRegistration
+        );
+
+      const targetUserId =
+        targetRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        targetUserId
+      );
+
+      const profileUpdate =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              handle:
+                "@w13_friends"
+            }
+          }
+        );
+
+      assert.equal(
+        profileUpdate.statusCode,
+        200
+      );
+
+      const privacyUpdate =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              profileVisibility:
+                "friends"
+            }
+          }
+        );
+
+      assert.equal(
+        privacyUpdate.statusCode,
+        200
+      );
+
+      const firstRequest =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_friends`,
+          {
+            method: "POST",
+            cookie:
+              requesterCookie
+          }
+        );
+
+      assert.equal(
+        firstRequest.statusCode,
+        202
+      );
+
+      assert.deepEqual(
+        firstRequest.json,
+        {
+          following: false,
+          requested: true
+        }
+      );
+
+      const duplicateRequest =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_friends`,
+          {
+            method: "POST",
+            cookie:
+              requesterCookie
+          }
+        );
+
+      assert.equal(
+        duplicateRequest.statusCode,
+        409
+      );
+
+      assert.equal(
+        duplicateRequest.json?.error,
+        "follow_request_exists"
+      );
+
+      const persistedDb =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persistedDb
+          .users[requesterUserId]
+          .following,
+        []
+      );
+
+      assert.deepEqual(
+        persistedDb
+          .users[targetUserId]
+          .followRequests,
+        [
+          requesterUserId
+        ],
+        "la solicitud pendiente no debe duplicarse"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "aceptar una solicitud elimina el pendiente y crea following en el solicitante",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const requesterRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-accept-requester@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Accept Requester",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterRegistration.statusCode,
+        200
+      );
+
+      const requesterCookie =
+        sessionCookie(
+          requesterRegistration
+        );
+
+      const requesterUserId =
+        requesterRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        requesterUserId
+      );
+
+      const requesterProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              requesterCookie,
+            body: {
+              handle:
+                "@w13_requester"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterProfile.statusCode,
+        200
+      );
+
+      const targetRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-accept-target@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Accept Target",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        targetRegistration.statusCode,
+        200
+      );
+
+      const targetCookie =
+        sessionCookie(
+          targetRegistration
+        );
+
+      const targetUserId =
+        targetRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        targetUserId
+      );
+
+      const targetProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              handle:
+                "@w13_target"
+            }
+          }
+        );
+
+      assert.equal(
+        targetProfile.statusCode,
+        200
+      );
+
+      const targetPrivacy =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              profileVisibility:
+                "followers"
+            }
+          }
+        );
+
+      assert.equal(
+        targetPrivacy.statusCode,
+        200
+      );
+
+      const followRequest =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_target`,
+          {
+            method: "POST",
+            cookie:
+              requesterCookie
+          }
+        );
+
+      assert.equal(
+        followRequest.statusCode,
+        202
+      );
+
+      const accept =
+        await requestJson(
+          `${baseUrl}/api/user/follow-requests/w13_requester/accept`,
+          {
+            method: "POST",
+            cookie:
+              targetCookie
+          }
+        );
+
+      assert.equal(
+        accept.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        accept.json,
+        {
+          following: true,
+          requested: false
+        }
+      );
+
+      const persistedDb =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persistedDb
+          .users[targetUserId]
+          .followRequests,
+        [],
+        "la solicitud aceptada debe desaparecer"
+      );
+
+      assert.deepEqual(
+        persistedDb
+          .users[requesterUserId]
+          .following,
+        [
+          targetUserId
+        ],
+        "el solicitante debe pasar a seguir al destinatario"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "rechazar una solicitud elimina el pendiente sin crear following",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const requesterRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-reject-requester@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Reject Requester",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterRegistration.statusCode,
+        200
+      );
+
+      const requesterCookie =
+        sessionCookie(
+          requesterRegistration
+        );
+
+      const requesterUserId =
+        requesterRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        requesterUserId
+      );
+
+      const requesterProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              requesterCookie,
+            body: {
+              handle:
+                "@w13_rejector"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterProfile.statusCode,
+        200
+      );
+
+      const targetRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-reject-target@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Reject Target",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        targetRegistration.statusCode,
+        200
+      );
+
+      const targetCookie =
+        sessionCookie(
+          targetRegistration
+        );
+
+      const targetUserId =
+        targetRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        targetUserId
+      );
+
+      const targetProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              handle:
+                "@w13_reject_target"
+            }
+          }
+        );
+
+      assert.equal(
+        targetProfile.statusCode,
+        200
+      );
+
+      const targetPrivacy =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              profileVisibility:
+                "followers"
+            }
+          }
+        );
+
+      assert.equal(
+        targetPrivacy.statusCode,
+        200
+      );
+
+      const followRequest =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_reject_target`,
+          {
+            method: "POST",
+            cookie:
+              requesterCookie
+          }
+        );
+
+      assert.equal(
+        followRequest.statusCode,
+        202
+      );
+
+      const reject =
+        await requestJson(
+          `${baseUrl}/api/user/follow-requests/w13_rejector`,
+          {
+            method: "DELETE",
+            cookie:
+              targetCookie
+          }
+        );
+
+      assert.equal(
+        reject.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        reject.json,
+        {
+          following: false,
+          requested: false
+        }
+      );
+
+      const persistedDb =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persistedDb
+          .users[targetUserId]
+          .followRequests,
+        [],
+        "la solicitud rechazada debe desaparecer"
+      );
+
+      assert.deepEqual(
+        persistedDb
+          .users[requesterUserId]
+          .following,
+        [],
+        "rechazar no debe crear una relación following"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "seguir directamente tras pasar a public elimina una solicitud pendiente anterior",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const requesterRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-public-transition-requester@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Public Transition Requester",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterRegistration.statusCode,
+        200
+      );
+
+      const requesterCookie =
+        sessionCookie(
+          requesterRegistration
+        );
+
+      const requesterUserId =
+        requesterRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        requesterUserId
+      );
+
+      const requesterProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              requesterCookie,
+            body: {
+              handle:
+                "@w13_transitioner"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterProfile.statusCode,
+        200
+      );
+
+      const targetRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-public-transition-target@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Public Transition Target",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        targetRegistration.statusCode,
+        200
+      );
+
+      const targetCookie =
+        sessionCookie(
+          targetRegistration
+        );
+
+      const targetUserId =
+        targetRegistration.json
+          ?.user?.id;
+
+      assert.ok(
+        targetUserId
+      );
+
+      const targetProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              handle:
+                "@w13_transition"
+            }
+          }
+        );
+
+      assert.equal(
+        targetProfile.statusCode,
+        200
+      );
+
+      const restrict =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              profileVisibility:
+                "followers"
+            }
+          }
+        );
+
+      assert.equal(
+        restrict.statusCode,
+        200
+      );
+
+      const pending =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_transition`,
+          {
+            method: "POST",
+            cookie:
+              requesterCookie
+          }
+        );
+
+      assert.equal(
+        pending.statusCode,
+        202
+      );
+
+      const publish =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              profileVisibility:
+                "public"
+            }
+          }
+        );
+
+      assert.equal(
+        publish.statusCode,
+        200
+      );
+
+      const directFollow =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_transition`,
+          {
+            method: "POST",
+            cookie:
+              requesterCookie
+          }
+        );
+
+      assert.equal(
+        directFollow.statusCode,
+        201
+      );
+
+      const persistedDb =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persistedDb
+          .users[requesterUserId]
+          .following,
+        [
+          targetUserId
+        ]
+      );
+
+      assert.deepEqual(
+        persistedDb
+          .users[targetUserId]
+          .followRequests,
+        [],
+        "el follow directo debe limpiar la solicitud pendiente antigua"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "listar solicitudes recibidas expone solo identidad pública segura",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const requesterRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-inbox-requester@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Inbox Requester",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterRegistration.statusCode,
+        200
+      );
+
+      const requesterCookie =
+        sessionCookie(
+          requesterRegistration
+        );
+
+      const requesterProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              requesterCookie,
+            body: {
+              handle:
+                "@w13_inbox_req"
+            }
+          }
+        );
+
+      assert.equal(
+        requesterProfile.statusCode,
+        200
+      );
+
+      const targetRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w13-inbox-target@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W13 Inbox Target",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        targetRegistration.statusCode,
+        200
+      );
+
+      const targetCookie =
+        sessionCookie(
+          targetRegistration
+        );
+
+      const targetProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              handle:
+                "@w13_inbox"
+            }
+          }
+        );
+
+      assert.equal(
+        targetProfile.statusCode,
+        200
+      );
+
+      const targetPrivacy =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              profileVisibility:
+                "followers"
+            }
+          }
+        );
+
+      assert.equal(
+        targetPrivacy.statusCode,
+        200
+      );
+
+      const followRequest =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_inbox`,
+          {
+            method: "POST",
+            cookie:
+              requesterCookie
+          }
+        );
+
+      assert.equal(
+        followRequest.statusCode,
+        202
+      );
+
+      const anonymousList =
+        await requestJson(
+          `${baseUrl}/api/user/follow-requests`
+        );
+
+      assert.equal(
+        anonymousList.statusCode,
+        401
+      );
+
+      const list =
+        await requestJson(
+          `${baseUrl}/api/user/follow-requests`,
+          {
+            cookie:
+              targetCookie
+          }
+        );
+
+      assert.equal(
+        list.statusCode,
+        200
+      );
+
+      assert.ok(
+        Array.isArray(
+          list.json?.requests
+        )
+      );
+
+      assert.equal(
+        list.json.requests.length,
+        1
+      );
+
+      assert.deepEqual(
+        Object.keys(
+          list.json.requests[0]
+        ).sort(),
+        [
+          "avatar",
+          "name",
+          "username"
+        ]
+      );
+
+      assert.equal(
+        list.json.requests[0].name,
+        "W13 Inbox Requester"
+      );
+
+      assert.equal(
+        list.json.requests[0].username,
+        "w13_inbox_req"
+      );
+
+      assert.equal(
+        typeof list.json.requests[0].avatar,
+        "string"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);

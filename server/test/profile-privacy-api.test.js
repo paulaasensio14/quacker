@@ -150,3 +150,90 @@ test(
     );
   }
 );
+
+test(
+  "PATCH /api/user/privacy reconoce profileVisibility como campo de privacidad",
+  () => {
+    const start = serverSource.indexOf(
+      'app.patch("/api/user/privacy"'
+    );
+
+    assert.notEqual(start, -1);
+
+    const end = serverSource.indexOf(
+      "\napp.",
+      start + 20
+    );
+
+    const block = serverSource.slice(
+      start,
+      end === -1 ? undefined : end
+    );
+
+    assert.match(
+      block,
+      /["']profileVisibility["']/,
+      "PATCH debe reconocer profileVisibility"
+    );
+  }
+);
+
+test(
+  "PATCH /api/user/privacy valida profileVisibility con los valores canónicos",
+  () => {
+    const start = serverSource.indexOf(
+      'app.patch("/api/user/privacy"'
+    );
+
+    assert.notEqual(start, -1);
+
+    const end = serverSource.indexOf(
+      "\napp.",
+      start + 20
+    );
+
+    const block = serverSource.slice(
+      start,
+      end === -1 ? undefined : end
+    );
+
+    assert.match(
+      block,
+      /PROFILE_VISIBILITIES/,
+      "PATCH debe usar los valores canónicos de visibilidad"
+    );
+  }
+);
+
+test(
+  "PATCH /api/user/privacy mantiene compatibilidad con el booleano profile legacy",
+  () => {
+    const start = serverSource.indexOf(
+      'app.patch("/api/user/privacy"'
+    );
+
+    assert.notEqual(start, -1);
+
+    const end = serverSource.indexOf(
+      "\napp.",
+      start + 20
+    );
+
+    const block = serverSource.slice(
+      start,
+      end === -1 ? undefined : end
+    );
+
+    assert.match(
+      block,
+      /profileVisibility/,
+      "PATCH debe gestionar profileVisibility"
+    );
+
+    assert.match(
+      block,
+      /Object\.prototype\.hasOwnProperty\.call\(\s*patch,\s*["']profile["']\s*\)/,
+      "PATCH debe detectar explícitamente el campo profile legacy"
+    );
+  }
+);

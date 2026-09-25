@@ -68,7 +68,8 @@ import {
 } from "./lib/account-validation.js";
 
 import {
-  normalizeProfilePrivacy
+  normalizeProfilePrivacy,
+  PROFILE_VISIBILITIES
 } from "./lib/profile-privacy.js";
 
 import {
@@ -86,7 +87,14 @@ import {
 } from "./lib/following.js";
 
 import {
+  addFollowRequest,
+  normalizeFollowRequests,
+  removeFollowRequest
+} from "./lib/follow-requests.js";
+
+import {
   getPublicProfileByUsername,
+  normalizePublicIdentity,
   normalizePublicUsername
 } from "./lib/public-profile.js";
 
@@ -1958,6 +1966,7 @@ function _getUserBucket(db, userId) {
     opinions: [],
     favorites: normalizeFavorites(),
     following: normalizeFollowing(),
+    followRequests: normalizeFollowRequests(),
     notifications: [],
     explore: {
       dismissed: []
@@ -2005,6 +2014,13 @@ function _getUserBucket(db, userId) {
     }
   );
 
+  db.users[userId].followRequests = normalizeFollowRequests(
+    db.users[userId].followRequests,
+    {
+      ownerUserId: userId
+    }
+  );
+
   db.users[userId].notifications = _normalizeUserNotificationsList(
     db.users[userId].notifications
   );
@@ -2035,7 +2051,7 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
 
-function _findPublicFollowTarget(
+function _findFollowTarget(
   users,
   username
 ) {
@@ -2068,13 +2084,17 @@ function _findPublicFollowTarget(
         bucket?.privacy
       );
 
-    if (privacy.profile !== true) {
+    if (
+      privacy.profileVisibility === "hidden"
+    ) {
       return null;
     }
 
     return {
       userId,
-      bucket
+      bucket,
+      profileVisibility:
+        privacy.profileVisibility
     };
   }
 
@@ -2086,10 +2106,19 @@ app.get("/api/public/users/:username", (req, res) => {
 
   const db = _readDb();
 
+  const viewerUserId =
+    getAuthenticatedUserId(
+      req.session,
+      db.users
+    );
+
   const publicProfile =
     getPublicProfileByUsername(
       db.users,
-      req.params.username
+      req.params.username,
+      {
+        viewerUserId
+      }
     );
 
   if (!publicProfile) {
@@ -2246,6 +2275,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     opinions: [],
     favorites: normalizeFavorites(),
     following: normalizeFollowing(),
+    followRequests: normalizeFollowRequests(),
     notifications: [],
     explore: {
       dismissed: []
@@ -3758,7 +3788,7 @@ app.post(
     }
 
     const target =
-      _findPublicFollowTarget(
+      _findFollowTarget(
         db.users,
         requestedUsername
       );
@@ -3766,6 +3796,60 @@ app.post(
     if (!target) {
       return res.status(404).json({
         error: "not_found"
+      });
+    }
+
+    if (
+      ownerBucket.following.includes(
+        target.userId
+      )
+    ) {
+      return res.status(409).json({
+        error: "already_following"
+      });
+    }
+
+    if (
+      target.profileVisibility ===
+      "followers" ||
+      target.profileVisibility ===
+      "friends"
+    ) {
+      const requestResult =
+        addFollowRequest(
+          target.bucket.followRequests,
+          ownerUserId,
+          {
+            ownerUserId:
+              target.userId
+          }
+        );
+
+      if (!requestResult.ok) {
+        if (
+          requestResult.error ===
+          "follow_request_exists"
+        ) {
+          return res.status(409).json({
+            error:
+              requestResult.error
+          });
+        }
+
+        return res.status(400).json({
+          error:
+            requestResult.error
+        });
+      }
+
+      target.bucket.followRequests =
+        requestResult.followRequests;
+
+      _writeDb(db);
+
+      return res.status(202).json({
+        following: false,
+        requested: true
       });
     }
 
@@ -3795,6 +3879,27 @@ app.post(
 
     ownerBucket.following =
       result.following;
+
+    if (
+      target.bucket.followRequests.includes(
+        ownerUserId
+      )
+    ) {
+      const pendingResult =
+        removeFollowRequest(
+          target.bucket.followRequests,
+          ownerUserId,
+          {
+            ownerUserId:
+              target.userId
+          }
+        );
+
+      if (pendingResult.ok) {
+        target.bucket.followRequests =
+          pendingResult.followRequests;
+      }
+    }
 
     _writeDb(db);
 
@@ -3897,6 +4002,238 @@ app.delete(
   }
 );
 
+app.get(
+  "/api/user/follow-requests",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const ownerUserId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const requests =
+      ownerBucket.followRequests
+        .map((requesterUserId) => {
+          const requesterBucket =
+            db.users[requesterUserId];
+
+          if (!requesterBucket) {
+            return null;
+          }
+
+          const identity =
+            normalizePublicIdentity(
+              requesterBucket.profile
+            );
+
+          if (!identity.username) {
+            return null;
+          }
+
+          return identity;
+        })
+        .filter(Boolean);
+
+    return res.json({
+      requests
+    });
+  }
+);
+
+app.post(
+  "/api/user/follow-requests/:username/accept",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const targetUserId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const targetBucket =
+      _getUserBucket(
+        db,
+        targetUserId
+      );
+
+    const requestedUsername =
+      normalizePublicUsername(
+        req.params.username
+      );
+
+    const requesterEntry =
+      Object.entries(db.users).find(
+        ([, candidateBucket]) =>
+          normalizePublicUsername(
+            candidateBucket
+              ?.profile?.handle
+          ) === requestedUsername
+      );
+
+    const requesterUserId =
+      requesterEntry
+        ? String(
+            requesterEntry[0] || ""
+          ).trim()
+        : "";
+
+    if (
+      !requesterUserId ||
+      !targetBucket.followRequests.includes(
+        requesterUserId
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const requesterBucket =
+      _getUserBucket(
+        db,
+        requesterUserId
+      );
+
+    const followResult =
+      addFollowing(
+        requesterBucket.following,
+        targetUserId,
+        {
+          ownerUserId:
+            requesterUserId
+        }
+      );
+
+    if (
+      !followResult.ok &&
+      followResult.error !==
+        "already_following"
+    ) {
+      return res.status(400).json({
+        error: followResult.error
+      });
+    }
+
+    const requestResult =
+      removeFollowRequest(
+        targetBucket.followRequests,
+        requesterUserId,
+        {
+          ownerUserId:
+            targetUserId
+        }
+      );
+
+    if (!requestResult.ok) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    if (followResult.ok) {
+      requesterBucket.following =
+        followResult.following;
+    }
+
+    targetBucket.followRequests =
+      requestResult.followRequests;
+
+    _writeDb(db);
+
+    return res.json({
+      following: true,
+      requested: false
+    });
+  }
+);
+
+
+app.delete(
+  "/api/user/follow-requests/:username",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const targetUserId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const targetBucket =
+      _getUserBucket(
+        db,
+        targetUserId
+      );
+
+    const requestedUsername =
+      normalizePublicUsername(
+        req.params.username
+      );
+
+    const requesterEntry =
+      Object.entries(db.users).find(
+        ([, candidateBucket]) =>
+          normalizePublicUsername(
+            candidateBucket
+              ?.profile?.handle
+          ) === requestedUsername
+      );
+
+    const requesterUserId =
+      requesterEntry
+        ? String(
+            requesterEntry[0] || ""
+          ).trim()
+        : "";
+
+    if (
+      !requesterUserId ||
+      !targetBucket.followRequests.includes(
+        requesterUserId
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const requestResult =
+      removeFollowRequest(
+        targetBucket.followRequests,
+        requesterUserId,
+        {
+          ownerUserId:
+            targetUserId
+        }
+      );
+
+    if (!requestResult.ok) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    targetBucket.followRequests =
+      requestResult.followRequests;
+
+    _writeDb(db);
+
+    return res.json({
+      following: false,
+      requested: false
+    });
+  }
+);
+
 app.get("/api/user/privacy", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(
@@ -3923,6 +4260,7 @@ app.patch("/api/user/privacy", _requireAuth, (req, res) => {
 
   const allowedFields = new Set([
     "profile",
+    "profileVisibility",
     "activity",
     "library",
     "lists",
@@ -3938,6 +4276,21 @@ app.patch("/api/user/privacy", _requireAuth, (req, res) => {
       });
     }
 
+    if (key === "profileVisibility") {
+      if (
+        typeof patch[key] !== "string" ||
+        !PROFILE_VISIBILITIES.includes(
+          patch[key].trim().toLowerCase()
+        )
+      ) {
+        return res.status(400).json({
+          error: "invalid_privacy_value"
+        });
+      }
+
+      continue;
+    }
+
     if (typeof patch[key] !== "boolean") {
       return res.status(400).json({
         error: "invalid_privacy_value"
@@ -3951,9 +4304,29 @@ app.patch("/api/user/privacy", _requireAuth, (req, res) => {
     req.session.userId
   );
 
+  const normalizedPatch = {
+    ...patch
+  };
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      patch,
+      "profile"
+    ) &&
+    !Object.prototype.hasOwnProperty.call(
+      patch,
+      "profileVisibility"
+    )
+  ) {
+    normalizedPatch.profileVisibility =
+      patch.profile === true
+        ? "public"
+        : "hidden";
+  }
+
   bucket.privacy = normalizeProfilePrivacy({
     ...bucket.privacy,
-    ...patch
+    ...normalizedPatch
   });
 
   _writeDb(db);

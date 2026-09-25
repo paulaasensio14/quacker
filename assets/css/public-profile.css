@@ -171,6 +171,66 @@ body {
   overflow-wrap: anywhere;
 }
 
+.public-profile-social {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.public-profile-social-action {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 18px;
+  border: 1px solid var(--public-accent);
+  border-radius: 999px;
+  background: var(--public-accent);
+  color: #1b1b1b;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease,
+    opacity 140ms ease;
+}
+
+.public-profile-social-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.public-profile-social-action[data-social-state="following"],
+.public-profile-social-action[data-social-state="friend"] {
+  border-color: var(--public-border);
+  background: var(--public-surface-soft);
+  color: var(--public-text);
+}
+
+.public-profile-social-action:focus-visible {
+  outline: 3px solid var(--public-accent);
+  outline-offset: 3px;
+}
+
+.public-profile-social-action:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.public-profile-access-note {
+  margin: 0;
+  color: var(--public-text-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+
 .public-profile-favorites {
   margin-top: 30px;
   padding: 34px;
@@ -521,6 +581,19 @@ body {
   .public-profile-bio {
     margin-left: auto;
     margin-right: auto;
+  }
+
+  .public-profile-social {
+    justify-content: center;
+  }
+
+  .public-profile-social-action {
+    width: min(100%, 280px);
+  }
+
+  .public-profile-access-note {
+    flex-basis: 100%;
+    text-align: center;
   }
 
   .public-profile-favorites,

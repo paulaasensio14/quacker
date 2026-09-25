@@ -51,18 +51,24 @@ function _normalizePublicMediaSource(value) {
   return "";
 }
 
-function _normalizePublicProfile(profile = {}) {
+export function normalizePublicIdentity(profile = {}) {
   return {
     name: String(profile?.name || "").trim(),
     username: normalizePublicUsername(
       profile?.handle
     ),
-    bio: String(profile?.bio || "")
-      .trim()
-      .slice(0, 180),
     avatar: _normalizePublicMediaSource(
       profile?.avatar
     )
+  };
+}
+
+function _normalizePublicProfile(profile = {}) {
+  return {
+    ...normalizePublicIdentity(profile),
+    bio: String(profile?.bio || "")
+      .trim()
+      .slice(0, 180)
   };
 }
 
@@ -537,7 +543,8 @@ function _toPublicStats(library) {
 
 export function getPublicProfileByUsername(
   users,
-  username
+  username,
+  { viewerUserId = "" } = {}
 ) {
   const normalizedUsername =
     normalizePublicUsername(username);
@@ -551,20 +558,27 @@ export function getPublicProfileByUsername(
     return null;
   }
 
-  const userBucket = Object.values(users).find(
-    (candidate) =>
+  const targetEntry = Object.entries(users).find(
+    ([, candidate]) =>
       normalizePublicUsername(
         candidate?.profile?.handle
       ) === normalizedUsername
   );
 
-  if (!userBucket) return null;
+  if (!targetEntry) return null;
+
+  const [
+    targetUserId,
+    userBucket
+  ] = targetEntry;
 
   const privacy = normalizeProfilePrivacy(
     userBucket.privacy
   );
 
-  if (privacy.profile !== true) {
+  if (
+    privacy.profileVisibility === "hidden"
+  ) {
     return null;
   }
 
@@ -576,9 +590,108 @@ export function getPublicProfileByUsername(
     return null;
   }
 
+  const normalizedViewerUserId =
+    String(viewerUserId || "").trim();
+
+  const viewerBucket =
+    normalizedViewerUserId
+      ? users[normalizedViewerUserId]
+      : null;
+
+  const viewerFollowing =
+    Array.isArray(viewerBucket?.following)
+      ? viewerBucket.following
+      : [];
+
+  const viewerFollowsTarget =
+    viewerFollowing.includes(
+      targetUserId
+    );
+
+  const targetFollowing =
+    Array.isArray(userBucket?.following)
+      ? userBucket.following
+      : [];
+
+  const targetFollowRequests =
+    Array.isArray(userBucket?.followRequests)
+      ? userBucket.followRequests
+      : [];
+
+  const hasPendingRequest =
+    normalizedViewerUserId
+      ? targetFollowRequests.includes(
+          normalizedViewerUserId
+        )
+      : false;
+
+  const targetFollowsViewer =
+    normalizedViewerUserId
+      ? targetFollowing.includes(
+          normalizedViewerUserId
+        )
+      : false;
+
+  const isFriend =
+    viewerFollowsTarget &&
+    targetFollowsViewer;
+
+  const isOwner =
+    normalizedViewerUserId ===
+    targetUserId;
+
+  const viewerState =
+    isOwner
+      ? "self"
+      : isFriend
+        ? "friend"
+        : viewerFollowsTarget
+          ? "following"
+          : hasPendingRequest
+            ? "requested"
+            : "none";
+
+  const hasFullAccess =
+    privacy.profileVisibility === "public" ||
+    isOwner ||
+    (
+      privacy.profileVisibility === "followers" &&
+      viewerFollowsTarget
+    ) ||
+    (
+      privacy.profileVisibility === "friends" &&
+      isFriend
+    );
+
+  if (!hasFullAccess) {
+    const restrictedResult = {
+      profile: {
+        name: profile.name,
+        username: profile.username,
+        avatar: profile.avatar
+      }
+    };
+
+    if (normalizedViewerUserId) {
+      restrictedResult.viewer = {
+        access: "restricted",
+        state: viewerState
+      };
+    }
+
+    return restrictedResult;
+  }
+
   const result = {
     profile
   };
+
+  if (normalizedViewerUserId) {
+    result.viewer = {
+      access: "full",
+      state: viewerState
+    };
+  }
 
   if (privacy.favorites === true) {
     result.favorites = _toPublicFavorites(

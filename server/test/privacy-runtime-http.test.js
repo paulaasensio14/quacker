@@ -676,6 +676,7 @@ test(
         initialPrivacy.json,
         {
           profile: false,
+          profileVisibility: "hidden",
           activity: false,
           library: false,
           lists: false,
@@ -1023,6 +1024,7 @@ test(
         privacyAfterAttacks.json,
         {
           profile: false,
+          profileVisibility: "hidden",
           activity: false,
           library: false,
           lists: false,
@@ -1181,6 +1183,451 @@ test(
         profile.json?.avatar,
         dangerousAvatar,
         "un avatar rechazado no debe persistirse"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "el runtime persiste profileVisibility followers y deriva profile de forma segura",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const registration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "runtime-followers-privacy@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "Followers Privacy Runtime",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        registration.statusCode,
+        200
+      );
+
+      const setCookie =
+        registration.headers[
+          "set-cookie"
+        ];
+
+      assert.ok(
+        Array.isArray(setCookie) &&
+          setCookie.length > 0
+      );
+
+      const sessionCookie =
+        setCookie[0].split(";")[0];
+
+      const update =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              sessionCookie,
+            body: {
+              profileVisibility:
+                "followers"
+            }
+          }
+        );
+
+      assert.equal(
+        update.statusCode,
+        200
+      );
+
+      assert.equal(
+        update.json?.privacy
+          ?.profileVisibility,
+        "followers"
+      );
+
+      assert.equal(
+        update.json?.privacy
+          ?.profile,
+        false,
+        "followers no debe convertirse en perfil público legacy"
+      );
+
+      const readBack =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            cookie:
+              sessionCookie
+          }
+        );
+
+      assert.equal(
+        readBack.statusCode,
+        200
+      );
+
+      assert.equal(
+        readBack.json?.profileVisibility,
+        "followers"
+      );
+
+      assert.equal(
+        readBack.json?.profile,
+        false
+      );
+
+      const persistedDb =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      const persistedUser =
+        Object.values(
+          persistedDb.users || {}
+        ).find(
+          (bucket) =>
+            bucket?.profile?.email ===
+            "runtime-followers-privacy@example.test"
+        );
+
+      assert.ok(
+        persistedUser,
+        "el usuario debe existir en la BD temporal"
+      );
+
+      assert.equal(
+        persistedUser.privacy
+          ?.profileVisibility,
+        "followers",
+        "profileVisibility debe quedar persistido en disco"
+      );
+
+      assert.equal(
+        persistedUser.privacy?.profile,
+        false
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "la API pública da acceso completo a un seguidor aceptado de un perfil followers",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const targetRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "runtime-followers-target@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "Runtime Followers Target",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        targetRegistration.statusCode,
+        200
+      );
+
+      const targetCookie =
+        targetRegistration
+          .headers["set-cookie"][0]
+          .split(";")[0];
+
+      const targetProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              handle:
+                "@runtime_followers"
+            }
+          }
+        );
+
+      assert.equal(
+        targetProfile.statusCode,
+        200
+      );
+
+      const targetPrivacy =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              targetCookie,
+            body: {
+              profileVisibility:
+                "followers"
+            }
+          }
+        );
+
+      assert.equal(
+        targetPrivacy.statusCode,
+        200
+      );
+
+      const anonymousProfile =
+        await requestJson(
+          `${baseUrl}/api/public/users/runtime_followers`
+        );
+
+      assert.equal(
+        anonymousProfile.statusCode,
+        200
+      );
+
+      assert.equal(
+        Object.hasOwn(
+          anonymousProfile.json.profile,
+          "bio"
+        ),
+        false,
+        "un visitante sin acceso debe recibir solo la identidad mínima"
+      );
+
+      const viewerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "runtime-followers-viewer@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "Runtime Followers Viewer",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        viewerRegistration.statusCode,
+        200
+      );
+
+      const viewerCookie =
+        viewerRegistration
+          .headers["set-cookie"][0]
+          .split(";")[0];
+
+      const viewerProfile =
+        await requestJson(
+          `${baseUrl}/api/user`,
+          {
+            method: "PATCH",
+            cookie:
+              viewerCookie,
+            body: {
+              handle:
+                "@runtime_viewer"
+            }
+          }
+        );
+
+      assert.equal(
+        viewerProfile.statusCode,
+        200
+      );
+
+      const followRequest =
+        await requestJson(
+          `${baseUrl}/api/user/following/runtime_followers`,
+          {
+            method: "POST",
+            cookie:
+              viewerCookie
+          }
+        );
+
+      assert.equal(
+        followRequest.statusCode,
+        202
+      );
+
+      const accept =
+        await requestJson(
+          `${baseUrl}/api/user/follow-requests/runtime_viewer/accept`,
+          {
+            method: "POST",
+            cookie:
+              targetCookie
+          }
+        );
+
+      assert.equal(
+        accept.statusCode,
+        200
+      );
+
+      const authenticatedProfile =
+        await requestJson(
+          `${baseUrl}/api/public/users/runtime_followers`,
+          {
+            cookie:
+              viewerCookie
+          }
+        );
+
+      assert.equal(
+        authenticatedProfile.statusCode,
+        200
+      );
+
+      assert.equal(
+        Object.hasOwn(
+          authenticatedProfile.json.profile,
+          "bio"
+        ),
+        true,
+        "un seguidor aceptado debe recibir el perfil completo"
+      );
+
+      assert.deepEqual(
+        authenticatedProfile.json.viewer,
+        {
+          access: "full",
+          state: "following"
+        },
+        "la API debe informar a la UI de la relación social del visitante"
       );
     } finally {
       await stopTestServer(
