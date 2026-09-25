@@ -93,6 +93,11 @@ import {
 } from "./lib/follow-requests.js";
 
 import {
+  addRecommendation,
+  normalizeRecommendations
+} from "./lib/recommendations.js";
+
+import {
   getPublicProfileByUsername,
   getPublicSocialGraphByUsername,
   normalizePublicIdentity,
@@ -1968,6 +1973,7 @@ function _getUserBucket(db, userId) {
     favorites: normalizeFavorites(),
     following: normalizeFollowing(),
     followRequests: normalizeFollowRequests(),
+    recommendations: normalizeRecommendations(),
     notifications: [],
     explore: {
       dismissed: []
@@ -2020,6 +2026,10 @@ function _getUserBucket(db, userId) {
     {
       ownerUserId: userId
     }
+  );
+
+  db.users[userId].recommendations = normalizeRecommendations(
+    db.users[userId].recommendations
   );
 
   db.users[userId].notifications = _normalizeUserNotificationsList(
@@ -2357,6 +2367,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     favorites: normalizeFavorites(),
     following: normalizeFollowing(),
     followRequests: normalizeFollowRequests(),
+    recommendations: normalizeRecommendations(),
     notifications: [],
     explore: {
       dismissed: []
@@ -3833,6 +3844,144 @@ app.patch("/api/user", _requireAuth, (req, res) => {
 
   res.json({ user: bucket.profile });
 });
+
+app.get(
+  "/api/user/recommendations",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    return res.json({
+      recommendations:
+        ownerBucket.recommendations
+    });
+  }
+);
+
+app.post(
+  "/api/user/recommendations/:username",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const requestedUsername =
+      normalizePublicUsername(
+        req.params.username
+      );
+
+    const ownerUsername =
+      normalizePublicUsername(
+        ownerBucket?.profile?.handle
+      );
+
+    if (
+      requestedUsername &&
+      ownerUsername &&
+      requestedUsername === ownerUsername
+    ) {
+      return res.status(400).json({
+        error: "cannot_recommend_self"
+      });
+    }
+
+    const target =
+      _findFollowTarget(
+        db.users,
+        requestedUsername
+      );
+
+    if (!target) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const targetBucket =
+      _getUserBucket(
+        db,
+        target.userId
+      );
+
+    const areFriends =
+      ownerBucket.following.includes(
+        target.userId
+      ) &&
+      targetBucket.following.includes(
+        ownerUserId
+      );
+
+    if (!areFriends) {
+      return res.status(403).json({
+        error: "friendship_required"
+      });
+    }
+
+    const data = req.body || {};
+
+    const result =
+      addRecommendation(
+        targetBucket.recommendations,
+        {
+          id: _uid(),
+          fromUserId: ownerUserId,
+          contentType: data.contentType,
+          source: data.source,
+          externalId: data.externalId,
+          itemSnapshot: data.itemSnapshot,
+          message: data.message,
+          createdAt:
+            new Date().toISOString()
+        },
+        {
+          ownerUserId:
+            target.userId
+        }
+      );
+
+    if (!result.ok) {
+      if (
+        result.error ===
+        "recommendation_already_exists"
+      ) {
+        return res.status(409).json({
+          error: result.error
+        });
+      }
+
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    targetBucket.recommendations =
+      result.recommendations;
+
+    _writeDb(db);
+
+    return res.status(201).json({
+      recommendation:
+        result.recommendation
+    });
+  }
+);
 
 app.post(
   "/api/user/following/:username",
