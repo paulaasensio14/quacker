@@ -132,6 +132,39 @@
             ></p>
 
             <div
+              id="publicProfileSocialStats"
+              class="public-profile-social-stats"
+              hidden
+            >
+              <button
+                id="publicProfileFollowersButton"
+                class="public-profile-social-stat"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="publicProfileConnectionsModal"
+              >
+                <strong id="publicProfileFollowersCount">0</strong>
+                <span>seguidores</span>
+              </button>
+
+              <span
+                class="public-profile-social-separator"
+                aria-hidden="true"
+              >·</span>
+
+              <button
+                id="publicProfileFollowingButton"
+                class="public-profile-social-stat"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="publicProfileConnectionsModal"
+              >
+                <strong id="publicProfileFollowingCount">0</strong>
+                <span>siguiendo</span>
+              </button>
+            </div>
+
+            <div
               id="publicProfileSocial"
               class="public-profile-social"
               hidden
@@ -386,6 +419,50 @@
 
     </main>
   </div>
+
+  <div
+    id="publicProfileConnectionsModal"
+    class="modal-overlay public-profile-connections-modal"
+    aria-hidden="true"
+  >
+    <div
+      class="modal-card public-profile-connections-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="publicProfileConnectionsModalTitle"
+    >
+      <div class="public-profile-connections-header">
+        <h2 id="publicProfileConnectionsModalTitle">
+          Seguidores
+        </h2>
+
+        <button
+          id="publicProfileConnectionsClose"
+          class="public-profile-connections-close"
+          type="button"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+      </div>
+
+      <p
+        id="publicProfileConnectionsStatus"
+        class="public-profile-connections-status"
+        aria-live="polite"
+      ></p>
+
+      <div
+        id="publicProfileConnectionsList"
+        class="public-profile-connections-list"
+      ></div>
+    </div>
+  </div>
+
+  <script
+    src="/assets/js/app/ui-modal.js"
+    defer
+  ></script>
 
   <script
     src="/assets/js/app/public-profile.js"

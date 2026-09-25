@@ -12,6 +12,7 @@
   ]);
 
   let publicFavorites = {};
+  let socialConnectionsRequestId = 0;
 
   function $(selector) {
     return document.querySelector(selector);
@@ -847,6 +848,297 @@
     section.hidden = false;
   }
 
+  function renderSocialStats(social) {
+    const container =
+      $("#publicProfileSocialStats");
+
+    const followersCount =
+      $("#publicProfileFollowersCount");
+
+    const followingCount =
+      $("#publicProfileFollowingCount");
+
+    if (
+      !container ||
+      !followersCount ||
+      !followingCount
+    ) {
+      return;
+    }
+
+    if (
+      !social ||
+      typeof social !== "object" ||
+      Array.isArray(social)
+    ) {
+      container.hidden = true;
+      followersCount.textContent = "0";
+      followingCount.textContent = "0";
+      return;
+    }
+
+    const normalizeCount = (value) => {
+      const number = Number(value);
+
+      return Number.isFinite(number)
+        ? Math.max(0, Math.trunc(number))
+        : 0;
+    };
+
+    followersCount.textContent =
+      String(
+        normalizeCount(social.followersCount)
+      );
+
+    followingCount.textContent =
+      String(
+        normalizeCount(social.followingCount)
+      );
+
+    container.hidden = false;
+  }
+
+  function renderSocialConnections(users) {
+    const container =
+      $("#publicProfileConnectionsList");
+
+    if (!container) return;
+
+    container.replaceChildren();
+
+    const safeUsers =
+      Array.isArray(users)
+        ? users
+        : [];
+
+    let rendered = 0;
+
+    for (const user of safeUsers) {
+      const username = String(
+        user?.username || ""
+      ).trim();
+
+      if (!username) continue;
+
+      const link =
+        document.createElement("a");
+
+      link.className =
+        "public-profile-connection";
+
+      link.href =
+        `/u/${encodeURIComponent(username)}`;
+
+      const avatar =
+        document.createElement("img");
+
+      avatar.className =
+        "public-profile-connection-avatar";
+
+      avatar.src =
+        resolveAvatarSrc(user?.avatar);
+
+      avatar.alt = "";
+
+      avatar.loading = "lazy";
+      avatar.decoding = "async";
+
+      const identity =
+        document.createElement("span");
+
+      const name =
+        document.createElement("span");
+
+      name.className =
+        "public-profile-connection-name";
+
+      name.textContent =
+        String(user?.name || "").trim() ||
+        `@${username}`;
+
+      const handle =
+        document.createElement("span");
+
+      handle.className =
+        "public-profile-connection-username";
+
+      handle.textContent =
+        `@${username}`;
+
+      identity.append(name, handle);
+      link.append(avatar, identity);
+      container.append(link);
+
+      rendered += 1;
+    }
+
+    if (!rendered) {
+      const empty =
+        document.createElement("p");
+
+      empty.className =
+        "public-profile-section-empty";
+
+      empty.textContent =
+        "No hay usuarios que mostrar.";
+
+      container.append(empty);
+    }
+  }
+
+  function setSocialConnectionsStatus(message) {
+    const status =
+      $("#publicProfileConnectionsStatus");
+
+    if (status) {
+      status.textContent = message;
+    }
+  }
+
+  async function loadSocialConnections(kind) {
+    if (
+      !["followers", "following"].includes(kind)
+    ) {
+      return;
+    }
+
+    const username =
+      getUsernameFromPath();
+
+    const modal =
+      $("#publicProfileConnectionsModal");
+
+    const title =
+      $("#publicProfileConnectionsModalTitle");
+
+    const list =
+      $("#publicProfileConnectionsList");
+
+    if (
+      !username ||
+      !modal ||
+      !title ||
+      !list
+    ) {
+      return;
+    }
+
+    const requestId =
+      ++socialConnectionsRequestId;
+
+    title.textContent =
+      kind === "followers"
+        ? "Seguidores"
+        : "Siguiendo";
+
+    list.replaceChildren();
+
+    setSocialConnectionsStatus(
+      "Cargando…"
+    );
+
+    if (window.UIModal?.open) {
+      window.UIModal.open(
+        modal,
+        {
+          initialFocusSelector:
+            "#publicProfileConnectionsClose"
+        }
+      );
+    }
+
+    try {
+      const response = await fetch(
+        `/api/public/users/${encodeURIComponent(username)}/${kind}`,
+        {
+          headers: {
+            Accept: "application/json"
+          },
+          cache: "no-store"
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "social_connections_request_failed"
+        );
+      }
+
+      const data =
+        await response.json();
+
+      if (
+        requestId !==
+        socialConnectionsRequestId
+      ) {
+        return;
+      }
+
+      const users =
+        Array.isArray(data?.[kind])
+          ? data[kind]
+          : [];
+
+      setSocialConnectionsStatus("");
+      renderSocialConnections(users);
+    } catch (_) {
+      if (
+        requestId !==
+        socialConnectionsRequestId
+      ) {
+        return;
+      }
+
+      list.replaceChildren();
+
+      setSocialConnectionsStatus(
+        "No hemos podido cargar este listado."
+      );
+    }
+  }
+
+  function setupSocialConnections() {
+    const modal =
+      $("#publicProfileConnectionsModal");
+
+    const followersButton =
+      $("#publicProfileFollowersButton");
+
+    const followingButton =
+      $("#publicProfileFollowingButton");
+
+    if (window.UIModal?.bind && modal) {
+      window.UIModal.bind(
+        "publicProfileConnectionsModal",
+        {
+          closeSelectors: [
+            "#publicProfileConnectionsClose"
+          ],
+          initialFocusSelector:
+            "#publicProfileConnectionsClose"
+        }
+      );
+    }
+
+    if (followersButton) {
+      followersButton.addEventListener(
+        "click",
+        () => {
+          loadSocialConnections("followers");
+        }
+      );
+    }
+
+    if (followingButton) {
+      followingButton.addEventListener(
+        "click",
+        () => {
+          loadSocialConnections("following");
+        }
+      );
+    }
+  }
+
   function renderSocialRelationship(viewer) {
     const container =
       $("#publicProfileSocial");
@@ -1003,6 +1295,7 @@
     }
 
     renderSocialRelationship(data.viewer);
+    renderSocialStats(data.social);
 
     const name = String(
       profile.name || ""
@@ -1125,6 +1418,7 @@
         );
       }
 
+      setupSocialConnections();
       loadPublicProfile();
     }
   );

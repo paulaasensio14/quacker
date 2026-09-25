@@ -2240,3 +2240,885 @@ test(
     }
   }
 );
+
+async function registerSocialGraphUser(
+  baseUrl,
+  {
+    email,
+    name,
+    handle,
+    profileVisibility = "public"
+  }
+) {
+  const registration = await requestJson(
+    `${baseUrl}/api/auth/register`,
+    {
+      method: "POST",
+      body: {
+        email,
+        password: "runtime-pass-123",
+        name,
+        language: "es"
+      }
+    }
+  );
+
+  assert.equal(registration.statusCode, 200);
+
+  const cookie = sessionCookie(registration);
+
+  const profileUpdate = await requestJson(
+    `${baseUrl}/api/user`,
+    {
+      method: "PATCH",
+      cookie,
+      body: {
+        handle: `@${handle}`
+      }
+    }
+  );
+
+  assert.equal(profileUpdate.statusCode, 200);
+
+  const privacyUpdate = await requestJson(
+    `${baseUrl}/api/user/privacy`,
+    {
+      method: "PATCH",
+      cookie,
+      body: {
+        profileVisibility
+      }
+    }
+  );
+
+  assert.equal(privacyUpdate.statusCode, 200);
+
+  return {
+    cookie,
+    userId: registration.json?.user?.id
+  };
+}
+
+test(
+  "los listados públicos derivan seguidores y siguiendo sin exponer perfiles ocultos",
+  {
+    timeout: 20000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const target =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-target@example.test",
+            name:
+              "W13 Graph Target",
+            handle:
+              "w13_graph_target"
+          }
+        );
+
+      const visibleFollower =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-follower@example.test",
+            name:
+              "W13 Graph Follower",
+            handle:
+              "w13_graph_follower"
+          }
+        );
+
+      const visibleFollowing =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-following@example.test",
+            name:
+              "W13 Graph Following",
+            handle:
+              "w13_graph_following"
+          }
+        );
+
+      const hiddenRelation =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-hidden@example.test",
+            name:
+              "W13 Graph Hidden",
+            handle:
+              "w13_graph_hidden"
+          }
+        );
+
+      const visibleFollow =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_graph_target`,
+          {
+            method: "POST",
+            cookie:
+              visibleFollower.cookie
+          }
+        );
+
+      assert.equal(
+        visibleFollow.statusCode,
+        201
+      );
+
+      const targetFollowing =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_graph_following`,
+          {
+            method: "POST",
+            cookie:
+              target.cookie
+          }
+        );
+
+      assert.equal(
+        targetFollowing.statusCode,
+        201
+      );
+
+      const hiddenFollowsTarget =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_graph_target`,
+          {
+            method: "POST",
+            cookie:
+              hiddenRelation.cookie
+          }
+        );
+
+      assert.equal(
+        hiddenFollowsTarget.statusCode,
+        201
+      );
+
+      const targetFollowsHidden =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_graph_hidden`,
+          {
+            method: "POST",
+            cookie:
+              target.cookie
+          }
+        );
+
+      assert.equal(
+        targetFollowsHidden.statusCode,
+        201
+      );
+
+      const hideRelation =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              hiddenRelation.cookie,
+            body: {
+              profileVisibility:
+                "hidden"
+            }
+          }
+        );
+
+      assert.equal(
+        hideRelation.statusCode,
+        200
+      );
+
+      const followersList =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_target/followers`
+        );
+
+      assert.equal(
+        followersList.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        followersList.json?.followers,
+        [
+          {
+            name:
+              "W13 Graph Follower",
+            username:
+              "w13_graph_follower",
+            avatar: ""
+          }
+        ]
+      );
+
+      const followingList =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_target/following`
+        );
+
+      assert.equal(
+        followingList.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        followingList.json?.following,
+        [
+          {
+            name:
+              "W13 Graph Following",
+            username:
+              "w13_graph_following",
+            avatar: ""
+          }
+        ]
+      );
+
+      assert.deepEqual(
+        Object.keys(
+          followersList.json.followers[0]
+        ).sort(),
+        [
+          "avatar",
+          "name",
+          "username"
+        ]
+      );
+
+      assert.deepEqual(
+        Object.keys(
+          followingList.json.following[0]
+        ).sort(),
+        [
+          "avatar",
+          "name",
+          "username"
+        ]
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "el grafo de un perfil followers solo se expone tras aceptar el seguimiento",
+  {
+    timeout: 20000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const target =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-restricted@example.test",
+            name:
+              "W13 Graph Restricted",
+            handle:
+              "w13_graph_restricted",
+            profileVisibility:
+              "followers"
+          }
+        );
+
+      const viewer =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-viewer@example.test",
+            name:
+              "W13 Graph Viewer",
+            handle:
+              "w13_graph_viewer"
+          }
+        );
+
+      const anonymousFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_restricted/followers`
+        );
+
+      assert.equal(
+        anonymousFollowers.statusCode,
+        403
+      );
+
+      const requestFollow =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_graph_restricted`,
+          {
+            method: "POST",
+            cookie:
+              viewer.cookie
+          }
+        );
+
+      assert.equal(
+        requestFollow.statusCode,
+        202
+      );
+
+      const pendingFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_restricted/followers`,
+          {
+            cookie:
+              viewer.cookie
+          }
+        );
+
+      assert.equal(
+        pendingFollowers.statusCode,
+        403
+      );
+
+      const acceptRequest =
+        await requestJson(
+          `${baseUrl}/api/user/follow-requests/w13_graph_viewer/accept`,
+          {
+            method: "POST",
+            cookie:
+              target.cookie
+          }
+        );
+
+      assert.equal(
+        acceptRequest.statusCode,
+        200
+      );
+
+      const acceptedFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_restricted/followers`,
+          {
+            cookie:
+              viewer.cookie
+          }
+        );
+
+      assert.equal(
+        acceptedFollowers.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        acceptedFollowers.json?.followers,
+        [
+          {
+            name:
+              "W13 Graph Viewer",
+            username:
+              "w13_graph_viewer",
+            avatar: ""
+          }
+        ]
+      );
+
+      const acceptedFollowing =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_restricted/following`,
+          {
+            cookie:
+              viewer.cookie
+          }
+        );
+
+      assert.equal(
+        acceptedFollowing.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        acceptedFollowing.json?.following,
+        []
+      );
+
+      const ownerFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_restricted/followers`,
+          {
+            cookie:
+              target.cookie
+          }
+        );
+
+      assert.equal(
+        ownerFollowers.statusCode,
+        200
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "el grafo de un perfil friends exige seguimiento mutuo",
+  {
+    timeout: 20000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const target =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-friends@example.test",
+            name:
+              "W13 Graph Friends",
+            handle:
+              "w13_graph_friends",
+            profileVisibility:
+              "friends"
+          }
+        );
+
+      const viewer =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-friend-viewer@example.test",
+            name:
+              "W13 Graph Friend Viewer",
+            handle:
+              "w13_friend_viewer"
+          }
+        );
+
+      const anonymousFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_friends/followers`
+        );
+
+      assert.equal(
+        anonymousFollowers.statusCode,
+        403
+      );
+
+      const requestFollow =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_graph_friends`,
+          {
+            method: "POST",
+            cookie:
+              viewer.cookie
+          }
+        );
+
+      assert.equal(
+        requestFollow.statusCode,
+        202
+      );
+
+      const acceptRequest =
+        await requestJson(
+          `${baseUrl}/api/user/follow-requests/w13_friend_viewer/accept`,
+          {
+            method: "POST",
+            cookie:
+              target.cookie
+          }
+        );
+
+      assert.equal(
+        acceptRequest.statusCode,
+        200
+      );
+
+      const followerOnly =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_friends/followers`,
+          {
+            cookie:
+              viewer.cookie
+          }
+        );
+
+      assert.equal(
+        followerOnly.statusCode,
+        403,
+        "seguir al perfil no basta para acceder a un perfil friends"
+      );
+
+      const mutualFollow =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_friend_viewer`,
+          {
+            method: "POST",
+            cookie:
+              target.cookie
+          }
+        );
+
+      assert.equal(
+        mutualFollow.statusCode,
+        201
+      );
+
+      const friendFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_friends/followers`,
+          {
+            cookie:
+              viewer.cookie
+          }
+        );
+
+      assert.equal(
+        friendFollowers.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        friendFollowers.json?.followers,
+        [
+          {
+            name:
+              "W13 Graph Friend Viewer",
+            username:
+              "w13_friend_viewer",
+            avatar: ""
+          }
+        ]
+      );
+
+      const friendFollowing =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_graph_friends/following`,
+          {
+            cookie:
+              viewer.cookie
+          }
+        );
+
+      assert.equal(
+        friendFollowing.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        friendFollowing.json?.following,
+        [
+          {
+            name:
+              "W13 Graph Friend Viewer",
+            username:
+              "w13_friend_viewer",
+            avatar: ""
+          }
+        ]
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "un perfil hidden y uno inexistente no exponen su grafo social",
+  {
+    timeout: 20000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const hidden =
+        await registerSocialGraphUser(
+          baseUrl,
+          {
+            email:
+              "w13-graph-hidden-target@example.test",
+            name:
+              "W13 Hidden Target",
+            handle:
+              "w13_hidden_target",
+            profileVisibility:
+              "hidden"
+          }
+        );
+
+      const hiddenFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_hidden_target/followers`
+        );
+
+      assert.equal(
+        hiddenFollowers.statusCode,
+        404
+      );
+
+      const hiddenFollowing =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_hidden_target/following`
+        );
+
+      assert.equal(
+        hiddenFollowing.statusCode,
+        404
+      );
+
+      const ownerFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_hidden_target/followers`,
+          {
+            cookie:
+              hidden.cookie
+          }
+        );
+
+      assert.equal(
+        ownerFollowers.statusCode,
+        404
+      );
+
+      const ownerFollowing =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_hidden_target/following`,
+          {
+            cookie:
+              hidden.cookie
+          }
+        );
+
+      assert.equal(
+        ownerFollowing.statusCode,
+        404
+      );
+
+      const missingFollowers =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_missing/followers`
+        );
+
+      assert.equal(
+        missingFollowers.statusCode,
+        404
+      );
+
+      const missingFollowing =
+        await requestJson(
+          `${baseUrl}/api/public/users/w13_missing/following`
+        );
+
+      assert.equal(
+        missingFollowing.statusCode,
+        404
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);

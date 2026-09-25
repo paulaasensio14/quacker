@@ -106,6 +106,10 @@ test("el perfil público expone únicamente la identidad pública permitida", ()
       username: "paula",
       bio: "Mi rincón de pelis, series, juegos y libros.",
       avatar: "assets/img/avatars/avatar-2.png"
+    },
+    social: {
+      followersCount: 0,
+      followingCount: 0
     }
   });
 
@@ -288,6 +292,10 @@ test("el contrato público funciona como whitelist aunque el bucket contenga dat
         username: "paula",
         bio: "Bio pública",
         avatar: "assets/img/avatars/avatar-3.png"
+      },
+      social: {
+        followersCount: 0,
+        followingCount: 0
       },
       activity: [],
       lists: [],
@@ -1024,6 +1032,10 @@ test(
           avatar:
             "assets/img/avatars/avatar-1.png"
         },
+        social: {
+          followersCount: 0,
+          followingCount: 0
+        },
         viewer: {
           access: "full",
           state: "following"
@@ -1083,6 +1095,10 @@ test(
           avatar:
             "assets/img/avatars/avatar-1.png"
         },
+        social: {
+          followersCount: 0,
+          followingCount: 0
+        },
         viewer: {
           access: "full",
           state: "friend"
@@ -1130,6 +1146,10 @@ test(
           bio: "Bio privada para visitantes",
           avatar:
             "assets/img/avatars/avatar-1.png"
+        },
+        social: {
+          followersCount: 0,
+          followingCount: 0
         },
         viewer: {
           access: "full",
@@ -1422,6 +1442,89 @@ test(
       {
         access: "full",
         state: "self"
+      }
+    );
+  }
+);
+
+test(
+  "el perfil con acceso completo expone contadores sociales solo de relaciones visibles",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Target",
+          handle: "@target_social"
+        },
+        privacy: {
+          profileVisibility: "public"
+        },
+        following: [
+          "u_following_visible",
+          "u_following_hidden"
+        ]
+      },
+
+      u_follower_visible: {
+        profile: {
+          name: "Follower visible",
+          handle: "@follower_visible"
+        },
+        privacy: {
+          profileVisibility: "public"
+        },
+        following: [
+          "u_target"
+        ]
+      },
+
+      u_follower_hidden: {
+        profile: {
+          name: "Follower hidden",
+          handle: "@follower_hidden"
+        },
+        privacy: {
+          profileVisibility: "hidden"
+        },
+        following: [
+          "u_target"
+        ]
+      },
+
+      u_following_visible: {
+        profile: {
+          name: "Following visible",
+          handle: "@following_visible"
+        },
+        privacy: {
+          profileVisibility: "public"
+        },
+        following: []
+      },
+
+      u_following_hidden: {
+        profile: {
+          name: "Following hidden",
+          handle: "@following_hidden"
+        },
+        privacy: {
+          profileVisibility: "hidden"
+        },
+        following: []
+      }
+    };
+
+    const result =
+      getPublicProfileByUsername(
+        users,
+        "target_social"
+      );
+
+    assert.deepEqual(
+      result.social,
+      {
+        followersCount: 1,
+        followingCount: 1
       }
     );
   }
