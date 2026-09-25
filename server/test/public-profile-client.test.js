@@ -462,3 +462,133 @@ test(
     );
   }
 );
+
+test(
+  "el cliente público renderiza contadores y listados sociales de forma segura",
+  () => {
+    assert.match(
+      clientSource,
+      /function renderSocialStats/
+    );
+
+    assert.match(
+      clientSource,
+      /publicProfileFollowersCount/
+    );
+
+    assert.match(
+      clientSource,
+      /publicProfileFollowingCount/
+    );
+
+    assert.match(
+      clientSource,
+      /renderSocialStats\(data\.social\)/
+    );
+
+    assert.match(
+      clientSource,
+      /async function loadSocialConnections/
+    );
+
+    assert.match(
+      clientSource,
+      /["']followers["']/
+    );
+
+    assert.match(
+      clientSource,
+      /["']following["']/
+    );
+
+    assert.match(
+      clientSource,
+      /\/api\/public\/users\/\$\{encodeURIComponent\(username\)\}\/\$\{kind\}/
+    );
+
+    assert.match(
+      clientSource,
+      /Cargando/
+    );
+
+    assert.match(
+      clientSource,
+      /No hay usuarios que mostrar/
+    );
+
+    assert.match(
+      clientSource,
+      /No hemos podido cargar/
+    );
+
+    assert.match(
+      clientSource,
+      /window\.UIModal/
+    );
+
+    const start =
+      clientSource.indexOf(
+        "function renderSocialConnections"
+      );
+
+    assert.notEqual(
+      start,
+      -1,
+      "falta renderSocialConnections"
+    );
+
+    const nextFunction =
+      clientSource.indexOf(
+        "\n  function ",
+        start + 1
+      );
+
+    const block =
+      clientSource.slice(
+        start,
+        nextFunction === -1
+          ? clientSource.length
+          : nextFunction
+      );
+
+    assert.match(
+      block,
+      /document\.createElement/
+    );
+
+    assert.match(
+      block,
+      /\.textContent\s*=/
+    );
+
+    assert.doesNotMatch(
+      block,
+      /\.innerHTML\s*=/
+    );
+  }
+);
+
+test(
+  "el modal social ignora respuestas obsoletas si cambia el listado solicitado",
+  () => {
+    assert.match(
+      clientSource,
+      /let socialConnectionsRequestId\s*=\s*0/
+    );
+
+    assert.match(
+      clientSource,
+      /const requestId\s*=\s*\+\+socialConnectionsRequestId/
+    );
+
+    const staleGuards =
+      clientSource.match(
+        /requestId\s*!==\s*socialConnectionsRequestId/g
+      ) || [];
+
+    assert.ok(
+      staleGuards.length >= 2,
+      "debe ignorar respuestas obsoletas tanto en éxito como en error"
+    );
+  }
+);

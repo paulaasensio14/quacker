@@ -682,8 +682,28 @@ export function getPublicProfileByUsername(
     return restrictedResult;
   }
 
+  const socialGraph =
+    getPublicSocialGraphByUsername(
+      users,
+      normalizedUsername,
+      {
+        viewerUserId:
+          normalizedViewerUserId
+      }
+    );
+
   const result = {
-    profile
+    profile,
+    social: {
+      followersCount:
+        socialGraph?.access === "full"
+          ? socialGraph.followers.length
+          : 0,
+      followingCount:
+        socialGraph?.access === "full"
+          ? socialGraph.following.length
+          : 0
+    }
   };
 
   if (normalizedViewerUserId) {
@@ -726,4 +746,169 @@ export function getPublicProfileByUsername(
   }
 
   return result;
+}
+
+export function getPublicSocialGraphByUsername(
+  users,
+  username,
+  { viewerUserId = "" } = {}
+) {
+  const normalizedUsername =
+    normalizePublicUsername(username);
+
+  if (
+    !normalizedUsername ||
+    !users ||
+    typeof users !== "object" ||
+    Array.isArray(users)
+  ) {
+    return null;
+  }
+
+  const targetEntry =
+    Object.entries(users).find(
+      ([, candidate]) =>
+        normalizePublicUsername(
+          candidate?.profile?.handle
+        ) === normalizedUsername
+    );
+
+  if (!targetEntry) return null;
+
+  const [
+    targetUserId,
+    targetBucket
+  ] = targetEntry;
+
+  const targetPrivacy =
+    normalizeProfilePrivacy(
+      targetBucket?.privacy
+    );
+
+  if (
+    targetPrivacy.profileVisibility ===
+    "hidden"
+  ) {
+    return null;
+  }
+
+  const normalizedViewerUserId =
+    String(viewerUserId || "").trim();
+
+  const viewerBucket =
+    normalizedViewerUserId
+      ? users[normalizedViewerUserId]
+      : null;
+
+  const viewerFollowing =
+    Array.isArray(viewerBucket?.following)
+      ? viewerBucket.following
+      : [];
+
+  const targetFollowing =
+    Array.isArray(targetBucket?.following)
+      ? targetBucket.following
+      : [];
+
+  const viewerFollowsTarget =
+    viewerFollowing.includes(
+      targetUserId
+    );
+
+  const targetFollowsViewer =
+    normalizedViewerUserId
+      ? targetFollowing.includes(
+          normalizedViewerUserId
+        )
+      : false;
+
+  const isOwner =
+    normalizedViewerUserId ===
+    targetUserId;
+
+  const isFriend =
+    viewerFollowsTarget &&
+    targetFollowsViewer;
+
+  const hasFullAccess =
+    targetPrivacy.profileVisibility ===
+      "public" ||
+    isOwner ||
+    (
+      targetPrivacy.profileVisibility ===
+        "followers" &&
+      viewerFollowsTarget
+    ) ||
+    (
+      targetPrivacy.profileVisibility ===
+        "friends" &&
+      isFriend
+    );
+
+  if (!hasFullAccess) {
+    return {
+      access: "restricted"
+    };
+  }
+
+  const toVisibleIdentity = (
+    userBucket
+  ) => {
+    if (!userBucket) return null;
+
+    const privacy =
+      normalizeProfilePrivacy(
+        userBucket.privacy
+      );
+
+    if (
+      privacy.profileVisibility ===
+      "hidden"
+    ) {
+      return null;
+    }
+
+    const identity =
+      normalizePublicIdentity(
+        userBucket.profile
+      );
+
+    if (!identity.username) {
+      return null;
+    }
+
+    return identity;
+  };
+
+  const followers =
+    Object.entries(users)
+      .filter(
+        ([userId, userBucket]) =>
+          userId !== targetUserId &&
+          Array.isArray(
+            userBucket?.following
+          ) &&
+          userBucket.following.includes(
+            targetUserId
+          )
+      )
+      .map(([, userBucket]) =>
+        toVisibleIdentity(userBucket)
+      )
+      .filter(Boolean);
+
+  const following =
+    targetFollowing
+      .map((followedUserId) =>
+        toVisibleIdentity(
+          users[followedUserId]
+        )
+      )
+      .filter(Boolean);
+
+  return {
+    access: "full",
+    followers,
+    following
+  };
 }

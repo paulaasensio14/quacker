@@ -94,6 +94,7 @@ import {
 
 import {
   getPublicProfileByUsername,
+  getPublicSocialGraphByUsername,
   normalizePublicIdentity,
   normalizePublicUsername
 } from "./lib/public-profile.js";
@@ -2129,6 +2130,86 @@ app.get("/api/public/users/:username", (req, res) => {
 
   res.json(publicProfile);
 });
+
+app.get(
+  "/api/public/users/:username/followers",
+  (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    const db = _readDb();
+
+    const viewerUserId =
+      getAuthenticatedUserId(
+        req.session,
+        db.users
+      );
+
+    const graph =
+      getPublicSocialGraphByUsername(
+        db.users,
+        req.params.username,
+        {
+          viewerUserId
+        }
+      );
+
+    if (!graph) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    if (graph.access !== "full") {
+      return res.status(403).json({
+        error: "forbidden"
+      });
+    }
+
+    return res.json({
+      followers: graph.followers
+    });
+  }
+);
+
+app.get(
+  "/api/public/users/:username/following",
+  (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    const db = _readDb();
+
+    const viewerUserId =
+      getAuthenticatedUserId(
+        req.session,
+        db.users
+      );
+
+    const graph =
+      getPublicSocialGraphByUsername(
+        db.users,
+        req.params.username,
+        {
+          viewerUserId
+        }
+      );
+
+    if (!graph) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    if (graph.access !== "full") {
+      return res.status(403).json({
+        error: "forbidden"
+      });
+    }
+
+    return res.json({
+      following: graph.following
+    });
+  }
+);
 
 app.get("/api/ready", (req, res) => {
   const readiness =

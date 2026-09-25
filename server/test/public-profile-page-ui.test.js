@@ -338,3 +338,155 @@ test(
     );
   }
 );
+
+test(
+  "la cabecera pública reserva contadores y un modal accesible para seguidores y siguiendo",
+  () => {
+    const html = fs.readFileSync(
+      HTML_URL,
+      "utf8"
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileSocialStats["'][^>]*hidden/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileFollowersButton["'][^>]*type=["']button["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileFollowersCount["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileFollowingButton["'][^>]*type=["']button["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileFollowingCount["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileConnectionsModal["'][^>]*aria-hidden=["']true["']/
+    );
+
+    assert.match(
+      html,
+      /class=["'][^"']*modal-card[^"']*["'][^>]*role=["']dialog["'][^>]*aria-modal=["']true["'][^>]*aria-labelledby=["']publicProfileConnectionsModalTitle["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileConnectionsModalTitle["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileConnectionsClose["'][^>]*type=["']button["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileConnectionsStatus["'][^>]*aria-live=["']polite["']/
+    );
+
+    assert.match(
+      html,
+      /id=["']publicProfileConnectionsList["']/
+    );
+
+    const modalHelperIndex =
+      html.indexOf(
+        'src="/assets/js/app/ui-modal.js"'
+      );
+
+    const publicProfileIndex =
+      html.indexOf(
+        'src="/assets/js/app/public-profile.js"'
+      );
+
+    assert.ok(
+      modalHelperIndex >= 0,
+      "el perfil público debe cargar ui-modal.js"
+    );
+
+    assert.ok(
+      publicProfileIndex > modalHelperIndex,
+      "ui-modal.js debe cargarse antes de public-profile.js"
+    );
+  }
+);
+
+test(
+  "los contadores y el modal social tienen estilos accesibles, dark y responsive",
+  () => {
+    const css = fs.readFileSync(
+      CSS_URL,
+      "utf8"
+    );
+
+    for (const selector of [
+      "body.modal-open",
+      ".public-profile-social-stats",
+      ".public-profile-social-stat",
+      ".public-profile-connections-modal",
+      ".public-profile-connections-card",
+      ".public-profile-connections-header",
+      ".public-profile-connections-close",
+      ".public-profile-connections-status",
+      ".public-profile-connections-list",
+      ".public-profile-connection",
+      ".public-profile-connection-avatar",
+      ".public-profile-connection-name",
+      ".public-profile-connection-username"
+    ]) {
+      assert.match(
+        css,
+        new RegExp(
+          selector.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+          )
+        ),
+        `falta el estilo ${selector}`
+      );
+    }
+
+    assert.match(
+      css,
+      /\.public-profile-social-stat:focus-visible/
+    );
+
+    assert.match(
+      css,
+      /\.public-profile-connections-close:focus-visible/
+    );
+
+    assert.match(
+      css,
+      /\.public-profile-connections-modal\.is-open/
+    );
+
+    assert.match(
+      css,
+      /body\.dark-theme[\s\S]*?\.public-profile-connections-card/
+    );
+
+    assert.match(
+      css,
+      /@media\s*\(max-width:\s*760px\)[\s\S]*?\.public-profile-social-stats/
+    );
+
+    assert.match(
+      css,
+      /@media\s*\(max-width:\s*760px\)[\s\S]*?\.public-profile-connections-card/
+    );
+  }
+);
