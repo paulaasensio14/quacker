@@ -94,7 +94,8 @@ import {
 
 import {
   addRecommendation,
-  normalizeRecommendations
+  normalizeRecommendations,
+  resolveRecommendation
 } from "./lib/recommendations.js";
 
 import {
@@ -3863,6 +3864,220 @@ app.get(
     return res.json({
       recommendations:
         ownerBucket.recommendations
+          .filter(
+            (recommendation) =>
+              recommendation.status === "pending"
+          )
+          .map((recommendation) => ({
+            ...recommendation,
+            sender:
+              normalizePublicIdentity(
+                db.users[
+                  recommendation.fromUserId
+                ]?.profile || {}
+              )
+          }))
+    });
+  }
+);
+
+app.patch(
+  "/api/user/recommendations/:id",
+  _requireAuth,
+  (req, res) => {
+    const data = req.body || {};
+
+    const status =
+      String(data.status || "")
+        .trim()
+        .toLowerCase();
+
+    if (
+      status !== "dismissed" &&
+      status !== "added" &&
+      status !== "consumed"
+    ) {
+      return res.status(400).json({
+        error: "invalid_recommendation_status"
+      });
+    }
+
+    const db = _readDb();
+
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const resolvedAt =
+      new Date().toISOString();
+
+    const result =
+      resolveRecommendation(
+        ownerBucket.recommendations,
+        req.params.id,
+        status,
+        {
+          resolvedAt
+        }
+      );
+
+    if (!result.ok) {
+      if (
+        result.error ===
+        "recommendation_not_found"
+      ) {
+        return res.status(404).json({
+          error: result.error
+        });
+      }
+
+      if (
+        result.error ===
+        "recommendation_already_resolved"
+      ) {
+        return res.status(409).json({
+          error: result.error
+        });
+      }
+
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    let libraryItem = null;
+
+    if (
+      status === "added" ||
+      status === "consumed"
+    ) {
+      const recommendation =
+        result.recommendation;
+
+      const libraryResult =
+        _addLibraryItem(
+          ownerBucket,
+          {
+            type:
+              recommendation.contentType,
+            title:
+              recommendation
+                .itemSnapshot
+                .title,
+            source:
+              recommendation.source,
+            externalId:
+              recommendation.externalId,
+            cover:
+              recommendation
+                .itemSnapshot
+                .cover,
+            progress: 0
+          },
+          {
+            nowIso: resolvedAt
+          }
+        );
+
+      if (!libraryResult.ok) {
+        return res.status(400).json({
+          error: libraryResult.error
+        });
+      }
+
+      libraryItem =
+        libraryResult.item;
+
+      if (status === "consumed") {
+        const libraryIndex =
+          ownerBucket.library.findIndex(
+            (item) =>
+              String(item.id) ===
+              String(libraryItem.id)
+          );
+
+        if (libraryIndex === -1) {
+          return res.status(500).json({
+            error: "library_item_not_found"
+          });
+        }
+
+        const prev =
+          ownerBucket.library[
+            libraryIndex
+          ];
+
+        const prevProgress =
+          Math.max(
+            0,
+            Math.min(
+              100,
+              Number(
+                prev.progress ?? 0
+              )
+            )
+          );
+
+        const prevCompleted =
+          prevProgress >= 100 ||
+          String(
+            prev.status || ""
+          )
+            .trim()
+            .toLowerCase() ===
+            "completed";
+
+        const next = {
+          ...prev,
+          status: "completed",
+          progress: 100,
+          updatedAt: resolvedAt
+        };
+
+        const completionPatch = {
+          status: "completed",
+          progress: 100
+        };
+
+        _applyLibraryTransitionEffects({
+          bucket: ownerBucket,
+          id: next.id,
+          prevProgress,
+          prevCompleted,
+          next,
+          patch: completionPatch,
+          rawPatch:
+            completionPatch,
+          shouldLogActivity: true,
+          nowIso: resolvedAt
+        });
+
+        ownerBucket.library[
+          libraryIndex
+        ] = next;
+
+        libraryItem = next;
+      }
+    }
+
+    ownerBucket.recommendations =
+      result.recommendations;
+
+    _writeDb(db);
+
+    return res.json({
+      recommendation:
+        result.recommendation,
+      ...(libraryItem
+        ? {
+            item: libraryItem
+          }
+        : {})
     });
   }
 );
@@ -5919,17 +6134,33 @@ app.post("/api/library/restore", _requireAuth, (req, res) => {
   res.status(201).json({ ok: true, item });
 });
 
-app.post("/api/library", _requireAuth, (req, res) => {
-  const data = req.body || {};
+function _addLibraryItem(
+  bucket,
+  data,
+  {
+    id = _uid(),
+    nowIso = new Date().toISOString()
+  } = {}
+) {
   const title = _normalizeContentText(data.title);
-  const type = String(data.type || "pelicula").trim().toLowerCase();
-  const canonicalIdentity = _normalizeCanonicalIdentity(
-    data.source,
-    type,
-    data.externalId
-  );
+  const type = String(
+    data.type || "pelicula"
+  ).trim().toLowerCase();
 
-  const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+  const canonicalIdentity =
+    _normalizeCanonicalIdentity(
+      data.source,
+      type,
+      data.externalId
+    );
+
+  const allowedTypes = new Set([
+    "serie",
+    "pelicula",
+    "book",
+    "game"
+  ]);
+
   const allowedStatuses = new Set([
     "pending",
     "not_started",
@@ -5941,284 +6172,208 @@ app.post("/api/library", _requireAuth, (req, res) => {
   ]);
 
   if (!title) {
-    return res.status(400).json({ error: "missing_title" });
+    return {
+      ok: false,
+      error: "missing_title"
+    };
   }
 
   if (title.length < 2) {
-    return res.status(400).json({ error: "title_too_short" });
+    return {
+      ok: false,
+      error: "title_too_short"
+    };
   }
 
   if (title.length > 120) {
-    return res.status(400).json({ error: "title_too_long" });
+    return {
+      ok: false,
+      error: "title_too_long"
+    };
   }
 
   if (!allowedTypes.has(type)) {
-    return res.status(400).json({ error: "invalid_type" });
-  }
-
-  if (!canonicalIdentity.source || !canonicalIdentity.externalId) {
-    return res.status(400).json({ error: "missing_identity" });
+    return {
+      ok: false,
+      error: "invalid_type"
+    };
   }
 
   if (
-    Object.prototype.hasOwnProperty.call(data, "status") &&
+    !canonicalIdentity.source ||
+    !canonicalIdentity.externalId
+  ) {
+    return {
+      ok: false,
+      error: "missing_identity"
+    };
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      data,
+      "status"
+    ) &&
     data.status != null &&
     String(data.status).trim() !== ""
   ) {
-    const status = String(data.status || "").trim().toLowerCase();
+    const status =
+      String(data.status || "")
+        .trim()
+        .toLowerCase();
+
     if (!allowedStatuses.has(status)) {
-      return res.status(400).json({ error: "invalid_status" });
+      return {
+        ok: false,
+        error: "invalid_status"
+      };
     }
   }
 
-  const rawProgress = Number(data.progress ?? 0);
-  const progress = Number.isFinite(rawProgress)
-    ? Math.max(0, Math.min(100, rawProgress))
-    : 0;
-  
-  const db = _readDb();
-  const bucket = _getUserBucket(db, req.session.userId);
+  const rawProgress =
+    Number(data.progress ?? 0);
 
-  const duplicate = bucket.library.find((it) =>
-    _isSameLibraryIdentity(it, {
-      title,
-      type,
-      source: canonicalIdentity.source,
-      externalId: canonicalIdentity.externalId
-    })
-  );
+  const progress =
+    Number.isFinite(rawProgress)
+      ? Math.max(
+          0,
+          Math.min(100, rawProgress)
+        )
+      : 0;
+
+  bucket.library =
+    Array.isArray(bucket.library)
+      ? bucket.library
+      : [];
+
+  const duplicate =
+    bucket.library.find(
+      (item) =>
+        _isSameLibraryIdentity(
+          item,
+          {
+            title,
+            type,
+            source:
+              canonicalIdentity.source,
+            externalId:
+              canonicalIdentity.externalId
+          }
+        )
+    );
 
   if (duplicate) {
-    return res.json({
+    return {
       ok: true,
-      already: true,
       alreadyExists: true,
-      item: {
-        ...duplicate,
-        alreadyExists: true
-      }
-    });
+      item: duplicate
+    };
   }
 
-  const sanitizedMeta = _sanitizeLibraryMeta(data.meta);
+  let safeProgress =
+    Number(progress);
 
-  const nowIso = new Date().toISOString();
+  if (!Number.isFinite(safeProgress)) {
+    safeProgress = 0;
+  }
 
-  let safeProgress = Number(progress);
-  if (!Number.isFinite(safeProgress)) safeProgress = 0;
-  safeProgress = Math.max(0, Math.min(100, safeProgress));
-  const status = _normalizeLibraryStatus(data.status, type, safeProgress);
-  
+  safeProgress =
+    Math.max(
+      0,
+      Math.min(100, safeProgress)
+    );
+
+  const status =
+    _normalizeLibraryStatus(
+      data.status,
+      type,
+      safeProgress
+    );
+
   const item = {
-    id: _uid(),
+    id,
     type,
     title,
-    source: canonicalIdentity.source,
-    externalId: canonicalIdentity.externalId,
+    source:
+      canonicalIdentity.source,
+    externalId:
+      canonicalIdentity.externalId,
     status,
     progress: safeProgress,
-    meta: sanitizedMeta,
-    cover: String(data.cover || "").trim().slice(0, 500),
+    meta:
+      _sanitizeLibraryMeta(data.meta),
+    cover:
+      String(data.cover || "")
+        .trim()
+        .slice(0, 500),
     createdAt: nowIso,
     updatedAt: nowIso
   };
 
   bucket.library.push(item);
-  _writeDb(db);
 
-  res.json(item);
-});
-
-app.patch("/api/library/:id", _requireAuth, (req, res) => {
-  const id = String(req.params.id);
-  const rawPatch = req.body || {};
-  const patch = { ...rawPatch };
-  const shouldLogActivity = rawPatch.logActivity !== false;
-
-  if (Object.keys(patch).length === 0) {
-    return res.status(400).json({ error: "empty_patch" });
-  }
-
-  const allowedPatchFields = new Set([
-    "title",
-    "type",
-    "source",
-    "externalId",
-    "status",
-    "progress",
-    "meta",
-    "cover",
-    "lastActivityAt"
-  ]);
-
-  for (const key of Object.keys(patch)) {
-    if (!allowedPatchFields.has(key)) {
-      delete patch[key];
-    }
-  }
-
-  const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
-  const allowedStatuses = new Set([
-    "pending",
-    "not_started",
-    "in_progress",
-    "watching",
-    "reading",
-    "playing",
-    "completed"
-  ]);
-
-  const db = _readDb();
-  const bucket = _getUserBucket(db, req.session.userId);
-
-  const idx = bucket.library.findIndex((it) => String(it.id) === id);
-  if (idx === -1) return res.status(404).json({ error: "not_found" });
-
-  const prev = bucket.library[idx];
-  const nowIso = new Date().toISOString();
-  const prevProgress = Math.max(0, Math.min(100, Number(prev.progress ?? 0)));
-  const prevCompleted = prevProgress >= 100 || String(prev.status || "").trim().toLowerCase() === "completed";
-
-  const next = {
-    ...prev,
-    ...patch,
-    id: prev.id,
-    createdAt: prev.createdAt,
-    updatedAt: new Date().toISOString()
+  return {
+    ok: true,
+    alreadyExists: false,
+    item
   };
+}
 
-  if (Object.prototype.hasOwnProperty.call(patch, "title")) {
-    const title = _normalizeContentText(patch.title);
+app.post(
+  "/api/library",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
 
-    next.title = title;
+    const bucket =
+      _getUserBucket(
+        db,
+        req.session.userId
+      );
 
-    if (!title) {
-      return res.status(400).json({ error: "missing_title" });
+    const result =
+      _addLibraryItem(
+        bucket,
+        req.body || {}
+      );
+
+    if (!result.ok) {
+      return res.status(400).json({
+        error: result.error
+      });
     }
 
-    if (title.length < 2) {
-      return res.status(400).json({ error: "title_too_short" });
+    if (result.alreadyExists) {
+      return res.json({
+        ok: true,
+        already: true,
+        alreadyExists: true,
+        item: {
+          ...result.item,
+          alreadyExists: true
+        }
+      });
     }
 
-    if (title.length > 120) {
-      return res.status(400).json({ error: "title_too_long" });
-    }
+    _writeDb(db);
 
-    next.title = title;
+    return res.json(
+      result.item
+    );
   }
+);
 
-  if (Object.prototype.hasOwnProperty.call(patch, "type")) {
-    const type = String(patch.type || "").trim();
-
-    if (!allowedTypes.has(type)) {
-      return res.status(400).json({ error: "invalid_type" });
-    }
-
-    next.type = type;
-  }
-
-  const canonicalIdentity = _normalizeCanonicalIdentity(
-    Object.prototype.hasOwnProperty.call(patch, "source")
-      ? patch.source
-      : prev.source,
-    next.type,
-    Object.prototype.hasOwnProperty.call(patch, "externalId")
-      ? patch.externalId
-      : prev.externalId
-  );
-
-  if (
-    canonicalIdentity.error ||
-    !canonicalIdentity.source ||
-    !canonicalIdentity.type ||
-    !canonicalIdentity.externalId
-  ) {
-    return res.status(400).json({
-      error: canonicalIdentity.error || "missing_identity"
-    });
-  }
-
-  next.source = canonicalIdentity.source;
-  next.externalId = canonicalIdentity.externalId;
-
-  if (Object.prototype.hasOwnProperty.call(patch, "status")) {
-    const status = String(patch.status || "").trim().toLowerCase();
-
-    if (!allowedStatuses.has(status)) {
-      return res.status(400).json({ error: "invalid_status" });
-    }
-  }
-
-  if (Object.prototype.hasOwnProperty.call(patch, "progress")) {
-    const rawProgress = Number(patch.progress);
-    next.progress = Number.isFinite(rawProgress)
-      ? Math.max(0, Math.min(100, rawProgress))
-      : 0;
-  } else {
-    next.progress = Math.max(0, Math.min(100, Number(prev.progress ?? 0)));
-  }
-
-  next.status = _normalizeLibraryStatus(
-    Object.prototype.hasOwnProperty.call(patch, "status") ? patch.status : prev.status,
-    next.type,
-    next.progress,
-    prev.status
-  );
-
-  if (Object.prototype.hasOwnProperty.call(patch, "cover")) {
-    next.cover = String(patch.cover || "").trim();
-  }
-
-  if (Object.prototype.hasOwnProperty.call(patch, "lastActivityAt")) {
-    const normalizedLastActivityAt = _normalizeActivityCreatedAt(patch.lastActivityAt);
-
-    if (!normalizedLastActivityAt) {
-      return res.status(400).json({ error: "invalid_last_activity_at" });
-    }
-
-    next.lastActivityAt = normalizedLastActivityAt;
-  }
-
-  if (Object.prototype.hasOwnProperty.call(patch, "meta")) {
-    if (patch.meta !== undefined) {
-      if (typeof patch.meta !== "object" || Array.isArray(patch.meta)) {
-        return res.status(400).json({ error: "invalid_meta" });
-      }
-    }
-
-    if (patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta)) {
-      const sanitizedMeta = _sanitizeLibraryMeta(patch.meta);
-      next.meta = {
-        ...(prev.meta || {}),
-        ...sanitizedMeta
-      };
-
-    } else {
-      next.meta = { ...(prev.meta || {}) };
-    }
-  } else {
-    next.meta = { ...(prev.meta || {}) };
-  }
-
-  const duplicate = bucket.library.find((it) => {
-    if (String(it?.id) === id) return false;
-
-    return _isSameLibraryIdentity(it, {
-      title: next.title,
-      type: next.type,
-      source: next.source,
-      externalId: next.externalId
-    });
-  });
-  if (duplicate) {
-    return res.status(409).json({ error: "duplicate_item" });
-  }
-
-  if (next.progress >= 100) {
-    next.progress = 100;
-    next.status = "completed";
-  }
-
+function _applyLibraryTransitionEffects({
+  bucket,
+  id,
+  prevProgress,
+  prevCompleted,
+  next,
+  patch,
+  rawPatch,
+  shouldLogActivity,
+  nowIso
+}) {
   const nextProgress = Math.max(0, Math.min(100, Number(next.progress ?? 0)));
   const nextCompleted = nextProgress >= 100 || next.status === "completed";
   const activityCreatedAt = resolveActivityCreatedAt({
@@ -6441,6 +6596,210 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
         ]);
     }
   }
+
+}
+
+app.patch("/api/library/:id", _requireAuth, (req, res) => {
+  const id = String(req.params.id);
+  const rawPatch = req.body || {};
+  const patch = { ...rawPatch };
+  const shouldLogActivity = rawPatch.logActivity !== false;
+
+  if (Object.keys(patch).length === 0) {
+    return res.status(400).json({ error: "empty_patch" });
+  }
+
+  const allowedPatchFields = new Set([
+    "title",
+    "type",
+    "source",
+    "externalId",
+    "status",
+    "progress",
+    "meta",
+    "cover",
+    "lastActivityAt"
+  ]);
+
+  for (const key of Object.keys(patch)) {
+    if (!allowedPatchFields.has(key)) {
+      delete patch[key];
+    }
+  }
+
+  const allowedTypes = new Set(["serie", "pelicula", "book", "game"]);
+  const allowedStatuses = new Set([
+    "pending",
+    "not_started",
+    "in_progress",
+    "watching",
+    "reading",
+    "playing",
+    "completed"
+  ]);
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+
+  const idx = bucket.library.findIndex((it) => String(it.id) === id);
+  if (idx === -1) return res.status(404).json({ error: "not_found" });
+
+  const prev = bucket.library[idx];
+  const nowIso = new Date().toISOString();
+  const prevProgress = Math.max(0, Math.min(100, Number(prev.progress ?? 0)));
+  const prevCompleted = prevProgress >= 100 || String(prev.status || "").trim().toLowerCase() === "completed";
+
+  const next = {
+    ...prev,
+    ...patch,
+    id: prev.id,
+    createdAt: prev.createdAt,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (Object.prototype.hasOwnProperty.call(patch, "title")) {
+    const title = _normalizeContentText(patch.title);
+
+    next.title = title;
+
+    if (!title) {
+      return res.status(400).json({ error: "missing_title" });
+    }
+
+    if (title.length < 2) {
+      return res.status(400).json({ error: "title_too_short" });
+    }
+
+    if (title.length > 120) {
+      return res.status(400).json({ error: "title_too_long" });
+    }
+
+    next.title = title;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "type")) {
+    const type = String(patch.type || "").trim();
+
+    if (!allowedTypes.has(type)) {
+      return res.status(400).json({ error: "invalid_type" });
+    }
+
+    next.type = type;
+  }
+
+  const canonicalIdentity = _normalizeCanonicalIdentity(
+    Object.prototype.hasOwnProperty.call(patch, "source")
+      ? patch.source
+      : prev.source,
+    next.type,
+    Object.prototype.hasOwnProperty.call(patch, "externalId")
+      ? patch.externalId
+      : prev.externalId
+  );
+
+  if (
+    canonicalIdentity.error ||
+    !canonicalIdentity.source ||
+    !canonicalIdentity.type ||
+    !canonicalIdentity.externalId
+  ) {
+    return res.status(400).json({
+      error: canonicalIdentity.error || "missing_identity"
+    });
+  }
+
+  next.source = canonicalIdentity.source;
+  next.externalId = canonicalIdentity.externalId;
+
+  if (Object.prototype.hasOwnProperty.call(patch, "status")) {
+    const status = String(patch.status || "").trim().toLowerCase();
+
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({ error: "invalid_status" });
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "progress")) {
+    const rawProgress = Number(patch.progress);
+    next.progress = Number.isFinite(rawProgress)
+      ? Math.max(0, Math.min(100, rawProgress))
+      : 0;
+  } else {
+    next.progress = Math.max(0, Math.min(100, Number(prev.progress ?? 0)));
+  }
+
+  next.status = _normalizeLibraryStatus(
+    Object.prototype.hasOwnProperty.call(patch, "status") ? patch.status : prev.status,
+    next.type,
+    next.progress,
+    prev.status
+  );
+
+  if (Object.prototype.hasOwnProperty.call(patch, "cover")) {
+    next.cover = String(patch.cover || "").trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "lastActivityAt")) {
+    const normalizedLastActivityAt = _normalizeActivityCreatedAt(patch.lastActivityAt);
+
+    if (!normalizedLastActivityAt) {
+      return res.status(400).json({ error: "invalid_last_activity_at" });
+    }
+
+    next.lastActivityAt = normalizedLastActivityAt;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "meta")) {
+    if (patch.meta !== undefined) {
+      if (typeof patch.meta !== "object" || Array.isArray(patch.meta)) {
+        return res.status(400).json({ error: "invalid_meta" });
+      }
+    }
+
+    if (patch.meta && typeof patch.meta === "object" && !Array.isArray(patch.meta)) {
+      const sanitizedMeta = _sanitizeLibraryMeta(patch.meta);
+      next.meta = {
+        ...(prev.meta || {}),
+        ...sanitizedMeta
+      };
+
+    } else {
+      next.meta = { ...(prev.meta || {}) };
+    }
+  } else {
+    next.meta = { ...(prev.meta || {}) };
+  }
+
+  const duplicate = bucket.library.find((it) => {
+    if (String(it?.id) === id) return false;
+
+    return _isSameLibraryIdentity(it, {
+      title: next.title,
+      type: next.type,
+      source: next.source,
+      externalId: next.externalId
+    });
+  });
+  if (duplicate) {
+    return res.status(409).json({ error: "duplicate_item" });
+  }
+
+  if (next.progress >= 100) {
+    next.progress = 100;
+    next.status = "completed";
+  }
+
+  _applyLibraryTransitionEffects({
+    bucket,
+    id,
+    prevProgress,
+    prevCompleted,
+    next,
+    patch,
+    rawPatch,
+    shouldLogActivity,
+    nowIso
+  });
 
   bucket.library[idx] = next;
   _writeDb(db);

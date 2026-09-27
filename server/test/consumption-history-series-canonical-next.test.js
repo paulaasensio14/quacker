@@ -113,21 +113,30 @@ test(
     );
 
     const start = serverSource.indexOf(
-      'app.patch("/api/library/:id"'
+      "function _applyLibraryTransitionEffects"
     );
 
     const end = serverSource.indexOf(
-      'app.delete("/api/library/:id"',
+      'app.patch("/api/library/:id"',
       start
     );
 
-    assert.notEqual(start, -1, "no se encontró PATCH /api/library/:id");
-    assert.notEqual(end, -1, "no se encontró el final del PATCH");
+    assert.notEqual(
+      start,
+      -1,
+      "no se encontró _applyLibraryTransitionEffects"
+    );
 
-    const route = serverSource.slice(start, end);
+    assert.notEqual(
+      end,
+      -1,
+      "no se encontró el final del helper"
+    );
+
+    const helper = serverSource.slice(start, end);
 
     assert.match(
-      route,
+      helper,
       /else if\s*\(\s*next\.type\s*===\s*"serie"\s*&&\s*explicitSeriesActivityPayload\s*\)\s*\{\s*activityType\s*=\s*"progress"/s
     );
   }

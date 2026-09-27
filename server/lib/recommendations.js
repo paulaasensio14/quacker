@@ -35,7 +35,18 @@ function _normalizeSnapshot(value) {
   };
 }
 
-function _normalizeRecommendation(value) {
+const RESOLVED_RECOMMENDATION_STATUSES = new Set([
+  "added",
+  "consumed",
+  "dismissed"
+]);
+
+function _normalizeRecommendation(
+  value,
+  {
+    forcePending = false
+  } = {}
+) {
   if (
     !value ||
     typeof value !== "object" ||
@@ -63,6 +74,31 @@ function _normalizeRecommendation(value) {
     value.createdAt
   );
 
+  let status = forcePending
+    ? "pending"
+    : String(value.status || "pending")
+        .trim()
+        .toLowerCase();
+
+  if (
+    status !== "pending" &&
+    !RESOLVED_RECOMMENDATION_STATUSES.has(status)
+  ) {
+    return null;
+  }
+
+  let resolvedAt = null;
+
+  if (status !== "pending") {
+    resolvedAt = _normalizeDate(
+      value.resolvedAt
+    );
+
+    if (!resolvedAt) {
+      return null;
+    }
+  }
+
   if (
     !id ||
     !fromUserId ||
@@ -82,7 +118,9 @@ function _normalizeRecommendation(value) {
     itemSnapshot,
     message: String(value.message || "")
       .trim(),
-    createdAt
+    createdAt,
+    status,
+    resolvedAt
   };
 }
 
@@ -129,7 +167,12 @@ export function addRecommendation(
     normalizeRecommendations(recommendations);
 
   const recommendation =
-    _normalizeRecommendation(value);
+    _normalizeRecommendation(
+      value,
+      {
+        forcePending: true
+      }
+    );
 
   if (!recommendation) {
     return {
@@ -195,6 +238,81 @@ export function addRecommendation(
   normalizedRecommendations.push(
     recommendation
   );
+
+  return {
+    ok: true,
+    error: "",
+    recommendation,
+    recommendations:
+      normalizedRecommendations
+  };
+}
+
+export function resolveRecommendation(
+  recommendations,
+  recommendationId,
+  status,
+  {
+    resolvedAt
+  } = {}
+) {
+  const safeStatus = String(status || "")
+    .trim()
+    .toLowerCase();
+
+  if (!RESOLVED_RECOMMENDATION_STATUSES.has(safeStatus)) {
+    return {
+      ok: false,
+      error: "invalid_recommendation_status"
+    };
+  }
+
+  const normalizedRecommendations =
+    normalizeRecommendations(recommendations);
+
+  const safeRecommendationId =
+    String(recommendationId || "").trim();
+
+  const index = normalizedRecommendations.findIndex(
+    (recommendation) =>
+      recommendation.id === safeRecommendationId
+  );
+
+  if (index === -1) {
+    return {
+      ok: false,
+      error: "recommendation_not_found"
+    };
+  }
+
+  const currentRecommendation =
+    normalizedRecommendations[index];
+
+  if (currentRecommendation.status !== "pending") {
+    return {
+      ok: false,
+      error: "recommendation_already_resolved"
+    };
+  }
+
+  const normalizedResolvedAt =
+    _normalizeDate(resolvedAt);
+
+  if (!normalizedResolvedAt) {
+    return {
+      ok: false,
+      error: "invalid_resolved_at"
+    };
+  }
+
+  const recommendation = {
+    ...currentRecommendation,
+    status: safeStatus,
+    resolvedAt: normalizedResolvedAt
+  };
+
+  normalizedRecommendations[index] =
+    recommendation;
 
   return {
     ok: true,

@@ -75,26 +75,34 @@ test(
 test(
   "el PATCH de Library registra el progreso actual dentro de la actividad",
   () => {
-    const patchStart = serverSource.indexOf(
-      'app.patch("/api/library/:id"'
+    const helperStart = serverSource.indexOf(
+      "function _applyLibraryTransitionEffects"
+    );
+
+    const helperEnd = serverSource.indexOf(
+      'app.patch("/api/library/:id"',
+      helperStart
     );
 
     assert.notEqual(
-      patchStart,
+      helperStart,
       -1,
-      "no se encontró PATCH /api/library/:id"
+      "no se encontró _applyLibraryTransitionEffects"
     );
 
-    const patchBlock = serverSource.slice(
-      patchStart,
-      serverSource.indexOf(
-        'app.delete("/api/library/:id"',
-        patchStart
-      )
+    assert.notEqual(
+      helperEnd,
+      -1,
+      "no se encontró el final del helper"
+    );
+
+    const helperBlock = serverSource.slice(
+      helperStart,
+      helperEnd
     );
 
     assert.match(
-      patchBlock,
+      helperBlock,
       /progress:\s*nextProgress/,
       "la actividad debe persistir nextProgress en su payload"
     );

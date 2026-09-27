@@ -104,18 +104,62 @@ test(
   "PATCH /api/library/:id registra el primer watched usando la fecha de la actividad",
   () => {
     const start = serverSource.indexOf(
-      'app.patch("/api/library/:id"'
+      "function _applyLibraryTransitionEffects("
     );
 
     const end = serverSource.indexOf(
-      'app.delete("/api/library/:id"',
+      'app.patch("/api/library/:id"',
       start
     );
 
-    assert.notEqual(start, -1, "debe existir PATCH /api/library/:id");
-    assert.notEqual(end, -1, "debe poder aislarse PATCH /api/library/:id");
+    assert.notEqual(
+      start,
+      -1,
+      "debe existir _applyLibraryTransitionEffects"
+    );
+    assert.notEqual(
+      end,
+      -1,
+      "debe poder aislarse _applyLibraryTransitionEffects"
+    );
 
-    const block = serverSource.slice(start, end);
+    const block =
+      serverSource.slice(
+        start,
+        end
+      );
+
+    const patchStart = serverSource.indexOf(
+      'app.patch("/api/library/:id"'
+    );
+
+    const patchEnd = serverSource.indexOf(
+      'app.delete("/api/library/:id"',
+      patchStart
+    );
+
+    assert.notEqual(
+      patchStart,
+      -1,
+      "debe existir PATCH /api/library/:id"
+    );
+    assert.notEqual(
+      patchEnd,
+      -1,
+      "debe poder aislarse PATCH /api/library/:id"
+    );
+
+    const patchBlock =
+      serverSource.slice(
+        patchStart,
+        patchEnd
+      );
+
+    assert.match(
+      patchBlock,
+      /_applyLibraryTransitionEffects/,
+      "PATCH debe delegar los efectos de transición"
+    );
 
     assert.match(
       block,

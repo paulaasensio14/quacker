@@ -1635,6 +1635,317 @@ const ProfileModule = (() => {
     });
   }
 
+  function renderRecommendations(recommendations = []) {
+    const list = $("#profileRecommendationsList");
+    const status = $("#profileRecommendationsStatus");
+
+    if (!list) return;
+
+    list.replaceChildren();
+
+    const safeRecommendations = (
+      Array.isArray(recommendations)
+        ? recommendations
+        : []
+    ).filter((recommendation) => {
+      return String(recommendation?.id || "").trim();
+    });
+
+    if (safeRecommendations.length === 0) {
+      if (status) {
+        status.textContent =
+          t("profile_recommendations_empty");
+      }
+
+      return;
+    }
+
+    if (status) {
+      status.textContent = "";
+    }
+
+    for (const recommendation of safeRecommendations) {
+      const recommendationId =
+        String(recommendation.id || "").trim();
+
+      const sender =
+        recommendation?.sender &&
+        typeof recommendation.sender === "object"
+          ? recommendation.sender
+          : {};
+
+      const username =
+        String(sender.username || "")
+          .trim()
+          .replace(/^@/, "")
+          .toLowerCase();
+
+      const title =
+        String(
+          recommendation?.itemSnapshot?.title || ""
+        ).trim() ||
+        t("profile_recommendations_unknown_title");
+
+      const message =
+        String(recommendation?.message || "").trim();
+
+      const row = document.createElement("article");
+      row.className = "profile-recommendation-row";
+      row.dataset.recommendationId = recommendationId;
+
+      const senderEl = document.createElement("div");
+      senderEl.className =
+        "profile-recommendation-sender";
+
+      const avatar = document.createElement("img");
+      avatar.className =
+        "profile-recommendation-avatar";
+      avatar.src = resolveFollowRequestAvatarSrc(
+        sender.avatar
+      );
+      avatar.alt = "";
+      avatar.setAttribute("aria-hidden", "true");
+
+      const senderText =
+        document.createElement("div");
+      senderText.className =
+        "profile-recommendation-sender-text";
+
+      const name =
+        document.createElement("strong");
+      name.className =
+        "profile-recommendation-sender-name";
+      name.textContent =
+        String(sender.name || "").trim() ||
+        (username ? `@${username}` : "Quacker");
+
+      senderText.append(name);
+
+      if (username) {
+        const handle =
+          document.createElement("span");
+        handle.className =
+          "profile-recommendation-sender-handle";
+        handle.textContent = `@${username}`;
+        senderText.append(handle);
+      }
+
+      senderEl.append(avatar, senderText);
+
+      const content =
+        document.createElement("div");
+      content.className =
+        "profile-recommendation-content";
+
+      const coverUrl =
+        String(
+          recommendation?.itemSnapshot?.cover || ""
+        ).trim();
+
+      if (coverUrl) {
+        const cover = document.createElement("img");
+        cover.className =
+          "profile-recommendation-cover";
+        cover.src = coverUrl;
+        cover.alt = "";
+        cover.setAttribute("aria-hidden", "true");
+        content.append(cover);
+      }
+
+      const contentText =
+        document.createElement("div");
+      contentText.className =
+        "profile-recommendation-content-text";
+
+      const titleEl =
+        document.createElement("strong");
+      titleEl.className =
+        "profile-recommendation-title";
+      titleEl.textContent = title;
+
+      contentText.append(titleEl);
+
+      if (message) {
+        const messageEl =
+          document.createElement("p");
+        messageEl.className =
+          "profile-recommendation-message";
+        messageEl.textContent = message;
+        contentText.append(messageEl);
+      }
+
+      content.append(contentText);
+
+      const actions =
+        document.createElement("div");
+      actions.className =
+        "profile-recommendation-actions";
+
+      const addButton =
+        document.createElement("button");
+      addButton.type = "button";
+      addButton.className =
+        "btn-primary profile-recommendation-action";
+      addButton.dataset.recommendationAction =
+        "added";
+      addButton.dataset.recommendationId =
+        recommendationId;
+      addButton.textContent =
+        t("profile_recommendations_add");
+
+      const consumedButton =
+        document.createElement("button");
+      consumedButton.type = "button";
+      consumedButton.className =
+        "profile-recommendation-action";
+      consumedButton.dataset.recommendationAction =
+        "consumed";
+      consumedButton.dataset.recommendationId =
+        recommendationId;
+      consumedButton.textContent =
+        t("profile_recommendations_consumed");
+
+      const dismissButton =
+        document.createElement("button");
+      dismissButton.type = "button";
+      dismissButton.className =
+        "profile-recommendation-action profile-recommendation-action--dismiss";
+      dismissButton.dataset.recommendationAction =
+        "dismissed";
+      dismissButton.dataset.recommendationId =
+        recommendationId;
+      dismissButton.textContent =
+        t("profile_recommendations_dismiss");
+
+      actions.append(
+        addButton,
+        consumedButton,
+        dismissButton
+      );
+
+      row.append(
+        senderEl,
+        content,
+        actions
+      );
+
+      list.append(row);
+    }
+  }
+
+  async function loadRecommendations() {
+    const status =
+      $("#profileRecommendationsStatus");
+
+    if (status) {
+      status.textContent =
+        t("profile_recommendations_loading");
+    }
+
+    try {
+      const recommendations =
+        await ApiClient.getRecommendations();
+
+      renderRecommendations(recommendations);
+    } catch (err) {
+      console.error(
+        "ProfileModule: failed to load recommendations",
+        err
+      );
+
+      renderRecommendations([]);
+
+      if (status) {
+        status.textContent =
+          t("profile_recommendations_load_error");
+      }
+    }
+  }
+
+  function bindRecommendations() {
+    const list =
+      $("#profileRecommendationsList");
+
+    if (!list) return;
+
+    list.addEventListener("click", async (event) => {
+      const button = event.target.closest(
+        "[data-recommendation-action]"
+      );
+
+      if (!button || !list.contains(button)) {
+        return;
+      }
+
+      const action =
+        String(
+          button.dataset.recommendationAction || ""
+        )
+          .trim()
+          .toLowerCase();
+
+      const recommendationId =
+        String(
+          button.dataset.recommendationId || ""
+        ).trim();
+
+      if (
+        !recommendationId ||
+        ![
+          "added",
+          "consumed",
+          "dismissed"
+        ].includes(action)
+      ) {
+        return;
+      }
+
+      const row = button.closest(
+        ".profile-recommendation-row"
+      );
+
+      const actionButtons = row
+        ? row.querySelectorAll(
+            "[data-recommendation-action]"
+          )
+        : [button];
+
+      for (const actionButton of actionButtons) {
+        actionButton.disabled = true;
+      }
+
+      const status =
+        $("#profileRecommendationsStatus");
+
+      if (status) {
+        status.textContent = "";
+      }
+
+      try {
+        await ApiClient.resolveRecommendation(
+          recommendationId,
+          action
+        );
+
+        await loadRecommendations();
+      } catch (err) {
+        console.error(
+          "ProfileModule: failed to resolve recommendation",
+          err
+        );
+
+        if (status) {
+          status.textContent =
+            t("profile_recommendations_update_error");
+        }
+
+        for (const actionButton of actionButtons) {
+          actionButton.disabled = false;
+        }
+      }
+    });
+  }
+
   function bindPrivacyForm() {
     const form = $("#profilePrivacyForm");
     const saveBtn = $("#profilePrivacySaveBtn");
@@ -1808,6 +2119,7 @@ const ProfileModule = (() => {
       bindDirtyTracking();
       bindPrivacyForm();
       bindFollowRequests();
+      bindRecommendations();
       bindFavoriteActions();
       bindFavoritePicker();
       bindOpinionsNavigation();
@@ -1820,6 +2132,7 @@ const ProfileModule = (() => {
       loadProfileIntoForm(),
       loadPrivacyIntoForm(),
       loadFollowRequests(),
+      loadRecommendations(),
       loadFavoritesIntoProfile(),
       loadOpinionsSummary()
     ];
@@ -1836,6 +2149,7 @@ const ProfileModule = (() => {
       loadProfileIntoForm(),
       loadPrivacyIntoForm(),
       loadFollowRequests(),
+      loadRecommendations(),
       loadFavoritesIntoProfile(),
       loadOpinionsSummary()
     ]);

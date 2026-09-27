@@ -100,6 +100,34 @@ test("el cliente API expone la bandeja y gestión de solicitudes de seguimiento"
   );
 });
 
+
+test("el cliente API expone la bandeja y resolución de recomendaciones", () => {
+  assert.match(
+    apiClientSource,
+    /async function getRecommendations\s*\(/
+  );
+
+  assert.match(
+    apiClientSource,
+    /_httpJson\(\s*"GET",\s*"\/user\/recommendations"\s*\)/
+  );
+
+  assert.match(
+    apiClientSource,
+    /async function resolveRecommendation\s*\(/
+  );
+
+  assert.match(
+    apiClientSource,
+    /_httpJson\([\s\S]*"PATCH"[\s\S]*\/user\/recommendations\/\$\{encodeURIComponent\([^)]*\)\}/
+  );
+
+  assert.match(
+    apiClientSource,
+    /\bgetRecommendations\b[\s\S]*\bresolveRecommendation\b/
+  );
+});
+
 test("Mi perfil incluye los seis controles de privacidad por sección", () => {
   assert.match(
     dashboardSource,
@@ -141,6 +169,24 @@ test("Mi perfil incluye una bandeja de solicitudes de seguimiento", () => {
   assert.match(
     dashboardSource,
     /id=["']profileFollowRequestsStatus["']/
+  );
+});
+
+
+test("Mi perfil incluye una bandeja de recomendaciones", () => {
+  assert.match(
+    dashboardSource,
+    /id=["']profileRecommendationsCard["']/
+  );
+
+  assert.match(
+    dashboardSource,
+    /id=["']profileRecommendationsStatus["']/
+  );
+
+  assert.match(
+    dashboardSource,
+    /id=["']profileRecommendationsList["']/
   );
 });
 
@@ -218,6 +264,59 @@ test("el módulo de perfil carga y gestiona solicitudes de seguimiento", () => {
   );
 });
 
+test("el módulo de perfil carga y gestiona recomendaciones", () => {
+  assert.match(
+    profileSource,
+    /async function loadRecommendations\s*\(/
+  );
+
+  assert.match(
+    profileSource,
+    /function renderRecommendations\s*\(/
+  );
+
+  assert.match(
+    profileSource,
+    /function bindRecommendations\s*\(/
+  );
+
+  assert.match(
+    profileSource,
+    /ApiClient\.getRecommendations\s*\(/
+  );
+
+  assert.match(
+    profileSource,
+    /ApiClient\.resolveRecommendation\s*\(/
+  );
+
+  assert.match(
+    profileSource,
+    /profileRecommendationsList/
+  );
+
+  for (const status of [
+    "added",
+    "consumed",
+    "dismissed"
+  ]) {
+    assert.match(
+      profileSource,
+      new RegExp(`["']${status}["']`)
+    );
+  }
+
+  assert.match(
+    profileSource,
+    /bindRecommendations\s*\(\)/
+  );
+
+  assert.match(
+    profileSource,
+    /loadRecommendations\s*\(\)/
+  );
+});
+
 test("la bandeja de solicitudes está traducida en ES y EN", () => {
   const keys = [
     "profile_follow_requests_title",
@@ -287,6 +386,82 @@ test("la bandeja de solicitudes tiene estilos propios y responsive", () => {
   assert.match(
     dashboardCssSource,
     /@media\s*\(max-width:\s*640px\)[\s\S]*\.profile-follow-request-row/
+  );
+});
+
+test("la bandeja de recomendaciones está traducida en ES y EN", () => {
+  const keys = [
+    "profile_recommendations_title",
+    "profile_recommendations_description",
+    "profile_recommendations_loading",
+    "profile_recommendations_empty",
+    "profile_recommendations_add",
+    "profile_recommendations_consumed",
+    "profile_recommendations_dismiss",
+    "profile_recommendations_unknown_title",
+    "profile_recommendations_load_error",
+    "profile_recommendations_update_error"
+  ];
+
+  for (const key of keys) {
+    const matches = i18nSource.match(
+      new RegExp(`\\b${key}\\s*:`, "g")
+    ) || [];
+
+    assert.equal(
+      matches.length,
+      2,
+      `${key} debe existir en ES y EN`
+    );
+  }
+
+  assert.match(
+    dashboardSource,
+    /data-i18n=["']profile_recommendations_title["']/
+  );
+
+  assert.match(
+    dashboardSource,
+    /data-i18n=["']profile_recommendations_description["']/
+  );
+
+  assert.match(
+    dashboardSource,
+    /data-i18n=["']profile_recommendations_loading["']/
+  );
+});
+
+test("la bandeja de recomendaciones tiene estilos propios y responsive", () => {
+  const selectors = [
+    ".profile-recommendations-card",
+    ".profile-recommendations-list",
+    ".profile-recommendation-row",
+    ".profile-recommendation-sender",
+    ".profile-recommendation-avatar",
+    ".profile-recommendation-content",
+    ".profile-recommendation-cover",
+    ".profile-recommendation-actions",
+    ".profile-recommendation-action"
+  ];
+
+  for (const selector of selectors) {
+    assert.match(
+      dashboardCssSource,
+      new RegExp(
+        selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      ),
+      `falta el estilo ${selector}`
+    );
+  }
+
+  assert.match(
+    dashboardCssSource,
+    /body\.dark-theme\s+\.profile-recommendation-row/
+  );
+
+  assert.match(
+    dashboardCssSource,
+    /@media\s*\(max-width:\s*640px\)[\s\S]*\.profile-recommendation-row/
   );
 });
 

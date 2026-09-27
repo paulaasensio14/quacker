@@ -43,10 +43,10 @@ test("el backend tiene una regla única para decidir si debe invitar a valorar",
 
 test("PATCH /api/library crea una invitación rate_content solo en una transición a completado", () => {
   const start = serverSource.indexOf(
-    'app.patch("/api/library/:id"'
+    "function _applyLibraryTransitionEffects("
   );
   const end = serverSource.indexOf(
-    '\napp.delete("/api/library/:id"',
+    '\napp.patch("/api/library/:id"',
     start
   );
 
@@ -54,6 +54,28 @@ test("PATCH /api/library crea una invitación rate_content solo en una transici�
   assert.notEqual(end, -1);
 
   const block = serverSource.slice(start, end);
+
+  const patchStart = serverSource.indexOf(
+    'app.patch("/api/library/:id"'
+  );
+  const patchEnd = serverSource.indexOf(
+    '\napp.delete("/api/library/:id"',
+    patchStart
+  );
+
+  assert.notEqual(patchStart, -1);
+  assert.notEqual(patchEnd, -1);
+
+  const patchBlock =
+    serverSource.slice(
+      patchStart,
+      patchEnd
+    );
+
+  assert.match(
+    patchBlock,
+    /_applyLibraryTransitionEffects/
+  );
 
   assert.match(
     block,

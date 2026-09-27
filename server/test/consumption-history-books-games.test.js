@@ -32,8 +32,8 @@ test(
   () => {
     const block = extractBlock(
       serverSource,
-      'app.patch("/api/library/:id"',
-      'app.delete("/api/library/:id"'
+      "function _applyLibraryTransitionEffects(",
+      'app.patch("/api/library/:id"'
     );
 
     assert.match(block, /next\.type === "book"/);
@@ -49,8 +49,8 @@ test(
   () => {
     const block = extractBlock(
       serverSource,
-      'app.patch("/api/library/:id"',
-      'app.delete("/api/library/:id"'
+      "function _applyLibraryTransitionEffects(",
+      'app.patch("/api/library/:id"'
     );
 
     assert.match(block, /next\.type === "game"/);
@@ -64,8 +64,8 @@ test(
   () => {
     const block = extractBlock(
       serverSource,
-      'app.patch("/api/library/:id"',
-      'app.delete("/api/library/:id"'
+      "function _applyLibraryTransitionEffects(",
+      'app.patch("/api/library/:id"'
     );
 
     assert.match(block, /rawPatch\?\.consumptionPayload/);
