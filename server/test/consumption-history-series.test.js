@@ -77,6 +77,12 @@ test("el fallback de progreso rápido de series envía activityPayload explícit
 });
 
 test("PATCH registra episode_watched solo cuando llega activityPayload explícito", () => {
+  const transitionEffects = extractBetween(
+    serverSource,
+    "function _applyLibraryTransitionEffects(",
+    '\napp.patch("/api/library/:id"'
+  );
+
   const patchRoute = extractBetween(
     serverSource,
     'app.patch("/api/library/:id"',
@@ -85,26 +91,31 @@ test("PATCH registra episode_watched solo cuando llega activityPayload explícit
 
   assert.match(
     patchRoute,
+    /_applyLibraryTransitionEffects/
+  );
+
+  assert.match(
+    transitionEffects,
     /rawPatch\?\.activityPayload/
   );
 
   assert.match(
-    patchRoute,
+    transitionEffects,
     /eventType:\s*"episode_watched"/
   );
 
   assert.match(
-    patchRoute,
+    transitionEffects,
     /contentType:\s*next\.type/
   );
 
   assert.match(
-    patchRoute,
+    transitionEffects,
     /occurredAt:\s*activityCreatedAt/
   );
 
   assert.match(
-    patchRoute,
+    transitionEffects,
     /bucket\.consumptionHistory\.unshift/
   );
 });
@@ -143,6 +154,12 @@ test("la edición manual de una serie no se convierte en historial canónico", (
     /activityPayload/
   );
 
+  const transitionEffects = extractBetween(
+    serverSource,
+    "function _applyLibraryTransitionEffects(",
+    '\napp.patch("/api/library/:id"'
+  );
+
   const patchRoute = extractBetween(
     serverSource,
     'app.patch("/api/library/:id"',
@@ -151,6 +168,11 @@ test("la edición manual de una serie no se convierte en historial canónico", (
 
   assert.match(
     patchRoute,
+    /_applyLibraryTransitionEffects/
+  );
+
+  assert.match(
+    transitionEffects,
     /rawPatch\?\.activityPayload/
   );
 });

@@ -2319,6 +2319,99 @@ if (externalSignal?.aborted) {
     return res;
   }
 
+  async function getRecommendations() {
+    if (!_isHttp()) return [];
+
+    const res = await _httpJson(
+      "GET",
+      "/user/recommendations"
+    );
+
+    const recommendations =
+      Array.isArray(res?.recommendations)
+        ? res.recommendations
+        : [];
+
+    return recommendations.map(
+      (recommendation) =>
+        _cloneData(recommendation)
+    );
+  }
+
+  async function resolveRecommendation(
+    recommendationId,
+    status
+  ) {
+    const normalizedRecommendationId =
+      String(recommendationId || "").trim();
+
+    const normalizedStatus =
+      String(status || "")
+        .trim()
+        .toLowerCase();
+
+    if (!normalizedRecommendationId) {
+      throw _makeApiError(
+        "missing_recommendation_id",
+        400
+      );
+    }
+
+    if (
+      ![
+        "added",
+        "consumed",
+        "dismissed"
+      ].includes(normalizedStatus)
+    ) {
+      throw _makeApiError(
+        "invalid_recommendation_status",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const res = await _httpJson(
+      "PATCH",
+      `/user/recommendations/${encodeURIComponent(normalizedRecommendationId)}`,
+      {
+        status: normalizedStatus
+      }
+    );
+
+    _emitDataChanged({
+      kind: "recommendations",
+      action: normalizedStatus,
+      recommendationId:
+        normalizedRecommendationId
+    });
+
+    if (
+      normalizedStatus === "added" ||
+      normalizedStatus === "consumed"
+    ) {
+      _emitDataChanged({
+        kind: "library",
+        action:
+          normalizedStatus === "added"
+            ? "recommendation_add"
+            : "recommendation_complete",
+        itemId:
+          _normalizeDataId(
+            res?.item?.id
+          )
+      });
+    }
+
+    return res;
+  }
+
   function normalizeUserFavorites(value) {
     const source =
       value &&
@@ -6735,6 +6828,8 @@ if (externalSignal?.aborted) {
     getFollowRequests,
     acceptFollowRequest,
     rejectFollowRequest,
+    getRecommendations,
+    resolveRecommendation,
     getUserFavorites,
     addUserFavorite,
     replaceUserFavorite,
