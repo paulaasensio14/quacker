@@ -123,6 +123,10 @@ import {
 } from "./lib/auth-rate-limit.js";
 
 import {
+  createSocialRateLimiters
+} from "./lib/social-rate-limit.js";
+
+import {
   PASSWORD_RESET_TOKEN_TTL_MS,
   applyPasswordCredentialReset,
   createPasswordResetToken,
@@ -287,6 +291,9 @@ const contactRateLimit = new Map();
 
 const authRateLimits =
   createAuthRateLimiters();
+
+const socialRateLimits =
+  createSocialRateLimiters();
 
 let mailTransporter = null;
 
@@ -4214,6 +4221,19 @@ app.post(
       });
     }
 
+    const recommendationRateLimit =
+      socialRateLimits.consumeRecommendation({
+        userId: ownerUserId
+      });
+
+    if (!recommendationRateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "social_recommendation_rate_limited",
+        recommendationRateLimit.retryAfterSeconds
+      );
+    }
+
     targetBucket.recommendations =
       result.recommendations;
 
@@ -4346,6 +4366,19 @@ app.post(
         });
       }
 
+      const followRateLimit =
+        socialRateLimits.consumeFollow({
+          userId: ownerUserId
+        });
+
+      if (!followRateLimit.allowed) {
+        return _sendRateLimitResponse(
+          res,
+          "social_follow_rate_limited",
+          followRateLimit.retryAfterSeconds
+        );
+      }
+
       target.bucket.followRequests =
         requestResult.followRequests;
 
@@ -4379,6 +4412,19 @@ app.post(
       return res.status(400).json({
         error: result.error
       });
+    }
+
+    const followRateLimit =
+      socialRateLimits.consumeFollow({
+        userId: ownerUserId
+      });
+
+    if (!followRateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "social_follow_rate_limited",
+        followRateLimit.retryAfterSeconds
+      );
     }
 
     ownerBucket.following =
