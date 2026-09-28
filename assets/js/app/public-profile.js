@@ -1174,7 +1174,9 @@
       label =
         viewer?.access === "restricted"
           ? "Solicitar seguir"
-          : "Seguir";
+          : viewer?.followsViewer === true
+            ? "Seguir también"
+            : "Seguir";
     } else if (state === "requested") {
       label = "Solicitud enviada";
     } else if (

@@ -592,3 +592,45 @@ test(
     );
   }
 );
+
+test(
+  "el cliente público muestra Seguir también cuando el perfil ya sigue al visitante",
+  () => {
+    const start =
+      clientSource.indexOf(
+        "function renderSocialRelationship"
+      );
+
+    assert.notEqual(
+      start,
+      -1,
+      "falta renderSocialRelationship"
+    );
+
+    const nextFunction =
+      clientSource.indexOf(
+        "\n  async function ",
+        start + 1
+      );
+
+    const block =
+      clientSource.slice(
+        start,
+        nextFunction === -1
+          ? clientSource.length
+          : nextFunction
+      );
+
+    assert.match(
+      block,
+      /viewer\??\.followsViewer/,
+      "el render debe consultar followsViewer"
+    );
+
+    assert.match(
+      block,
+      /Seguir también/,
+      "falta la etiqueta Seguir también"
+    );
+  }
+);
