@@ -548,6 +548,31 @@ test(
         "following debe persistir el userId objetivo"
       );
 
+      const directFollowNotification =
+        persistedAfterFollow
+          .users[targetUserId]
+          .notifications
+          ?.find(
+            (notification) =>
+              notification.title ===
+              "Week 13 Follower ha empezado a seguirte"
+          );
+
+      assert.ok(
+        directFollowNotification,
+        "un follow público efectivo debe notificar al usuario seguido"
+      );
+
+      assert.equal(
+        directFollowNotification.text,
+        ""
+      );
+
+      assert.equal(
+        directFollowNotification.icon,
+        "bell"
+      );
+
       const duplicateFollow =
         await requestJson(
           `${baseUrl}/api/user/following/week13_target`,
@@ -1408,6 +1433,28 @@ test(
         202
       );
 
+      const persistedPending =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        (
+          persistedPending
+            .users[targetUserId]
+            .notifications || []
+        ).some(
+          (notification) =>
+            notification.title ===
+            "W13 Accept Requester ha empezado a seguirte"
+        ),
+        false,
+        "una solicitud pendiente no debe anunciar todavía un follow efectivo"
+      );
+
       const accept =
         await requestJson(
           `${baseUrl}/api/user/follow-requests/w13_requester/accept`,
@@ -1455,6 +1502,26 @@ test(
           targetUserId
         ],
         "el solicitante debe pasar a seguir al destinatario"
+      );
+
+      const acceptedFollowNotification =
+        persistedDb
+          .users[targetUserId]
+          .notifications
+          ?.find(
+            (notification) =>
+              notification.title ===
+              "W13 Accept Requester ha empezado a seguirte"
+          );
+
+      assert.ok(
+        acceptedFollowNotification,
+        "aceptar la solicitud debe crear la notificación de follow efectivo"
+      );
+
+      assert.equal(
+        acceptedFollowNotification.icon,
+        "bell"
       );
     } finally {
       await stopTestServer(

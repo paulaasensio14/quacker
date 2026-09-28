@@ -1680,6 +1680,34 @@ function _normalizeUserNotificationsList(list) {
 }
 
 
+function _appendUserNotification(bucket, entry) {
+  if (
+    !bucket ||
+    typeof bucket !== "object" ||
+    Array.isArray(bucket)
+  ) {
+    return null;
+  }
+
+  const notification =
+    _normalizeUserNotification(entry);
+
+  if (!notification) {
+    return null;
+  }
+
+  bucket.notifications =
+    _normalizeUserNotificationsList([
+      notification,
+      ...(Array.isArray(bucket.notifications)
+        ? bucket.notifications
+        : [])
+    ]);
+
+  return notification;
+}
+
+
 function _shouldCreateCompletionOpinionPrompt({
   prevCompleted,
   nextCompleted,
@@ -4189,6 +4217,37 @@ app.post(
     targetBucket.recommendations =
       result.recommendations;
 
+    const recommenderName =
+      String(
+        ownerBucket?.profile?.name ||
+        ownerUsername ||
+        ""
+      ).trim();
+
+    const recommendationTitle =
+      String(
+        result.recommendation
+          ?.itemSnapshot?.title || ""
+      ).trim();
+
+    const recommendationIsEnglish =
+      targetBucket?.profile?.language === "en";
+
+    _appendUserNotification(
+      targetBucket,
+      {
+        title: recommendationIsEnglish
+          ? `${recommenderName} recommends ${recommendationTitle}`
+          : `${recommenderName} te recomienda ${recommendationTitle}`,
+        text:
+          result.recommendation?.message || "",
+        icon: "bell",
+        createdAt:
+          result.recommendation?.createdAt ||
+          new Date().toISOString()
+      }
+    );
+
     _writeDb(db);
 
     return res.status(201).json({
@@ -4345,6 +4404,29 @@ app.post(
           pendingResult.followRequests;
       }
     }
+
+    const followerName =
+      String(
+        ownerBucket?.profile?.name ||
+        ownerUsername ||
+        ""
+      ).trim();
+
+    const followIsEnglish =
+      target.bucket?.profile?.language === "en";
+
+    _appendUserNotification(
+      target.bucket,
+      {
+        title: followIsEnglish
+          ? `${followerName} started following you`
+          : `${followerName} ha empezado a seguirte`,
+        text: "",
+        icon: "bell",
+        createdAt:
+          new Date().toISOString()
+      }
+    );
 
     _writeDb(db);
 
@@ -4587,6 +4669,29 @@ app.post(
     if (followResult.ok) {
       requesterBucket.following =
         followResult.following;
+
+      const requesterName =
+        String(
+          requesterBucket?.profile?.name ||
+          requestedUsername ||
+          ""
+        ).trim();
+
+      const followIsEnglish =
+        targetBucket?.profile?.language === "en";
+
+      _appendUserNotification(
+        targetBucket,
+        {
+          title: followIsEnglish
+            ? `${requesterName} started following you`
+            : `${requesterName} ha empezado a seguirte`,
+          text: "",
+          icon: "bell",
+          createdAt:
+            new Date().toISOString()
+        }
+      );
     }
 
     targetBucket.followRequests =

@@ -597,6 +597,31 @@ test(
         sender.userId
       );
 
+      const recommendationNotification =
+        persisted
+          .users[receiver.userId]
+          .notifications
+          ?.find(
+            (notification) =>
+              notification.title ===
+              "Recommendation Sender te recomienda The Matrix"
+          );
+
+      assert.ok(
+        recommendationNotification,
+        "una recomendación válida debe notificar al receptor"
+      );
+
+      assert.equal(
+        recommendationNotification.text,
+        "Creo que te va a gustar."
+      );
+
+      assert.equal(
+        recommendationNotification.icon,
+        "bell"
+      );
+
       persisted
         .users[receiver.userId]
         .recommendations
