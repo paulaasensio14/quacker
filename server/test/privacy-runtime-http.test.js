@@ -1625,7 +1625,8 @@ test(
         authenticatedProfile.json.viewer,
         {
           access: "full",
-          state: "following"
+          state: "following",
+          followsViewer: false
         },
         "la API debe informar a la UI de la relación social del visitante"
       );

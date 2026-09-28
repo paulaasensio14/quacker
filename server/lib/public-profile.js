@@ -675,7 +675,8 @@ export function getPublicProfileByUsername(
     if (normalizedViewerUserId) {
       restrictedResult.viewer = {
         access: "restricted",
-        state: viewerState
+        state: viewerState,
+        followsViewer: targetFollowsViewer
       };
     }
 
@@ -709,7 +710,8 @@ export function getPublicProfileByUsername(
   if (normalizedViewerUserId) {
     result.viewer = {
       access: "full",
-      state: viewerState
+      state: viewerState,
+      followsViewer: targetFollowsViewer
     };
   }
 

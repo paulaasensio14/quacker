@@ -977,7 +977,8 @@ test(
         },
         viewer: {
           access: "restricted",
-          state: "none"
+          state: "none",
+          followsViewer: false
         }
       }
     );
@@ -1038,7 +1039,8 @@ test(
         },
         viewer: {
           access: "full",
-          state: "following"
+          state: "following",
+          followsViewer: false
         }
       }
     );
@@ -1101,7 +1103,8 @@ test(
         },
         viewer: {
           access: "full",
-          state: "friend"
+          state: "friend",
+          followsViewer: true
         }
       }
     );
@@ -1153,7 +1156,8 @@ test(
         },
         viewer: {
           access: "full",
-          state: "self"
+          state: "self",
+          followsViewer: false
         }
       }
     );
@@ -1209,7 +1213,8 @@ test(
         },
         viewer: {
           access: "restricted",
-          state: "following"
+          state: "following",
+          followsViewer: false
         }
       }
     );
@@ -1261,7 +1266,8 @@ test(
         },
         viewer: {
           access: "restricted",
-          state: "requested"
+          state: "requested",
+          followsViewer: false
         }
       }
     );
@@ -1307,7 +1313,8 @@ test(
       result.viewer,
       {
         access: "restricted",
-        state: "none"
+        state: "none",
+        followsViewer: false
       }
     );
   }
@@ -1354,7 +1361,8 @@ test(
       result.viewer,
       {
         access: "full",
-        state: "following"
+        state: "following",
+        followsViewer: false
       }
     );
   }
@@ -1403,7 +1411,8 @@ test(
       result.viewer,
       {
         access: "full",
-        state: "friend"
+        state: "friend",
+        followsViewer: true
       }
     );
   }
@@ -1441,7 +1450,8 @@ test(
       result.viewer,
       {
         access: "full",
-        state: "self"
+        state: "self",
+        followsViewer: false
       }
     );
   }
@@ -1525,6 +1535,55 @@ test(
       {
         followersCount: 1,
         followingCount: 1
+      }
+    );
+  }
+);
+
+test(
+  "el perfil público informa cuando el objetivo ya sigue al visitante",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Paula",
+          handle: "@paula",
+          bio: "Bio",
+          avatar: ""
+        },
+        privacy: {
+          profileVisibility: "public"
+        },
+        following: [
+          "u_viewer"
+        ],
+        followRequests: []
+      },
+
+      u_viewer: {
+        profile: {
+          name: "Carmen",
+          handle: "@carmen"
+        },
+        following: []
+      }
+    };
+
+    const result =
+      getPublicProfileByUsername(
+        users,
+        "paula",
+        {
+          viewerUserId: "u_viewer"
+        }
+      );
+
+    assert.deepEqual(
+      result.viewer,
+      {
+        access: "full",
+        state: "none",
+        followsViewer: true
       }
     );
   }
