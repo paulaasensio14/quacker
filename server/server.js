@@ -99,6 +99,11 @@ import {
 } from "./lib/recommendations.js";
 
 import {
+  normalizeCollaborativeList,
+  normalizeCollaborativeLists
+} from "./lib/collaborative-lists.js";
+
+import {
   getPublicProfileByUsername,
   getPublicSocialGraphByUsername,
   normalizePublicIdentity,
@@ -2030,9 +2035,13 @@ function _getUserBucket(db, userId) {
     ? db.users[userId].library
     : [];
 
-  db.users[userId].lists = Array.isArray(db.users[userId].lists)
-    ? db.users[userId].lists
-    : [];
+  db.users[userId].lists =
+    normalizeCollaborativeLists(
+      db.users[userId].lists,
+      {
+        fallbackOwnerUserId: userId
+      }
+    );
 
   db.users[userId].activities = Array.isArray(db.users[userId].activities)
     ? db.users[userId].activities
@@ -5344,6 +5353,9 @@ app.post("/api/lists", _requireAuth, (req, res) => {
     name,
     description,
     visibility,
+    ownerUserId:
+      req.session.userId,
+    collaborators: [],
     items: [],
     itemsCount: 0,
     createdAt: nowIso,
@@ -5367,6 +5379,16 @@ app.put("/api/lists", _requireAuth, (req, res) => {
   const bucket = _getUserBucket(db, req.session.userId);
   const nowIso = new Date().toISOString();
 
+  const existingListsById =
+    new Map(
+      bucket.lists.map(
+        (list) => [
+          String(list?.id || ""),
+          list
+        ]
+      )
+    );
+
   const safeLists = incoming.map((list) => {
     const items = Array.isArray(list?.items) ? list.items : [];
 
@@ -5382,18 +5404,37 @@ app.put("/api/lists", _requireAuth, (req, res) => {
       })
       .filter(Boolean);
 
-    return {
-      id: list?.id ? String(list.id) : _uid(),
-      name: String(list?.name || "").replace(/\s+/g, " ").trim() || "Sin nombre",
-      description: String(list?.description || "").trim(),
-      visibility: ["private", "public", "collab"].includes(String(list?.visibility || "").trim().toLowerCase())
-        ? String(list.visibility).trim().toLowerCase()
-        : "private",
-      items: safeItems,
-      itemsCount: safeItems.length,
-      createdAt: list?.createdAt || nowIso,
-      updatedAt: nowIso
-    };
+    const listId =
+      list?.id
+        ? String(list.id)
+        : _uid();
+
+    const existingList =
+      existingListsById.get(listId);
+
+    return normalizeCollaborativeList(
+      {
+        id: listId,
+        name: String(list?.name || "").replace(/\s+/g, " ").trim() || "Sin nombre",
+        description: String(list?.description || "").trim(),
+        visibility: ["private", "public", "collab"].includes(String(list?.visibility || "").trim().toLowerCase())
+          ? String(list.visibility).trim().toLowerCase()
+          : "private",
+        ownerUserId:
+          existingList?.ownerUserId ||
+          req.session.userId,
+        collaborators:
+          existingList?.collaborators || [],
+        items: safeItems,
+        itemsCount: safeItems.length,
+        createdAt: list?.createdAt || nowIso,
+        updatedAt: nowIso
+      },
+      {
+        fallbackOwnerUserId:
+          req.session.userId
+      }
+    );
   });
 
   bucket.lists = safeLists;
