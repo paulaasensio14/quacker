@@ -3189,3 +3189,307 @@ test(
     }
   }
 );
+
+
+async function registerPublicRateLimitUser(
+  baseUrl,
+  {
+    email,
+    name,
+    handle
+  }
+) {
+  const registration =
+    await requestJson(
+      `${baseUrl}/api/auth/register`,
+      {
+        method: "POST",
+        body: {
+          email,
+          password:
+            "runtime-pass-123",
+          name,
+          language: "es"
+        }
+      }
+    );
+
+  assert.equal(
+    registration.statusCode,
+    200
+  );
+
+  const cookie =
+    sessionCookie(registration);
+
+  const userId =
+    registration.json?.user?.id;
+
+  assert.ok(userId);
+
+  const profileUpdate =
+    await requestJson(
+      `${baseUrl}/api/user`,
+      {
+        method: "PATCH",
+        cookie,
+        body: {
+          handle
+        }
+      }
+    );
+
+  assert.equal(
+    profileUpdate.statusCode,
+    200
+  );
+
+  const privacyUpdate =
+    await requestJson(
+      `${baseUrl}/api/user/privacy`,
+      {
+        method: "PATCH",
+        cookie,
+        body: {
+          profile: true
+        }
+      }
+    );
+
+  assert.equal(
+    privacyUpdate.statusCode,
+    200
+  );
+
+  return {
+    cookie,
+    userId
+  };
+}
+
+
+test(
+  "limita follows válidos por usuario sin cobrar intentos inválidos",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const follower =
+        await registerPublicRateLimitUser(
+          baseUrl,
+          {
+            email:
+              "w13-rate-follow-sender@example.test",
+            name:
+              "W13 Rate Follow Sender",
+            handle:
+              "@w13_rate_sender"
+          }
+        );
+
+      const target =
+        await registerPublicRateLimitUser(
+          baseUrl,
+          {
+            email:
+              "w13-rate-follow-target@example.test",
+            name:
+              "W13 Rate Follow Target",
+            handle:
+              "@w13_rate_target"
+          }
+        );
+
+      for (
+        let attempt = 0;
+        attempt < 31;
+        attempt += 1
+      ) {
+        const invalidSelfFollow =
+          await requestJson(
+            `${baseUrl}/api/user/following/w13_rate_sender`,
+            {
+              method: "POST",
+              cookie:
+                follower.cookie
+            }
+          );
+
+        assert.equal(
+          invalidSelfFollow.statusCode,
+          400,
+          "un auto-follow inválido no debe consumir cuota social"
+        );
+
+        assert.equal(
+          invalidSelfFollow.json?.error,
+          "cannot_follow_self"
+        );
+      }
+
+      for (
+        let attempt = 0;
+        attempt < 30;
+        attempt += 1
+      ) {
+        const follow =
+          await requestJson(
+            `${baseUrl}/api/user/following/w13_rate_target`,
+            {
+              method: "POST",
+              cookie:
+                follower.cookie
+            }
+          );
+
+        assert.equal(
+          follow.statusCode,
+          201,
+          `el follow válido ${attempt + 1} debe estar permitido`
+        );
+
+        const unfollow =
+          await requestJson(
+            `${baseUrl}/api/user/following/w13_rate_target`,
+            {
+              method: "DELETE",
+              cookie:
+                follower.cookie
+            }
+          );
+
+        assert.equal(
+          unfollow.statusCode,
+          200
+        );
+      }
+
+      const blocked =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_rate_target`,
+          {
+            method: "POST",
+            cookie:
+              follower.cookie
+          }
+        );
+
+      assert.equal(
+        blocked.statusCode,
+        429
+      );
+
+      assert.equal(
+        blocked.json?.error,
+        "social_follow_rate_limited"
+      );
+
+      const retryAfter =
+        Number(
+          blocked.headers[
+            "retry-after"
+          ]
+        );
+
+      assert.equal(
+        Number.isInteger(retryAfter) &&
+          retryAfter > 0,
+        true
+      );
+
+      assert.equal(
+        blocked.json
+          ?.retryAfterSeconds,
+        retryAfter
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persisted
+          .users[follower.userId]
+          .following,
+        [],
+        "el intento bloqueado no debe crear following"
+      );
+
+      const followNotifications =
+        (
+          persisted
+            .users[target.userId]
+            .notifications || []
+        ).filter(
+          (notification) =>
+            notification.title ===
+            "W13 Rate Follow Sender ha empezado a seguirte"
+        );
+
+      assert.equal(
+        followNotifications.length,
+        30,
+        "el intento bloqueado no debe crear una notificación extra"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);

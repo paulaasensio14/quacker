@@ -2158,3 +2158,316 @@ test(
     }
   }
 );
+
+
+test(
+  "limita recomendaciones válidas por usuario sin cobrar duplicados",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const sender =
+        await registerUser(
+          baseUrl,
+          {
+            email:
+              "w13-rate-rec-sender@example.test",
+            name:
+              "W13 Rate Rec Sender",
+            handle:
+              "@w13_rate_rec_a"
+          }
+        );
+
+      const receiver =
+        await registerUser(
+          baseUrl,
+          {
+            email:
+              "w13-rate-rec-receiver@example.test",
+            name:
+              "W13 Rate Rec Receiver",
+            handle:
+              "@w13_rate_rec_b"
+          }
+        );
+
+      const senderFollowsReceiver =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_rate_rec_b`,
+          {
+            method: "POST",
+            cookie:
+              sender.cookie
+          }
+        );
+
+      assert.equal(
+        senderFollowsReceiver.statusCode,
+        201
+      );
+
+      const receiverFollowsSender =
+        await requestJson(
+          `${baseUrl}/api/user/following/w13_rate_rec_a`,
+          {
+            method: "POST",
+            cookie:
+              receiver.cookie
+          }
+        );
+
+      assert.equal(
+        receiverFollowsSender.statusCode,
+        201
+      );
+
+      const firstRecommendationBody = {
+        contentType: "movie",
+        source: "tmdb",
+        externalId: "900001",
+        itemSnapshot: {
+          title: "Rate Limit Movie 1",
+          cover: ""
+        },
+        message:
+          "Primera recomendación válida."
+      };
+
+      const firstRecommendation =
+        await requestJson(
+          `${baseUrl}/api/user/recommendations/w13_rate_rec_b`,
+          {
+            method: "POST",
+            cookie:
+              sender.cookie,
+            body:
+              firstRecommendationBody
+          }
+        );
+
+      assert.equal(
+        firstRecommendation.statusCode,
+        201
+      );
+
+      for (
+        let attempt = 0;
+        attempt < 21;
+        attempt += 1
+      ) {
+        const duplicate =
+          await requestJson(
+            `${baseUrl}/api/user/recommendations/w13_rate_rec_b`,
+            {
+              method: "POST",
+              cookie:
+                sender.cookie,
+              body:
+                firstRecommendationBody
+            }
+          );
+
+        assert.equal(
+          duplicate.statusCode,
+          409,
+          "una recomendación duplicada no debe consumir cuota social"
+        );
+
+        assert.equal(
+          duplicate.json?.error,
+          "recommendation_already_exists"
+        );
+      }
+
+      for (
+        let attempt = 2;
+        attempt <= 20;
+        attempt += 1
+      ) {
+        const recommendation =
+          await requestJson(
+            `${baseUrl}/api/user/recommendations/w13_rate_rec_b`,
+            {
+              method: "POST",
+              cookie:
+                sender.cookie,
+              body: {
+                contentType: "movie",
+                source: "tmdb",
+                externalId:
+                  String(
+                    900000 + attempt
+                  ),
+                itemSnapshot: {
+                  title:
+                    `Rate Limit Movie ${attempt}`,
+                  cover: ""
+                },
+                message:
+                  `Recomendación válida ${attempt}.`
+              }
+            }
+          );
+
+        assert.equal(
+          recommendation.statusCode,
+          201,
+          `la recomendación válida ${attempt} debe estar permitida`
+        );
+      }
+
+      const blocked =
+        await requestJson(
+          `${baseUrl}/api/user/recommendations/w13_rate_rec_b`,
+          {
+            method: "POST",
+            cookie:
+              sender.cookie,
+            body: {
+              contentType: "movie",
+              source: "tmdb",
+              externalId: "900021",
+              itemSnapshot: {
+                title:
+                  "Rate Limit Movie 21",
+                cover: ""
+              },
+              message:
+                "Esta debe quedar bloqueada."
+            }
+          }
+        );
+
+      assert.equal(
+        blocked.statusCode,
+        429
+      );
+
+      assert.equal(
+        blocked.json?.error,
+        "social_recommendation_rate_limited"
+      );
+
+      const retryAfter =
+        Number(
+          blocked.headers[
+            "retry-after"
+          ]
+        );
+
+      assert.equal(
+        Number.isInteger(retryAfter) &&
+          retryAfter > 0,
+        true
+      );
+
+      assert.equal(
+        blocked.json
+          ?.retryAfterSeconds,
+        retryAfter
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        persisted
+          .users[receiver.userId]
+          .recommendations
+          ?.length,
+        20,
+        "el intento bloqueado no debe persistir una recomendación extra"
+      );
+
+      assert.equal(
+        persisted
+          .users[receiver.userId]
+          .recommendations
+          ?.some(
+            (recommendation) =>
+              recommendation.externalId ===
+              "900021"
+          ),
+        false
+      );
+
+      const blockedNotifications =
+        (
+          persisted
+            .users[receiver.userId]
+            .notifications || []
+        ).filter(
+          (notification) =>
+            notification.title ===
+            "W13 Rate Rec Sender te recomienda Rate Limit Movie 21"
+        );
+
+      assert.equal(
+        blockedNotifications.length,
+        0,
+        "el intento bloqueado no debe crear notificación"
+      );
+    } finally {
+      await stopTestServer(
+        child
+      );
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
