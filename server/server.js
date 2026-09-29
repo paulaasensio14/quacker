@@ -100,11 +100,17 @@ import {
 
 import {
   acceptCollaborativeListInvite,
+  addCollaborativeListCollaborator,
   addCollaborativeListInvite,
   normalizeCollaborativeList,
   normalizeCollaborativeLists,
   removeCollaborativeListInvite
 } from "./lib/collaborative-lists.js";
+
+import {
+  createCollaborativeListInviteToken,
+  verifyCollaborativeListInviteToken
+} from "./lib/collaborative-list-link-invites.js";
 
 import {
   getPublicProfileByUsername,
@@ -5373,6 +5379,194 @@ app.post("/api/lists", _requireAuth, (req, res) => {
 });
 
 app.post(
+  "/api/lists/:id/link-invite",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const ownerUserId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const listId =
+      String(
+        req.params.id || ""
+      ).trim();
+
+    const listIndex =
+      ownerBucket.lists.findIndex(
+        (list) =>
+          String(list?.id || "") ===
+          listId
+      );
+
+    if (listIndex === -1) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const list =
+      ownerBucket.lists[listIndex];
+
+    if (
+      list.ownerUserId !== ownerUserId
+    ) {
+      return res.status(403).json({
+        error: "not_list_owner"
+      });
+    }
+
+    if (list.visibility !== "collab") {
+      return res.status(400).json({
+        error: "list_not_collaborative"
+      });
+    }
+
+    const challenge =
+      createCollaborativeListInviteToken();
+
+    const currentInvites =
+      ownerBucket
+        .collaborativeListLinkInvites &&
+      typeof ownerBucket
+        .collaborativeListLinkInvites ===
+        "object" &&
+      !Array.isArray(
+        ownerBucket
+          .collaborativeListLinkInvites
+      )
+        ? ownerBucket
+            .collaborativeListLinkInvites
+        : {};
+
+    ownerBucket
+      .collaborativeListLinkInvites = {
+        ...currentInvites,
+        [listId]: {
+          tokenHash:
+            challenge.tokenHash,
+          issuedAt:
+            challenge.issuedAt
+        }
+      };
+
+    _writeDb(db);
+
+    return res.status(201).json({
+      created: true,
+      list: {
+        id: list.id,
+        name: list.name
+      },
+      invite: {
+        url:
+          "https://quacker.es/#list-invite=" +
+          encodeURIComponent(
+            challenge.token
+          ),
+        issuedAt:
+          challenge.issuedAt
+      }
+    });
+  }
+);
+
+
+app.delete(
+  "/api/lists/:id/link-invite",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const ownerUserId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const listId =
+      String(
+        req.params.id || ""
+      ).trim();
+
+    const listIndex =
+      ownerBucket.lists.findIndex(
+        (list) =>
+          String(list?.id || "") ===
+          listId
+      );
+
+    if (listIndex === -1) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const list =
+      ownerBucket.lists[listIndex];
+
+    if (
+      list.ownerUserId !== ownerUserId
+    ) {
+      return res.status(403).json({
+        error: "not_list_owner"
+      });
+    }
+
+    const invites =
+      ownerBucket
+        .collaborativeListLinkInvites;
+
+    if (
+      !invites ||
+      typeof invites !== "object" ||
+      Array.isArray(invites) ||
+      !Object.prototype.hasOwnProperty.call(
+        invites,
+        listId
+      )
+    ) {
+      return res.status(404).json({
+        error: "link_invite_not_found"
+      });
+    }
+
+    delete invites[listId];
+
+    if (
+      Object.keys(invites).length === 0
+    ) {
+      delete ownerBucket
+        .collaborativeListLinkInvites;
+    }
+
+    _writeDb(db);
+
+    return res.json({
+      revoked: true,
+      list: {
+        id: list.id,
+        name: list.name
+      }
+    });
+  }
+);
+
+
+app.post(
   "/api/lists/:id/invites/:username",
   _requireAuth,
   (req, res) => {
@@ -5480,6 +5674,160 @@ app.post(
         normalizePublicIdentity(
           target.bucket.profile
         )
+    });
+  }
+);
+
+
+app.post(
+  "/api/user/list-invites/link/accept",
+  _requireAuth,
+  (req, res) => {
+    const token =
+      String(
+        req.body?.token || ""
+      ).trim();
+
+    if (!token) {
+      return res.status(400).json({
+        error: "missing_token"
+      });
+    }
+
+    const db = _readDb();
+
+    const targetUserId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    let matchedOwnerBucket = null;
+    let matchedListIndex = -1;
+
+    for (
+      const [ownerUserId]
+      of Object.entries(db.users || {})
+    ) {
+      const ownerBucket =
+        _getUserBucket(
+          db,
+          ownerUserId
+        );
+
+      const linkInvites =
+        ownerBucket
+          .collaborativeListLinkInvites;
+
+      if (
+        !linkInvites ||
+        typeof linkInvites !== "object" ||
+        Array.isArray(linkInvites)
+      ) {
+        continue;
+      }
+
+      for (
+        const [listId, challenge]
+        of Object.entries(linkInvites)
+      ) {
+        if (
+          !verifyCollaborativeListInviteToken({
+            token,
+            tokenHash:
+              challenge?.tokenHash
+          })
+        ) {
+          continue;
+        }
+
+        const listIndex =
+          ownerBucket.lists.findIndex(
+            (list) =>
+              String(list?.id || "") ===
+              String(listId)
+          );
+
+        if (listIndex === -1) {
+          continue;
+        }
+
+        matchedOwnerBucket =
+          ownerBucket;
+
+        matchedListIndex =
+          listIndex;
+
+        break;
+      }
+
+      if (
+        matchedOwnerBucket &&
+        matchedListIndex !== -1
+      ) {
+        break;
+      }
+    }
+
+    if (
+      !matchedOwnerBucket ||
+      matchedListIndex === -1
+    ) {
+      return res.status(404).json({
+        error: "invite_not_found"
+      });
+    }
+
+    const list =
+      matchedOwnerBucket
+        .lists[matchedListIndex];
+
+    if (list.visibility !== "collab") {
+      return res.status(400).json({
+        error: "list_not_collaborative"
+      });
+    }
+
+    const result =
+      addCollaborativeListCollaborator(
+        list,
+        targetUserId
+      );
+
+    if (!result.ok) {
+      if (
+        result.error ===
+          "cannot_add_owner" ||
+        result.error ===
+          "already_collaborator"
+      ) {
+        return res.status(409).json({
+          error: result.error
+        });
+      }
+
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    const nextList = {
+      ...result.list,
+      updatedAt:
+        new Date().toISOString()
+    };
+
+    matchedOwnerBucket
+      .lists[matchedListIndex] =
+        nextList;
+
+    _writeDb(db);
+
+    return res.json({
+      accepted: true,
+      list: {
+        id: nextList.id,
+        name: nextList.name
+      }
     });
   }
 );
@@ -5842,6 +6190,66 @@ app.put("/api/lists", _requireAuth, (req, res) => {
     if (canRestoreDeletedListCollaboration) {
       restoredDeletedListCollaboration =
         true;
+
+      const deletedLinkInvite =
+        deletedListCollaboration
+          ?.linkInvite;
+
+      if (
+        deletedLinkInvite &&
+        typeof deletedLinkInvite ===
+          "object" &&
+        !Array.isArray(
+          deletedLinkInvite
+        ) &&
+        /^[a-f0-9]{64}$/.test(
+          String(
+            deletedLinkInvite
+              .tokenHash || ""
+          )
+            .trim()
+            .toLowerCase()
+        ) &&
+        Number.isFinite(
+          Number(
+            deletedLinkInvite
+              .issuedAt
+          )
+        )
+      ) {
+        const currentLinkInvites =
+          bucket
+            .collaborativeListLinkInvites &&
+          typeof bucket
+            .collaborativeListLinkInvites ===
+            "object" &&
+          !Array.isArray(
+            bucket
+              .collaborativeListLinkInvites
+          )
+            ? bucket
+                .collaborativeListLinkInvites
+            : {};
+
+        bucket
+          .collaborativeListLinkInvites = {
+            ...currentLinkInvites,
+            [listId]: {
+              tokenHash:
+                String(
+                  deletedLinkInvite
+                    .tokenHash
+                )
+                  .trim()
+                  .toLowerCase(),
+              issuedAt:
+                Number(
+                  deletedLinkInvite
+                    .issuedAt
+                )
+            }
+          };
+      }
     }
 
     return normalizeCollaborativeList(
@@ -5952,6 +6360,52 @@ app.delete("/api/lists/:id", _requireAuth, (req, res) => {
     });
   }
 
+  const linkInvites =
+    bucket
+      .collaborativeListLinkInvites;
+
+  const activeLinkInvite =
+    linkInvites &&
+    typeof linkInvites === "object" &&
+    !Array.isArray(linkInvites) &&
+    linkInvites[id] &&
+    typeof linkInvites[id] ===
+      "object" &&
+    !Array.isArray(linkInvites[id])
+      ? linkInvites[id]
+      : null;
+
+  const deletedLinkInvite =
+    activeLinkInvite &&
+    /^[a-f0-9]{64}$/.test(
+      String(
+        activeLinkInvite.tokenHash ||
+        ""
+      )
+        .trim()
+        .toLowerCase()
+    ) &&
+    Number.isFinite(
+      Number(
+        activeLinkInvite.issuedAt
+      )
+    )
+      ? {
+          tokenHash:
+            String(
+              activeLinkInvite
+                .tokenHash
+            )
+              .trim()
+              .toLowerCase(),
+          issuedAt:
+            Number(
+              activeLinkInvite
+                .issuedAt
+            )
+        }
+      : null;
+
   bucket.deletedListCollaboration = {
     id,
     ownerUserId:
@@ -5971,9 +6425,27 @@ app.delete("/api/lists/:id", _requireAuth, (req, res) => {
       )
         ? [...deletedList.invitedUserIds]
         : [],
+    ...(deletedLinkInvite
+      ? {
+          linkInvite:
+            deletedLinkInvite
+        }
+      : {}),
     deletedAt:
       new Date().toISOString()
   };
+
+  if (activeLinkInvite) {
+    delete linkInvites[id];
+
+    if (
+      Object.keys(linkInvites)
+        .length === 0
+    ) {
+      delete bucket
+        .collaborativeListLinkInvites;
+    }
+  }
 
   bucket.lists =
     bucket.lists.filter(

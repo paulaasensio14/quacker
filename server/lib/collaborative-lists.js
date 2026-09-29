@@ -338,3 +338,60 @@ export function removeCollaborativeListInvite(
     }
   };
 }
+
+
+export function addCollaborativeListCollaborator(
+  list,
+  userId
+) {
+  const normalizedList =
+    normalizeCollaborativeList(list);
+
+  const normalizedUserId =
+    _normalizeUserId(userId);
+
+  if (
+    !normalizedList ||
+    !normalizedUserId
+  ) {
+    return {
+      ok: false,
+      error: "invalid_collaborator"
+    };
+  }
+
+  if (
+    normalizedList.ownerUserId ===
+    normalizedUserId
+  ) {
+    return {
+      ok: false,
+      error: "cannot_add_owner"
+    };
+  }
+
+  if (
+    normalizedList.collaborators.includes(
+      normalizedUserId
+    )
+  ) {
+    return {
+      ok: false,
+      error: "already_collaborator"
+    };
+  }
+
+  return {
+    ok: true,
+    list:
+      normalizeCollaborativeList({
+        ...normalizedList,
+        collaborators: [
+          ...normalizedList.collaborators,
+          normalizedUserId
+        ],
+        invitedUserIds:
+          normalizedList.invitedUserIds
+      })
+  };
+}
