@@ -43,6 +43,55 @@ function _normalizeCollaborators(
 }
 
 
+function _normalizeInvitedUserIds(
+  value,
+  {
+    ownerUserId = "",
+    collaborators = []
+  } = {}
+) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const normalizedOwnerUserId =
+    _normalizeUserId(ownerUserId);
+
+  const collaboratorIds =
+    new Set(
+      _normalizeCollaborators(
+        collaborators,
+        {
+          ownerUserId:
+            normalizedOwnerUserId
+        }
+      )
+    );
+
+  const seen = new Set();
+  const invitedUserIds = [];
+
+  for (const entry of value) {
+    const userId =
+      _normalizeUserId(entry);
+
+    if (
+      !userId ||
+      userId === normalizedOwnerUserId ||
+      collaboratorIds.has(userId) ||
+      seen.has(userId)
+    ) {
+      continue;
+    }
+
+    seen.add(userId);
+    invitedUserIds.push(userId);
+  }
+
+  return invitedUserIds;
+}
+
+
 export function normalizeCollaborativeList(
   value,
   {
@@ -65,14 +114,24 @@ export function normalizeCollaborativeList(
       fallbackOwnerUserId
     );
 
+  const collaborators =
+    _normalizeCollaborators(
+      value.collaborators,
+      {
+        ownerUserId
+      }
+    );
+
   return {
     ...value,
     ownerUserId,
-    collaborators:
-      _normalizeCollaborators(
-        value.collaborators,
+    collaborators,
+    invitedUserIds:
+      _normalizeInvitedUserIds(
+        value.invitedUserIds,
         {
-          ownerUserId
+          ownerUserId,
+          collaborators
         }
       )
   };
@@ -139,4 +198,143 @@ export function getCollaborativeListRole(
   }
 
   return "";
+}
+
+export function addCollaborativeListInvite(
+  list,
+  userId
+) {
+  const normalizedList =
+    normalizeCollaborativeList(list);
+
+  const normalizedUserId =
+    _normalizeUserId(userId);
+
+  if (!normalizedList || !normalizedUserId) {
+    return {
+      ok: false,
+      error: "invalid_invite_target"
+    };
+  }
+
+  if (
+    normalizedList.ownerUserId ===
+    normalizedUserId
+  ) {
+    return {
+      ok: false,
+      error: "cannot_invite_owner"
+    };
+  }
+
+  if (
+    normalizedList.collaborators.includes(
+      normalizedUserId
+    )
+  ) {
+    return {
+      ok: false,
+      error: "already_collaborator"
+    };
+  }
+
+  if (
+    normalizedList.invitedUserIds.includes(
+      normalizedUserId
+    )
+  ) {
+    return {
+      ok: false,
+      error: "invite_exists"
+    };
+  }
+
+  return {
+    ok: true,
+    list: {
+      ...normalizedList,
+      invitedUserIds: [
+        ...normalizedList.invitedUserIds,
+        normalizedUserId
+      ]
+    }
+  };
+}
+
+
+export function acceptCollaborativeListInvite(
+  list,
+  userId
+) {
+  const normalizedList =
+    normalizeCollaborativeList(list);
+
+  const normalizedUserId =
+    _normalizeUserId(userId);
+
+  if (
+    !normalizedList ||
+    !normalizedUserId ||
+    !normalizedList.invitedUserIds.includes(
+      normalizedUserId
+    )
+  ) {
+    return {
+      ok: false,
+      error: "invite_not_found"
+    };
+  }
+
+  return {
+    ok: true,
+    list: {
+      ...normalizedList,
+      collaborators: [
+        ...normalizedList.collaborators,
+        normalizedUserId
+      ],
+      invitedUserIds:
+        normalizedList.invitedUserIds.filter(
+          (entry) =>
+            entry !== normalizedUserId
+        )
+    }
+  };
+}
+
+
+export function removeCollaborativeListInvite(
+  list,
+  userId
+) {
+  const normalizedList =
+    normalizeCollaborativeList(list);
+
+  const normalizedUserId =
+    _normalizeUserId(userId);
+
+  if (
+    !normalizedList ||
+    !normalizedUserId ||
+    !normalizedList.invitedUserIds.includes(
+      normalizedUserId
+    )
+  ) {
+    return {
+      ok: false,
+      error: "invite_not_found"
+    };
+  }
+
+  return {
+    ok: true,
+    list: {
+      ...normalizedList,
+      invitedUserIds:
+        normalizedList.invitedUserIds.filter(
+          (entry) =>
+            entry !== normalizedUserId
+        )
+    }
+  };
 }

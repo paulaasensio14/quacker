@@ -30,7 +30,8 @@ test(
         name: "Películas",
         items: [],
         ownerUserId: "user-owner",
-        collaborators: []
+        collaborators: [],
+        invitedUserIds: []
       }
     );
   }
@@ -147,13 +148,15 @@ test(
             "user-2"
           ],
           ownerUserId:
-            "owner-1"
+            "owner-1",
+          invitedUserIds: []
         },
         {
           id: "list-2",
           ownerUserId:
             "owner-1",
-          collaborators: []
+          collaborators: [],
+          invitedUserIds: []
         }
       ]
     );
