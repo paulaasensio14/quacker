@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  addCollaborativeListCollaborator,
   getCollaborativeListRole,
   normalizeCollaborativeList,
   normalizeCollaborativeLists
@@ -249,6 +250,116 @@ test(
         "owner-1"
       ),
       "owner"
+    );
+  }
+);
+
+
+
+test(
+  "addCollaborativeListCollaborator añade al usuario y elimina su invitación pendiente",
+  () => {
+    const original = {
+      id: "list-1",
+      ownerUserId: "owner-1",
+      collaborators: [
+        "user-2"
+      ],
+      invitedUserIds: [
+        "user-3",
+        "user-4"
+      ]
+    };
+
+    const result =
+      addCollaborativeListCollaborator(
+        original,
+        " user-3 "
+      );
+
+    assert.equal(
+      result.ok,
+      true
+    );
+
+    assert.deepEqual(
+      result.list.collaborators,
+      [
+        "user-2",
+        "user-3"
+      ]
+    );
+
+    assert.deepEqual(
+      result.list.invitedUserIds,
+      [
+        "user-4"
+      ]
+    );
+
+    assert.deepEqual(
+      original.collaborators,
+      [
+        "user-2"
+      ]
+    );
+
+    assert.deepEqual(
+      original.invitedUserIds,
+      [
+        "user-3",
+        "user-4"
+      ]
+    );
+  }
+);
+
+
+test(
+  "addCollaborativeListCollaborator rechaza al propietario",
+  () => {
+    const result =
+      addCollaborativeListCollaborator(
+        {
+          ownerUserId: "owner-1",
+          collaborators: [],
+          invitedUserIds: []
+        },
+        "owner-1"
+      );
+
+    assert.deepEqual(
+      result,
+      {
+        ok: false,
+        error: "cannot_add_owner"
+      }
+    );
+  }
+);
+
+
+test(
+  "addCollaborativeListCollaborator rechaza un colaborador existente",
+  () => {
+    const result =
+      addCollaborativeListCollaborator(
+        {
+          ownerUserId: "owner-1",
+          collaborators: [
+            "user-2"
+          ],
+          invitedUserIds: []
+        },
+        "user-2"
+      );
+
+    assert.deepEqual(
+      result,
+      {
+        ok: false,
+        error: "already_collaborator"
+      }
     );
   }
 );

@@ -2097,3 +2097,1857 @@ test(
     }
   }
 );
+
+
+test(
+  "el propietario puede generar un enlace colaborativo y solo se persiste su hash",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const registration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        registration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        registration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        registration.json?.user?.id;
+
+      assert.ok(ownerUserId);
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie: ownerCookie,
+            body: {
+              name:
+                "Lista con enlace",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const generated =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        generated.statusCode,
+        201
+      );
+
+      assert.equal(
+        generated.json?.created,
+        true
+      );
+
+      assert.equal(
+        generated.json?.list?.id,
+        listId
+      );
+
+      const inviteUrl =
+        String(
+          generated.json?.invite?.url ||
+          ""
+        );
+
+      assert.match(
+        inviteUrl,
+        /^https:\/\/quacker\.es\/#list-invite=[A-Za-z0-9_-]+$/
+      );
+
+      assert.ok(
+        Number.isFinite(
+          Number(
+            generated.json?.invite?.issuedAt
+          )
+        )
+      );
+
+      const token =
+        decodeURIComponent(
+          inviteUrl.split(
+            "#list-invite="
+          )[1] || ""
+        );
+
+      assert.ok(token);
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      const challenge =
+        persisted.users[ownerUserId]
+          ?.collaborativeListLinkInvites
+          ?.[listId];
+
+      assert.match(
+        challenge?.tokenHash || "",
+        /^[a-f0-9]{64}$/
+      );
+
+      assert.equal(
+        Number(challenge?.issuedAt),
+        Number(
+          generated.json?.invite?.issuedAt
+        )
+      );
+
+      assert.equal(
+        JSON.stringify(persisted)
+          .includes(token),
+        false
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "regenerar el enlace colaborativo sustituye el challenge anterior",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const registration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-regenerate@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Regenerate",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        registration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        registration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        registration.json?.user?.id;
+
+      assert.ok(ownerUserId);
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie: ownerCookie,
+            body: {
+              name:
+                "Lista regenerable",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const first =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        first.statusCode,
+        201
+      );
+
+      const firstUrl =
+        String(
+          first.json?.invite?.url || ""
+        );
+
+      const firstToken =
+        decodeURIComponent(
+          firstUrl.split(
+            "#list-invite="
+          )[1] || ""
+        );
+
+      assert.ok(firstToken);
+
+      const firstPersisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      const firstHash =
+        firstPersisted.users[ownerUserId]
+          ?.collaborativeListLinkInvites
+          ?.[listId]
+          ?.tokenHash;
+
+      assert.match(
+        firstHash || "",
+        /^[a-f0-9]{64}$/
+      );
+
+      const second =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        second.statusCode,
+        201
+      );
+
+      const secondUrl =
+        String(
+          second.json?.invite?.url || ""
+        );
+
+      const secondToken =
+        decodeURIComponent(
+          secondUrl.split(
+            "#list-invite="
+          )[1] || ""
+        );
+
+      assert.ok(secondToken);
+
+      assert.notEqual(
+        secondToken,
+        firstToken
+      );
+
+      const secondPersisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      const secondHash =
+        secondPersisted.users[ownerUserId]
+          ?.collaborativeListLinkInvites
+          ?.[listId]
+          ?.tokenHash;
+
+      assert.match(
+        secondHash || "",
+        /^[a-f0-9]{64}$/
+      );
+
+      assert.notEqual(
+        secondHash,
+        firstHash
+      );
+
+      assert.equal(
+        JSON.stringify(secondPersisted)
+          .includes(firstToken),
+        false
+      );
+
+      assert.equal(
+        JSON.stringify(secondPersisted)
+          .includes(secondToken),
+        false
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "el propietario puede revocar el enlace colaborativo",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const registration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-revoke@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Revoke",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        registration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        registration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        registration.json?.user?.id;
+
+      assert.ok(ownerUserId);
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie: ownerCookie,
+            body: {
+              name:
+                "Lista revocable",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const generated =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        generated.statusCode,
+        201
+      );
+
+      const before =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.ok(
+        before.users[ownerUserId]
+          ?.collaborativeListLinkInvites
+          ?.[listId]
+      );
+
+      const revoked =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "DELETE",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        revoked.statusCode,
+        200
+      );
+
+      assert.equal(
+        revoked.json?.revoked,
+        true
+      );
+
+      assert.equal(
+        revoked.json?.list?.id,
+        listId
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          ?.collaborativeListLinkInvites
+          ?.[listId],
+        undefined
+      );
+
+      assert.ok(
+        persisted.users[ownerUserId]
+          ?.lists
+          ?.some(
+            (list) =>
+              String(list?.id) === listId
+          )
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "un usuario autenticado puede unirse como colaborador mediante un enlace válido",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-accept-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Accept Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const inviteeRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-accept-user@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Accept User",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        inviteeRegistration.statusCode,
+        200
+      );
+
+      const inviteeCookie =
+        inviteeRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const inviteeUserId =
+        inviteeRegistration.json?.user?.id;
+
+      assert.ok(ownerUserId);
+      assert.ok(inviteeUserId);
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie: ownerCookie,
+            body: {
+              name:
+                "Lista para aceptar enlace",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const generated =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        generated.statusCode,
+        201
+      );
+
+      const inviteUrl =
+        String(
+          generated.json?.invite?.url ||
+          ""
+        );
+
+      const token =
+        decodeURIComponent(
+          inviteUrl.split(
+            "#list-invite="
+          )[1] || ""
+        );
+
+      assert.ok(token);
+
+      const accepted =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/link/accept`,
+          {
+            method: "POST",
+            cookie: inviteeCookie,
+            body: {
+              token
+            }
+          }
+        );
+
+      assert.equal(
+        accepted.statusCode,
+        200
+      );
+
+      assert.equal(
+        accepted.json?.accepted,
+        true
+      );
+
+      assert.equal(
+        accepted.json?.list?.id,
+        listId
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      const persistedList =
+        persisted.users[ownerUserId]
+          ?.lists
+          ?.find(
+            (list) =>
+              String(list?.id) === listId
+          );
+
+      assert.ok(persistedList);
+
+      assert.deepEqual(
+        persistedList.collaborators,
+        [
+          inviteeUserId
+        ]
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "un enlace regenerado o revocado deja de permitir unirse a la lista",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-invalid-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Invalid Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const inviteeRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-invalid-user@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Invalid User",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        inviteeRegistration.statusCode,
+        200
+      );
+
+      const inviteeCookie =
+        inviteeRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie: ownerCookie,
+            body: {
+              name:
+                "Lista con enlace invalidable",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const first =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        first.statusCode,
+        201
+      );
+
+      const firstToken =
+        decodeURIComponent(
+          String(
+            first.json?.invite?.url || ""
+          ).split(
+            "#list-invite="
+          )[1] || ""
+        );
+
+      assert.ok(firstToken);
+
+      const second =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        second.statusCode,
+        201
+      );
+
+      const secondToken =
+        decodeURIComponent(
+          String(
+            second.json?.invite?.url || ""
+          ).split(
+            "#list-invite="
+          )[1] || ""
+        );
+
+      assert.ok(secondToken);
+      assert.notEqual(
+        secondToken,
+        firstToken
+      );
+
+      const oldTokenAttempt =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/link/accept`,
+          {
+            method: "POST",
+            cookie: inviteeCookie,
+            body: {
+              token: firstToken
+            }
+          }
+        );
+
+      assert.equal(
+        oldTokenAttempt.statusCode,
+        404
+      );
+
+      assert.equal(
+        oldTokenAttempt.json?.error,
+        "invite_not_found"
+      );
+
+      const revoked =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "DELETE",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        revoked.statusCode,
+        200
+      );
+
+      const revokedTokenAttempt =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/link/accept`,
+          {
+            method: "POST",
+            cookie: inviteeCookie,
+            body: {
+              token: secondToken
+            }
+          }
+        );
+
+      assert.equal(
+        revokedTokenAttempt.statusCode,
+        404
+      );
+
+      assert.equal(
+        revokedTokenAttempt.json?.error,
+        "invite_not_found"
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "el propietario y un colaborador existente no pueden aceptar de nuevo el enlace",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-identity-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Identity Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const inviteeRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-identity-user@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Identity User",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        inviteeRegistration.statusCode,
+        200
+      );
+
+      const inviteeCookie =
+        inviteeRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie: ownerCookie,
+            body: {
+              name:
+                "Lista identidad enlace",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const generated =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        generated.statusCode,
+        201
+      );
+
+      const token =
+        decodeURIComponent(
+          String(
+            generated.json?.invite?.url ||
+            ""
+          ).split(
+            "#list-invite="
+          )[1] || ""
+        );
+
+      assert.ok(token);
+
+      const ownerAttempt =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/link/accept`,
+          {
+            method: "POST",
+            cookie: ownerCookie,
+            body: {
+              token
+            }
+          }
+        );
+
+      assert.equal(
+        ownerAttempt.statusCode,
+        409
+      );
+
+      assert.equal(
+        ownerAttempt.json?.error,
+        "cannot_add_owner"
+      );
+
+      const firstAcceptance =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/link/accept`,
+          {
+            method: "POST",
+            cookie: inviteeCookie,
+            body: {
+              token
+            }
+          }
+        );
+
+      assert.equal(
+        firstAcceptance.statusCode,
+        200
+      );
+
+      assert.equal(
+        firstAcceptance.json?.accepted,
+        true
+      );
+
+      const secondAcceptance =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/link/accept`,
+          {
+            method: "POST",
+            cookie: inviteeCookie,
+            body: {
+              token
+            }
+          }
+        );
+
+      assert.equal(
+        secondAcceptance.statusCode,
+        409
+      );
+
+      assert.equal(
+        secondAcceptance.json?.error,
+        "already_collaborator"
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "el enlace queda inactivo fuera de modo colaborativo y vuelve a funcionar al reactivarlo",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-visibility-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Visibility Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const inviteeRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-visibility-user@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Visibility User",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        inviteeRegistration.statusCode,
+        200
+      );
+
+      const inviteeCookie =
+        inviteeRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie: ownerCookie,
+            body: {
+              name:
+                "Lista visibilidad enlace",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const generated =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie: ownerCookie
+          }
+        );
+
+      assert.equal(
+        generated.statusCode,
+        201
+      );
+
+      const token =
+        decodeURIComponent(
+          String(
+            generated.json?.invite?.url ||
+            ""
+          ).split(
+            "#list-invite="
+          )[1] || ""
+        );
+
+      assert.ok(token);
+
+      const madePrivate =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}`,
+          {
+            method: "PATCH",
+            cookie: ownerCookie,
+            body: {
+              visibility: "private"
+            }
+          }
+        );
+
+      assert.equal(
+        madePrivate.statusCode,
+        200
+      );
+
+      const inactiveAttempt =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/link/accept`,
+          {
+            method: "POST",
+            cookie: inviteeCookie,
+            body: {
+              token
+            }
+          }
+        );
+
+      assert.equal(
+        inactiveAttempt.statusCode,
+        400
+      );
+
+      assert.equal(
+        inactiveAttempt.json?.error,
+        "list_not_collaborative"
+      );
+
+      const madeCollaborative =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}`,
+          {
+            method: "PATCH",
+            cookie: ownerCookie,
+            body: {
+              visibility: "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        madeCollaborative.statusCode,
+        200
+      );
+
+      const activeAgain =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/link/accept`,
+          {
+            method: "POST",
+            cookie: inviteeCookie,
+            body: {
+              token
+            }
+          }
+        );
+
+      assert.equal(
+        activeAgain.statusCode,
+        200
+      );
+
+      assert.equal(
+        activeAgain.json?.accepted,
+        true
+      );
+
+      assert.equal(
+        activeAgain.json?.list?.id,
+        listId
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "deshacer el borrado restaura también el challenge privado del enlace colaborativo",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const registration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-link-undo@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Link Undo",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        registration.statusCode,
+        200
+      );
+
+      const cookie =
+        registration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const userId =
+        registration.json?.user?.id;
+
+      assert.ok(userId);
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie,
+            body: {
+              name:
+                "Lista enlace undo",
+              description:
+                "Antes de borrar",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const generated =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+          {
+            method: "POST",
+            cookie
+          }
+        );
+
+      assert.equal(
+        generated.statusCode,
+        201
+      );
+
+      const beforeDelete =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      const originalChallenge =
+        beforeDelete.users[userId]
+          ?.collaborativeListLinkInvites
+          ?.[listId];
+
+      assert.match(
+        originalChallenge?.tokenHash || "",
+        /^[a-f0-9]{64}$/
+      );
+
+      const deleted =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}`,
+          {
+            method: "DELETE",
+            cookie
+          }
+        );
+
+      assert.equal(
+        deleted.statusCode,
+        200
+      );
+
+      const afterDelete =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        afterDelete.users[userId]
+          ?.collaborativeListLinkInvites
+          ?.[listId],
+        undefined
+      );
+
+      assert.deepEqual(
+        afterDelete.users[userId]
+          ?.deletedListCollaboration
+          ?.linkInvite,
+        originalChallenge
+      );
+
+      const restored =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "PUT",
+            cookie,
+            body: {
+              lists: [
+                {
+                  id: listId,
+                  name:
+                    "Lista enlace undo",
+                  description:
+                    "Antes de borrar",
+                  visibility:
+                    "collab",
+                  items: [],
+                  createdAt:
+                    created.json?.createdAt
+                }
+              ]
+            }
+          }
+        );
+
+      assert.equal(
+        restored.statusCode,
+        200
+      );
+
+      const afterRestore =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        afterRestore.users[userId]
+          ?.collaborativeListLinkInvites
+          ?.[listId],
+        originalChallenge
+      );
+
+      assert.equal(
+        afterRestore.users[userId]
+          ?.deletedListCollaboration,
+        undefined
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
