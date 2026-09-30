@@ -946,14 +946,100 @@ if (externalSignal?.aborted) {
       const fallbackListId = _normalizeDataId(`local_list_${Date.now()}_${index}`);
       const safeItems = items
         .map((entry) => {
-          const rawId = typeof entry === "string" ? entry : entry?.id;
-          const itemId = _normalizeDataId(rawId);
+          const rawId =
+            typeof entry === "string"
+              ? entry
+              : entry?.id;
+
+          const itemId =
+            _normalizeDataId(rawId);
+
           if (!itemId) return null;
 
-          return {
+          const safeEntry = {
             id: itemId,
-            addedAt: entry?.addedAt || nowIso
+            addedAt:
+              entry?.addedAt ||
+              nowIso
           };
+
+          if (
+            !entry ||
+            typeof entry !== "object" ||
+            Array.isArray(entry)
+          ) {
+            return safeEntry;
+          }
+
+          const source =
+            String(
+              entry.source || ""
+            )
+              .trim()
+              .toLowerCase();
+
+          const type =
+            String(
+              entry.type || ""
+            )
+              .trim()
+              .toLowerCase();
+
+          const externalId =
+            String(
+              entry.externalId || ""
+            )
+              .trim();
+
+          if (
+            source &&
+            externalId &&
+            [
+              "serie",
+              "pelicula",
+              "book",
+              "game"
+            ].includes(type)
+          ) {
+            safeEntry.source =
+              source;
+
+            safeEntry.type =
+              type;
+
+            safeEntry.externalId =
+              externalId;
+          }
+
+          const snapshot =
+            entry.itemSnapshot;
+
+          if (
+            snapshot &&
+            typeof snapshot === "object" &&
+            !Array.isArray(snapshot)
+          ) {
+            const title =
+              String(
+                snapshot.title || ""
+              )
+                .trim()
+                .slice(0, 120);
+
+            if (title) {
+              safeEntry.itemSnapshot = {
+                title,
+                cover:
+                  String(
+                    snapshot.cover || ""
+                  )
+                    .trim()
+                    .slice(0, 500)
+              };
+            }
+          }
+
+          return safeEntry;
         })
         .filter(Boolean);
 
@@ -1532,16 +1618,84 @@ if (externalSignal?.aborted) {
   // Devuelve las listas donde está un item (para deshabilitar opciones y pintar estado)
   async function getListsContainingItem(itemId) {
     if (itemId == null) return [];
-    const target = _normalizeDataId(itemId);
+
+    const target =
+      _normalizeDataId(itemId);
+
     if (!target) return [];
 
-    const lists = await getLists();
+    const lists =
+      await getLists();
+
+    const library =
+      await getLibrary();
+
+    const targetLibraryItem =
+      (library || []).find(
+        (item) =>
+          _normalizeDataId(item?.id) ===
+          target
+      ) || null;
+
+    const targetIdentity =
+      targetLibraryItem
+        ? _normalizeCanonicalIdentity(
+            targetLibraryItem?.source,
+            targetLibraryItem?.type,
+            targetLibraryItem?.externalId
+          )
+        : null;
+
+    const hasCanonicalTarget =
+      Boolean(
+        targetIdentity?.source &&
+        targetIdentity?.type &&
+        targetIdentity?.externalId
+      );
 
     return (lists || []).filter((l) => {
-      const arr = Array.isArray(l.items) ? l.items : [];
+      const arr =
+        Array.isArray(l.items)
+          ? l.items
+          : [];
+
       return arr.some((entry) => {
-        const id = typeof entry === "string" ? entry : entry?.id;
-        return _normalizeDataId(id) === target;
+        const id =
+          typeof entry === "string"
+            ? entry
+            : entry?.id;
+
+        if (
+          _normalizeDataId(id) ===
+          target
+        ) {
+          return true;
+        }
+
+        if (
+          !hasCanonicalTarget ||
+          !entry ||
+          typeof entry !== "object" ||
+          Array.isArray(entry)
+        ) {
+          return false;
+        }
+
+        const entryIdentity =
+          _normalizeCanonicalIdentity(
+            entry?.source,
+            entry?.type,
+            entry?.externalId
+          );
+
+        return (
+          entryIdentity.source ===
+            targetIdentity.source &&
+          entryIdentity.type ===
+            targetIdentity.type &&
+          entryIdentity.externalId ===
+            targetIdentity.externalId
+        );
       });
     });
   }
@@ -1585,16 +1739,55 @@ if (externalSignal?.aborted) {
 
     if (!libItem?.id) return 0;
 
-    const libId = _normalizeDataId(libItem.id);
+    const libId =
+      _normalizeDataId(libItem.id);
+
     let count = 0;
 
     for (const list of lists || []) {
-      const arr = Array.isArray(list?.items) ? list.items : [];
+      const arr =
+        Array.isArray(list?.items)
+          ? list.items
+          : [];
 
-      const has = arr.some((entry) => {
-        const id = typeof entry === "string" ? entry : entry?.id;
-        return _normalizeDataId(id) === libId;
-      });
+      const has =
+        arr.some((entry) => {
+          const id =
+            typeof entry === "string"
+              ? entry
+              : entry?.id;
+
+          if (
+            _normalizeDataId(id) ===
+            libId
+          ) {
+            return true;
+          }
+
+          if (
+            !entry ||
+            typeof entry !== "object" ||
+            Array.isArray(entry)
+          ) {
+            return false;
+          }
+
+          const entryIdentity =
+            _normalizeCanonicalIdentity(
+              entry?.source,
+              entry?.type,
+              entry?.externalId
+            );
+
+          return (
+            entryIdentity.source ===
+              canonical.source &&
+            entryIdentity.type ===
+              canonical.type &&
+            entryIdentity.externalId ===
+              canonical.externalId
+          );
+        });
 
       if (has) count++;
     }
@@ -1608,16 +1801,20 @@ if (externalSignal?.aborted) {
     const library = await getLibrary();
 
     const idToKey = new Map();
+    const libraryKeys = new Set();
 
     for (const item of library || []) {
-      const itemId = _normalizeDataId(item?.id);
+      const itemId =
+        _normalizeDataId(item?.id);
+
       if (!itemId) continue;
 
-      const identity = _normalizeCanonicalIdentity(
-        item?.source,
-        item?.type,
-        item?.externalId
-      );
+      const identity =
+        _normalizeCanonicalIdentity(
+          item?.source,
+          item?.type,
+          item?.externalId
+        );
 
       if (
         !identity.source ||
@@ -1627,26 +1824,76 @@ if (externalSignal?.aborted) {
         continue;
       }
 
+      const key =
+        `${identity.source}::${identity.type}::${identity.externalId}`;
+
       idToKey.set(
         itemId,
-        `${identity.source}::${identity.type}::${identity.externalId}`
+        key
       );
+
+      libraryKeys.add(key);
     }
 
-    const counts = Object.create(null);
+    const counts =
+      Object.create(null);
 
     for (const list of lists || []) {
-      const items = Array.isArray(list?.items) ? list.items : [];
+      const items =
+        Array.isArray(list?.items)
+          ? list.items
+          : [];
 
       for (const entry of items) {
-        const id = typeof entry === "string" ? entry : entry?.id;
-        const itemId = _normalizeDataId(id);
-        if (!itemId) continue;
+        const id =
+          typeof entry === "string"
+            ? entry
+            : entry?.id;
 
-        const key = idToKey.get(itemId);
+        const itemId =
+          _normalizeDataId(id);
+
+        let key =
+          itemId
+            ? idToKey.get(itemId)
+            : "";
+
+        if (
+          !key &&
+          entry &&
+          typeof entry === "object" &&
+          !Array.isArray(entry)
+        ) {
+          const identity =
+            _normalizeCanonicalIdentity(
+              entry?.source,
+              entry?.type,
+              entry?.externalId
+            );
+
+          if (
+            identity.source &&
+            identity.type &&
+            identity.externalId
+          ) {
+            const canonicalKey =
+              `${identity.source}::${identity.type}::${identity.externalId}`;
+
+            if (
+              libraryKeys.has(
+                canonicalKey
+              )
+            ) {
+              key =
+                canonicalKey;
+            }
+          }
+        }
+
         if (!key) continue;
 
-        counts[key] = (counts[key] || 0) + 1;
+        counts[key] =
+          (counts[key] || 0) + 1;
       }
     }
 

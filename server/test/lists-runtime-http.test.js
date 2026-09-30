@@ -3951,3 +3951,2741 @@ test(
     }
   }
 );
+
+
+test(
+  "un colaborador puede abandonar una lista colaborativa",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-leave-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Leave Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-leave-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Leave Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const collaboratorUserId =
+        collaboratorRegistration.json?.user?.id;
+
+      const collaboratorUsername =
+        collaboratorRegistration.json?.user
+          ?.handle;
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+      assert.ok(collaboratorUsername);
+
+      const privacyUpdated =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              collaboratorCookie,
+            body: {
+              profileVisibility:
+                "public"
+            }
+          }
+        );
+
+      assert.equal(
+        privacyUpdated.statusCode,
+        200
+      );
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              name:
+                "Lista para abandonar",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const invited =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(collaboratorUsername)}`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie
+          }
+        );
+
+      assert.equal(
+        invited.statusCode,
+        201
+      );
+
+      const accepted =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        accepted.statusCode,
+        200
+      );
+
+      const left =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/me`,
+          {
+            method: "DELETE",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        left.statusCode,
+        200
+      );
+
+      assert.equal(
+        left.json?.left,
+        true
+      );
+
+      assert.equal(
+        left.json?.list?.id,
+        listId
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .collaborators,
+        []
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "el propietario puede expulsar a un colaborador de su lista",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-kick-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Kick Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-kick-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Kick Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const collaboratorUserId =
+        collaboratorRegistration.json?.user?.id;
+
+      const collaboratorUsername =
+        collaboratorRegistration.json?.user
+          ?.handle;
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+      assert.ok(collaboratorUsername);
+
+      const privacyUpdated =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              collaboratorCookie,
+            body: {
+              profileVisibility:
+                "public"
+            }
+          }
+        );
+
+      assert.equal(
+        privacyUpdated.statusCode,
+        200
+      );
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              name:
+                "Lista para expulsar",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const invited =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(collaboratorUsername)}`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie
+          }
+        );
+
+      assert.equal(
+        invited.statusCode,
+        201
+      );
+
+      const accepted =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        accepted.statusCode,
+        200
+      );
+
+      const removed =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/${encodeURIComponent(collaboratorUserId)}`,
+          {
+            method: "DELETE",
+            cookie:
+              ownerCookie
+          }
+        );
+
+      assert.equal(
+        removed.statusCode,
+        200
+      );
+
+      assert.equal(
+        removed.json?.removed,
+        true
+      );
+
+      assert.equal(
+        removed.json?.list?.id,
+        listId
+      );
+
+      assert.equal(
+        removed.json?.userId,
+        collaboratorUserId
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .collaborators,
+        []
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "los permisos de miembros se aplican también ante llamadas directas a la API",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const register = async ({
+        email,
+        name
+      }) => {
+        const response =
+          await requestJson(
+            `${baseUrl}/api/auth/register`,
+            {
+              method: "POST",
+              body: {
+                email,
+                password:
+                  "runtime-pass-123",
+                name,
+                language: "es"
+              }
+            }
+          );
+
+        assert.equal(
+          response.statusCode,
+          200
+        );
+
+        return {
+          cookie:
+            response.headers[
+              "set-cookie"
+            ][0].split(";")[0],
+          userId:
+            response.json?.user?.id,
+          username:
+            response.json?.user?.handle
+        };
+      };
+
+      const owner =
+        await register({
+          email:
+            "w14-members-owner@example.test",
+          name:
+            "W14 Members Owner"
+        });
+
+      const collaboratorA =
+        await register({
+          email:
+            "w14-members-a@example.test",
+          name:
+            "W14 Members A"
+        });
+
+      const collaboratorB =
+        await register({
+          email:
+            "w14-members-b@example.test",
+          name:
+            "W14 Members B"
+        });
+
+      assert.ok(owner.userId);
+      assert.ok(collaboratorA.userId);
+      assert.ok(collaboratorB.userId);
+      assert.ok(collaboratorA.username);
+      assert.ok(collaboratorB.username);
+
+      for (const collaborator of [
+        collaboratorA,
+        collaboratorB
+      ]) {
+        const privacyUpdated =
+          await requestJson(
+            `${baseUrl}/api/user/privacy`,
+            {
+              method: "PATCH",
+              cookie:
+                collaborator.cookie,
+              body: {
+                profileVisibility:
+                  "public"
+              }
+            }
+          );
+
+        assert.equal(
+          privacyUpdated.statusCode,
+          200
+        );
+      }
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie:
+              owner.cookie,
+            body: {
+              name:
+                "Lista de permisos",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      for (const collaborator of [
+        collaboratorA,
+        collaboratorB
+      ]) {
+        const invited =
+          await requestJson(
+            `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(collaborator.username)}`,
+            {
+              method: "POST",
+              cookie:
+                owner.cookie
+            }
+          );
+
+        assert.equal(
+          invited.statusCode,
+          201
+        );
+
+        const accepted =
+          await requestJson(
+            `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+            {
+              method: "POST",
+              cookie:
+                collaborator.cookie
+            }
+          );
+
+        assert.equal(
+          accepted.statusCode,
+          200
+        );
+      }
+
+      const collaboratorKick =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/${encodeURIComponent(collaboratorB.userId)}`,
+          {
+            method: "DELETE",
+            cookie:
+              collaboratorA.cookie
+          }
+        );
+
+      assert.equal(
+        collaboratorKick.statusCode,
+        404
+      );
+
+      const ownerRemoveSelf =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/${encodeURIComponent(owner.userId)}`,
+          {
+            method: "DELETE",
+            cookie:
+              owner.cookie
+          }
+        );
+
+      assert.equal(
+        ownerRemoveSelf.statusCode,
+        400
+      );
+
+      assert.equal(
+        ownerRemoveSelf.json?.error,
+        "cannot_remove_owner"
+      );
+
+      const ownerLeave =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/me`,
+          {
+            method: "DELETE",
+            cookie:
+              owner.cookie
+          }
+        );
+
+      assert.equal(
+        ownerLeave.statusCode,
+        409
+      );
+
+      assert.equal(
+        ownerLeave.json?.error,
+        "owner_cannot_leave"
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persisted.users[owner.userId]
+          .lists[0]
+          .collaborators,
+        [
+          collaboratorA.userId,
+          collaboratorB.userId
+        ]
+      );
+
+      assert.equal(
+        persisted.users[owner.userId]
+          .lists[0]
+          .ownerUserId,
+        owner.userId
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "GET /api/lists incluye listas compartidas y PUT no las materializa en el bucket del colaborador",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-shared-read-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Shared Read Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-shared-read-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Shared Read Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const collaboratorUserId =
+        collaboratorRegistration.json?.user?.id;
+
+      const collaboratorUsername =
+        collaboratorRegistration.json?.user
+          ?.handle;
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+      assert.ok(collaboratorUsername);
+
+      const privacyUpdated =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              collaboratorCookie,
+            body: {
+              profileVisibility:
+                "public"
+            }
+          }
+        );
+
+      assert.equal(
+        privacyUpdated.statusCode,
+        200
+      );
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              name:
+                "Lista compartida visible",
+              description:
+                "Debe verla el colaborador",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const invited =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(collaboratorUsername)}`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie
+          }
+        );
+
+      assert.equal(
+        invited.statusCode,
+        201
+      );
+
+      const accepted =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        accepted.statusCode,
+        200
+      );
+
+      const collaboratorLists =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        collaboratorLists.statusCode,
+        200
+      );
+
+      assert.equal(
+        Array.isArray(collaboratorLists.json),
+        true
+      );
+
+      const sharedList =
+        collaboratorLists.json.find(
+          (list) =>
+            String(list?.id || "") ===
+            listId
+        );
+
+      assert.ok(sharedList);
+
+      assert.equal(
+        sharedList.ownerUserId,
+        ownerUserId
+      );
+
+      assert.deepEqual(
+        sharedList.collaborators,
+        [
+          collaboratorUserId
+        ]
+      );
+
+      const putPayloadLists =
+        collaboratorLists.json.map(
+          (list) => ({
+            id: list?.id,
+            name: list?.name,
+            description:
+              list?.description,
+            visibility:
+              list?.visibility,
+            items:
+              Array.isArray(list?.items)
+                ? list.items
+                : [],
+            createdAt:
+              list?.createdAt,
+            updatedAt:
+              list?.updatedAt
+          })
+        );
+
+      const rewritten =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "PUT",
+            cookie:
+              collaboratorCookie,
+            body: {
+              lists:
+                putPayloadLists
+            }
+          }
+        );
+
+      assert.equal(
+        rewritten.statusCode,
+        200
+      );
+
+      assert.equal(
+        Array.isArray(
+          rewritten.json?.lists
+        ),
+        true
+      );
+
+      assert.equal(
+        rewritten.json.lists.length,
+        1
+      );
+
+      const rewrittenSharedList =
+        rewritten.json.lists.find(
+          (list) =>
+            String(
+              list?.id || ""
+            ) === listId
+        );
+
+      assert.ok(
+        rewrittenSharedList
+      );
+
+      assert.equal(
+        rewrittenSharedList.ownerUserId,
+        ownerUserId
+      );
+
+      assert.deepEqual(
+        rewrittenSharedList.collaborators,
+        [
+          collaboratorUserId
+        ]
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists.length,
+        1
+      );
+
+      assert.equal(
+        persisted.users[collaboratorUserId]
+          .lists.length,
+        0
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "un colaborador puede añadir desde su Library un item canónico a la lista del propietario",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-content-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Content Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-content-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Content Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const collaboratorUserId =
+        collaboratorRegistration.json?.user?.id;
+
+      const collaboratorUsername =
+        collaboratorRegistration.json?.user
+          ?.handle;
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+      assert.ok(collaboratorUsername);
+
+      const privacyUpdated =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              collaboratorCookie,
+            body: {
+              profileVisibility:
+                "public"
+            }
+          }
+        );
+
+      assert.equal(
+        privacyUpdated.statusCode,
+        200
+      );
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              name:
+                "Lista colaborativa con contenido",
+              description:
+                "Contenido añadido por colaborador",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const invited =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(collaboratorUsername)}`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie
+          }
+        );
+
+      assert.equal(
+        invited.statusCode,
+        201
+      );
+
+      const accepted =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        accepted.statusCode,
+        200
+      );
+
+      const collaboratorItemId =
+        "w14_collaborator_movie_603";
+
+      const restored =
+        await requestJson(
+          `${baseUrl}/api/library/restore`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie,
+            body: {
+              item: {
+                id:
+                  collaboratorItemId,
+                type:
+                  "pelicula",
+                title:
+                  "Matrix compartida",
+                source:
+                  "tmdb",
+                externalId:
+                  "603",
+                cover:
+                  "https://image.example.test/matrix.jpg",
+                status:
+                  "pending",
+                progress:
+                  0
+              }
+            }
+          }
+        );
+
+      assert.equal(
+        restored.statusCode,
+        201
+      );
+
+      const added =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie,
+            body: {
+              itemId:
+                collaboratorItemId
+            }
+          }
+        );
+
+      assert.equal(
+        added.statusCode,
+        201
+      );
+
+      assert.equal(
+        added.json?.itemId,
+        collaboratorItemId
+      );
+
+      const listItem =
+        added.json?.list?.items?.find(
+          (entry) =>
+            String(entry?.id || "") ===
+            collaboratorItemId
+        );
+
+      assert.ok(listItem);
+
+      assert.equal(
+        listItem.source,
+        "tmdb"
+      );
+
+      assert.equal(
+        listItem.type,
+        "pelicula"
+      );
+
+      assert.equal(
+        listItem.externalId,
+        "603"
+      );
+
+      assert.deepEqual(
+        listItem.itemSnapshot,
+        {
+          title:
+            "Matrix compartida",
+          cover:
+            "https://image.example.test/matrix.jpg"
+        }
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists.length,
+        1
+      );
+
+      assert.equal(
+        persisted.users[collaboratorUserId]
+          .lists.length,
+        0
+      );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .library.length,
+        0
+      );
+
+      assert.equal(
+        persisted.users[collaboratorUserId]
+          .library.length,
+        1
+      );
+
+      assert.deepEqual(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .items[0],
+        listItem
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "una lista colaborativa evita duplicados por identidad canónica aunque los IDs locales sean distintos",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-canonical-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Canonical Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-canonical-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Canonical Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const collaboratorUserId =
+        collaboratorRegistration.json?.user?.id;
+
+      const collaboratorUsername =
+        collaboratorRegistration.json?.user
+          ?.handle;
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+      assert.ok(collaboratorUsername);
+
+      const privacyUpdated =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              collaboratorCookie,
+            body: {
+              profileVisibility:
+                "public"
+            }
+          }
+        );
+
+      assert.equal(
+        privacyUpdated.statusCode,
+        200
+      );
+
+      const ownerItemId =
+        "owner_matrix_603";
+
+      const collaboratorItemId =
+        "collaborator_matrix_603";
+
+      const ownerRestore =
+        await requestJson(
+          `${baseUrl}/api/library/restore`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              item: {
+                id:
+                  ownerItemId,
+                type:
+                  "pelicula",
+                title:
+                  "Matrix",
+                source:
+                  "tmdb",
+                externalId:
+                  "603",
+                cover:
+                  "https://image.example.test/matrix-owner.jpg",
+                status:
+                  "pending"
+              }
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRestore.statusCode,
+        201
+      );
+
+      const collaboratorRestore =
+        await requestJson(
+          `${baseUrl}/api/library/restore`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie,
+            body: {
+              item: {
+                id:
+                  collaboratorItemId,
+                type:
+                  "pelicula",
+                title:
+                  "Matrix",
+                source:
+                  "tmdb",
+                externalId:
+                  "603",
+                cover:
+                  "https://image.example.test/matrix-collaborator.jpg",
+                status:
+                  "pending"
+              }
+            }
+          }
+        );
+
+      assert.equal(
+        collaboratorRestore.statusCode,
+        201
+      );
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              name:
+                "Lista sin duplicados canónicos",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const ownerAdded =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              itemId:
+                ownerItemId
+            }
+          }
+        );
+
+      assert.equal(
+        ownerAdded.statusCode,
+        201
+      );
+
+      const invited =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(collaboratorUsername)}`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie
+          }
+        );
+
+      assert.equal(
+        invited.statusCode,
+        201
+      );
+
+      const accepted =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        accepted.statusCode,
+        200
+      );
+
+      const duplicateAdd =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie,
+            body: {
+              itemId:
+                collaboratorItemId
+            }
+          }
+        );
+
+      assert.equal(
+        duplicateAdd.statusCode,
+        200
+      );
+
+      assert.equal(
+        duplicateAdd.json?.already,
+        true
+      );
+
+      assert.equal(
+        duplicateAdd.json?.list?.items?.length,
+        1
+      );
+
+      assert.equal(
+        duplicateAdd.json?.list?.items?.[0]?.id,
+        ownerItemId
+      );
+
+      assert.equal(
+        duplicateAdd.json?.list?.items?.[0]?.source,
+        "tmdb"
+      );
+
+      assert.equal(
+        duplicateAdd.json?.list?.items?.[0]?.type,
+        "pelicula"
+      );
+
+      assert.equal(
+        duplicateAdd.json?.list?.items?.[0]?.externalId,
+        "603"
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .items.length,
+        1
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "PUT /api/lists preserva la identidad canónica y snapshot de los items",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const registration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-put-canonical@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Put Canonical",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        registration.statusCode,
+        200
+      );
+
+      const userId =
+        registration.json?.user?.id;
+
+      const cookie =
+        registration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(userId);
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie,
+            body: {
+              name:
+                "Lista identidad persistente",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const item = {
+        id:
+          "local_matrix_603",
+        source:
+          "tmdb",
+        type:
+          "pelicula",
+        externalId:
+          "603",
+        itemSnapshot: {
+          title:
+            "Matrix persistente",
+          cover:
+            "https://image.example.test/matrix-put.jpg"
+        },
+        addedAt:
+          "2026-09-29T10:00:00.000Z"
+      };
+
+      const response =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "PUT",
+            cookie,
+            body: {
+              lists: [
+                {
+                  ...created.json,
+                  items: [
+                    item
+                  ],
+                  itemsCount: 1
+                }
+              ]
+            }
+          }
+        );
+
+      assert.equal(
+        response.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        response.json?.lists?.[0]
+          ?.items?.[0],
+        item
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persisted.users[userId]
+          .lists[0]
+          .items[0],
+        item
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+
+test(
+  "un colaborador puede eliminar por identidad canónica un item añadido por el propietario",
+  {
+    timeout: 15000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-remove-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Remove Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-remove-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Remove Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      const collaboratorUsername =
+        collaboratorRegistration.json?.user
+          ?.handle;
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUsername);
+
+      const privacyUpdated =
+        await requestJson(
+          `${baseUrl}/api/user/privacy`,
+          {
+            method: "PATCH",
+            cookie:
+              collaboratorCookie,
+            body: {
+              profileVisibility:
+                "public"
+            }
+          }
+        );
+
+      assert.equal(
+        privacyUpdated.statusCode,
+        200
+      );
+
+      const ownerItemId =
+        "owner_remove_matrix_603";
+
+      const collaboratorItemId =
+        "collaborator_remove_matrix_603";
+
+      const ownerRestore =
+        await requestJson(
+          `${baseUrl}/api/library/restore`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              item: {
+                id:
+                  ownerItemId,
+                type:
+                  "pelicula",
+                title:
+                  "Matrix",
+                source:
+                  "tmdb",
+                externalId:
+                  "603",
+                cover:
+                  "https://image.example.test/matrix-owner-remove.jpg",
+                status:
+                  "pending"
+              }
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRestore.statusCode,
+        201
+      );
+
+      const collaboratorRestore =
+        await requestJson(
+          `${baseUrl}/api/library/restore`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie,
+            body: {
+              item: {
+                id:
+                  collaboratorItemId,
+                type:
+                  "pelicula",
+                title:
+                  "Matrix",
+                source:
+                  "tmdb",
+                externalId:
+                  "603",
+                cover:
+                  "https://image.example.test/matrix-collaborator-remove.jpg",
+                status:
+                  "pending"
+              }
+            }
+          }
+        );
+
+      assert.equal(
+        collaboratorRestore.statusCode,
+        201
+      );
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              name:
+                "Lista eliminación colaborativa",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      const ownerAdded =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie,
+            body: {
+              itemId:
+                ownerItemId
+            }
+          }
+        );
+
+      assert.equal(
+        ownerAdded.statusCode,
+        201
+      );
+
+      assert.equal(
+        ownerAdded.json?.list?.items?.length,
+        1
+      );
+
+      assert.equal(
+        ownerAdded.json?.list?.items?.[0]?.id,
+        ownerItemId
+      );
+
+      const invited =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(collaboratorUsername)}`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie
+          }
+        );
+
+      assert.equal(
+        invited.statusCode,
+        201
+      );
+
+      const accepted =
+        await requestJson(
+          `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        accepted.statusCode,
+        200
+      );
+
+      const removed =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(collaboratorItemId)}`,
+          {
+            method: "DELETE",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        removed.statusCode,
+        200
+      );
+
+      assert.equal(
+        removed.json?.removed,
+        1
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .items.length,
+        0
+      );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .library.length,
+        1
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "outsiders y ex-colaboradores no pueden mutar items de una lista colaborativa",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const register =
+        async ({
+          email,
+          name
+        }) => {
+          const response =
+            await requestJson(
+              `${baseUrl}/api/auth/register`,
+              {
+                method: "POST",
+                body: {
+                  email,
+                  password:
+                    "runtime-pass-123",
+                  name,
+                  language: "es"
+                }
+              }
+            );
+
+          assert.equal(
+            response.statusCode,
+            200
+          );
+
+          return {
+            cookie:
+              response.headers[
+                "set-cookie"
+              ][0].split(";")[0],
+            userId:
+              response.json?.user?.id,
+            username:
+              response.json?.user?.handle
+          };
+        };
+
+      const owner =
+        await register({
+          email:
+            "w14-access-owner@example.test",
+          name:
+            "W14 Access Owner"
+        });
+
+      const leaver =
+        await register({
+          email:
+            "w14-access-leaver@example.test",
+          name:
+            "W14 Access Leaver"
+        });
+
+      const kicked =
+        await register({
+          email:
+            "w14-access-kicked@example.test",
+          name:
+            "W14 Access Kicked"
+        });
+
+      const outsider =
+        await register({
+          email:
+            "w14-access-outsider@example.test",
+          name:
+            "W14 Access Outsider"
+        });
+
+      assert.ok(owner.userId);
+      assert.ok(leaver.userId);
+      assert.ok(kicked.userId);
+      assert.ok(outsider.userId);
+      assert.ok(leaver.username);
+      assert.ok(kicked.username);
+
+      for (const collaborator of [
+        leaver,
+        kicked
+      ]) {
+        const privacyUpdated =
+          await requestJson(
+            `${baseUrl}/api/user/privacy`,
+            {
+              method: "PATCH",
+              cookie:
+                collaborator.cookie,
+              body: {
+                profileVisibility:
+                  "public"
+              }
+            }
+          );
+
+        assert.equal(
+          privacyUpdated.statusCode,
+          200
+        );
+      }
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "POST",
+            cookie:
+              owner.cookie,
+            body: {
+              name:
+                "Lista autorización negativa",
+              description: "",
+              visibility:
+                "collab"
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      const listId =
+        created.json?.id;
+
+      assert.ok(listId);
+
+      for (const collaborator of [
+        leaver,
+        kicked
+      ]) {
+        const invited =
+          await requestJson(
+            `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(collaborator.username)}`,
+            {
+              method: "POST",
+              cookie:
+                owner.cookie
+            }
+          );
+
+        assert.equal(
+          invited.statusCode,
+          201
+        );
+
+        const accepted =
+          await requestJson(
+            `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+            {
+              method: "POST",
+              cookie:
+                collaborator.cookie
+            }
+          );
+
+        assert.equal(
+          accepted.statusCode,
+          200
+        );
+      }
+
+      for (const method of [
+        "POST",
+        "DELETE"
+      ]) {
+        const response =
+          method === "POST"
+            ? await requestJson(
+                `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items`,
+                {
+                  method,
+                  cookie:
+                    outsider.cookie,
+                  body: {
+                    itemId:
+                      "authorization-probe-item"
+                  }
+                }
+              )
+            : await requestJson(
+                `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent("authorization-probe-item")}`,
+                {
+                  method,
+                  cookie:
+                    outsider.cookie
+                }
+              );
+
+        assert.equal(
+          response.statusCode,
+          404
+        );
+
+        assert.equal(
+          response.json?.error,
+          "list_not_found"
+        );
+      }
+
+      const left =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/me`,
+          {
+            method: "DELETE",
+            cookie:
+              leaver.cookie
+          }
+        );
+
+      assert.equal(
+        left.statusCode,
+        200
+      );
+
+      for (const method of [
+        "POST",
+        "DELETE"
+      ]) {
+        const response =
+          method === "POST"
+            ? await requestJson(
+                `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items`,
+                {
+                  method,
+                  cookie:
+                    leaver.cookie,
+                  body: {
+                    itemId:
+                      "authorization-probe-item"
+                  }
+                }
+              )
+            : await requestJson(
+                `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent("authorization-probe-item")}`,
+                {
+                  method,
+                  cookie:
+                    leaver.cookie
+                }
+              );
+
+        assert.equal(
+          response.statusCode,
+          404
+        );
+
+        assert.equal(
+          response.json?.error,
+          "list_not_found"
+        );
+      }
+
+      const removed =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/${encodeURIComponent(kicked.userId)}`,
+          {
+            method: "DELETE",
+            cookie:
+              owner.cookie
+          }
+        );
+
+      assert.equal(
+        removed.statusCode,
+        200
+      );
+
+      for (const method of [
+        "POST",
+        "DELETE"
+      ]) {
+        const response =
+          method === "POST"
+            ? await requestJson(
+                `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items`,
+                {
+                  method,
+                  cookie:
+                    kicked.cookie,
+                  body: {
+                    itemId:
+                      "authorization-probe-item"
+                  }
+                }
+              )
+            : await requestJson(
+                `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent("authorization-probe-item")}`,
+                {
+                  method,
+                  cookie:
+                    kicked.cookie
+                }
+              );
+
+        assert.equal(
+          response.statusCode,
+          404
+        );
+
+        assert.equal(
+          response.json?.error,
+          "list_not_found"
+        );
+      }
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
