@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   addCollaborativeListCollaborator,
+  removeCollaborativeListCollaborator,
   getCollaborativeListRole,
   normalizeCollaborativeList,
   normalizeCollaborativeLists
@@ -359,6 +360,107 @@ test(
       {
         ok: false,
         error: "already_collaborator"
+      }
+    );
+  }
+);
+
+
+test(
+  "removeCollaborativeListCollaborator elimina un colaborador sin mutar la lista original",
+  () => {
+    const original = {
+      id: "list-1",
+      ownerUserId: "owner-1",
+      collaborators: [
+        "user-2",
+        "user-3"
+      ],
+      invitedUserIds: [
+        "user-4"
+      ]
+    };
+
+    const result =
+      removeCollaborativeListCollaborator(
+        original,
+        " user-2 "
+      );
+
+    assert.equal(
+      result.ok,
+      true
+    );
+
+    assert.deepEqual(
+      result.list.collaborators,
+      [
+        "user-3"
+      ]
+    );
+
+    assert.deepEqual(
+      result.list.invitedUserIds,
+      [
+        "user-4"
+      ]
+    );
+
+    assert.deepEqual(
+      original.collaborators,
+      [
+        "user-2",
+        "user-3"
+      ]
+    );
+  }
+);
+
+test(
+  "removeCollaborativeListCollaborator rechaza al propietario",
+  () => {
+    const result =
+      removeCollaborativeListCollaborator(
+        {
+          ownerUserId: "owner-1",
+          collaborators: [
+            "user-2"
+          ],
+          invitedUserIds: []
+        },
+        "owner-1"
+      );
+
+    assert.deepEqual(
+      result,
+      {
+        ok: false,
+        error: "cannot_remove_owner"
+      }
+    );
+  }
+);
+
+test(
+  "removeCollaborativeListCollaborator rechaza un usuario que no es colaborador",
+  () => {
+    const result =
+      removeCollaborativeListCollaborator(
+        {
+          ownerUserId: "owner-1",
+          collaborators: [
+            "user-2"
+          ],
+          invitedUserIds: []
+        },
+        "user-9"
+      );
+
+    assert.deepEqual(
+      result,
+      {
+        ok: false,
+        error: "collaborator_not_found"
       }
     );
   }

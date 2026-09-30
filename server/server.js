@@ -101,6 +101,8 @@ import {
 import {
   acceptCollaborativeListInvite,
   addCollaborativeListCollaborator,
+  getCollaborativeListRole,
+  removeCollaborativeListCollaborator,
   addCollaborativeListInvite,
   normalizeCollaborativeList,
   normalizeCollaborativeLists,
@@ -5334,10 +5336,69 @@ app.delete("/api/user/explore/dismissed", _requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+function _getVisibleListsForUser(
+  db,
+  userId
+) {
+  const safeUserId =
+    String(userId || "").trim();
+
+  const bucket =
+    _getUserBucket(
+      db,
+      safeUserId
+    );
+
+  const lists = [
+    ...bucket.lists
+  ];
+
+  for (
+    const [ownerUserId]
+    of Object.entries(db.users || {})
+  ) {
+    if (ownerUserId === safeUserId) {
+      continue;
+    }
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    for (const list of ownerBucket.lists) {
+      if (
+        list.visibility !== "collab" ||
+        getCollaborativeListRole(
+          list,
+          safeUserId
+        ) !== "collaborator"
+      ) {
+        continue;
+      }
+
+      lists.push(list);
+    }
+  }
+
+  return lists;
+}
+
 app.get("/api/lists", _requireAuth, (req, res) => {
   const db = _readDb();
-  const bucket = _getUserBucket(db, req.session.userId);
-  res.json(bucket.lists);
+
+  const userId =
+    String(
+      req.session.userId || ""
+    ).trim();
+
+  res.json(
+    _getVisibleListsForUser(
+      db,
+      userId
+    )
+  );
 });
 
 app.post("/api/lists", _requireAuth, (req, res) => {
@@ -6037,6 +6098,225 @@ app.delete(
 );
 
 
+
+
+app.delete(
+  "/api/lists/:id/members/me",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const userId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const listId =
+      String(
+        req.params.id || ""
+      ).trim();
+
+    const ownBucket =
+      _getUserBucket(
+        db,
+        userId
+      );
+
+    const ownedList =
+      ownBucket.lists.find(
+        (list) =>
+          String(list?.id || "") ===
+            listId &&
+          list?.ownerUserId ===
+            userId
+      );
+
+    if (ownedList) {
+      return res.status(409).json({
+        error: "owner_cannot_leave"
+      });
+    }
+
+    let matchedOwnerBucket = null;
+    let matchedListIndex = -1;
+
+    for (
+      const [ownerUserId]
+      of Object.entries(db.users || {})
+    ) {
+      const ownerBucket =
+        _getUserBucket(
+          db,
+          ownerUserId
+        );
+
+      const listIndex =
+        ownerBucket.lists.findIndex(
+          (list) =>
+            String(list?.id || "") ===
+              listId &&
+            Array.isArray(
+              list?.collaborators
+            ) &&
+            list.collaborators.includes(
+              userId
+            )
+        );
+
+      if (listIndex === -1) {
+        continue;
+      }
+
+      matchedOwnerBucket =
+        ownerBucket;
+
+      matchedListIndex =
+        listIndex;
+
+      break;
+    }
+
+    if (
+      !matchedOwnerBucket ||
+      matchedListIndex === -1
+    ) {
+      return res.status(404).json({
+        error: "list_membership_not_found"
+      });
+    }
+
+    const result =
+      removeCollaborativeListCollaborator(
+        matchedOwnerBucket
+          .lists[matchedListIndex],
+        userId
+      );
+
+    if (!result.ok) {
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    const nextList = {
+      ...result.list,
+      updatedAt:
+        new Date().toISOString()
+    };
+
+    matchedOwnerBucket
+      .lists[matchedListIndex] =
+        nextList;
+
+    _writeDb(db);
+
+    return res.json({
+      left: true,
+      list: {
+        id: nextList.id,
+        name: nextList.name
+      }
+    });
+  }
+);
+
+
+app.delete(
+  "/api/lists/:id/members/:userId",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const ownerUserId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const targetUserId =
+      String(
+        req.params.userId || ""
+      ).trim();
+
+    const listId =
+      String(
+        req.params.id || ""
+      ).trim();
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const listIndex =
+      ownerBucket.lists.findIndex(
+        (list) =>
+          String(list?.id || "") ===
+          listId
+      );
+
+    if (listIndex === -1) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const list =
+      ownerBucket.lists[listIndex];
+
+    if (
+      list.ownerUserId !==
+      ownerUserId
+    ) {
+      return res.status(403).json({
+        error: "not_list_owner"
+      });
+    }
+
+    const result =
+      removeCollaborativeListCollaborator(
+        list,
+        targetUserId
+      );
+
+    if (!result.ok) {
+      if (
+        result.error ===
+        "collaborator_not_found"
+      ) {
+        return res.status(404).json({
+          error: result.error
+        });
+      }
+
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    const nextList = {
+      ...result.list,
+      updatedAt:
+        new Date().toISOString()
+    };
+
+    ownerBucket.lists[listIndex] =
+      nextList;
+
+    _writeDb(db);
+
+    return res.json({
+      removed: true,
+      userId: targetUserId,
+      list: {
+        id: nextList.id,
+        name: nextList.name
+      }
+    });
+  }
+);
+
+
 app.get(
   "/api/user/list-invites",
   _requireAuth,
@@ -6119,6 +6399,43 @@ app.put("/api/lists", _requireAuth, (req, res) => {
       )
     );
 
+  const foreignListIds =
+    new Set();
+
+  for (
+    const [
+      otherUserId,
+      otherBucket
+    ] of Object.entries(
+      db.users || {}
+    )
+  ) {
+    if (
+      String(otherUserId) ===
+      String(req.session.userId)
+    ) {
+      continue;
+    }
+
+    const otherLists =
+      Array.isArray(otherBucket?.lists)
+        ? otherBucket.lists
+        : [];
+
+    for (const otherList of otherLists) {
+      const otherListId =
+        String(
+          otherList?.id || ""
+        ).trim();
+
+      if (otherListId) {
+        foreignListIds.add(
+          otherListId
+        );
+      }
+    }
+  }
+
   const deletedListCollaboration =
     bucket.deletedListCollaboration &&
     typeof bucket.deletedListCollaboration === "object" &&
@@ -6148,18 +6465,119 @@ app.put("/api/lists", _requireAuth, (req, res) => {
   let restoredDeletedListCollaboration =
     false;
 
-  const safeLists = incoming.map((list) => {
+  const safeLists = incoming
+    .filter((list) => {
+      const incomingListId =
+        String(
+          list?.id || ""
+        ).trim();
+
+      if (!incomingListId) {
+        return true;
+      }
+
+      if (
+        existingListsById.has(
+          incomingListId
+        )
+      ) {
+        return true;
+      }
+
+      return !foreignListIds.has(
+        incomingListId
+      );
+    })
+    .map((list) => {
     const items = Array.isArray(list?.items) ? list.items : [];
 
     const safeItems = items
       .map((entry) => {
-        const rawId = typeof entry === "string" ? entry : entry?.id;
+        const rawId =
+          typeof entry === "string"
+            ? entry
+            : entry?.id;
+
         if (!rawId) return null;
 
-        return {
+        const safeEntry = {
           id: String(rawId),
-          addedAt: entry?.addedAt || nowIso
+          addedAt:
+            entry?.addedAt ||
+            nowIso
         };
+
+        if (
+          !entry ||
+          typeof entry !== "object" ||
+          Array.isArray(entry)
+        ) {
+          return safeEntry;
+        }
+
+        const canonicalType =
+          String(
+            entry.type || ""
+          )
+            .trim()
+            .toLowerCase();
+
+        const canonicalIdentity =
+          _normalizeCanonicalIdentity(
+            entry.source,
+            canonicalType,
+            entry.externalId
+          );
+
+        if (
+          canonicalIdentity.source &&
+          canonicalIdentity.externalId &&
+          [
+            "serie",
+            "pelicula",
+            "book",
+            "game"
+          ].includes(canonicalType)
+        ) {
+          safeEntry.source =
+            canonicalIdentity.source;
+
+          safeEntry.type =
+            canonicalType;
+
+          safeEntry.externalId =
+            canonicalIdentity.externalId;
+        }
+
+        const rawSnapshot =
+          entry.itemSnapshot;
+
+        if (
+          rawSnapshot &&
+          typeof rawSnapshot === "object" &&
+          !Array.isArray(rawSnapshot)
+        ) {
+          const title =
+            String(
+              rawSnapshot.title || ""
+            )
+              .trim()
+              .slice(0, 120);
+
+          if (title) {
+            safeEntry.itemSnapshot = {
+              title,
+              cover:
+                String(
+                  rawSnapshot.cover || ""
+                )
+                  .trim()
+                  .slice(0, 500)
+            };
+          }
+        }
+
+        return safeEntry;
       })
       .filter(Boolean);
 
@@ -6294,7 +6712,14 @@ app.put("/api/lists", _requireAuth, (req, res) => {
   bucket.lists = safeLists;
   _writeDb(db);
 
-  res.json({ ok: true, lists: bucket.lists });
+  res.json({
+    ok: true,
+    lists:
+      _getVisibleListsForUser(
+        db,
+        req.session.userId
+      )
+  });
 });
 
 app.patch("/api/lists/:id", _requireAuth, (req, res) => {
@@ -6470,38 +6895,174 @@ app.post("/api/lists/:id/items", _requireAuth, (req, res) => {
   }
 
   const db = _readDb();
-  const bucket = _getUserBucket(db, req.session.userId);
+
+  const userId =
+    String(
+      req.session.userId || ""
+    ).trim();
+
+  const bucket =
+    _getUserBucket(
+      db,
+      userId
+    );
 
   bucket.lists = Array.isArray(bucket.lists) ? bucket.lists : [];
   bucket.library = Array.isArray(bucket.library) ? bucket.library : [];
 
-  const list = bucket.lists.find((entry) => String(entry?.id) === listId);
+  let list =
+    bucket.lists.find(
+      (entry) =>
+        String(entry?.id) === listId
+    );
+
+  if (!list) {
+    for (
+      const [ownerUserId]
+      of Object.entries(db.users || {})
+    ) {
+      if (ownerUserId === userId) {
+        continue;
+      }
+
+      const ownerBucket =
+        _getUserBucket(
+          db,
+          ownerUserId
+        );
+
+      const candidate =
+        ownerBucket.lists.find(
+          (entry) =>
+            String(entry?.id) === listId
+        );
+
+      if (
+        !candidate ||
+        candidate.visibility !== "collab" ||
+        getCollaborativeListRole(
+          candidate,
+          userId
+        ) !== "collaborator"
+      ) {
+        continue;
+      }
+
+      list = candidate;
+      break;
+    }
+  }
+
   if (!list) {
     return res.status(404).json({ error: "list_not_found" });
   }
 
-  const libraryItemExists = bucket.library.some(
-    (entry) => String(entry?.id) === itemId
-  );
-  if (!libraryItemExists) {
+  const libraryItem =
+    bucket.library.find(
+      (entry) =>
+        String(entry?.id) === itemId
+    );
+
+  if (!libraryItem) {
     return res.status(404).json({ error: "item_not_found" });
   }
 
   list.items = Array.isArray(list.items) ? list.items : [];
 
+  const canonicalType =
+    String(
+      libraryItem.type || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const canonicalIdentity =
+    _normalizeCanonicalIdentity(
+      libraryItem.source,
+      canonicalType,
+      libraryItem.externalId
+    );
+
   const already = list.items.some((entry) => {
-    const id = typeof entry === "string" ? entry : entry?.id;
-    return String(id) === itemId;
+    const id =
+      typeof entry === "string"
+        ? entry
+        : entry?.id;
+
+    if (String(id) === itemId) {
+      return true;
+    }
+
+    if (
+      typeof entry === "string" ||
+      !canonicalIdentity.source ||
+      !canonicalIdentity.externalId
+    ) {
+      return false;
+    }
+
+    const entryType =
+      String(
+        entry?.type || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const entryIdentity =
+      _normalizeCanonicalIdentity(
+        entry?.source,
+        entryType,
+        entry?.externalId
+      );
+
+    return (
+      entryType === canonicalType &&
+      entryIdentity.source ===
+        canonicalIdentity.source &&
+      entryIdentity.externalId ===
+        canonicalIdentity.externalId
+    );
   });
 
   if (already) {
     return res.json({ ok: true, already: true, list });
   }
 
-  list.items.push({
+  const nextEntry = {
     id: itemId,
     addedAt: new Date().toISOString()
-  });
+  };
+
+  if (
+    canonicalIdentity.source &&
+    canonicalIdentity.externalId
+  ) {
+    nextEntry.source =
+      canonicalIdentity.source;
+
+    nextEntry.type =
+      canonicalType;
+
+    nextEntry.externalId =
+      canonicalIdentity.externalId;
+
+    nextEntry.itemSnapshot = {
+      title:
+        String(
+          libraryItem.title || ""
+        )
+          .trim()
+          .slice(0, 120),
+      cover:
+        String(
+          libraryItem.cover || ""
+        )
+          .trim()
+          .slice(0, 500)
+    };
+  }
+
+  list.items.push(nextEntry);
 
   list.itemsCount = list.items.length;
   list.updatedAt = new Date().toISOString();
@@ -6516,33 +7077,192 @@ app.post("/api/lists/:id/items", _requireAuth, (req, res) => {
 });
 
 app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
-  const listId = String(req.params.id);
-  const itemId = String(req.params.itemId);
+  const listId =
+    String(
+      req.params.id || ""
+    ).trim();
+
+  const itemId =
+    String(
+      req.params.itemId || ""
+    ).trim();
 
   const db = _readDb();
-  const bucket = _getUserBucket(db, req.session.userId);
 
-  const list = bucket.lists.find((x) => String(x.id) === listId);
-  if (!list) return res.status(404).json({ error: "list_not_found" });
+  const userId =
+    String(
+      req.session.userId || ""
+    ).trim();
 
-  list.items = Array.isArray(list.items) ? list.items : [];
-  const before = list.items.length;
+  const bucket =
+    _getUserBucket(
+      db,
+      userId
+    );
 
-  list.items = list.items.filter((entry) => {
-    const id = typeof entry === "string" ? entry : entry?.id;
-    return String(id) !== itemId;
-  });
+  bucket.lists =
+    Array.isArray(bucket.lists)
+      ? bucket.lists
+      : [];
 
-  const removed = before - list.items.length;
-  if (removed <= 0) {
-    return res.status(404).json({ error: "item_not_in_list" });
+  bucket.library =
+    Array.isArray(bucket.library)
+      ? bucket.library
+      : [];
+
+  let list =
+    bucket.lists.find(
+      (entry) =>
+        String(entry?.id || "") ===
+        listId
+    );
+
+  if (!list) {
+    for (
+      const [ownerUserId]
+      of Object.entries(db.users || {})
+    ) {
+      if (ownerUserId === userId) {
+        continue;
+      }
+
+      const ownerBucket =
+        _getUserBucket(
+          db,
+          ownerUserId
+        );
+
+      const candidate =
+        ownerBucket.lists.find(
+          (entry) =>
+            String(entry?.id || "") ===
+            listId
+        );
+
+      if (
+        !candidate ||
+        candidate.visibility !== "collab" ||
+        getCollaborativeListRole(
+          candidate,
+          userId
+        ) !== "collaborator"
+      ) {
+        continue;
+      }
+
+      list = candidate;
+      break;
+    }
   }
 
-  list.itemsCount = list.items.length;
-  list.updatedAt = new Date().toISOString();
+  if (!list) {
+    return res.status(404).json({
+      error: "list_not_found"
+    });
+  }
+
+  const callerLibraryItem =
+    bucket.library.find(
+      (entry) =>
+        String(entry?.id || "") ===
+        itemId
+    );
+
+  const callerType =
+    String(
+      callerLibraryItem?.type || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const callerIdentity =
+    callerLibraryItem
+      ? _normalizeCanonicalIdentity(
+          callerLibraryItem.source,
+          callerType,
+          callerLibraryItem.externalId
+        )
+      : {
+          source: "",
+          externalId: ""
+        };
+
+  list.items =
+    Array.isArray(list.items)
+      ? list.items
+      : [];
+
+  const before =
+    list.items.length;
+
+  list.items =
+    list.items.filter((entry) => {
+      const entryId =
+        typeof entry === "string"
+          ? entry
+          : entry?.id;
+
+      if (
+        String(entryId || "") ===
+        itemId
+      ) {
+        return false;
+      }
+
+      if (
+        typeof entry === "string" ||
+        !callerIdentity.source ||
+        !callerIdentity.externalId
+      ) {
+        return true;
+      }
+
+      const entryType =
+        String(
+          entry?.type || ""
+        )
+          .trim()
+          .toLowerCase();
+
+      const entryIdentity =
+        _normalizeCanonicalIdentity(
+          entry?.source,
+          entryType,
+          entry?.externalId
+        );
+
+      const sameCanonicalItem =
+        entryType === callerType &&
+        entryIdentity.source ===
+          callerIdentity.source &&
+        entryIdentity.externalId ===
+          callerIdentity.externalId;
+
+      return !sameCanonicalItem;
+    });
+
+  const removed =
+    before -
+    list.items.length;
+
+  if (removed <= 0) {
+    return res.status(404).json({
+      error: "item_not_in_list"
+    });
+  }
+
+  list.itemsCount =
+    list.items.length;
+
+  list.updatedAt =
+    new Date().toISOString();
 
   _writeDb(db);
-  res.json({ ok: true, removed });
+
+  res.json({
+    ok: true,
+    removed
+  });
 });
 
 app.get("/api/consumption-history", _requireAuth, (req, res) => {

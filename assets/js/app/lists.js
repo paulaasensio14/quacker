@@ -183,18 +183,21 @@ const ListsModule = (() => {
   }
 
   function _getListPreviewItems(list) {
-    const ids = Array.isArray(list?.items)
-      ? list.items.map((entry) => _getListItemEntryId(entry)).filter(Boolean)
-      : [];
+    const entries =
+      Array.isArray(list?.items)
+        ? list.items
+        : [];
 
-    if (!ids.length || !listsOverviewLibrary.length) return [];
+    if (!entries.length) return [];
 
-    const libraryById = new Map(
-      listsOverviewLibrary.map((item) => [_normalizeId(item?.id), item])
-    );
-
-    return ids
-      .map((id) => libraryById.get(_normalizeId(id)))
+    return entries
+      .map(
+        (entry) =>
+          _resolveListItemEntry(
+            entry,
+            listsOverviewLibrary
+          )
+      )
       .filter((item) => item?.cover)
       .slice(0, 4);
   }
@@ -278,6 +281,103 @@ const ListsModule = (() => {
 
   function _getListItemEntryId(entry) {
     return _normalizeId(typeof entry === "string" ? entry : entry?.id);
+  }
+
+  function _resolveListItemEntry(entry, library = []) {
+    const entryId =
+      _getListItemEntryId(entry);
+
+    if (!entryId) return null;
+
+    const safeLibrary =
+      Array.isArray(library)
+        ? library
+        : [];
+
+    const directMatch =
+      safeLibrary.find(
+        (item) =>
+          _normalizeId(item?.id) ===
+          entryId
+      );
+
+    if (directMatch) {
+      return directMatch;
+    }
+
+    if (
+      entry &&
+      typeof entry === "object" &&
+      !Array.isArray(entry)
+    ) {
+      const getCanonicalContentKey =
+        window.ItemIdentity
+          ?.getCanonicalContentKey;
+
+      if (
+        typeof getCanonicalContentKey ===
+        "function"
+      ) {
+        const entryKey =
+          getCanonicalContentKey(entry);
+
+        if (entryKey) {
+          const canonicalMatch =
+            safeLibrary.find(
+              (item) =>
+                getCanonicalContentKey(item) ===
+                entryKey
+            );
+
+          if (canonicalMatch) {
+            return canonicalMatch;
+          }
+        }
+      }
+
+      const snapshot =
+        entry.itemSnapshot;
+
+      if (
+        snapshot &&
+        typeof snapshot === "object" &&
+        !Array.isArray(snapshot)
+      ) {
+        const title =
+          String(
+            snapshot.title || ""
+          ).trim();
+
+        if (title) {
+          return {
+            id: entryId,
+            source:
+              String(
+                entry.source || ""
+              ).trim(),
+            type:
+              String(
+                entry.type || ""
+              )
+                .trim()
+                .toLowerCase(),
+            externalId:
+              String(
+                entry.externalId || ""
+              ).trim(),
+            title,
+            cover:
+              String(
+                snapshot.cover || ""
+              ).trim(),
+            progress: 0,
+            __listSnapshot: true
+          };
+        }
+      }
+    }
+
+    return null;
   }
 
   function _patchListMembership(listId, itemId, action) {
@@ -803,8 +903,16 @@ const ListsModule = (() => {
       return;
     }
 
-    const byId = new Map((library || []).map((it) => [_normalizeId(it.id), it]));
-    const items = ids.map(id => byId.get(id)).filter(Boolean);
+    const items =
+      (Array.isArray(list.items) ? list.items : [])
+        .map(
+          (entry) =>
+            _resolveListItemEntry(
+              entry,
+              library
+            )
+        )
+        .filter(Boolean);
 
     // Aplicar filtros (búsqueda / tipo / estado)
     const q = String(detailSearch || "").trim().toLowerCase();
@@ -865,6 +973,14 @@ const ListsModule = (() => {
         ? Math.max(0, Math.min(100, rawProgress))
         : 0;
       const prog = _progressLabel(progressValue);
+      const canUndo =
+        it?.__listSnapshot !== true;
+      const itemSource =
+        _safeAttr(it?.source);
+      const itemType =
+        _safeAttr(it?.type);
+      const itemExternalId =
+        _safeAttr(it?.externalId);
 
       return `
         <article class="list-item-card" data-item-id="${_safeText(it.id)}">
@@ -886,7 +1002,16 @@ const ListsModule = (() => {
             <div class="list-item-title">${title}</div>
 
             <div class="list-item-actions">
-              <button type="button" class="list-item-remove" data-action="remove-from-list" data-item-id="${_safeText(it.id)}">
+              <button
+                type="button"
+                class="list-item-remove"
+                data-action="remove-from-list"
+                data-item-id="${_safeAttr(it.id)}"
+                data-can-undo="${canUndo ? "1" : "0"}"
+                data-item-source="${itemSource}"
+                data-item-type="${itemType}"
+                data-item-external-id="${itemExternalId}"
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
                      aria-hidden="true" focusable="false">
@@ -905,12 +1030,33 @@ const ListsModule = (() => {
     }).join("");
   }
 
-  async function removeItemFromActiveList(itemId){
+  async function removeItemFromActiveList(
+    itemId,
+    {
+      canUndo = true,
+      source = "",
+      type = "",
+      externalId = ""
+    } = {}
+  ){
     if (!activeListId || !itemId) return;
 
     const listId = _normalizeId(activeListId);
     const id = _normalizeId(itemId);
     if (!listId || !id) return;
+
+    const getCanonicalContentKey =
+      window.ItemIdentity
+        ?.getCanonicalContentKey;
+
+    const targetCanonicalKey =
+      typeof getCanonicalContentKey === "function"
+        ? getCanonicalContentKey({
+            source,
+            type,
+            externalId
+          })
+        : "";
 
     // Animación de salida (optimista)
     const card = document.querySelector(
@@ -934,8 +1080,35 @@ const ListsModule = (() => {
       const listRef = (allLists || []).find(l => _normalizeId(l.id) === listId);
       if (listRef && Array.isArray(listRef.items)) {
         listRef.items = listRef.items.filter((x) => {
-          const entryId = typeof x === "string" ? x : x?.id;
-          return _normalizeId(entryId) !== id;
+          const entryId =
+            typeof x === "string"
+              ? x
+              : x?.id;
+
+          if (
+            _normalizeId(entryId) === id
+          ) {
+            return false;
+          }
+
+          if (
+            !targetCanonicalKey ||
+            typeof x === "string" ||
+            !x ||
+            typeof x !== "object" ||
+            typeof getCanonicalContentKey !== "function"
+          ) {
+            return true;
+          }
+
+          const entryCanonicalKey =
+            getCanonicalContentKey(x);
+
+          return (
+            !entryCanonicalKey ||
+            entryCanonicalKey !==
+              targetCanonicalKey
+          );
         });
 
         listRef.itemsCount = listRef.items.length;
@@ -950,8 +1123,11 @@ const ListsModule = (() => {
         message: t("lists_remove_success_text"),
         type: "success",
         duration: 5200,
-        actionLabel: t("lists_undo"),
-        onAction: async () => {
+        actionLabel:
+          canUndo
+            ? t("lists_undo")
+            : null,
+        onAction: canUndo ? async () => {
           try{
             assertListMutationOk(
               await ApiClient.addLibraryItemToList(listId, id),
@@ -996,7 +1172,7 @@ const ListsModule = (() => {
               duration: 3200
             });
           }
-        }
+        } : null
       });
 
       // Nota: no sincronizamos LibraryUI ni disparamos events manuales.
@@ -1461,7 +1637,19 @@ const ListsModule = (() => {
         const itemId = _normalizeId(rm.dataset.itemId);
         if (!itemId) return;
 
-        await removeItemFromActiveList(itemId);
+        await removeItemFromActiveList(
+          itemId,
+          {
+            canUndo:
+              rm.dataset.canUndo !== "0",
+            source:
+              rm.dataset.itemSource || "",
+            type:
+              rm.dataset.itemType || "",
+            externalId:
+              rm.dataset.itemExternalId || ""
+          }
+        );
       });
     }
 
