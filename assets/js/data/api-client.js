@@ -1961,6 +1961,324 @@ if (externalSignal?.aborted) {
     return _buildListMutationList("create", newList);
   }
 
+  async function createListPoll(
+    listId,
+    pollData = {}
+  ) {
+    const safeListId =
+      _normalizeDataId(listId);
+
+    if (!safeListId) {
+      throw _makeApiError(
+        "list_not_found",
+        404
+      );
+    }
+
+    const title =
+      String(
+        pollData?.title || ""
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const optionContentKeys =
+      Array.isArray(
+        pollData?.optionContentKeys
+      )
+        ? pollData.optionContentKeys
+            .map((value) =>
+              String(value || "").trim()
+            )
+            .filter(Boolean)
+        : [];
+
+    const allowMultipleVotes =
+      pollData?.allowMultipleVotes ===
+      true;
+
+    const deadlineAt =
+      pollData?.deadlineAt == null ||
+      String(
+        pollData.deadlineAt
+      ).trim() === ""
+        ? null
+        : String(
+            pollData.deadlineAt
+          ).trim();
+
+    if (_isHttp()) {
+      const res =
+        await _httpJson(
+          "POST",
+          `/lists/${encodeURIComponent(safeListId)}/polls`,
+          {
+            title,
+            optionContentKeys,
+            allowMultipleVotes,
+            deadlineAt
+          }
+        );
+
+      const poll =
+        res?.poll;
+
+      const pollId =
+        _normalizeDataId(
+          poll?.id
+        );
+
+      if (
+        !res?.ok ||
+        !poll ||
+        !pollId
+      ) {
+        throw _makeApiError(
+          "invalid_poll_response",
+          502
+        );
+      }
+
+      _invalidateListsCache();
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "create_poll",
+        listId: safeListId,
+        pollId
+      });
+
+      return poll;
+    }
+
+    throw _makeApiError(
+      "polls_require_http",
+      501
+    );
+  }
+
+
+  async function voteListPoll(
+    listId,
+    pollId,
+    contentKeys = []
+  ) {
+    const safeListId =
+      _normalizeDataId(listId);
+
+    const safePollId =
+      _normalizeDataId(pollId);
+
+    if (!safeListId) {
+      throw _makeApiError(
+        "list_not_found",
+        404
+      );
+    }
+
+    if (!safePollId) {
+      throw _makeApiError(
+        "poll_not_found",
+        404
+      );
+    }
+
+    const safeContentKeys =
+      Array.isArray(contentKeys)
+        ? contentKeys
+            .map((value) =>
+              String(value || "").trim()
+            )
+            .filter(Boolean)
+        : [];
+
+    if (_isHttp()) {
+      const res =
+        await _httpJson(
+          "PUT",
+          `/lists/${encodeURIComponent(safeListId)}/polls/${encodeURIComponent(safePollId)}/votes/me`,
+          {
+            contentKeys:
+              safeContentKeys
+          }
+        );
+
+      const poll =
+        res?.poll;
+
+      const returnedPollId =
+        _normalizeDataId(
+          poll?.id
+        );
+
+      if (
+        !res?.ok ||
+        !poll ||
+        returnedPollId !== safePollId
+      ) {
+        throw _makeApiError(
+          "invalid_poll_response",
+          502
+        );
+      }
+
+      _invalidateListsCache();
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "vote_poll",
+        listId: safeListId,
+        pollId: safePollId
+      });
+
+      return poll;
+    }
+
+    throw _makeApiError(
+      "polls_require_http",
+      501
+    );
+  }
+
+
+  async function closeListPoll(
+    listId,
+    pollId
+  ) {
+    const safeListId =
+      _normalizeDataId(listId);
+
+    const safePollId =
+      _normalizeDataId(pollId);
+
+    if (!safeListId) {
+      throw _makeApiError(
+        "list_not_found",
+        404
+      );
+    }
+
+    if (!safePollId) {
+      throw _makeApiError(
+        "poll_not_found",
+        404
+      );
+    }
+
+    if (_isHttp()) {
+      const res =
+        await _httpJson(
+          "POST",
+          `/lists/${encodeURIComponent(safeListId)}/polls/${encodeURIComponent(safePollId)}/close`
+        );
+
+      const poll =
+        res?.poll;
+
+      const returnedPollId =
+        _normalizeDataId(
+          poll?.id
+        );
+
+      if (
+        !res?.ok ||
+        !poll ||
+        returnedPollId !== safePollId
+      ) {
+        throw _makeApiError(
+          "invalid_poll_response",
+          502
+        );
+      }
+
+      _invalidateListsCache();
+
+      _emitDataChanged({
+        kind: "lists",
+        action: "close_poll",
+        listId: safeListId,
+        pollId: safePollId
+      });
+
+      return poll;
+    }
+
+    throw _makeApiError(
+      "polls_require_http",
+      501
+    );
+  }
+
+
+  async function getListPollResults(
+    listId,
+    pollId
+  ) {
+    const safeListId =
+      _normalizeDataId(listId);
+
+    const safePollId =
+      _normalizeDataId(pollId);
+
+    if (!safeListId) {
+      throw _makeApiError(
+        "list_not_found",
+        404
+      );
+    }
+
+    if (!safePollId) {
+      throw _makeApiError(
+        "poll_not_found",
+        404
+      );
+    }
+
+    if (_isHttp()) {
+      const res =
+        await _httpJson(
+          "GET",
+          `/lists/${encodeURIComponent(safeListId)}/polls/${encodeURIComponent(safePollId)}/results`
+        );
+
+      const poll =
+        res?.poll;
+
+      const returnedPollId =
+        _normalizeDataId(
+          poll?.id
+        );
+
+      const results =
+        res?.results;
+
+      if (
+        !res?.ok ||
+        !poll ||
+        returnedPollId !== safePollId ||
+        !results ||
+        typeof results !== "object" ||
+        Array.isArray(results)
+      ) {
+        throw _makeApiError(
+          "invalid_poll_results_response",
+          502
+        );
+      }
+
+      return {
+        poll,
+        results
+      };
+    }
+
+    throw _makeApiError(
+      "polls_require_http",
+      501
+    );
+  }
+
+
   async function updateList(listId, patch = {}) {
     if (!listId) {
       throw _makeApiError("not_found", 404);
@@ -7107,6 +7425,10 @@ if (externalSignal?.aborted) {
     getLists,
     getListsContainingItem,
     createList,
+    createListPoll,
+    voteListPoll,
+    closeListPoll,
+    getListPollResults,
     updateList,
     deleteList,
     addLibraryItemToList,

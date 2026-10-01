@@ -706,6 +706,21 @@ test(
           invitedUserIds: [
             "pending-user"
           ],
+          polls: [
+            {
+              id: "poll-1",
+              title: "Qué vemos",
+              createdByUserId: userId,
+              allowMultipleVotes: false,
+              options: [],
+              votesByUserId: {},
+              deadlineAt: null,
+              closedAt: null,
+              winnerContentKey: "",
+              createdAt:
+                "2026-09-01T11:00:00.000Z"
+            }
+          ],
           items: [],
           itemsCount: 0,
           createdAt:
@@ -786,6 +801,26 @@ test(
         ]
       );
 
+      assert.deepEqual(
+        response.json?.lists?.[0]
+          ?.polls,
+        [
+          {
+            id: "poll-1",
+            title: "Qué vemos",
+            createdByUserId: userId,
+            allowMultipleVotes: false,
+            options: [],
+            votesByUserId: {},
+            deadlineAt: null,
+            closedAt: null,
+            winnerContentKey: "",
+            createdAt:
+              "2026-09-01T11:00:00.000Z"
+          }
+        ]
+      );
+
       const persisted =
         JSON.parse(
           fs.readFileSync(
@@ -816,6 +851,27 @@ test(
           .invitedUserIds,
         [
           "pending-user"
+        ]
+      );
+
+      assert.deepEqual(
+        persisted.users[userId]
+          .lists[0]
+          .polls,
+        [
+          {
+            id: "poll-1",
+            title: "Qué vemos",
+            createdByUserId: userId,
+            allowMultipleVotes: false,
+            options: [],
+            votesByUserId: {},
+            deadlineAt: null,
+            closedAt: null,
+            winnerContentKey: "",
+            createdAt:
+              "2026-09-01T11:00:00.000Z"
+          }
         ]
       );
     } finally {
@@ -6676,6 +6732,2388 @@ test(
           "list_not_found"
         );
       }
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "un colaborador puede crear una votación sobre items de la lista del propietario",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-poll-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Poll Owner",
+              language: "es"
+            }
+          }
+        );
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-poll-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Poll Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorUserId =
+        collaboratorRegistration
+          .json?.user?.id;
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+
+      const listId =
+        "poll-collaborative-list";
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      db.users[ownerUserId].lists = [
+        {
+          id: listId,
+          name: "Noche de cine",
+          description: "",
+          visibility: "collab",
+          ownerUserId,
+          collaborators: [
+            collaboratorUserId
+          ],
+          invitedUserIds: [],
+          polls: [],
+          items: [
+            {
+              id: "owner-item-1",
+              source: "tmdb",
+              type: "pelicula",
+              externalId: "123",
+              itemSnapshot: {
+                title: "Dune",
+                cover: "dune.jpg"
+              },
+              addedAt:
+                "2026-09-30T09:00:00.000Z"
+            },
+            {
+              id: "owner-item-2",
+              source: "tmdb",
+              type: "pelicula",
+              externalId: "456",
+              itemSnapshot: {
+                title: "Arrival",
+                cover: "arrival.jpg"
+              },
+              addedAt:
+                "2026-09-30T09:05:00.000Z"
+            }
+          ],
+          itemsCount: 2,
+          createdAt:
+            "2026-09-30T09:00:00.000Z",
+          updatedAt:
+            "2026-09-30T09:05:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const created =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie,
+            body: {
+              title:
+                "  Qué vemos el sábado  ",
+              optionContentKeys: [
+                "tmdb::pelicula::123",
+                "tmdb::pelicula::456"
+              ],
+              allowMultipleVotes:
+                false,
+              deadlineAt:
+                null
+            }
+          }
+        );
+
+      assert.equal(
+        created.statusCode,
+        201
+      );
+
+      assert.equal(
+        created.json?.poll?.title,
+        "Qué vemos el sábado"
+      );
+
+      assert.equal(
+        created.json?.poll
+          ?.createdByUserId,
+        collaboratorUserId
+      );
+
+      assert.deepEqual(
+        created.json?.poll?.options
+          ?.map(
+            (option) =>
+              option.contentKey
+          ),
+        [
+          "tmdb::pelicula::123",
+          "tmdb::pelicula::456"
+        ]
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls.length,
+        1
+      );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .createdByUserId,
+        collaboratorUserId
+      );
+
+      assert.equal(
+        persisted.users[
+          collaboratorUserId
+        ].lists.length,
+        0
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "un colaborador puede votar y cambiar su voto en una votación del propietario",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-vote-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Vote Owner",
+              language: "es"
+            }
+          }
+        );
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-vote-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Vote Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorUserId =
+        collaboratorRegistration
+          .json?.user?.id;
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+
+      const listId =
+        "vote-collaborative-list";
+
+      const pollId =
+        "poll-1";
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      db.users[ownerUserId].lists = [
+        {
+          id: listId,
+          name: "Noche de cine",
+          description: "",
+          visibility: "collab",
+          ownerUserId,
+          collaborators: [
+            collaboratorUserId
+          ],
+          invitedUserIds: [],
+          polls: [
+            {
+              id: pollId,
+              title: "Qué vemos",
+              createdByUserId:
+                ownerUserId,
+              allowMultipleVotes:
+                false,
+              options: [
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "123",
+                  contentKey:
+                    "tmdb::pelicula::123",
+                  itemSnapshot: {
+                    title: "Dune",
+                    cover: ""
+                  }
+                },
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "456",
+                  contentKey:
+                    "tmdb::pelicula::456",
+                  itemSnapshot: {
+                    title: "Arrival",
+                    cover: ""
+                  }
+                }
+              ],
+              votesByUserId: {},
+              deadlineAt: null,
+              closedAt: null,
+              winnerContentKey: "",
+              createdAt:
+                "2026-09-30T10:00:00.000Z"
+            }
+          ],
+          items: [],
+          itemsCount: 0,
+          createdAt:
+            "2026-09-30T09:00:00.000Z",
+          updatedAt:
+            "2026-09-30T10:00:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const firstVote =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls/${encodeURIComponent(pollId)}/votes/me`,
+          {
+            method: "PUT",
+            cookie:
+              collaboratorCookie,
+            body: {
+              contentKeys: [
+                "tmdb::pelicula::123"
+              ]
+            }
+          }
+        );
+
+      assert.equal(
+        firstVote.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        firstVote.json?.poll
+          ?.votesByUserId?.[
+            collaboratorUserId
+          ],
+        [
+          "tmdb::pelicula::123"
+        ]
+      );
+
+      const changedVote =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls/${encodeURIComponent(pollId)}/votes/me`,
+          {
+            method: "PUT",
+            cookie:
+              collaboratorCookie,
+            body: {
+              contentKeys: [
+                "tmdb::pelicula::456"
+              ]
+            }
+          }
+        );
+
+      assert.equal(
+        changedVote.statusCode,
+        200
+      );
+
+      assert.deepEqual(
+        changedVote.json?.poll
+          ?.votesByUserId?.[
+            collaboratorUserId
+          ],
+        [
+          "tmdb::pelicula::456"
+        ]
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .votesByUserId[
+            collaboratorUserId
+          ],
+        [
+          "tmdb::pelicula::456"
+        ]
+      );
+
+      assert.equal(
+        persisted.users[
+          collaboratorUserId
+        ].lists.length,
+        0
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "el creador colaborador puede cerrar manualmente su votación y persistir el ganador",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-close-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Close Owner",
+              language: "es"
+            }
+          }
+        );
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-close-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Close Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorUserId =
+        collaboratorRegistration
+          .json?.user?.id;
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+
+      const listId =
+        "close-collaborative-list";
+
+      const pollId =
+        "poll-close-1";
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      db.users[ownerUserId].lists = [
+        {
+          id: listId,
+          name: "Noche de cine",
+          description: "",
+          visibility: "collab",
+          ownerUserId,
+          collaborators: [
+            collaboratorUserId
+          ],
+          invitedUserIds: [],
+          polls: [
+            {
+              id: pollId,
+              title: "Qué vemos",
+              createdByUserId:
+                collaboratorUserId,
+              allowMultipleVotes:
+                false,
+              options: [
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "123",
+                  contentKey:
+                    "tmdb::pelicula::123",
+                  itemSnapshot: {
+                    title: "Dune",
+                    cover: ""
+                  }
+                },
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "456",
+                  contentKey:
+                    "tmdb::pelicula::456",
+                  itemSnapshot: {
+                    title: "Arrival",
+                    cover: ""
+                  }
+                }
+              ],
+              votesByUserId: {
+                [ownerUserId]: [
+                  "tmdb::pelicula::123"
+                ],
+                [collaboratorUserId]: [
+                  "tmdb::pelicula::123"
+                ]
+              },
+              deadlineAt: null,
+              closedAt: null,
+              winnerContentKey: "",
+              createdAt:
+                "2026-09-30T10:00:00.000Z"
+            }
+          ],
+          items: [],
+          itemsCount: 0,
+          createdAt:
+            "2026-09-30T09:00:00.000Z",
+          updatedAt:
+            "2026-09-30T10:00:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const closed =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls/${encodeURIComponent(pollId)}/close`,
+          {
+            method: "POST",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        closed.statusCode,
+        200
+      );
+
+      assert.ok(
+        closed.json?.poll?.closedAt
+      );
+
+      assert.equal(
+        closed.json?.poll
+          ?.winnerContentKey,
+        "tmdb::pelicula::123"
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.ok(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .closedAt
+      );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .winnerContentKey,
+        "tmdb::pelicula::123"
+      );
+
+      assert.equal(
+        persisted.users[
+          collaboratorUserId
+        ].lists.length,
+        0
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "un colaborador no puede cerrar la votación creada por otro usuario",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const register =
+        async ({
+          email,
+          name
+        }) => {
+          const response =
+            await requestJson(
+              `${baseUrl}/api/auth/register`,
+              {
+                method: "POST",
+                body: {
+                  email,
+                  password:
+                    "runtime-pass-123",
+                  name,
+                  language: "es"
+                }
+              }
+            );
+
+          assert.equal(
+            response.statusCode,
+            200
+          );
+
+          return {
+            userId:
+              response.json?.user?.id,
+            cookie:
+              response.headers[
+                "set-cookie"
+              ][0].split(";")[0]
+          };
+        };
+
+      const owner =
+        await register({
+          email:
+            "w14-close-auth-owner@example.test",
+          name:
+            "W14 Close Auth Owner"
+        });
+
+      const creator =
+        await register({
+          email:
+            "w14-close-auth-creator@example.test",
+          name:
+            "W14 Close Auth Creator"
+        });
+
+      const otherCollaborator =
+        await register({
+          email:
+            "w14-close-auth-other@example.test",
+          name:
+            "W14 Close Auth Other"
+        });
+
+      assert.ok(owner.userId);
+      assert.ok(creator.userId);
+      assert.ok(
+        otherCollaborator.userId
+      );
+
+      const listId =
+        "close-auth-list";
+
+      const pollId =
+        "close-auth-poll";
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      db.users[owner.userId].lists = [
+        {
+          id: listId,
+          name:
+            "Lista cierre autorizado",
+          description: "",
+          visibility: "collab",
+          ownerUserId:
+            owner.userId,
+          collaborators: [
+            creator.userId,
+            otherCollaborator.userId
+          ],
+          invitedUserIds: [],
+          polls: [
+            {
+              id: pollId,
+              title:
+                "Qué vemos",
+              createdByUserId:
+                creator.userId,
+              allowMultipleVotes:
+                false,
+              options: [
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "123",
+                  contentKey:
+                    "tmdb::pelicula::123",
+                  itemSnapshot: {
+                    title: "Dune",
+                    cover: ""
+                  }
+                },
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "456",
+                  contentKey:
+                    "tmdb::pelicula::456",
+                  itemSnapshot: {
+                    title: "Arrival",
+                    cover: ""
+                  }
+                }
+              ],
+              votesByUserId: {},
+              deadlineAt: null,
+              closedAt: null,
+              winnerContentKey: "",
+              createdAt:
+                "2026-09-30T10:00:00.000Z"
+            }
+          ],
+          items: [],
+          itemsCount: 0,
+          createdAt:
+            "2026-09-30T09:00:00.000Z",
+          updatedAt:
+            "2026-09-30T10:00:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const response =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls/${encodeURIComponent(pollId)}/close`,
+          {
+            method: "POST",
+            cookie:
+              otherCollaborator.cookie
+          }
+        );
+
+      assert.equal(
+        response.statusCode,
+        403
+      );
+
+      assert.equal(
+        response.json?.error,
+        "not_poll_closer"
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.equal(
+        persisted.users[owner.userId]
+          .lists[0]
+          .polls[0]
+          .closedAt,
+        null
+      );
+
+      assert.equal(
+        persisted.users[owner.userId]
+          .lists[0]
+          .polls[0]
+          .winnerContentKey,
+        ""
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "GET /api/lists finaliza y persiste una votación colaborativa cuyo plazo ha vencido",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-auto-close-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Auto Close Owner",
+              language: "es"
+            }
+          }
+        );
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-auto-close-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Auto Close Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorUserId =
+        collaboratorRegistration
+          .json?.user?.id;
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+
+      const listId =
+        "auto-close-collaborative-list";
+
+      const pollId =
+        "auto-close-poll";
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      db.users[ownerUserId].lists = [
+        {
+          id: listId,
+          name:
+            "Lista con votación vencida",
+          description: "",
+          visibility: "collab",
+          ownerUserId,
+          collaborators: [
+            collaboratorUserId
+          ],
+          invitedUserIds: [],
+          polls: [
+            {
+              id: pollId,
+              title:
+                "Qué vemos",
+              createdByUserId:
+                collaboratorUserId,
+              allowMultipleVotes:
+                false,
+              options: [
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "123",
+                  contentKey:
+                    "tmdb::pelicula::123",
+                  itemSnapshot: {
+                    title: "Dune",
+                    cover: ""
+                  }
+                },
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "456",
+                  contentKey:
+                    "tmdb::pelicula::456",
+                  itemSnapshot: {
+                    title: "Arrival",
+                    cover: ""
+                  }
+                }
+              ],
+              votesByUserId: {
+                [ownerUserId]: [
+                  "tmdb::pelicula::123"
+                ],
+                [collaboratorUserId]: [
+                  "tmdb::pelicula::123"
+                ]
+              },
+              deadlineAt:
+                "2020-01-01T00:00:00.000Z",
+              closedAt: null,
+              winnerContentKey: "",
+              createdAt:
+                "2019-12-31T20:00:00.000Z"
+            }
+          ],
+          items: [],
+          itemsCount: 0,
+          createdAt:
+            "2019-12-31T19:00:00.000Z",
+          updatedAt:
+            "2019-12-31T20:00:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const response =
+        await requestJson(
+          `${baseUrl}/api/lists`,
+          {
+            method: "GET",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        response.statusCode,
+        200
+      );
+
+      const visibleList =
+        response.json?.find(
+          (list) =>
+            list?.id === listId
+        );
+
+      assert.ok(visibleList);
+
+      const visiblePoll =
+        visibleList.polls?.find(
+          (poll) =>
+            poll?.id === pollId
+        );
+
+      assert.ok(visiblePoll);
+
+      assert.ok(
+        visiblePoll.closedAt
+      );
+
+      assert.equal(
+        visiblePoll.winnerContentKey,
+        "tmdb::pelicula::123"
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.ok(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .closedAt
+      );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .winnerContentKey,
+        "tmdb::pelicula::123"
+      );
+
+      assert.equal(
+        persisted.users[
+          collaboratorUserId
+        ].lists.length,
+        0
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "no se puede votar en una votación cerrada",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-closed-vote-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Closed Vote Owner",
+              language: "es"
+            }
+          }
+        );
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-closed-vote-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Closed Vote Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorUserId =
+        collaboratorRegistration
+          .json?.user?.id;
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+
+      const listId =
+        "closed-vote-list";
+
+      const pollId =
+        "closed-vote-poll";
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      db.users[ownerUserId].lists = [
+        {
+          id: listId,
+          name:
+            "Lista con votación cerrada",
+          description: "",
+          visibility: "collab",
+          ownerUserId,
+          collaborators: [
+            collaboratorUserId
+          ],
+          invitedUserIds: [],
+          polls: [
+            {
+              id: pollId,
+              title:
+                "Qué vemos",
+              createdByUserId:
+                ownerUserId,
+              allowMultipleVotes:
+                false,
+              options: [
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "123",
+                  contentKey:
+                    "tmdb::pelicula::123",
+                  itemSnapshot: {
+                    title: "Dune",
+                    cover: ""
+                  }
+                },
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "456",
+                  contentKey:
+                    "tmdb::pelicula::456",
+                  itemSnapshot: {
+                    title: "Arrival",
+                    cover: ""
+                  }
+                }
+              ],
+              votesByUserId: {
+                [collaboratorUserId]: [
+                  "tmdb::pelicula::123"
+                ]
+              },
+              deadlineAt: null,
+              closedAt:
+                "2026-09-30T12:00:00.000Z",
+              winnerContentKey:
+                "tmdb::pelicula::123",
+              createdAt:
+                "2026-09-30T10:00:00.000Z"
+            }
+          ],
+          items: [],
+          itemsCount: 0,
+          createdAt:
+            "2026-09-30T09:00:00.000Z",
+          updatedAt:
+            "2026-09-30T12:00:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const response =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls/${encodeURIComponent(pollId)}/votes/me`,
+          {
+            method: "PUT",
+            cookie:
+              collaboratorCookie,
+            body: {
+              contentKeys: [
+                "tmdb::pelicula::456"
+              ]
+            }
+          }
+        );
+
+      assert.equal(
+        response.statusCode,
+        409
+      );
+
+      assert.equal(
+        response.json?.error,
+        "poll_closed"
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .votesByUserId[
+            collaboratorUserId
+          ],
+        [
+          "tmdb::pelicula::123"
+        ]
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "el propietario puede cerrar una votación creada por un colaborador",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-owner-close-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Owner Close Owner",
+              language: "es"
+            }
+          }
+        );
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-owner-close-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Owner Close Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorUserId =
+        collaboratorRegistration
+          .json?.user?.id;
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+
+      const listId =
+        "owner-close-list";
+
+      const pollId =
+        "owner-close-poll";
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      db.users[ownerUserId].lists = [
+        {
+          id: listId,
+          name:
+            "Lista cierre por propietario",
+          description: "",
+          visibility: "collab",
+          ownerUserId,
+          collaborators: [
+            collaboratorUserId
+          ],
+          invitedUserIds: [],
+          polls: [
+            {
+              id: pollId,
+              title:
+                "Qué vemos",
+              createdByUserId:
+                collaboratorUserId,
+              allowMultipleVotes:
+                false,
+              options: [
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "123",
+                  contentKey:
+                    "tmdb::pelicula::123",
+                  itemSnapshot: {
+                    title: "Dune",
+                    cover: ""
+                  }
+                },
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "456",
+                  contentKey:
+                    "tmdb::pelicula::456",
+                  itemSnapshot: {
+                    title: "Arrival",
+                    cover: ""
+                  }
+                }
+              ],
+              votesByUserId: {
+                [ownerUserId]: [
+                  "tmdb::pelicula::123"
+                ],
+                [collaboratorUserId]: [
+                  "tmdb::pelicula::123"
+                ]
+              },
+              deadlineAt: null,
+              closedAt: null,
+              winnerContentKey: "",
+              createdAt:
+                "2026-09-30T10:00:00.000Z"
+            }
+          ],
+          items: [],
+          itemsCount: 0,
+          createdAt:
+            "2026-09-30T09:00:00.000Z",
+          updatedAt:
+            "2026-09-30T10:00:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const response =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls/${encodeURIComponent(pollId)}/close`,
+          {
+            method: "POST",
+            cookie:
+              ownerCookie
+          }
+        );
+
+      assert.equal(
+        response.statusCode,
+        200
+      );
+
+      assert.ok(
+        response.json?.poll?.closedAt
+      );
+
+      assert.equal(
+        response.json?.poll
+          ?.winnerContentKey,
+        "tmdb::pelicula::123"
+      );
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.ok(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .closedAt
+      );
+
+      assert.equal(
+        persisted.users[ownerUserId]
+          .lists[0]
+          .polls[0]
+          .winnerContentKey,
+        "tmdb::pelicula::123"
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "un colaborador puede consultar el recuento de una votación de la lista",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-results-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Results Owner",
+              language: "es"
+            }
+          }
+        );
+
+      const collaboratorRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-results-collaborator@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Results Collaborator",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      assert.equal(
+        collaboratorRegistration.statusCode,
+        200
+      );
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const collaboratorUserId =
+        collaboratorRegistration
+          .json?.user?.id;
+
+      const collaboratorCookie =
+        collaboratorRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(ownerUserId);
+      assert.ok(collaboratorUserId);
+
+      const listId =
+        "results-collaborative-list";
+
+      const pollId =
+        "results-poll";
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      db.users[ownerUserId].lists = [
+        {
+          id: listId,
+          name:
+            "Lista con resultados",
+          description: "",
+          visibility: "collab",
+          ownerUserId,
+          collaborators: [
+            collaboratorUserId
+          ],
+          invitedUserIds: [],
+          polls: [
+            {
+              id: pollId,
+              title:
+                "Qué vemos",
+              createdByUserId:
+                ownerUserId,
+              allowMultipleVotes:
+                false,
+              options: [
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "123",
+                  contentKey:
+                    "tmdb::pelicula::123",
+                  itemSnapshot: {
+                    title: "Dune",
+                    cover: ""
+                  }
+                },
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "456",
+                  contentKey:
+                    "tmdb::pelicula::456",
+                  itemSnapshot: {
+                    title: "Arrival",
+                    cover: ""
+                  }
+                }
+              ],
+              votesByUserId: {
+                [ownerUserId]: [
+                  "tmdb::pelicula::123"
+                ],
+                [collaboratorUserId]: [
+                  "tmdb::pelicula::123"
+                ]
+              },
+              deadlineAt: null,
+              closedAt: null,
+              winnerContentKey: "",
+              createdAt:
+                "2026-09-30T10:00:00.000Z"
+            }
+          ],
+          items: [],
+          itemsCount: 0,
+          createdAt:
+            "2026-09-30T09:00:00.000Z",
+          updatedAt:
+            "2026-09-30T10:00:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      const response =
+        await requestJson(
+          `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls/${encodeURIComponent(pollId)}/results`,
+          {
+            method: "GET",
+            cookie:
+              collaboratorCookie
+          }
+        );
+
+      assert.equal(
+        response.statusCode,
+        200
+      );
+
+      assert.equal(
+        response.json?.results
+          ?.totalVotes,
+        2
+      );
+
+      assert.equal(
+        response.json?.results
+          ?.counts?.[
+            "tmdb::pelicula::123"
+          ],
+        2
+      );
+
+      assert.equal(
+        response.json?.results
+          ?.counts?.[
+            "tmdb::pelicula::456"
+          ],
+        0
+      );
+
+      assert.deepEqual(
+        response.json?.results
+          ?.topContentKeys,
+        [
+          "tmdb::pelicula::123"
+        ]
+      );
+
+      assert.equal(
+        response.json?.results
+          ?.winnerContentKey,
+        "tmdb::pelicula::123"
+      );
+
+      assert.equal(
+        response.json?.results
+          ?.tied,
+        false
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(
+        directory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
+    }
+  }
+);
+
+test(
+  "el propietario no puede crear votaciones en listas privadas o públicas",
+  {
+    timeout: 30000
+  },
+  async () => {
+    const directory =
+      createTemporaryDirectory();
+
+    const dbPath =
+      path.join(
+        directory,
+        "db.json"
+      );
+
+    const sessionStorePath =
+      path.join(
+        directory,
+        "sessions"
+      );
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify(
+        {
+          users: {}
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const port =
+      await getAvailablePort();
+
+    let child = null;
+
+    try {
+      child =
+        await startTestServer({
+          dbPath,
+          sessionStorePath,
+          port
+        });
+
+      const baseUrl =
+        `http://127.0.0.1:${port}`;
+
+      const ownerRegistration =
+        await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email:
+                "w14-poll-non-collab-owner@example.test",
+              password:
+                "runtime-pass-123",
+              name:
+                "W14 Poll Non Collab Owner",
+              language: "es"
+            }
+          }
+        );
+
+      assert.equal(
+        ownerRegistration.statusCode,
+        200
+      );
+
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const ownerCookie =
+        ownerRegistration.headers[
+          "set-cookie"
+        ][0].split(";")[0];
+
+      assert.ok(ownerUserId);
+
+      const db =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      const makeList =
+        (id, visibility) => ({
+          id,
+          name: id,
+          description: "",
+          visibility,
+          ownerUserId,
+          collaborators: [],
+          invitedUserIds: [],
+          polls: [],
+          items: [
+            {
+              id: `${id}-item-1`,
+              source: "tmdb",
+              type: "pelicula",
+              externalId: "123",
+              itemSnapshot: {
+                title: "Dune",
+                cover: "dune.jpg"
+              },
+              addedAt:
+                "2026-09-30T09:00:00.000Z"
+            },
+            {
+              id: `${id}-item-2`,
+              source: "tmdb",
+              type: "pelicula",
+              externalId: "456",
+              itemSnapshot: {
+                title: "Arrival",
+                cover: "arrival.jpg"
+              },
+              addedAt:
+                "2026-09-30T09:05:00.000Z"
+            }
+          ],
+          itemsCount: 2,
+          createdAt:
+            "2026-09-30T09:00:00.000Z",
+          updatedAt:
+            "2026-09-30T09:05:00.000Z"
+        });
+
+      db.users[ownerUserId].lists = [
+        makeList(
+          "poll-private-list",
+          "private"
+        ),
+        makeList(
+          "poll-public-list",
+          "public"
+        )
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          db,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
+      for (const listId of [
+        "poll-private-list",
+        "poll-public-list"
+      ]) {
+        const response =
+          await requestJson(
+            `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls`,
+            {
+              method: "POST",
+              cookie: ownerCookie,
+              body: {
+                title:
+                  "Qué vemos el sábado",
+                optionContentKeys: [
+                  "tmdb::pelicula::123",
+                  "tmdb::pelicula::456"
+                ],
+                allowMultipleVotes:
+                  false,
+                deadlineAt:
+                  null
+              }
+            }
+          );
+
+        assert.equal(
+          response.statusCode,
+          404
+        );
+
+        assert.equal(
+          response.json?.error,
+          "list_not_found"
+        );
+      }
+
+      const persisted =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      assert.deepEqual(
+        persisted.users[ownerUserId]
+          .lists
+          .map((list) => list.polls),
+        [
+          [],
+          []
+        ]
+      );
     } finally {
       await stopTestServer(child);
 
