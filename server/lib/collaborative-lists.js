@@ -1,3 +1,8 @@
+import {
+  normalizeCollaborativeListPoll
+} from "./collaborative-list-polls.js";
+
+
 function _normalizeUserId(value) {
   if (typeof value !== "string") {
     return "";
@@ -133,7 +138,18 @@ export function normalizeCollaborativeList(
           ownerUserId,
           collaborators
         }
-      )
+      ),
+    polls:
+      Array.isArray(value.polls)
+        ? value.polls
+            .map(
+              (poll) =>
+                normalizeCollaborativeListPoll(
+                  poll
+                )
+            )
+            .filter(Boolean)
+        : []
   };
 }
 

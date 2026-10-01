@@ -1142,6 +1142,45 @@
             </div>
           </div>
 
+          <section
+            id="listDetailPolls"
+            class="list-detail-polls"
+            aria-labelledby="listDetailPollsTitle"
+          >
+            <div class="list-polls-header">
+              <div>
+                <h3
+                  id="listDetailPollsTitle"
+                  class="list-polls-title"
+                data-i18n="lists_poll_section_title"
+                >
+                  Votaciones
+                </h3>
+
+                <p
+                  class="list-polls-sub"
+                  data-i18n="lists_poll_section_subtitle"
+                >
+                  Decide en grupo qué contenido elegir.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                class="btn-secondary"
+                id="btnCreateListPoll"
+                data-i18n="lists_poll_create"
+              >
+                Crear votación
+              </button>
+            </div>
+
+            <div
+              id="listDetailPollsList"
+              class="list-polls-list"
+            ></div>
+          </section>
+
           <div class="list-detail-items">
             <div class="list-items-header">
               <div class="list-items-head-left">
@@ -1866,6 +1905,117 @@
     <div class="modal-actions">
       <button type="button" class="btn-secondary" id="cancelListModal" data-i18n="common_cancel">Cancelar</button>
       <button type="button" class="btn-primary" id="saveListModal" data-i18n="common_create">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVA VOTACIÓN -->
+<div class="modal-overlay" id="listPollModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="listPollModalTitle">
+    <div class="modal-header">
+      <h3
+        id="listPollModalTitle"
+        data-i18n="lists_poll_modal_title"
+      >Nueva votación</h3>
+
+      <button
+        type="button"
+        class="modal-close"
+        id="closeListPollModal"
+        aria-label="Cerrar"
+        data-i18n-aria-label="common_close"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-field">
+        <label
+          for="lpm_title"
+          data-i18n="lists_poll_modal_question_label"
+        >Título</label>
+        <input
+          id="lpm_title"
+          type="text"
+          maxlength="120"
+          placeholder="Ej: ¿Qué vemos el sábado?"
+          data-i18n-placeholder="lists_poll_modal_question_placeholder"
+        />
+      </div>
+
+      <div class="modal-field">
+        <span data-i18n="lists_poll_modal_options_label">Contenidos participantes</span>
+        <div
+          id="lpm_options"
+          class="list-poll-modal-options"
+        ></div>
+      </div>
+
+      <div class="modal-field">
+        <label for="lpm_multiple">
+          <input
+            id="lpm_multiple"
+            type="checkbox"
+          />
+          <span data-i18n="lists_poll_modal_multiple">
+            Permitir votar varias opciones
+          </span>
+        </label>
+      </div>
+
+      <div class="modal-field">
+        <label
+          for="lpm_deadline"
+          data-i18n="lists_poll_modal_deadline"
+        >
+          Fecha límite (opcional)
+        </label>
+        <input
+          id="lpm_deadline"
+          type="datetime-local"
+        />
+      </div>
+
+      <div
+        class="modal-errors is-initially-hidden"
+        id="listPollModalErrors"
+        role="alert"
+        aria-live="polite"
+      ></div>
+    </div>
+
+    <div class="modal-actions">
+      <button
+        type="button"
+        class="btn-secondary"
+        id="cancelListPollModal"
+        data-i18n="common_cancel"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="button"
+        class="btn-primary"
+        id="saveListPollModal"
+        data-i18n="common_create"
+      >
+        Crear
+      </button>
     </div>
   </div>
 </div>

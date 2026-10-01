@@ -7,6 +7,7 @@ const ListsModule = (() => {
   let allLists = [];
   let visibleLists = [];
   let listsOverviewLibrary = [];
+  let currentUserId = "";
   let listsFilter = "all";     // "all" | "public" | "private" | "collab"
   
   let pendingDeleteListId = null;
@@ -55,6 +56,28 @@ const ListsModule = (() => {
   function _normalizeId(value) {
     return String(value || "").trim();
   }
+
+  async function _ensureCurrentUserId() {
+    if (currentUserId) return currentUserId;
+
+    try {
+      const session =
+        await ApiClient.getCurrentSession();
+
+      currentUserId =
+        _normalizeId(session?.user?.id);
+    } catch (error) {
+      console.error(
+        "ListsModule: failed to resolve current user",
+        error
+      );
+
+      currentUserId = "";
+    }
+
+    return currentUserId;
+  }
+
 
   function _visibilityLabel(v) {
     if (v === "public") return t("lists_visibility_public");
@@ -499,6 +522,7 @@ const ListsModule = (() => {
 
   async function load() {
     await _loadUIState();
+    await _ensureCurrentUserId();
     renderListsSkeleton();
 
     try {
@@ -529,6 +553,7 @@ const ListsModule = (() => {
           closeListDetail();
         } else {
           _renderActiveListDetailHeader(activeList);
+          await renderActiveListPolls();
           await renderActiveListItems();
         }
       }
@@ -756,6 +781,7 @@ const ListsModule = (() => {
     const showing2 = _getEl("listDetailShowing");
     if (showing2) showing2.textContent = "";
 
+    await renderActiveListPolls();
     await renderActiveListItems();
   }
 
@@ -847,6 +873,207 @@ const ListsModule = (() => {
       </svg>
     `;
   }
+
+  async function renderActiveListPolls() {
+    const container =
+      _getEl("listDetailPollsList");
+
+    const pollsSection =
+      _getEl("listDetailPolls");
+
+    if (!container) return;
+
+    const list =
+      allLists.find(
+        (entry) =>
+          _normalizeId(entry?.id) ===
+          _normalizeId(activeListId)
+      );
+
+    if (!list) {
+      if (pollsSection) {
+        pollsSection.hidden = true;
+      }
+
+      container.innerHTML = "";
+      return;
+    }
+
+    if (list.visibility !== "collab") {
+      if (pollsSection) {
+        pollsSection.hidden = true;
+      }
+
+      container.innerHTML = "";
+      return;
+    }
+
+    if (pollsSection) {
+      pollsSection.hidden = false;
+    }
+
+    const polls =
+      Array.isArray(list.polls)
+        ? list.polls
+        : [];
+
+    if (!polls.length) {
+      container.innerHTML =
+        `<p class="list-polls-empty">${t("lists_poll_empty")}</p>`;
+      return;
+    }
+
+    container.innerHTML =
+      polls
+        .map((poll) => {
+          const pollId =
+            _safeAttr(poll?.id);
+
+          const title =
+            _safeAttr(
+              poll?.title ||
+              t("lists_poll_untitled")
+            );
+
+          const options =
+            Array.isArray(poll?.options)
+              ? poll.options
+              : [];
+
+          const closed =
+            !!String(
+              poll?.closedAt || ""
+            ).trim();
+
+          const isListOwner = _normalizeId(list?.ownerUserId) === currentUserId;
+          const isPollCreator = _normalizeId(poll?.createdByUserId) === currentUserId;
+          const canClosePoll = !closed && (isListOwner || isPollCreator);
+
+          const ownVotes =
+            Array.isArray(
+              poll?.votesByUserId?.[currentUserId]
+            )
+              ? poll.votesByUserId[currentUserId]
+              : [];
+
+          const inputType =
+            poll?.allowMultipleVotes
+              ? "checkbox"
+              : "radio";
+
+          const optionsMarkup =
+            options
+              .map((option) => {
+                const contentKey =
+                  _safeAttr(
+                    option?.contentKey
+                  );
+
+                const optionTitle =
+                  _safeAttr(
+                    option?.itemSnapshot
+                      ?.title ||
+                    option?.contentKey
+                  );
+
+                const checked =
+                  ownVotes.includes(
+                    option?.contentKey
+                  );
+
+                return `
+                  <li
+                    class="list-poll-option"
+                    data-content-key="${contentKey}"
+                  >
+                    <label class="list-poll-option-label">
+                      <input
+                        type="${inputType}"
+                        name="listPollVote-${pollId}"
+                        value="${contentKey}"
+                        data-poll-option-key="${contentKey}"
+                        ${checked ? "checked" : ""}
+                        ${closed ? "disabled" : ""}
+                      />
+                      <span>${optionTitle}</span>
+                    </label>
+                  </li>
+                `;
+              })
+              .join("");
+
+          return `
+            <article
+              class="list-poll-card"
+              data-poll-id="${pollId}"
+            >
+              <div class="list-poll-card-head">
+                <h4 class="list-poll-card-title">
+                  ${title}
+                </h4>
+
+                <span
+                  class="list-poll-status"
+                  data-poll-closed="${closed ? "1" : "0"}"
+                >
+                  ${closed ? t("lists_poll_status_closed") : t("lists_poll_status_open")}
+                </span>
+              </div>
+
+              <ul class="list-poll-options">
+                ${optionsMarkup}
+              </ul>
+
+              ${
+                closed
+                  ? ""
+                  : `
+                    <button
+                      type="button"
+                      class="btn-secondary list-poll-vote-save"
+                      data-action="save-poll-vote"
+                      data-poll-id="${pollId}"
+                    >
+                      ${t("lists_poll_save_vote")}
+                    </button>
+                  `
+              }
+
+              ${
+                canClosePoll
+                  ? `
+                    <button
+                      type="button"
+                      class="btn-secondary list-poll-close"
+                      data-action="close-poll"
+                      data-poll-id="${pollId}"
+                    >
+                      ${t("lists_poll_close")}
+                    </button>
+                  `
+                  : ""
+              }
+
+              <button
+                type="button"
+                class="btn-secondary list-poll-results-button"
+                data-action="show-poll-results"
+                data-poll-id="${pollId}"
+              >
+                ${t("lists_poll_show_results")}
+              </button>
+
+              <div
+                class="list-poll-results"
+                data-poll-results-for="${pollId}"
+                aria-live="polite"
+              ></div>
+            </article>
+          `;
+        })
+        .join("");
+  }
+
 
   async function renderActiveListItems(){
     const grid = _getEl("listDetailItemsGrid");
@@ -1213,6 +1440,279 @@ const ListsModule = (() => {
     render();
   }
 
+  function openListPollModal() {
+    const modal =
+      document.getElementById("listPollModal");
+
+    const optionsContainer =
+      document.getElementById("lpm_options");
+
+    if (!modal || !optionsContainer) return;
+
+    const listId =
+      _normalizeId(activeListId);
+
+    const list =
+      (allLists || []).find(
+        (entry) =>
+          _normalizeId(entry?.id) === listId
+      );
+
+    if (!list) return;
+
+    if (list.visibility !== "collab") {
+      return;
+    }
+
+    const titleInput =
+      document.getElementById("lpm_title");
+
+    const multipleInput =
+      document.getElementById("lpm_multiple");
+
+    const deadlineInput =
+      document.getElementById("lpm_deadline");
+
+    const errors =
+      document.getElementById("listPollModalErrors");
+
+    if (titleInput) titleInput.value = "";
+    if (multipleInput) multipleInput.checked = false;
+    if (deadlineInput) deadlineInput.value = "";
+
+    if (errors) {
+      errors.textContent = "";
+      errors.classList.add("is-initially-hidden");
+    }
+
+    const getCanonicalContentKey =
+      window.ItemIdentity
+        ?.getCanonicalContentKey;
+
+    const seenContentKeys =
+      new Set();
+
+    const options =
+      (Array.isArray(list.items) ? list.items : [])
+        .map(
+          (entry) =>
+            _resolveListItemEntry(
+              entry,
+              listsOverviewLibrary
+            )
+        )
+        .filter(Boolean)
+        .map((item) => {
+          const contentKey =
+            typeof getCanonicalContentKey === "function"
+              ? getCanonicalContentKey(item)
+              : "";
+
+          return {
+            item,
+            contentKey:
+              String(contentKey || "").trim()
+          };
+        })
+        .filter(({ contentKey }) => {
+          if (
+            !contentKey ||
+            seenContentKeys.has(contentKey)
+          ) {
+            return false;
+          }
+
+          seenContentKeys.add(contentKey);
+          return true;
+        });
+
+    optionsContainer.innerHTML =
+      options.length
+        ? options
+            .map(({ item, contentKey }) => {
+              const title =
+                _safeAttr(
+                  item?.title ||
+                  contentKey
+                );
+
+              return `
+                <label class="list-poll-modal-option">
+                  <input
+                    type="checkbox"
+                    name="listPollOption"
+                    value="${_safeAttr(contentKey)}"
+                  />
+                  <span>${title}</span>
+                </label>
+              `;
+            })
+            .join("")
+        : `<p class="list-polls-empty">${t("lists_poll_modal_no_options")}</p>`;
+
+    window.UIModal?.open(modal, {
+      initialFocusSelector: "#lpm_title"
+    });
+  }
+
+
+  async function saveListPollFromModal() {
+    const listId =
+      _normalizeId(activeListId);
+
+    if (!listId) return;
+
+    const modal =
+      document.getElementById("listPollModal");
+
+    const titleInput =
+      document.getElementById("lpm_title");
+
+    const errors =
+      document.getElementById("listPollModalErrors");
+
+    const saveBtn =
+      document.getElementById("saveListPollModal");
+
+    const cancelBtn =
+      document.getElementById("cancelListPollModal");
+
+    const closeBtn =
+      document.getElementById("closeListPollModal");
+
+    const title =
+      String(titleInput?.value || "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (titleInput && titleInput.value !== title) {
+      titleInput.value = title;
+    }
+
+    const optionContentKeys =
+      Array.from(
+        document.querySelectorAll(
+          'input[name="listPollOption"]:checked'
+        )
+      )
+        .map((input) =>
+          String(input.value || "").trim()
+        )
+        .filter(Boolean);
+
+    const allowMultipleVotes =
+      document.getElementById("lpm_multiple")?.checked === true;
+
+    const deadlineRaw =
+      String(
+        document.getElementById("lpm_deadline")?.value || ""
+      ).trim();
+
+    let deadlineAt = null;
+
+    const showError = (message) => {
+      if (!errors) return;
+      errors.textContent = message;
+      errors.classList.remove("is-initially-hidden");
+    };
+
+    if (errors) {
+      errors.textContent = "";
+      errors.classList.add("is-initially-hidden");
+    }
+
+    if (!title) {
+      showError(t("lists_poll_modal_title_required"));
+      titleInput?.focus?.();
+      return;
+    }
+
+    if (title.length > 120) {
+      showError(t("lists_poll_modal_title_too_long"));
+      titleInput?.focus?.();
+      return;
+    }
+
+    if (optionContentKeys.length < 2) {
+      showError(t("lists_poll_modal_min_options"));
+      return;
+    }
+
+    if (deadlineRaw) {
+      try {
+        deadlineAt =
+          new Date(deadlineRaw).toISOString();
+      } catch {
+        showError(t("lists_poll_modal_invalid_deadline"));
+        return;
+      }
+    }
+
+    const prevHtml =
+      saveBtn?.innerHTML || t("common_create");
+
+    if (saveBtn) {
+      if (saveBtn.dataset.busy === "1") return;
+
+      saveBtn.disabled = true;
+      saveBtn.dataset.busy = "1";
+      saveBtn.textContent = t("lists_poll_creating");
+    }
+
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (closeBtn) closeBtn.disabled = true;
+
+    try {
+      await ApiClient.createListPoll(
+        listId,
+        {
+          title,
+          optionContentKeys,
+          allowMultipleVotes,
+          deadlineAt
+        }
+      );
+
+      window.UIModal?.close(modal);
+
+      await load();
+      await openListDetail(listId);
+    } catch (error) {
+      console.error(error);
+
+      const code =
+        error?.body?.error ||
+        error?.error ||
+        error?.reason ||
+        "";
+
+      if (code === "missing_poll_title") {
+        showError(t("lists_poll_modal_title_required"));
+      } else if (code === "poll_title_too_long") {
+        showError(t("lists_poll_modal_title_too_long"));
+      } else if (
+        code === "invalid_poll_option" ||
+        code === "invalid_poll_options"
+      ) {
+        showError(t("lists_poll_modal_invalid_options"));
+      } else if (code === "invalid_poll_deadline") {
+        showError(t("lists_poll_modal_invalid_deadline"));
+      } else {
+        showError(t("lists_poll_modal_create_error"));
+      }
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.dataset.busy = "0";
+        saveBtn.innerHTML = prevHtml;
+      }
+
+      if (cancelBtn) cancelBtn.disabled = false;
+      if (closeBtn) closeBtn.disabled = false;
+    }
+  }
+
+
   function openListModal(listId = null) {
     const modal = document.getElementById("listModal");
     if (!modal) return;
@@ -1389,6 +1889,297 @@ const ListsModule = (() => {
     box.textContent = msg || "";
   }
 
+  async function saveListPollVote(pollId) {
+    const listId =
+      _normalizeId(activeListId);
+
+    const safePollId =
+      _normalizeId(pollId);
+
+    if (!listId || !safePollId) return;
+
+    const container =
+      document.getElementById("listDetailPollsList");
+
+    if (!container) return;
+
+    const pollCard =
+      Array.from(
+        container.querySelectorAll(
+          ".list-poll-card"
+        )
+      ).find(
+        (card) =>
+          _normalizeId(card?.dataset?.pollId) ===
+          safePollId
+      );
+
+    if (!pollCard) return;
+
+    const button =
+      pollCard.querySelector(
+        '[data-action="save-poll-vote"]'
+      );
+
+    if (!button) return;
+
+    if (button.dataset.busy === "1") return;
+
+    const contentKeys =
+      Array.from(
+        pollCard.querySelectorAll(
+          'input[data-poll-option-key]:checked'
+        )
+      )
+        .map((input) =>
+          String(
+            input.dataset.pollOptionKey || ""
+          ).trim()
+        )
+        .filter(Boolean);
+
+    const previousText =
+      button.textContent;
+
+    button.dataset.busy = "1";
+    button.disabled = true;
+    button.textContent = t("lists_poll_saving");
+
+    try {
+      await ApiClient.voteListPoll(
+        listId,
+        safePollId,
+        contentKeys
+      );
+
+      await load();
+      await openListDetail(listId);
+    } catch (error) {
+      console.error(
+        "ListsModule: failed to save poll vote",
+        error
+      );
+
+      button.disabled = false;
+      button.dataset.busy = "0";
+      button.textContent =
+        previousText || t("lists_poll_save_vote");
+    }
+  }
+
+
+  async function loadListPollResults(pollId) {
+    const listId = _normalizeId(activeListId);
+    const safePollId = _normalizeId(pollId);
+
+    if (!listId || !safePollId) return;
+
+    const container =
+      document.getElementById("listDetailPollsList");
+
+    if (!container) return;
+
+    const pollCard =
+      Array.from(
+        container.querySelectorAll(
+          ".list-poll-card"
+        )
+      ).find(
+        (card) =>
+          _normalizeId(card?.dataset?.pollId) ===
+          safePollId
+      );
+
+    if (!pollCard) return;
+
+    const resultsBox =
+      Array.from(
+        pollCard.querySelectorAll(
+          "[data-poll-results-for]"
+        )
+      ).find(
+        (element) =>
+          _normalizeId(
+            element?.dataset?.pollResultsFor
+          ) === safePollId
+      );
+
+    const button =
+      pollCard.querySelector(
+        '[data-action="show-poll-results"]'
+      );
+
+    if (!resultsBox || !button) return;
+    if (button.dataset.busy === "1") return;
+
+    const previousText =
+      button.textContent;
+
+    button.dataset.busy = "1";
+    button.disabled = true;
+    button.textContent = t("lists_poll_loading");
+    resultsBox.textContent = "";
+
+    try {
+      const response =
+        await ApiClient.getListPollResults(
+          listId,
+          safePollId
+        );
+
+      const results =
+        response?.results || {};
+
+      const resultPoll =
+        response?.poll || {};
+
+      const totalVotes =
+        Number(results.totalVotes) || 0;
+
+      const counts =
+        results.counts &&
+        typeof results.counts === "object"
+          ? results.counts
+          : {};
+
+      const winnerContentKey =
+        _normalizeId(
+          results.winnerContentKey
+        );
+
+      const tied =
+        results.tied === true;
+
+      const options =
+        Array.isArray(resultPoll?.options)
+          ? resultPoll.options
+          : [];
+
+      const rows =
+        options
+          .map((option) => {
+            const optionKey =
+              _normalizeId(
+                option?.contentKey
+              );
+
+            const optionTitle =
+              _safeAttr(
+                option?.itemSnapshot?.title ||
+                optionKey
+              );
+
+            const votes =
+              Number(counts[optionKey]) || 0;
+
+            const isWinner =
+              !!winnerContentKey &&
+              optionKey === winnerContentKey;
+
+            return `
+              <li class="list-poll-result-row">
+                <span>${optionTitle}</span>
+                <strong>${votes}</strong>
+                ${isWinner ? '<span class="list-poll-winner">' + t("lists_poll_winner") + '</span>' : ""}
+              </li>
+            `;
+          })
+          .join("");
+
+      const outcome =
+        winnerContentKey
+          ? t("lists_poll_result_has_winner")
+          : tied
+            ? t("lists_poll_result_tied")
+            : t("lists_poll_result_no_winner");
+
+      resultsBox.innerHTML = `
+        <div class="list-poll-results-summary">
+          <strong>${t("lists_poll_results_total").replace("{count}", String(totalVotes))}</strong>
+          <span>${outcome}</span>
+        </div>
+        <ul class="list-poll-results-list">
+          ${rows}
+        </ul>
+      `;
+    } catch (error) {
+      console.error(
+        "ListsModule: failed to load poll results",
+        error
+      );
+
+      resultsBox.textContent =
+        t("lists_poll_results_error");
+    } finally {
+      button.dataset.busy = "0";
+      button.disabled = false;
+      button.textContent =
+        previousText || t("lists_poll_show_results");
+    }
+  }
+
+
+  async function closeListPollFromDetail(pollId) {
+    const listId = _normalizeId(activeListId);
+    const safePollId = _normalizeId(pollId);
+
+    if (!listId || !safePollId) return;
+
+    const container =
+      document.getElementById("listDetailPollsList");
+
+    if (!container) return;
+
+    const pollCard =
+      Array.from(
+        container.querySelectorAll(
+          ".list-poll-card"
+        )
+      ).find(
+        (card) =>
+          _normalizeId(card?.dataset?.pollId) ===
+          safePollId
+      );
+
+    if (!pollCard) return;
+
+    const button =
+      pollCard.querySelector(
+        '[data-action="close-poll"]'
+      );
+
+    if (!button) return;
+    if (button.dataset.busy === "1") return;
+
+    const previousText =
+      button.textContent;
+
+    button.dataset.busy = "1";
+    button.disabled = true;
+    button.textContent = t("lists_poll_closing");
+
+    try {
+      await ApiClient.closeListPoll(
+        listId,
+        safePollId
+      );
+
+      await load();
+      await openListDetail(listId);
+    } catch (error) {
+      console.error(
+        "ListsModule: failed to close poll",
+        error
+      );
+
+      button.disabled = false;
+      button.dataset.busy = "0";
+      button.textContent =
+        previousText || t("lists_poll_close");
+    }
+  }
+
+
   function openConfirmDeleteListModal() {
     const modal = document.getElementById("confirmDeleteListModal");
     if (!modal) return;
@@ -1412,6 +2203,15 @@ const ListsModule = (() => {
     window.UIModal?.bind("listModal", {
       closeSelectors: ["#closeListModal", "#cancelListModal"],
       initialFocusSelector: "#lm_name",
+      closeOnBackdrop: true
+    });
+
+    window.UIModal?.bind("listPollModal", {
+      closeSelectors: [
+        "#closeListPollModal",
+        "#cancelListPollModal"
+      ],
+      initialFocusSelector: "#lpm_title",
       closeOnBackdrop: true
     });
 
@@ -1459,6 +2259,7 @@ const ListsModule = (() => {
         const activeList = allLists.find((l) => _normalizeId(l.id) === normalizedActiveListId);
         if (activeList) {
           _renderActiveListDetailHeader(activeList);
+          await renderActiveListPolls();
           await renderActiveListItems();
         }
       }
@@ -1562,6 +2363,65 @@ const ListsModule = (() => {
       });
     }
 
+    document.getElementById("btnCreateListPoll")?.addEventListener("click", openListPollModal);
+
+    document.getElementById("listDetailPollsList")?.addEventListener("click", (event) => {
+      const voteButton =
+        event.target.closest(
+          '[data-action="save-poll-vote"]'
+        );
+
+      if (voteButton) {
+        const pollId =
+          _normalizeId(
+            voteButton.dataset.pollId
+          );
+
+        if (!pollId) return;
+
+        saveListPollVote(pollId)
+          .catch(console.error);
+
+        return;
+      }
+
+      const closeButton =
+        event.target.closest(
+          '[data-action="close-poll"]'
+        );
+
+      if (closeButton) {
+        const pollId =
+          _normalizeId(
+            closeButton.dataset.pollId
+          );
+
+        if (!pollId) return;
+
+        closeListPollFromDetail(pollId)
+          .catch(console.error);
+
+        return;
+      }
+
+      const resultsButton =
+        event.target.closest(
+          '[data-action="show-poll-results"]'
+        );
+
+      if (resultsButton) {
+        const pollId =
+          _normalizeId(
+            resultsButton.dataset.pollId
+          );
+
+        if (!pollId) return;
+
+        loadListPollResults(pollId)
+          .catch(console.error);
+      }
+    });
+
     document.getElementById("btnBackToLists")?.addEventListener("click", () => {
       closeListDetail();
     });
@@ -1658,6 +2518,8 @@ const ListsModule = (() => {
     document.getElementById("btnNewList")?.addEventListener("click", () => openListModal(null));
 
     // Crear
+    document.getElementById("saveListPollModal")?.addEventListener("click", saveListPollFromModal);
+
     document.getElementById("saveListModal")?.addEventListener("click", saveListFromModal);
 
     // Confirmar eliminar (CON toast y deshacer)

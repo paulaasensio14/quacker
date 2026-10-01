@@ -33,7 +33,8 @@ test(
         items: [],
         ownerUserId: "user-owner",
         collaborators: [],
-        invitedUserIds: []
+        invitedUserIds: [],
+        polls: []
       }
     );
   }
@@ -151,14 +152,16 @@ test(
           ],
           ownerUserId:
             "owner-1",
-          invitedUserIds: []
+          invitedUserIds: [],
+          polls: []
         },
         {
           id: "list-2",
           ownerUserId:
             "owner-1",
           collaborators: [],
-          invitedUserIds: []
+          invitedUserIds: [],
+          polls: []
         }
       ]
     );
@@ -462,6 +465,71 @@ test(
         ok: false,
         error: "collaborator_not_found"
       }
+    );
+  }
+);
+
+test(
+  "normalizeCollaborativeList migra una lista antigua con votaciones vacías",
+  () => {
+    const result =
+      normalizeCollaborativeList(
+        {
+          id: "list-1",
+          ownerUserId: "owner-1",
+          items: []
+        }
+      );
+
+    assert.deepEqual(
+      result.polls,
+      []
+    );
+  }
+);
+
+test(
+  "normalizeCollaborativeList normaliza las votaciones y descarta entradas inválidas",
+  () => {
+    const result =
+      normalizeCollaborativeList({
+        id: "list-1",
+        ownerUserId: "owner-1",
+        polls: [
+          null,
+          "poll-invalid",
+          {
+            id: " poll-1 ",
+            title: "  Qué vemos  ",
+            createdByUserId: " owner-1 ",
+            allowMultipleVotes: false,
+            options: [],
+            votesByUserId: {},
+            deadlineAt: null,
+            closedAt: null,
+            createdAt:
+              "2026-09-30T10:00:00.000Z"
+          }
+        ]
+      });
+
+    assert.deepEqual(
+      result.polls,
+      [
+        {
+          id: "poll-1",
+          title: "Qué vemos",
+          createdByUserId: "owner-1",
+          allowMultipleVotes: false,
+          options: [],
+          votesByUserId: {},
+          deadlineAt: null,
+          closedAt: null,
+          winnerContentKey: "",
+          createdAt:
+            "2026-09-30T10:00:00.000Z"
+        }
+      ]
     );
   }
 );

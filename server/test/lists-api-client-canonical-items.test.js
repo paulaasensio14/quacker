@@ -488,3 +488,548 @@ test(
     );
   }
 );
+
+function loadCreateListPoll({
+  httpResponse
+} = {}) {
+  const source =
+    extractAsyncFunction(
+      apiClientSource,
+      "createListPoll"
+    );
+
+  const calls = [];
+  const events = [];
+  let cacheInvalidations = 0;
+
+  const fn =
+    Function(
+      "_normalizeDataId",
+      "_httpJson",
+      "_isHttp",
+      "_makeApiError",
+      "_emitDataChanged",
+      "_invalidateListsCache",
+      `"use strict"; return (${source});`
+    )(
+      (value) =>
+        String(value || "").trim(),
+      async (
+        method,
+        url,
+        body
+      ) => {
+        calls.push({
+          method,
+          url,
+          body
+        });
+
+        return httpResponse;
+      },
+      () => true,
+      (message, status) => {
+        const error =
+          new Error(message);
+
+        error.status =
+          status;
+
+        return error;
+      },
+      (detail) => {
+        events.push(detail);
+      },
+      () => {
+        cacheInvalidations += 1;
+      }
+    );
+
+  return {
+    fn,
+    calls,
+    events,
+    getCacheInvalidations:
+      () => cacheInvalidations
+  };
+}
+
+test(
+  "createListPoll crea una votación por HTTP e invalida la caché de listas",
+  async () => {
+    const poll = {
+      id: "poll-1",
+      title: "Qué vemos",
+      createdByUserId: "user-1",
+      allowMultipleVotes: false,
+      options: [],
+      votesByUserId: {},
+      deadlineAt: null,
+      closedAt: null,
+      winnerContentKey: "",
+      createdAt:
+        "2026-09-30T10:00:00.000Z"
+    };
+
+    const {
+      fn: createListPoll,
+      calls,
+      events,
+      getCacheInvalidations
+    } =
+      loadCreateListPoll({
+        httpResponse: {
+          ok: true,
+          poll
+        }
+      });
+
+    const result =
+      await createListPoll(
+        "list-1",
+        {
+          title:
+            "Qué vemos",
+          optionContentKeys: [
+            "tmdb::pelicula::123",
+            "tmdb::pelicula::456"
+          ],
+          allowMultipleVotes:
+            false,
+          deadlineAt:
+            null
+        }
+      );
+
+    assert.deepEqual(
+      calls,
+      [
+        {
+          method: "POST",
+          url:
+            "/lists/list-1/polls",
+          body: {
+            title:
+              "Qué vemos",
+            optionContentKeys: [
+              "tmdb::pelicula::123",
+              "tmdb::pelicula::456"
+            ],
+            allowMultipleVotes:
+              false,
+            deadlineAt:
+              null
+          }
+        }
+      ]
+    );
+
+    assert.deepEqual(
+      result,
+      poll
+    );
+
+    assert.equal(
+      getCacheInvalidations(),
+      1
+    );
+
+    assert.deepEqual(
+      events,
+      [
+        {
+          kind: "lists",
+          action: "create_poll",
+          listId: "list-1",
+          pollId: "poll-1"
+        }
+      ]
+    );
+  }
+);
+
+function loadVoteListPoll({
+  httpResponse
+} = {}) {
+  const source =
+    extractAsyncFunction(
+      apiClientSource,
+      "voteListPoll"
+    );
+
+  const calls = [];
+  const events = [];
+  let cacheInvalidations = 0;
+
+  const fn =
+    Function(
+      "_normalizeDataId",
+      "_httpJson",
+      "_isHttp",
+      "_makeApiError",
+      "_emitDataChanged",
+      "_invalidateListsCache",
+      `"use strict"; return (${source});`
+    )(
+      (value) =>
+        String(value || "").trim(),
+      async (
+        method,
+        url,
+        body
+      ) => {
+        calls.push({
+          method,
+          url,
+          body
+        });
+
+        return httpResponse;
+      },
+      () => true,
+      (message, status) => {
+        const error =
+          new Error(message);
+
+        error.status =
+          status;
+
+        return error;
+      },
+      (detail) => {
+        events.push(detail);
+      },
+      () => {
+        cacheInvalidations += 1;
+      }
+    );
+
+  return {
+    fn,
+    calls,
+    events,
+    getCacheInvalidations:
+      () => cacheInvalidations
+  };
+}
+
+test(
+  "voteListPoll envía y reemplaza el voto propio por HTTP",
+  async () => {
+    const poll = {
+      id: "poll-1",
+      title: "Qué vemos",
+      votesByUserId: {
+        "user-1": [
+          "tmdb::pelicula::456"
+        ]
+      }
+    };
+
+    const {
+      fn: voteListPoll,
+      calls,
+      events,
+      getCacheInvalidations
+    } =
+      loadVoteListPoll({
+        httpResponse: {
+          ok: true,
+          poll
+        }
+      });
+
+    const result =
+      await voteListPoll(
+        "list-1",
+        "poll-1",
+        [
+          "tmdb::pelicula::456"
+        ]
+      );
+
+    assert.deepEqual(
+      calls,
+      [
+        {
+          method: "PUT",
+          url:
+            "/lists/list-1/polls/poll-1/votes/me",
+          body: {
+            contentKeys: [
+              "tmdb::pelicula::456"
+            ]
+          }
+        }
+      ]
+    );
+
+    assert.deepEqual(
+      result,
+      poll
+    );
+
+    assert.equal(
+      getCacheInvalidations(),
+      1
+    );
+
+    assert.deepEqual(
+      events,
+      [
+        {
+          kind: "lists",
+          action: "vote_poll",
+          listId: "list-1",
+          pollId: "poll-1"
+        }
+      ]
+    );
+  }
+);
+
+function loadCloseListPoll({
+  httpResponse
+} = {}) {
+  const source =
+    extractAsyncFunction(
+      apiClientSource,
+      "closeListPoll"
+    );
+
+  const calls = [];
+  const events = [];
+  let cacheInvalidations = 0;
+
+  const fn =
+    Function(
+      "_normalizeDataId",
+      "_httpJson",
+      "_isHttp",
+      "_makeApiError",
+      "_emitDataChanged",
+      "_invalidateListsCache",
+      `"use strict"; return (${source});`
+    )(
+      (value) =>
+        String(value || "").trim(),
+      async (
+        method,
+        url,
+        body
+      ) => {
+        calls.push({
+          method,
+          url,
+          body
+        });
+
+        return httpResponse;
+      },
+      () => true,
+      (message, status) => {
+        const error =
+          new Error(message);
+
+        error.status =
+          status;
+
+        return error;
+      },
+      (detail) => {
+        events.push(detail);
+      },
+      () => {
+        cacheInvalidations += 1;
+      }
+    );
+
+  return {
+    fn,
+    calls,
+    events,
+    getCacheInvalidations:
+      () => cacheInvalidations
+  };
+}
+
+test(
+  "closeListPoll cierra una votación por HTTP e invalida la caché",
+  async () => {
+    const poll = {
+      id: "poll-1",
+      title: "Qué vemos",
+      closedAt:
+        "2026-09-30T13:00:00.000Z",
+      winnerContentKey:
+        "tmdb::pelicula::123"
+    };
+
+    const {
+      fn: closeListPoll,
+      calls,
+      events,
+      getCacheInvalidations
+    } =
+      loadCloseListPoll({
+        httpResponse: {
+          ok: true,
+          poll
+        }
+      });
+
+    const result =
+      await closeListPoll(
+        "list-1",
+        "poll-1"
+      );
+
+    assert.deepEqual(
+      calls,
+      [
+        {
+          method: "POST",
+          url:
+            "/lists/list-1/polls/poll-1/close",
+          body: undefined
+        }
+      ]
+    );
+
+    assert.deepEqual(
+      result,
+      poll
+    );
+
+    assert.equal(
+      getCacheInvalidations(),
+      1
+    );
+
+    assert.deepEqual(
+      events,
+      [
+        {
+          kind: "lists",
+          action: "close_poll",
+          listId: "list-1",
+          pollId: "poll-1"
+        }
+      ]
+    );
+  }
+);
+
+function loadGetListPollResults({
+  httpResponse
+} = {}) {
+  const source =
+    extractAsyncFunction(
+      apiClientSource,
+      "getListPollResults"
+    );
+
+  const calls = [];
+
+  const fn =
+    Function(
+      "_normalizeDataId",
+      "_httpJson",
+      "_isHttp",
+      "_makeApiError",
+      `"use strict"; return (${source});`
+    )(
+      (value) =>
+        String(value || "").trim(),
+      async (
+        method,
+        url,
+        body
+      ) => {
+        calls.push({
+          method,
+          url,
+          body
+        });
+
+        return httpResponse;
+      },
+      () => true,
+      (message, status) => {
+        const error =
+          new Error(message);
+
+        error.status =
+          status;
+
+        return error;
+      }
+    );
+
+  return {
+    fn,
+    calls
+  };
+}
+
+test(
+  "getListPollResults obtiene el recuento de una votación por HTTP",
+  async () => {
+    const poll = {
+      id: "poll-1",
+      title: "Qué vemos"
+    };
+
+    const results = {
+      totalVotes: 2,
+      counts: {
+        "tmdb::pelicula::123": 2,
+        "tmdb::pelicula::456": 0
+      },
+      topContentKeys: [
+        "tmdb::pelicula::123"
+      ],
+      winnerContentKey:
+        "tmdb::pelicula::123",
+      tied: false
+    };
+
+    const {
+      fn: getListPollResults,
+      calls
+    } =
+      loadGetListPollResults({
+        httpResponse: {
+          ok: true,
+          poll,
+          results
+        }
+      });
+
+    const result =
+      await getListPollResults(
+        "list-1",
+        "poll-1"
+      );
+
+    assert.deepEqual(
+      calls,
+      [
+        {
+          method: "GET",
+          url:
+            "/lists/list-1/polls/poll-1/results",
+          body: undefined
+        }
+      ]
+    );
+
+    assert.deepEqual(
+      result,
+      {
+        poll,
+        results
+      }
+    );
+  }
+);

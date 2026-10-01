@@ -115,6 +115,14 @@ import {
 } from "./lib/collaborative-list-link-invites.js";
 
 import {
+  castCollaborativeListPollVote,
+  closeCollaborativeListPoll,
+  finalizeCollaborativeListPollIfExpired,
+  getCollaborativeListPollResults,
+  normalizeCollaborativeListPoll
+} from "./lib/collaborative-list-polls.js";
+
+import {
   getPublicProfileByUsername,
   getPublicSocialGraphByUsername,
   normalizePublicIdentity,
@@ -5385,6 +5393,113 @@ function _getVisibleListsForUser(
   return lists;
 }
 
+function _resolveCollaborativeListForUser(
+  db,
+  userId,
+  listId
+) {
+  const safeUserId =
+    String(userId || "").trim();
+
+  const safeListId =
+    String(listId || "").trim();
+
+  if (!safeUserId || !safeListId) {
+    return null;
+  }
+
+  const ownBucket =
+    _getUserBucket(
+      db,
+      safeUserId
+    );
+
+  const ownListIndex =
+    ownBucket.lists.findIndex(
+      (list) =>
+        String(list?.id || "") ===
+        safeListId
+    );
+
+  if (ownListIndex !== -1) {
+    const list =
+      ownBucket.lists[
+        ownListIndex
+      ];
+
+    if (list.visibility === "collab") {
+      return {
+        list,
+        listIndex: ownListIndex,
+        ownerBucket: ownBucket,
+        ownerUserId:
+          safeUserId,
+        role:
+          getCollaborativeListRole(
+            list,
+            safeUserId
+          )
+      };
+    }
+  }
+
+  for (
+    const [ownerUserId]
+    of Object.entries(
+      db.users || {}
+    )
+  ) {
+    if (ownerUserId === safeUserId) {
+      continue;
+    }
+
+    const ownerBucket =
+      _getUserBucket(
+        db,
+        ownerUserId
+      );
+
+    const listIndex =
+      ownerBucket.lists.findIndex(
+        (list) =>
+          String(list?.id || "") ===
+          safeListId
+      );
+
+    if (listIndex === -1) {
+      continue;
+    }
+
+    const list =
+      ownerBucket.lists[
+        listIndex
+      ];
+
+    const role =
+      getCollaborativeListRole(
+        list,
+        safeUserId
+      );
+
+    if (
+      list.visibility !== "collab" ||
+      role !== "collaborator"
+    ) {
+      continue;
+    }
+
+    return {
+      list,
+      listIndex,
+      ownerBucket,
+      ownerUserId,
+      role
+    };
+  }
+
+  return null;
+}
+
 app.get("/api/lists", _requireAuth, (req, res) => {
   const db = _readDb();
 
@@ -5393,12 +5508,50 @@ app.get("/api/lists", _requireAuth, (req, res) => {
       req.session.userId || ""
     ).trim();
 
-  res.json(
+  const lists =
     _getVisibleListsForUser(
       db,
       userId
-    )
-  );
+    );
+
+  let didChangePolls =
+    false;
+
+  for (const list of lists) {
+    if (!Array.isArray(list.polls)) {
+      continue;
+    }
+
+    for (
+      let pollIndex = 0;
+      pollIndex < list.polls.length;
+      pollIndex += 1
+    ) {
+      const result =
+        finalizeCollaborativeListPollIfExpired(
+          list.polls[pollIndex]
+        );
+
+      if (
+        !result.ok ||
+        !result.changed
+      ) {
+        continue;
+      }
+
+      list.polls[pollIndex] =
+        result.poll;
+
+      didChangePolls =
+        true;
+    }
+  }
+
+  if (didChangePolls) {
+    _writeDb(db);
+  }
+
+  res.json(lists);
 });
 
 app.post("/api/lists", _requireAuth, (req, res) => {
@@ -6687,6 +6840,9 @@ app.put("/api/lists", _requireAuth, (req, res) => {
         invitedUserIds:
           protectedMetadata?.invitedUserIds ||
           [],
+        polls:
+          protectedMetadata?.polls ||
+          [],
         items: safeItems,
         itemsCount: safeItems.length,
         createdAt: list?.createdAt || nowIso,
@@ -6885,6 +7041,580 @@ app.delete("/api/lists/:id", _requireAuth, (req, res) => {
     deleted: 1
   });
 });
+
+app.post("/api/lists/:id/polls", _requireAuth, (req, res) => {
+  const db = _readDb();
+
+  const userId =
+    String(
+      req.session.userId || ""
+    ).trim();
+
+  const listId =
+    String(
+      req.params.id || ""
+    ).trim();
+
+  const resolved =
+    _resolveCollaborativeListForUser(
+      db,
+      userId,
+      listId
+    );
+
+  if (!resolved) {
+    return res.status(404).json({
+      error: "list_not_found"
+    });
+  }
+
+  const {
+    list,
+    listIndex,
+    ownerBucket
+  } = resolved;
+
+  const title =
+    String(
+      req.body?.title || ""
+    )
+      .replace(/\s+/g, " ")
+      .trim();
+
+  if (!title) {
+    return res.status(400).json({
+      error: "missing_poll_title"
+    });
+  }
+
+  if (title.length > 120) {
+    return res.status(400).json({
+      error: "poll_title_too_long"
+    });
+  }
+
+  const rawOptionContentKeys =
+    req.body?.optionContentKeys;
+
+  if (!Array.isArray(rawOptionContentKeys)) {
+    return res.status(400).json({
+      error: "invalid_poll_options"
+    });
+  }
+
+  const requestedContentKeys = [];
+  const seenRequestedContentKeys =
+    new Set();
+
+  for (const rawKey of rawOptionContentKeys) {
+    const contentKey =
+      String(rawKey || "").trim();
+
+    if (
+      !contentKey ||
+      seenRequestedContentKeys.has(
+        contentKey
+      )
+    ) {
+      continue;
+    }
+
+    seenRequestedContentKeys.add(
+      contentKey
+    );
+
+    requestedContentKeys.push(
+      contentKey
+    );
+  }
+
+  if (requestedContentKeys.length < 2) {
+    return res.status(400).json({
+      error: "not_enough_poll_options"
+    });
+  }
+
+  const listItems =
+    Array.isArray(list.items)
+      ? list.items
+      : [];
+
+  const optionByContentKey =
+    new Map();
+
+  for (const entry of listItems) {
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      Array.isArray(entry)
+    ) {
+      continue;
+    }
+
+    const identity =
+      normalizeContentIdentity({
+        source: entry.source,
+        type: entry.type,
+        externalId:
+          entry.externalId
+      });
+
+    if (!identity.ok) {
+      continue;
+    }
+
+    if (
+      optionByContentKey.has(
+        identity.key
+      )
+    ) {
+      continue;
+    }
+
+    const snapshot =
+      entry.itemSnapshot &&
+      typeof entry.itemSnapshot ===
+        "object" &&
+      !Array.isArray(
+        entry.itemSnapshot
+      )
+        ? entry.itemSnapshot
+        : {};
+
+    optionByContentKey.set(
+      identity.key,
+      {
+        source: identity.source,
+        type: identity.type,
+        externalId:
+          identity.externalId,
+        contentKey:
+          identity.key,
+        itemSnapshot: {
+          title:
+            String(
+              snapshot.title || ""
+            )
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 120),
+          cover:
+            String(
+              snapshot.cover || ""
+            )
+              .trim()
+              .slice(0, 500)
+        }
+      }
+    );
+  }
+
+  const options = [];
+
+  for (
+    const contentKey
+    of requestedContentKeys
+  ) {
+    const option =
+      optionByContentKey.get(
+        contentKey
+      );
+
+    if (!option) {
+      return res.status(400).json({
+        error: "invalid_poll_option"
+      });
+    }
+
+    options.push(option);
+  }
+
+  const rawDeadlineAt =
+    req.body?.deadlineAt;
+
+  let deadlineAt = null;
+
+  if (
+    rawDeadlineAt !== null &&
+    rawDeadlineAt !== undefined &&
+    String(rawDeadlineAt).trim()
+  ) {
+    const deadlineMs =
+      Date.parse(
+        String(rawDeadlineAt).trim()
+      );
+
+    if (!Number.isFinite(deadlineMs)) {
+      return res.status(400).json({
+        error: "invalid_poll_deadline"
+      });
+    }
+
+    deadlineAt =
+      new Date(
+        deadlineMs
+      ).toISOString();
+  }
+
+  const nowIso =
+    new Date().toISOString();
+
+  const poll =
+    normalizeCollaborativeListPoll({
+      id: _uid(),
+      title,
+      createdByUserId:
+        userId,
+      allowMultipleVotes:
+        req.body
+          ?.allowMultipleVotes ===
+        true,
+      options,
+      votesByUserId: {},
+      deadlineAt,
+      closedAt: null,
+      winnerContentKey: "",
+      createdAt: nowIso
+    });
+
+  if (!poll) {
+    return res.status(400).json({
+      error: "invalid_poll"
+    });
+  }
+
+  list.polls =
+    Array.isArray(list.polls)
+      ? list.polls
+      : [];
+
+  list.polls.push(poll);
+  list.updatedAt = nowIso;
+
+  ownerBucket.lists[
+    listIndex
+  ] = list;
+
+  _writeDb(db);
+
+  return res.status(201).json({
+    ok: true,
+    poll
+  });
+});
+
+
+app.get(
+  "/api/lists/:id/polls/:pollId/results",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const userId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const listId =
+      String(
+        req.params.id || ""
+      ).trim();
+
+    const pollId =
+      String(
+        req.params.pollId || ""
+      ).trim();
+
+    const resolved =
+      _resolveCollaborativeListForUser(
+        db,
+        userId,
+        listId
+      );
+
+    if (!resolved) {
+      return res.status(404).json({
+        error: "list_not_found"
+      });
+    }
+
+    const {
+      list,
+      listIndex,
+      ownerBucket
+    } = resolved;
+
+    list.polls =
+      Array.isArray(list.polls)
+        ? list.polls
+        : [];
+
+    const pollIndex =
+      list.polls.findIndex(
+        (poll) =>
+          String(
+            poll?.id || ""
+          ) === pollId
+      );
+
+    if (pollIndex === -1) {
+      return res.status(404).json({
+        error: "poll_not_found"
+      });
+    }
+
+    const finalized =
+      finalizeCollaborativeListPollIfExpired(
+        list.polls[pollIndex]
+      );
+
+    if (!finalized.ok) {
+      return res.status(400).json({
+        error: finalized.error
+      });
+    }
+
+    if (finalized.changed) {
+      list.polls[pollIndex] =
+        finalized.poll;
+
+      list.updatedAt =
+        new Date().toISOString();
+
+      ownerBucket.lists[
+        listIndex
+      ] = list;
+
+      _writeDb(db);
+    }
+
+    const poll =
+      finalized.poll;
+
+    const results =
+      getCollaborativeListPollResults(
+        poll
+      );
+
+    return res.json({
+      ok: true,
+      poll,
+      results
+    });
+  }
+);
+
+
+app.post(
+  "/api/lists/:id/polls/:pollId/close",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const userId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const listId =
+      String(
+        req.params.id || ""
+      ).trim();
+
+    const pollId =
+      String(
+        req.params.pollId || ""
+      ).trim();
+
+    const resolved =
+      _resolveCollaborativeListForUser(
+        db,
+        userId,
+        listId
+      );
+
+    if (!resolved) {
+      return res.status(404).json({
+        error: "list_not_found"
+      });
+    }
+
+    const {
+      list,
+      listIndex,
+      ownerBucket,
+      role
+    } = resolved;
+
+    list.polls =
+      Array.isArray(list.polls)
+        ? list.polls
+        : [];
+
+    const pollIndex =
+      list.polls.findIndex(
+        (poll) =>
+          String(
+            poll?.id || ""
+          ) === pollId
+      );
+
+    if (pollIndex === -1) {
+      return res.status(404).json({
+        error: "poll_not_found"
+      });
+    }
+
+    const poll =
+      list.polls[pollIndex];
+
+    const pollCreatorUserId =
+      String(
+        poll?.createdByUserId || ""
+      ).trim();
+
+    if (
+      role !== "owner" &&
+      pollCreatorUserId !== userId
+    ) {
+      return res.status(403).json({
+        error: "not_poll_closer"
+      });
+    }
+
+    const result =
+      closeCollaborativeListPoll(
+        poll
+      );
+
+    if (!result.ok) {
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    list.polls[pollIndex] =
+      result.poll;
+
+    list.updatedAt =
+      new Date().toISOString();
+
+    ownerBucket.lists[
+      listIndex
+    ] = list;
+
+    _writeDb(db);
+
+    return res.json({
+      ok: true,
+      poll:
+        result.poll
+    });
+  }
+);
+
+
+app.put(
+  "/api/lists/:id/polls/:pollId/votes/me",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const userId =
+      String(
+        req.session.userId || ""
+      ).trim();
+
+    const listId =
+      String(
+        req.params.id || ""
+      ).trim();
+
+    const pollId =
+      String(
+        req.params.pollId || ""
+      ).trim();
+
+    const resolved =
+      _resolveCollaborativeListForUser(
+        db,
+        userId,
+        listId
+      );
+
+    if (!resolved) {
+      return res.status(404).json({
+        error: "list_not_found"
+      });
+    }
+
+    const {
+      list,
+      listIndex,
+      ownerBucket
+    } = resolved;
+
+    list.polls =
+      Array.isArray(list.polls)
+        ? list.polls
+        : [];
+
+    const pollIndex =
+      list.polls.findIndex(
+        (poll) =>
+          String(
+            poll?.id || ""
+          ) === pollId
+      );
+
+    if (pollIndex === -1) {
+      return res.status(404).json({
+        error: "poll_not_found"
+      });
+    }
+
+    const result =
+      castCollaborativeListPollVote(
+        list.polls[pollIndex],
+        userId,
+        req.body?.contentKeys
+      );
+
+    if (!result.ok) {
+      if (
+        result.error ===
+        "poll_closed"
+      ) {
+        return res.status(409).json({
+          error: result.error
+        });
+      }
+
+      return res.status(400).json({
+        error: result.error
+      });
+    }
+
+    list.polls[pollIndex] =
+      result.poll;
+
+    list.updatedAt =
+      new Date().toISOString();
+
+    ownerBucket.lists[
+      listIndex
+    ] = list;
+
+    _writeDb(db);
+
+    return res.json({
+      ok: true,
+      poll:
+        result.poll
+    });
+  }
+);
+
 
 app.post("/api/lists/:id/items", _requireAuth, (req, res) => {
   const listId = String(req.params.id);
