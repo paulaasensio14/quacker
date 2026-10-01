@@ -669,3 +669,18 @@ test(
     );
   }
 );
+
+test(
+  "las tarjetas de listas reservan editar y eliminar al propietario",
+  () => {
+    assert.match(
+      listsSource,
+      /const canManageList\s*=\s*_normalizeId\(list\?\.ownerUserId\)\s*===\s*currentUserId/
+    );
+
+    assert.match(
+      listsSource,
+      /canManageList\s*\?\s*`[\s\S]*?data-action="edit-list"[\s\S]*?data-action="delete-list"[\s\S]*?`\s*:\s*""/
+    );
+  }
+);

@@ -12,6 +12,11 @@ const notificationsSource = fs.readFileSync(
   "utf8"
 );
 
+const i18nSource = fs.readFileSync(
+  new URL("../../assets/js/app/i18n.js", import.meta.url),
+  "utf8"
+);
+
 test(
   "LibraryUI expone una apertura de Detail por itemId reutilizando la identidad canónica",
   () => {
@@ -235,6 +240,88 @@ test(
     assert.match(
       notificationsSource,
       /assets\/img\/quacker-rating\.png/
+    );
+  }
+);
+
+test(
+  "la bandeja de notificaciones carga también las invitaciones colaborativas pendientes",
+  () => {
+    assert.match(
+      notificationsSource,
+      /ApiClient\.getListInvites\(\)/
+    );
+
+    assert.match(
+      notificationsSource,
+      /action:\s*"list_invite"/
+    );
+  }
+);
+
+test(
+  "las invitaciones colaborativas permiten aceptar o rechazar desde la bandeja",
+  () => {
+    assert.match(
+      notificationsSource,
+      /n\.action\s*===\s*"list_invite"/
+    );
+
+    assert.match(
+      notificationsSource,
+      /ApiClient\.acceptListInvite\(/
+    );
+
+    assert.match(
+      notificationsSource,
+      /ApiClient\.rejectListInvite\(/
+    );
+
+    assert.match(
+      notificationsSource,
+      /notif_list_invite_accept/
+    );
+
+    assert.match(
+      notificationsSource,
+      /notif_list_invite_reject/
+    );
+  }
+);
+
+
+test(
+  "las invitaciones colaborativas usan textos i18n propios en español e inglés",
+  () => {
+    const keys = [
+      "notif_list_invite_text",
+      "notif_list_invite_accept",
+      "notif_list_invite_reject"
+    ];
+
+    for (const key of keys) {
+      const matches =
+        i18nSource.match(
+          new RegExp(`${key}:`, "g")
+        ) || [];
+
+      assert.equal(
+        matches.length,
+        2,
+        `${key} debe existir exactamente en ES y EN`
+      );
+
+      assert.match(
+        notificationsSource,
+        new RegExp(
+          `I18n\\.t\\(\\s*["']${key}["']`
+        )
+      );
+    }
+
+    assert.match(
+      i18nSource,
+      /notif_list_invite_text:\s*"[^"]*\{owner\}[^"]*\{list\}[^"]*"/
     );
   }
 );

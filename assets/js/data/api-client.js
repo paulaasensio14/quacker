@@ -2831,6 +2831,88 @@ if (externalSignal?.aborted) {
       .filter(Boolean);
   }
 
+  async function getListInvites() {
+    if (!_isHttp()) return [];
+
+    const res =
+      await _httpJson(
+        "GET",
+        "/user/list-invites"
+      );
+
+    return Array.isArray(res?.invites)
+      ? res.invites
+      : [];
+  }
+
+  async function acceptListInvite(listId) {
+    const safeListId =
+      _normalizeDataId(listId);
+
+    if (!safeListId) {
+      throw _makeApiError(
+        "list_not_found",
+        404
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const res =
+      await _httpJson(
+        "POST",
+        `/user/list-invites/${encodeURIComponent(safeListId)}/accept`
+      );
+
+    _invalidateListsCache();
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "accept_invite",
+      listId: safeListId
+    });
+
+    return res;
+  }
+
+  async function rejectListInvite(listId) {
+    const safeListId =
+      _normalizeDataId(listId);
+
+    if (!safeListId) {
+      throw _makeApiError(
+        "list_not_found",
+        404
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const res =
+      await _httpJson(
+        "DELETE",
+        `/user/list-invites/${encodeURIComponent(safeListId)}`
+      );
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "reject_invite",
+      listId: safeListId
+    });
+
+    return res;
+  }
+
   async function acceptFollowRequest(username) {
     const normalizedUsername = String(username || "")
       .trim()
@@ -7391,6 +7473,9 @@ if (externalSignal?.aborted) {
     getUserPrivacy,
     updateUserPrivacy,
     getFollowRequests,
+    getListInvites,
+    acceptListInvite,
+    rejectListInvite,
     acceptFollowRequest,
     rejectFollowRequest,
     getRecommendations,

@@ -680,6 +680,8 @@ const ListsModule = (() => {
         const count = _itemsCount(list);
         const vis = _visibilityLabel(list.visibility);
         const cover = _renderListCover(list, count);
+        const canManageList =
+          _normalizeId(list?.ownerUserId) === currentUserId;
 
         return `
 
@@ -693,7 +695,8 @@ const ListsModule = (() => {
             <div class="list-card-header-actions">
               <span class="list-visibility">${vis}</span>
 
-              <button
+              ${
+                canManageList ? `              <button
                 type="button"
                 class="list-edit-btn"
                 data-action="edit-list"
@@ -727,6 +730,8 @@ const ListsModule = (() => {
                   <path d="M14 11v6"/>
                 </svg>
               </button>
+                ` : ""
+              }
             </div>
           </div>
 

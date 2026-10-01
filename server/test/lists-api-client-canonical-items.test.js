@@ -1033,3 +1033,337 @@ test(
     );
   }
 );
+
+function loadGetListInvites({
+  httpResponse
+} = {}) {
+  const source =
+    extractAsyncFunction(
+      apiClientSource,
+      "getListInvites"
+    );
+
+  const calls = [];
+
+  const fn =
+    Function(
+      "_httpJson",
+      "_isHttp",
+      `"use strict"; return (${source});`
+    )(
+      async (
+        method,
+        url,
+        body
+      ) => {
+        calls.push({
+          method,
+          url,
+          body
+        });
+
+        return httpResponse;
+      },
+      () => true
+    );
+
+  return {
+    fn,
+    calls
+  };
+}
+
+test(
+  "getListInvites obtiene las invitaciones colaborativas pendientes por HTTP",
+  async () => {
+    const invites = [
+      {
+        list: {
+          id: "list-1",
+          name: "Lista compartida",
+          description: "",
+          visibility: "collab"
+        },
+        owner: {
+          name: "Paula",
+          username: "paula",
+          avatar: ""
+        }
+      }
+    ];
+
+    const {
+      fn: getListInvites,
+      calls
+    } =
+      loadGetListInvites({
+        httpResponse: {
+          invites
+        }
+      });
+
+    const result =
+      await getListInvites();
+
+    assert.deepEqual(
+      calls,
+      [
+        {
+          method: "GET",
+          url: "/user/list-invites",
+          body: undefined
+        }
+      ]
+    );
+
+    assert.deepEqual(
+      result,
+      invites
+    );
+  }
+);
+
+function loadAcceptListInvite({
+  httpResponse
+} = {}) {
+  const source =
+    extractAsyncFunction(
+      apiClientSource,
+      "acceptListInvite"
+    );
+
+  const calls = [];
+  const events = [];
+  let cacheInvalidations = 0;
+
+  const fn =
+    Function(
+      "_normalizeDataId",
+      "_httpJson",
+      "_isHttp",
+      "_makeApiError",
+      "_emitDataChanged",
+      "_invalidateListsCache",
+      `"use strict"; return (${source});`
+    )(
+      (value) =>
+        String(value || "").trim(),
+      async (
+        method,
+        url,
+        body
+      ) => {
+        calls.push({
+          method,
+          url,
+          body
+        });
+
+        return httpResponse;
+      },
+      () => true,
+      (message, status) => {
+        const error =
+          new Error(message);
+
+        error.status =
+          status;
+
+        return error;
+      },
+      (detail) => {
+        events.push(detail);
+      },
+      () => {
+        cacheInvalidations += 1;
+      }
+    );
+
+  return {
+    fn,
+    calls,
+    events,
+    getCacheInvalidations:
+      () => cacheInvalidations
+  };
+}
+
+test(
+  "acceptListInvite acepta una invitación colaborativa e invalida las listas",
+  async () => {
+    const {
+      fn: acceptListInvite,
+      calls,
+      events,
+      getCacheInvalidations
+    } =
+      loadAcceptListInvite({
+        httpResponse: {
+          accepted: true,
+          list: {
+            id: "list-1",
+            name: "Lista compartida"
+          }
+        }
+      });
+
+    const result =
+      await acceptListInvite(
+        "list-1"
+      );
+
+    assert.deepEqual(
+      calls,
+      [
+        {
+          method: "POST",
+          url:
+            "/user/list-invites/list-1/accept",
+          body: undefined
+        }
+      ]
+    );
+
+    assert.equal(
+      result.accepted,
+      true
+    );
+
+    assert.equal(
+      result.list.id,
+      "list-1"
+    );
+
+    assert.equal(
+      getCacheInvalidations(),
+      1
+    );
+
+    assert.deepEqual(
+      events,
+      [
+        {
+          kind: "lists",
+          action: "accept_invite",
+          listId: "list-1"
+        }
+      ]
+    );
+  }
+);
+
+function loadRejectListInvite({
+  httpResponse
+} = {}) {
+  const source =
+    extractAsyncFunction(
+      apiClientSource,
+      "rejectListInvite"
+    );
+
+  const calls = [];
+  const events = [];
+
+  const fn =
+    Function(
+      "_normalizeDataId",
+      "_httpJson",
+      "_isHttp",
+      "_makeApiError",
+      "_emitDataChanged",
+      `"use strict"; return (${source});`
+    )(
+      (value) =>
+        String(value || "").trim(),
+      async (
+        method,
+        url,
+        body
+      ) => {
+        calls.push({
+          method,
+          url,
+          body
+        });
+
+        return httpResponse;
+      },
+      () => true,
+      (message, status) => {
+        const error =
+          new Error(message);
+
+        error.status =
+          status;
+
+        return error;
+      },
+      (detail) => {
+        events.push(detail);
+      }
+    );
+
+  return {
+    fn,
+    calls,
+    events
+  };
+}
+
+test(
+  "rejectListInvite rechaza una invitación colaborativa por HTTP",
+  async () => {
+    const {
+      fn: rejectListInvite,
+      calls,
+      events
+    } =
+      loadRejectListInvite({
+        httpResponse: {
+          rejected: true,
+          list: {
+            id: "list-1",
+            name: "Lista compartida"
+          }
+        }
+      });
+
+    const result =
+      await rejectListInvite(
+        "list-1"
+      );
+
+    assert.deepEqual(
+      calls,
+      [
+        {
+          method: "DELETE",
+          url:
+            "/user/list-invites/list-1",
+          body: undefined
+        }
+      ]
+    );
+
+    assert.equal(
+      result.rejected,
+      true
+    );
+
+    assert.equal(
+      result.list.id,
+      "list-1"
+    );
+
+    assert.deepEqual(
+      events,
+      [
+        {
+          kind: "lists",
+          action: "reject_invite",
+          listId: "list-1"
+        }
+      ]
+    );
+  }
+);

@@ -4922,6 +4922,24 @@ body.dark-theme .favorite-picker-empty {
   margin-top: 8px;
 }
 
+.notif-list-invite-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.notif-list-invite-accept:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.notif-list-invite-reject:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .notif-time {
   font-size: 0.7rem;
   color: var(--text-muted);

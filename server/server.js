@@ -5393,6 +5393,76 @@ function _getVisibleListsForUser(
   return lists;
 }
 
+function _serializeCollaborativeListPollForUser(
+  poll,
+  userId
+) {
+  if (
+    !poll ||
+    typeof poll !== "object" ||
+    Array.isArray(poll)
+  ) {
+    return poll;
+  }
+
+  const safeUserId =
+    String(userId || "").trim();
+
+  const ownVotes =
+    safeUserId &&
+    Array.isArray(
+      poll?.votesByUserId?.[
+        safeUserId
+      ]
+    )
+      ? [
+          ...poll.votesByUserId[
+            safeUserId
+          ]
+        ]
+      : null;
+
+  return {
+    ...poll,
+    votesByUserId:
+      ownVotes
+        ? {
+            [safeUserId]:
+              ownVotes
+          }
+        : {}
+  };
+}
+
+
+function _serializeCollaborativeListForUser(
+  list,
+  userId
+) {
+  if (
+    !list ||
+    typeof list !== "object" ||
+    Array.isArray(list)
+  ) {
+    return list;
+  }
+
+  return {
+    ...list,
+    polls:
+      Array.isArray(list.polls)
+        ? list.polls.map(
+            (poll) =>
+              _serializeCollaborativeListPollForUser(
+                poll,
+                userId
+              )
+          )
+        : []
+  };
+}
+
+
 function _resolveCollaborativeListForUser(
   db,
   userId,
@@ -5551,7 +5621,15 @@ app.get("/api/lists", _requireAuth, (req, res) => {
     _writeDb(db);
   }
 
-  res.json(lists);
+  res.json(
+    lists.map(
+      (list) =>
+        _serializeCollaborativeListForUser(
+          list,
+          userId
+        )
+    )
+  );
 });
 
 app.post("/api/lists", _requireAuth, (req, res) => {
@@ -6874,6 +6952,12 @@ app.put("/api/lists", _requireAuth, (req, res) => {
       _getVisibleListsForUser(
         db,
         req.session.userId
+      ).map(
+        (list) =>
+          _serializeCollaborativeListForUser(
+            list,
+            req.session.userId
+          )
       )
   });
 });
@@ -6920,7 +7004,12 @@ app.patch("/api/lists/:id", _requireAuth, (req, res) => {
   bucket.lists[idx] = next;
   _writeDb(db);
 
-  res.json(next);
+  res.json(
+    _serializeCollaborativeListForUser(
+      next,
+      req.session.userId
+    )
+  );
 });
 
 app.delete("/api/lists/:id", _requireAuth, (req, res) => {
@@ -7398,7 +7487,11 @@ app.get(
 
     return res.json({
       ok: true,
-      poll,
+      poll:
+        _serializeCollaborativeListPollForUser(
+          poll,
+          userId
+        ),
       results
     });
   }
@@ -7508,7 +7601,10 @@ app.post(
     return res.json({
       ok: true,
       poll:
-        result.poll
+        _serializeCollaborativeListPollForUser(
+          result.poll,
+          userId
+        )
     });
   }
 );
@@ -7610,7 +7706,10 @@ app.put(
     return res.json({
       ok: true,
       poll:
-        result.poll
+        _serializeCollaborativeListPollForUser(
+          result.poll,
+          userId
+        )
     });
   }
 );

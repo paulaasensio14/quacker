@@ -106,9 +106,14 @@ const NotificationsUI = (() => {
     const emptyStateEl = document.getElementById("notifEmptyState");
 
     let rawList;
+    let rawListInvites;
 
     try {
-      rawList = await ApiClient.getNotifications();
+      [rawList, rawListInvites] =
+        await Promise.all([
+          ApiClient.getNotifications(),
+          ApiClient.getListInvites()
+        ]);
     } catch (error) {
       console.error("NotificationsUI.render error", error);
 
@@ -128,7 +133,65 @@ const NotificationsUI = (() => {
 
     if (errorStateEl) errorStateEl.hidden = true;
 
-    const list = Array.isArray(rawList) ? rawList : [];
+    const notifications =
+      Array.isArray(rawList)
+        ? rawList
+        : [];
+
+    const listInvites =
+      (Array.isArray(rawListInvites)
+        ? rawListInvites
+        : [])
+        .map((invite) => {
+          const listId =
+            String(
+              invite?.list?.id || ""
+            ).trim();
+
+          if (!listId) {
+            return null;
+          }
+
+          const listName =
+            String(
+              invite?.list?.name || ""
+            ).trim();
+
+          const ownerName =
+            String(
+              invite?.owner?.name ||
+              invite?.owner?.username ||
+              ""
+            ).trim();
+
+          return {
+            id:
+              `list-invite:${listId}`,
+            action:
+              "list_invite",
+            listId,
+            title:
+              listName,
+            text:
+              window.I18n.t(
+                "notif_list_invite_text",
+                {
+                  owner: ownerName,
+                  list: listName
+                }
+              ),
+            icon:
+              "bell",
+            createdAt:
+              ""
+          };
+        })
+        .filter(Boolean);
+
+    const list = [
+      ...listInvites,
+      ...notifications
+    ];
 
     const panelOpen = !!panel && panel.classList.contains("is-open");
 
@@ -213,7 +276,7 @@ const NotificationsUI = (() => {
 
     // UX: si no hay notificaciones, desactivar "Marcar todas"
     if (markAllBtn) {
-      const hasAny = list.length > 0;
+      const hasAny = notifications.length > 0;
       markAllBtn.disabled = !hasAny;
       markAllBtn.textContent = hasAny
         ? window.I18n.t("notif_mark_all")
@@ -260,6 +323,16 @@ const NotificationsUI = (() => {
       card.className = "notif-card";
       card.dataset.notifId = notifId;
       card.setAttribute("data-notif-id", notifId);
+
+      const isPersistedNotification =
+        n.action !== "list_invite";
+
+      card.setAttribute(
+        "data-persisted-notification",
+        isPersistedNotification
+          ? "true"
+          : "false"
+      );
 
       const isStreakNotif = n.icon === "flame" || n.icon === "spark" || n.icon === "streak";
       if (isStreakNotif) card.classList.add("is-streak");
@@ -506,10 +579,159 @@ const NotificationsUI = (() => {
         body.appendChild(opinionActions);
       }
 
+      const isListInviteAction =
+        n.action === "list_invite" &&
+        Boolean(
+          String(
+            n.listId || ""
+          ).trim()
+        );
+
+      if (isListInviteAction) {
+        const inviteActions =
+          document.createElement("div");
+        inviteActions.className =
+          "notif-list-invite-actions";
+
+        const acceptBtn =
+          document.createElement("button");
+        acceptBtn.type = "button";
+        acceptBtn.className =
+          "notif-list-invite-accept btn-primary btn-sm";
+        acceptBtn.textContent =
+          window.I18n.t(
+            "notif_list_invite_accept"
+          );
+
+        const rejectBtn =
+          document.createElement("button");
+        rejectBtn.type = "button";
+        rejectBtn.className =
+          "notif-list-invite-reject btn-secondary btn-sm";
+        rejectBtn.textContent =
+          window.I18n.t(
+            "notif_list_invite_reject"
+          );
+
+        const setInviteBusy =
+          (busy) => {
+            acceptBtn.disabled = busy;
+            rejectBtn.disabled = busy;
+          };
+
+        acceptBtn.addEventListener(
+          "click",
+          async (e) => {
+            e.stopPropagation();
+
+            if (
+              acceptBtn.dataset.busy ===
+              "1"
+            ) {
+              return;
+            }
+
+            acceptBtn.dataset.busy = "1";
+            rejectBtn.dataset.busy = "1";
+            setInviteBusy(true);
+
+            try {
+              await ApiClient.acceptListInvite(
+                n.listId
+              );
+
+              await renderNotifications();
+            } catch (err) {
+              console.error(
+                "NotificationsUI: failed to accept list invite",
+                err
+              );
+
+              acceptBtn.dataset.busy = "0";
+              rejectBtn.dataset.busy = "0";
+              setInviteBusy(false);
+
+              window.toast?.({
+                title:
+                  window.I18n.t(
+                    "home_notif_update_error_title"
+                  ),
+                message:
+                  window.I18n.t(
+                    "home_notif_try_again"
+                  ),
+                type: "error",
+                duration: 3000
+              });
+            }
+          }
+        );
+
+        rejectBtn.addEventListener(
+          "click",
+          async (e) => {
+            e.stopPropagation();
+
+            if (
+              rejectBtn.dataset.busy ===
+              "1"
+            ) {
+              return;
+            }
+
+            acceptBtn.dataset.busy = "1";
+            rejectBtn.dataset.busy = "1";
+            setInviteBusy(true);
+
+            try {
+              await ApiClient.rejectListInvite(
+                n.listId
+              );
+
+              await renderNotifications();
+            } catch (err) {
+              console.error(
+                "NotificationsUI: failed to reject list invite",
+                err
+              );
+
+              acceptBtn.dataset.busy = "0";
+              rejectBtn.dataset.busy = "0";
+              setInviteBusy(false);
+
+              window.toast?.({
+                title:
+                  window.I18n.t(
+                    "home_notif_update_error_title"
+                  ),
+                message:
+                  window.I18n.t(
+                    "home_notif_try_again"
+                  ),
+                type: "error",
+                duration: 3000
+              });
+            }
+          }
+        );
+
+        inviteActions.append(
+          acceptBtn,
+          rejectBtn
+        );
+
+        body.appendChild(
+          inviteActions
+        );
+      }
+
       card.appendChild(icon);
       card.appendChild(body);
 
-      if (!isRateContentAction) {
+      if (
+        !isRateContentAction &&
+        !isListInviteAction
+      ) {
         card.appendChild(markBtn);
       }
 
@@ -588,7 +810,11 @@ const NotificationsUI = (() => {
         markAllBtn.classList.add("is-busy");
       }
 
-      const cards = Array.from(notifListEl.querySelectorAll(".notif-card"));
+      const cards = Array.from(
+        notifListEl.querySelectorAll(
+          '.notif-card[data-persisted-notification="true"]'
+        )
+      );
       cards.forEach((el, i) => {
         setTimeout(() => el.classList.add("is-removing"), i * 35);
       });

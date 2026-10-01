@@ -712,8 +712,27 @@ test(
               title: "Qué vemos",
               createdByUserId: userId,
               allowMultipleVotes: false,
-              options: [],
-              votesByUserId: {},
+              options: [
+                {
+                  source: "tmdb",
+                  type: "pelicula",
+                  externalId: "123",
+                  contentKey:
+                    "tmdb::pelicula::123",
+                  itemSnapshot: {
+                    title: "Dune",
+                    cover: ""
+                  }
+                }
+              ],
+              votesByUserId: {
+                [userId]: [
+                  "tmdb::pelicula::123"
+                ],
+                "existing-collaborator": [
+                  "tmdb::pelicula::123"
+                ]
+              },
               deadlineAt: null,
               closedAt: null,
               winnerContentKey: "",
@@ -810,8 +829,24 @@ test(
             title: "Qué vemos",
             createdByUserId: userId,
             allowMultipleVotes: false,
-            options: [],
-            votesByUserId: {},
+            options: [
+              {
+                source: "tmdb",
+                type: "pelicula",
+                externalId: "123",
+                contentKey:
+                  "tmdb::pelicula::123",
+                itemSnapshot: {
+                  title: "Dune",
+                  cover: ""
+                }
+              }
+            ],
+            votesByUserId: {
+              [userId]: [
+                "tmdb::pelicula::123"
+              ]
+            },
             deadlineAt: null,
             closedAt: null,
             winnerContentKey: "",
@@ -864,8 +899,27 @@ test(
             title: "Qué vemos",
             createdByUserId: userId,
             allowMultipleVotes: false,
-            options: [],
-            votesByUserId: {},
+            options: [
+              {
+                source: "tmdb",
+                type: "pelicula",
+                externalId: "123",
+                contentKey:
+                  "tmdb::pelicula::123",
+                itemSnapshot: {
+                  title: "Dune",
+                  cover: ""
+                }
+              }
+            ],
+            votesByUserId: {
+              [userId]: [
+                "tmdb::pelicula::123"
+              ],
+              "existing-collaborator": [
+                "tmdb::pelicula::123"
+              ]
+            },
             deadlineAt: null,
             closedAt: null,
             winnerContentKey: "",
@@ -2011,6 +2065,15 @@ test(
         200
       );
 
+      const ownerUserId =
+        ownerRegistration.json?.user?.id;
+
+      const inviteeUserId =
+        inviteeRegistration.json?.user?.id;
+
+      assert.ok(ownerUserId);
+      assert.ok(inviteeUserId);
+
       const ownerCookie =
         ownerRegistration.headers[
           "set-cookie"
@@ -2088,6 +2151,70 @@ test(
         201
       );
 
+      const dbBeforePatch =
+        JSON.parse(
+          fs.readFileSync(
+            dbPath,
+            "utf8"
+          )
+        );
+
+      const listBeforePatch =
+        dbBeforePatch.users[
+          ownerUserId
+        ].lists.find(
+          (list) =>
+            list?.id === listId
+        );
+
+      assert.ok(listBeforePatch);
+
+      listBeforePatch.polls = [
+        {
+          id: "historical-vote-poll",
+          title: "Qué vemos",
+          createdByUserId:
+            ownerUserId,
+          allowMultipleVotes: false,
+          options: [
+            {
+              source: "tmdb",
+              type: "pelicula",
+              externalId: "123",
+              contentKey:
+                "tmdb::pelicula::123",
+              itemSnapshot: {
+                title: "Dune",
+                cover: ""
+              }
+            }
+          ],
+          votesByUserId: {
+            [ownerUserId]: [
+              "tmdb::pelicula::123"
+            ],
+            [inviteeUserId]: [
+              "tmdb::pelicula::123"
+            ]
+          },
+          deadlineAt: null,
+          closedAt: null,
+          winnerContentKey: "",
+          createdAt:
+            "2026-09-30T10:00:00.000Z"
+        }
+      ];
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(
+          dbBeforePatch,
+          null,
+          2
+        ),
+        "utf8"
+      );
+
       const changedVisibility =
         await requestJson(
           `${baseUrl}/api/lists/${encodeURIComponent(listId)}`,
@@ -2105,6 +2232,27 @@ test(
       assert.equal(
         changedVisibility.statusCode,
         200
+      );
+
+      assert.deepEqual(
+        changedVisibility.json
+          ?.polls?.[0]
+          ?.votesByUserId,
+        {
+          [ownerUserId]: [
+            "tmdb::pelicula::123"
+          ]
+        }
+      );
+
+      assert.equal(
+        Object.prototype.hasOwnProperty.call(
+          changedVisibility.json
+            ?.polls?.[0]
+            ?.votesByUserId || {},
+          inviteeUserId
+        ),
+        false
       );
 
       const pending =
@@ -7179,7 +7327,11 @@ test(
                   }
                 }
               ],
-              votesByUserId: {},
+              votesByUserId: {
+                [ownerUserId]: [
+                  "tmdb::pelicula::123"
+                ]
+              },
               deadlineAt: null,
               closedAt: null,
               winnerContentKey: "",
@@ -7258,12 +7410,21 @@ test(
 
       assert.deepEqual(
         changedVote.json?.poll
-          ?.votesByUserId?.[
-            collaboratorUserId
-          ],
-        [
-          "tmdb::pelicula::456"
-        ]
+          ?.votesByUserId,
+        {
+          [collaboratorUserId]: [
+            "tmdb::pelicula::456"
+          ]
+        }
+      );
+
+      assert.equal(
+        Object.prototype.hasOwnProperty.call(
+          changedVote.json?.poll
+            ?.votesByUserId || {},
+          ownerUserId
+        ),
+        false
       );
 
       const persisted =
@@ -7528,6 +7689,25 @@ test(
         closed.json?.poll
           ?.winnerContentKey,
         "tmdb::pelicula::123"
+      );
+
+      assert.deepEqual(
+        closed.json?.poll
+          ?.votesByUserId,
+        {
+          [collaboratorUserId]: [
+            "tmdb::pelicula::123"
+          ]
+        }
+      );
+
+      assert.equal(
+        Object.prototype.hasOwnProperty.call(
+          closed.json?.poll
+            ?.votesByUserId || {},
+          ownerUserId
+        ),
+        false
       );
 
       const persisted =
@@ -8072,6 +8252,23 @@ test(
       assert.equal(
         visiblePoll.winnerContentKey,
         "tmdb::pelicula::123"
+      );
+
+      assert.deepEqual(
+        visiblePoll.votesByUserId,
+        {
+          [collaboratorUserId]: [
+            "tmdb::pelicula::123"
+          ]
+        }
+      );
+
+      assert.equal(
+        Object.prototype.hasOwnProperty.call(
+          visiblePoll.votesByUserId || {},
+          ownerUserId
+        ),
+        false
       );
 
       const persisted =
@@ -8892,6 +9089,25 @@ test(
       assert.equal(
         response.json?.results
           ?.tied,
+        false
+      );
+
+      assert.deepEqual(
+        response.json?.poll
+          ?.votesByUserId,
+        {
+          [collaboratorUserId]: [
+            "tmdb::pelicula::123"
+          ]
+        }
+      );
+
+      assert.equal(
+        Object.prototype.hasOwnProperty.call(
+          response.json?.poll
+            ?.votesByUserId || {},
+          ownerUserId
+        ),
         false
       );
     } finally {

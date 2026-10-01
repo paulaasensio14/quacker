@@ -176,3 +176,52 @@ test("las acciones de valoración forman una fila compacta dentro de la notifica
     ".notif-opinion-actions debe separarse del texto"
   );
 });
+
+test("las acciones de invitación colaborativa forman una fila compacta", () => {
+  const actions = firstRule(".notif-list-invite-actions");
+
+  assert.equal(
+    hasDeclaration(actions, "display", "flex"),
+    true
+  );
+
+  assert.equal(
+    hasDeclaration(actions, "gap", "8px"),
+    true
+  );
+
+  assert.equal(
+    hasDeclaration(actions, "flex-wrap", "wrap"),
+    true
+  );
+
+  assert.equal(
+    hasDeclaration(actions, "margin-top", "8px"),
+    true
+  );
+});
+
+test("los botones de invitación muestran estado visual mientras procesan", () => {
+  const accept = firstRule(".notif-list-invite-accept:disabled");
+  const reject = firstRule(".notif-list-invite-reject:disabled");
+
+  assert.equal(
+    hasDeclaration(accept, "opacity", "0.55"),
+    true
+  );
+
+  assert.equal(
+    hasDeclaration(accept, "cursor", "wait"),
+    true
+  );
+
+  assert.equal(
+    hasDeclaration(reject, "opacity", "0.55"),
+    true
+  );
+
+  assert.equal(
+    hasDeclaration(reject, "cursor", "wait"),
+    true
+  );
+});

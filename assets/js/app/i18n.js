@@ -654,6 +654,9 @@
       notif_load_error_title: "No se pudieron cargar las notificaciones",
       notif_load_error_text: "Ha ocurrido un problema al cargar tus notificaciones.",
       notif_load_error_cta: "Reintentar",
+      notif_list_invite_text: "{owner} te ha invitado a colaborar en {list}.",
+      notif_list_invite_accept: "Aceptar",
+      notif_list_invite_reject: "Rechazar",
       completion_opinion_action_rate: "Valorar",
       completion_opinion_action_later: "Ahora no",
 
@@ -1510,6 +1513,9 @@
       notif_load_error_title: "Notifications couldn't be loaded",
       notif_load_error_text: "There was a problem loading your notifications.",
       notif_load_error_cta: "Retry",
+      notif_list_invite_text: "{owner} invited you to collaborate on {list}.",
+      notif_list_invite_accept: "Accept",
+      notif_list_invite_reject: "Reject",
       completion_opinion_action_rate: "Rate",
       completion_opinion_action_later: "Not now",
 

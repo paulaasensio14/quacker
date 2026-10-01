@@ -37,3 +37,20 @@ test("check tiene un icono visual propio de contenido completado", () => {
     /if \(kind === "check"\)[\s\S]{0,700}<path d="M5 12l4 4 10-10"/
   );
 });
+
+test("marcar todas solo afecta a notificaciones persistidas, no a invitaciones colaborativas", () => {
+  assert.match(
+    uiSource,
+    /const hasAny = notifications\.length > 0;/
+  );
+
+  assert.match(
+    uiSource,
+    /data-persisted-notification/
+  );
+
+  assert.match(
+    uiSource,
+    /\.notif-card\[data-persisted-notification="true"\]/
+  );
+});
