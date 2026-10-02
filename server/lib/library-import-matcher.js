@@ -178,13 +178,23 @@ function _buildSelectedMatch(candidate = {}) {
     meta.author = author;
   }
 
-  return {
+  const match = {
     title: _normalizeText(candidate.title),
     type: candidate.type,
     source: candidate.source,
     externalId: candidate.externalId,
     meta
   };
+
+  const cover =
+    _normalizeText(candidate.cover)
+      .slice(0, 500);
+
+  if (cover) {
+    match.cover = cover;
+  }
+
+  return match;
 }
 
 export async function matchLibraryImportRow(

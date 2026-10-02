@@ -9182,6 +9182,10 @@ app.post(
               match.source,
             externalId:
               match.externalId,
+            cover:
+              String(match.cover || "")
+                .trim()
+                .slice(0, 500),
             status:
               data.status,
             progress:

@@ -568,6 +568,7 @@ test(
             type: "pelicula",
             source: "tmdb",
             externalId: "438631",
+            cover: "https://image.tmdb.org/t/p/w500/dune.jpg",
             meta: {
               year: 2021
             }
@@ -753,6 +754,11 @@ test(
       assert.equal(
         dune?.progress,
         100
+      );
+
+      assert.equal(
+        dune?.cover,
+        "https://image.tmdb.org/t/p/w500/dune.jpg"
       );
 
       assert.equal(
