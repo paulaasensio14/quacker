@@ -11922,3 +11922,17 @@ body.dark-theme .profile-privacy-row input[type="checkbox"]:checked {
     flex-direction: column;
   }
 }
+
+/* ===== Importación de biblioteca: preview largo ===== */
+#importLibraryModal .modal-card {
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+#importLibraryModal .modal-content {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}

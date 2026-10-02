@@ -581,3 +581,27 @@ test(
     );
   }
 );
+
+const dashboardCssSource =
+  fs.readFileSync(
+    new URL(
+      "../../assets/css/dashboard.css",
+      import.meta.url
+    ),
+    "utf8"
+  );
+
+test(
+  "el modal de importación mantiene las acciones visibles con listas grandes",
+  () => {
+    assert.match(
+      dashboardCssSource,
+      /#importLibraryModal\s+\.modal-card\s*\{[^}]*max-height:\s*calc\(100dvh - 32px\);[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*\}/s
+    );
+
+    assert.match(
+      dashboardCssSource,
+      /#importLibraryModal\s+\.modal-content\s*\{[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto;[^}]*flex:\s*1 1 auto;[^}]*\}/s
+    );
+  }
+);
