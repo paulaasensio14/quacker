@@ -5550,6 +5550,65 @@ if (externalSignal?.aborted) {
   }
 
   // === biblioteca ===
+  async function previewLibraryImport(text = "") {
+    const importText =
+      String(text ?? "");
+
+    if (!importText.trim()) {
+      throw _makeApiError(
+        "missing_import_text",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "library_import_requires_http",
+        400
+      );
+    }
+
+    return _httpJson(
+      "POST",
+      "/library/import/preview",
+      { text }
+    );
+  }
+
+  async function confirmLibraryImport(rows = []) {
+    if (!Array.isArray(rows)) {
+      throw _makeApiError(
+        "invalid_import_rows",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "library_import_requires_http",
+        400
+      );
+    }
+
+    const result =
+      await _httpJson(
+        "POST",
+        "/library/import/confirm",
+        { rows }
+      );
+
+    if (
+      Number(result?.summary?.imported || 0) > 0
+    ) {
+      _emitDataChanged({
+        kind: "library",
+        action: "import"
+      });
+    }
+
+    return result;
+  }
+
   async function getLibrary() {
     const cachedItems = _getLibraryCacheSnapshot();
     if (cachedItems) {
@@ -7522,6 +7581,8 @@ if (externalSignal?.aborted) {
     getRecentActivitiesDetailed,
     // libreria
     createLibraryItem,
+    previewLibraryImport,
+    confirmLibraryImport,
     getLibrary,
     getLibraryItemById,
     getLibraryItemActivities,

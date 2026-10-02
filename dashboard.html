@@ -935,8 +935,8 @@
               <button class="pill-filter-sm lib-type-pill" data-type="game" data-i18n="library_type_game">Videojuegos</button>
             </div>
 
-            <button type="button" class="btn-primary" id="btnAddLibraryItem" data-i18n="library_add_cta">
-              + Añadir
+            <button type="button" class="btn-primary" id="btnImportLibrary" data-i18n="library_import_cta">
+              Importar
             </button>
 
             <div class="library-sort">
@@ -2041,6 +2041,60 @@
       <button type="button" class="btn-delete-item" id="deleteItemBtn" data-i18n="common_delete">Eliminar</button>
       <button class="btn-secondary" id="cancelProgressBtn" data-i18n="common_cancel">Cancelar</button>
       <button class="btn-primary" id="saveProgressBtn" data-i18n="common_save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORTAR BIBLIOTECA -->
+<div class="modal-overlay" id="importLibraryModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="importLibraryModalTitle">
+    <div class="modal-header">
+      <h3 id="importLibraryModalTitle" data-i18n="library_import_modal_title">Importar biblioteca</h3>
+
+      <button class="modal-close" id="closeImportLibraryModal" aria-label="Cerrar" data-i18n-aria-label="common_close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M6 18L18 6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-content">
+      <div class="modal-field">
+        <label for="importLibraryFile" data-i18n="library_import_file_label">Archivo CSV</label>
+        <input id="importLibraryFile" type="file" accept=".csv,text/csv" />
+      </div>
+
+      <div
+        id="importLibraryErrors"
+        class="modal-errors is-initially-hidden"
+        role="alert"
+        aria-live="polite"
+      ></div>
+
+      <section
+        id="importLibraryPreview"
+        class="is-initially-hidden"
+        aria-live="polite"
+      >
+        <h4 data-i18n="library_import_preview_title">Vista previa</h4>
+
+        <div id="importLibraryPreviewSummary"></div>
+        <div id="importLibraryRows"></div>
+      </section>
+
+      <section
+        id="importLibraryResult"
+        class="is-initially-hidden"
+        aria-live="polite"
+      ></section>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="cancelImportLibraryModal" data-i18n="common_cancel">Cancelar</button>
+      <button type="button" class="btn-primary" id="confirmImportLibraryBtn" data-i18n="library_import_confirm" disabled>Confirmar importación</button>
+      <button type="button" class="btn-primary" id="analyzeImportLibraryBtn" data-i18n="library_import_analyze">Analizar</button>
     </div>
   </div>
 </div>

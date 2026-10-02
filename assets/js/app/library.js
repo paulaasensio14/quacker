@@ -3,7 +3,9 @@
 
 let __progressModalLastFocus = null;
 let __addLibraryModalLastFocus = null;
+let __importLibraryModalLastFocus = null;
 let __addToListModalLastFocus = null;
+let __libraryImportPreviewState = null;
 
 const LIBRARY_FILTERS_KEY = "quacker_library_filters";
 
@@ -229,6 +231,620 @@ function _buildAddLibraryExtras(type = "pelicula") {
     meta,
     progress
   };
+}
+
+function _libraryImportErrorMessage(
+  error,
+  fallbackCode = "library_import_preview_failed"
+) {
+  const code =
+    String(
+      error?.error ||
+      error?.code ||
+      error?.message ||
+      error ||
+      fallbackCode
+    ).trim();
+
+  const keys = {
+    file_required:
+      "library_import_error_file_required",
+    missing_import_text:
+      "library_import_error_file_required",
+    unsupported_import_format:
+      "library_import_error_unsupported_format",
+    csv_unclosed_quote:
+      "library_import_error_unclosed_quote",
+    csv_empty:
+      "library_import_error_invalid_headers",
+    csv_empty_header:
+      "library_import_error_invalid_headers",
+    csv_duplicate_header:
+      "library_import_error_invalid_headers",
+    csv_missing_required_headers:
+      "library_import_error_invalid_headers",
+    csv_unsupported_header:
+      "library_import_error_invalid_headers",
+    csv_column_count_mismatch:
+      "library_import_error_column_count",
+    library_import_preview_failed:
+      "library_import_error_preview_failed",
+    library_import_confirm_failed:
+      "library_import_error_confirm_failed",
+    missing_import_rows:
+      "library_import_error_confirm_failed"
+  };
+
+  return _addLibraryT(
+    keys[code] ||
+    keys[fallbackCode] ||
+    "library_import_error_preview_failed"
+  );
+}
+
+function _showLibraryImportError(message = "") {
+  const box =
+    document.getElementById(
+      "importLibraryErrors"
+    );
+
+  if (!box) return;
+
+  const normalized =
+    String(message || "").trim();
+
+  box.textContent = normalized;
+  box.classList.toggle(
+    "is-initially-hidden",
+    !normalized
+  );
+}
+
+function _resetLibraryImportPreview() {
+  _showLibraryImportError("");
+  __libraryImportPreviewState = null;
+
+  const preview =
+    document.getElementById(
+      "importLibraryPreview"
+    );
+
+  const summary =
+    document.getElementById(
+      "importLibraryPreviewSummary"
+    );
+
+  const rows =
+    document.getElementById(
+      "importLibraryRows"
+    );
+
+  preview?.classList.add(
+    "is-initially-hidden"
+  );
+
+  if (summary) {
+    summary.innerHTML = "";
+  }
+
+  if (rows) {
+    rows.innerHTML = "";
+  }
+
+  const confirmButton =
+    document.getElementById(
+      "confirmImportLibraryBtn"
+    );
+
+  if (confirmButton) {
+    confirmButton.disabled = true;
+  }
+
+  const analyzeButton =
+    document.getElementById(
+      "analyzeImportLibraryBtn"
+    );
+
+  if (analyzeButton) {
+    analyzeButton.disabled = false;
+  }
+
+  const result =
+    document.getElementById(
+      "importLibraryResult"
+    );
+
+  if (result) {
+    result.innerHTML = "";
+    result.classList.add(
+      "is-initially-hidden"
+    );
+  }
+}
+
+function _renderLibraryImportResult(
+  result = {}
+) {
+  const root =
+    document.getElementById(
+      "importLibraryResult"
+    );
+
+  if (!root) return;
+
+  const summary =
+    result?.summary &&
+    typeof result.summary === "object"
+      ? result.summary
+      : {};
+
+  root.innerHTML = `
+    <h4>${_escapeLibraryHtml(
+      _addLibraryT(
+        "library_import_result_title"
+      )
+    )}</h4>
+
+    <div class="library-import-summary">
+      <span>${_escapeLibraryHtml(
+        _addLibraryT(
+          "library_import_result_total"
+        )
+      )}: ${Number(summary.total || 0)}</span>
+
+      <span>${_escapeLibraryHtml(
+        _addLibraryT(
+          "library_import_result_imported"
+        )
+      )}: ${Number(summary.imported || 0)}</span>
+
+      <span>${_escapeLibraryHtml(
+        _addLibraryT(
+          "library_import_result_duplicate"
+        )
+      )}: ${Number(summary.duplicate || 0)}</span>
+
+      <span>${_escapeLibraryHtml(
+        _addLibraryT(
+          "library_import_result_skipped"
+        )
+      )}: ${Number(summary.skipped || 0)}</span>
+
+      <span>${_escapeLibraryHtml(
+        _addLibraryT(
+          "library_import_result_failed"
+        )
+      )}: ${Number(summary.failed || 0)}</span>
+    </div>
+  `;
+
+  root.classList.remove(
+    "is-initially-hidden"
+  );
+
+  const preview =
+    document.getElementById(
+      "importLibraryPreview"
+    );
+
+  preview?.classList.add(
+    "is-initially-hidden"
+  );
+
+  const analyzeButton =
+    document.getElementById(
+      "analyzeImportLibraryBtn"
+    );
+
+  if (analyzeButton) {
+    analyzeButton.disabled = true;
+  }
+}
+
+function _recalculateLibraryImportSummary(
+  preview = __libraryImportPreviewState
+) {
+  if (!preview || typeof preview !== "object") {
+    return null;
+  }
+
+  const rows =
+    Array.isArray(preview.rows)
+      ? preview.rows
+      : [];
+
+  const summary = {
+    total: rows.length,
+    matched: 0,
+    doubtful: 0,
+    notFound: 0,
+    duplicate: 0,
+    invalid: 0
+  };
+
+  for (const row of rows) {
+    const status =
+      String(row?.status || "");
+
+    if (status === "matched") {
+      summary.matched += 1;
+    } else if (status === "doubtful") {
+      summary.doubtful += 1;
+    } else if (status === "not_found") {
+      summary.notFound += 1;
+    } else if (status === "duplicate") {
+      summary.duplicate += 1;
+    } else if (status === "invalid") {
+      summary.invalid += 1;
+    }
+  }
+
+  preview.summary = summary;
+
+  return summary;
+}
+
+function _applyLibraryImportManualMatch(
+  rowNumber,
+  candidateIndex
+) {
+  if (
+    !__libraryImportPreviewState ||
+    !Array.isArray(
+      __libraryImportPreviewState.rows
+    )
+  ) {
+    return false;
+  }
+
+  const normalizedRowNumber =
+    Number(rowNumber);
+
+  const normalizedCandidateIndex =
+    Number(candidateIndex);
+
+  const row =
+    __libraryImportPreviewState.rows.find(
+      (entry) =>
+        Number(entry?.rowNumber) ===
+        normalizedRowNumber
+    );
+
+  if (
+    !row ||
+    !Array.isArray(row.candidates) ||
+    !Number.isInteger(
+      normalizedCandidateIndex
+    ) ||
+    normalizedCandidateIndex < 0 ||
+    normalizedCandidateIndex >=
+      row.candidates.length
+  ) {
+    return false;
+  }
+
+  const candidate =
+    row.candidates[
+      normalizedCandidateIndex
+    ];
+
+  if (
+    !candidate ||
+    typeof candidate !== "object"
+  ) {
+    return false;
+  }
+
+  Object.assign(row, {
+    status: "matched",
+    confidence: 1,
+    reason: "manual_selection",
+    match: candidate,
+    duplicate: null,
+    errors: []
+  });
+
+  _recalculateLibraryImportSummary(
+    __libraryImportPreviewState
+  );
+
+  _renderLibraryImportPreview(
+    __libraryImportPreviewState
+  );
+
+  return true;
+}
+
+function _libraryImportStatusLabel(status = "") {
+  const keys = {
+    matched:
+      "library_import_preview_matched",
+    doubtful:
+      "library_import_preview_doubtful",
+    not_found:
+      "library_import_preview_not_found",
+    duplicate:
+      "library_import_preview_duplicate",
+    invalid:
+      "library_import_preview_invalid"
+  };
+
+  return _addLibraryT(
+    keys[status] ||
+      "library_import_preview_invalid"
+  );
+}
+
+function _renderLibraryImportPreview(
+  preview = {}
+) {
+  const root =
+    document.getElementById(
+      "importLibraryPreview"
+    );
+
+  const summaryRoot =
+    document.getElementById(
+      "importLibraryPreviewSummary"
+    );
+
+  const rowsRoot =
+    document.getElementById(
+      "importLibraryRows"
+    );
+
+  if (
+    !root ||
+    !summaryRoot ||
+    !rowsRoot
+  ) {
+    return;
+  }
+
+  const summary =
+    preview?.summary &&
+    typeof preview.summary === "object"
+      ? preview.summary
+      : {};
+
+  const summaryItems = [
+    [
+      "library_import_preview_total",
+      summary.total
+    ],
+    [
+      "library_import_preview_matched",
+      summary.matched
+    ],
+    [
+      "library_import_preview_doubtful",
+      summary.doubtful
+    ],
+    [
+      "library_import_preview_not_found",
+      summary.notFound
+    ],
+    [
+      "library_import_preview_duplicate",
+      summary.duplicate
+    ],
+    [
+      "library_import_preview_invalid",
+      summary.invalid
+    ]
+  ];
+
+  summaryRoot.innerHTML =
+    summaryItems.map(
+      ([key, value]) => `
+        <div class="library-import-summary-item">
+          <span>${_libraryHtmlT(key)}</span>
+          <strong>${_escapeLibraryHtml(
+            Number.isFinite(Number(value))
+              ? Number(value)
+              : 0
+          )}</strong>
+        </div>
+      `
+    ).join("");
+
+  const rows =
+    Array.isArray(preview?.rows)
+      ? preview.rows
+      : [];
+
+  rowsRoot.innerHTML =
+    rows.map((row) => {
+      const data =
+        row?.data &&
+        typeof row.data === "object"
+          ? row.data
+          : {};
+
+      const match =
+        row?.match &&
+        typeof row.match === "object"
+          ? row.match
+          : null;
+
+      const title =
+        match?.title ||
+        data.title ||
+        "";
+
+      const year =
+        match?.meta?.year ??
+        data.year ??
+        "";
+
+      const status =
+        String(row?.status || "");
+
+      const errorCodes =
+        Array.isArray(row?.errors)
+          ? row.errors
+          : [];
+
+      const candidates =
+        Array.isArray(row?.candidates)
+          ? row.candidates
+          : [];
+
+      const candidateSelector =
+        status === "doubtful" &&
+        candidates.length
+          ? `
+            <select
+              data-import-candidate-select
+              data-import-row="${_escapeLibraryHtml(
+                row?.rowNumber ?? ""
+              )}"
+            >
+              <option value="">
+                ${_escapeLibraryHtml(
+                  _libraryImportStatusLabel(
+                    "doubtful"
+                  )
+                )}
+              </option>
+
+              ${candidates.map(
+                (candidate, index) => {
+                  const candidateTitle =
+                    candidate?.title || "";
+
+                  const candidateYear =
+                    candidate?.meta?.year ??
+                    "";
+
+                  const candidateSource =
+                    candidate?.source || "";
+
+                  const label = [
+                    candidateTitle,
+                    candidateYear,
+                    candidateSource
+                  ].filter(Boolean).join(" · ");
+
+                  return `
+                    <option value="${index}">
+                      ${_escapeLibraryHtml(
+                        label
+                      )}
+                    </option>
+                  `;
+                }
+              ).join("")}
+            </select>
+          `
+          : "";
+
+      const details = [
+        data.type,
+        year,
+        errorCodes.join(", ")
+      ].filter(Boolean);
+
+      return `
+        <article
+          class="library-import-row"
+          data-import-row="${_escapeLibraryHtml(
+            row?.rowNumber ?? ""
+          )}"
+          data-import-status="${_escapeLibraryHtml(
+            status
+          )}"
+        >
+          <div class="library-import-row-main">
+            <strong>${_escapeLibraryHtml(
+              title
+            )}</strong>
+            <span>${_escapeLibraryHtml(
+              details.join(" · ")
+            )}</span>
+          </div>
+
+          <div class="library-import-row-resolution">
+            <span class="library-import-row-status">
+              ${_escapeLibraryHtml(
+                _libraryImportStatusLabel(
+                  status
+                )
+              )}
+            </span>
+
+            ${candidateSelector}
+          </div>
+        </article>
+      `;
+    }).join("");
+
+  root.classList.remove(
+    "is-initially-hidden"
+  );
+
+  const confirmButton =
+    document.getElementById(
+      "confirmImportLibraryBtn"
+    );
+
+  if (confirmButton) {
+    confirmButton.disabled =
+      Number(summary?.matched || 0) <= 0;
+  }
+}
+
+function openImportLibraryModal() {
+  const modal = document.getElementById("importLibraryModal");
+  if (!modal) return;
+
+  __importLibraryModalLastFocus = document.activeElement;
+
+  const fileInput = document.getElementById("importLibraryFile");
+  if (fileInput) fileInput.value = "";
+
+  _resetLibraryImportPreview();
+
+  if (window.UIModal && typeof window.UIModal.open === "function") {
+    window.UIModal.open(modal, {
+      initialFocusSelector: "#importLibraryFile",
+      lastFocusEl: __importLibraryModalLastFocus
+    });
+    return;
+  }
+
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+
+  requestAnimationFrame(() => {
+    fileInput?.focus?.();
+  });
+}
+
+function closeImportLibraryModal() {
+  const modal = document.getElementById("importLibraryModal");
+  if (!modal) return;
+
+  if (window.UIModal && typeof window.UIModal.close === "function") {
+    window.UIModal.close(modal);
+  } else {
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+
+    if (
+      __importLibraryModalLastFocus &&
+      typeof __importLibraryModalLastFocus.focus === "function"
+    ) {
+      requestAnimationFrame(() => __importLibraryModalLastFocus.focus());
+    }
+  }
+
+  __importLibraryModalLastFocus = null;
+
+  const fileInput = document.getElementById("importLibraryFile");
+  if (fileInput) fileInput.value = "";
 }
 
 function openAddLibraryModal() {
@@ -1300,7 +1916,7 @@ const LibraryUI = (() => {
         const safeKicker = escapeHtml(t("nav_library"));
         const safeTitle = escapeHtml(t("library_empty_initial_title"));
         const safeText = escapeHtml(t("library_empty_initial_text"));
-        const safeCta = escapeHtml(t("library_empty_initial_cta"));
+        const safeCta = escapeHtml(t("library_empty_initial_import_cta"));
 
         grid.innerHTML = `
           <div class="lib-empty-state">
@@ -1317,14 +1933,16 @@ const LibraryUI = (() => {
                 ${safeText}
               </p>
               <div class="lib-empty-state-actions">
-                <button id="libEmptyAddBtn" class="btn btn-primary">+ ${safeCta}</button>
+                <button id="libEmptyImportBtn" class="btn btn-primary">${safeCta}</button>
               </div>
             </div>
           </div>
         `;
 
         requestAnimationFrame(() => {
-          document.getElementById("libEmptyAddBtn")?.addEventListener("click", openAddLibraryModal);
+          document.getElementById("libEmptyImportBtn")?.addEventListener("click", () => {
+            document.getElementById("btnImportLibrary")?.click();
+          });
         });
         return;
       }
@@ -2231,6 +2849,12 @@ const LibraryUI = (() => {
       closeOnBackdrop: true
     });
 
+    window.UIModal?.bind("importLibraryModal", {
+      closeSelectors: ["#closeImportLibraryModal", "#cancelImportLibraryModal"],
+      initialFocusSelector: "#importLibraryFile",
+      closeOnBackdrop: true
+    });
+
     window.UIModal?.bind("addToListModal", {
       closeSelectors: ["#closeAddToListModal", "#cancelAddToListModal"],
       initialFocusSelector: "#confirmAddToListModal",
@@ -2250,12 +2874,194 @@ const LibraryUI = (() => {
       });
     }
     
-    // Botón "Añadir" (delegado, robusto)
+    // Botón "Importar" (delegado, robusto)
     document.addEventListener("click", (e) => {
-      const btn = e.target.closest("#btnAddLibraryItem");
+      const btn = e.target.closest("#btnImportLibrary");
       if (!btn) return;
       e.preventDefault();
-      openAddLibraryModal();
+      openImportLibraryModal();
+    });
+
+    document.addEventListener("change", (e) => {
+      const select =
+        e.target.closest('[data-import-candidate-select]');
+
+      if (!select) return;
+
+      const candidateIndex =
+        Number(select.value);
+
+      if (!Number.isInteger(candidateIndex)) {
+        return;
+      }
+
+      _applyLibraryImportManualMatch(
+        select.dataset.importRow,
+        candidateIndex
+      );
+    });
+
+    document.getElementById("analyzeImportLibraryBtn")?.addEventListener("click", async () => {
+      const file =
+        document.getElementById(
+          "importLibraryFile"
+        )?.files?.[0];
+
+      const button =
+        document.getElementById(
+          "analyzeImportLibraryBtn"
+        );
+
+      if (!file) {
+        _resetLibraryImportPreview();
+        _showLibraryImportError(
+          _libraryImportErrorMessage(
+            "file_required"
+          )
+        );
+        return;
+      }
+
+      if (button?.dataset.busy === "1") {
+        return;
+      }
+
+      const previousHtml =
+        button?.innerHTML || "";
+
+      if (button) {
+        button.disabled = true;
+        button.dataset.busy = "1";
+      }
+
+      _resetLibraryImportPreview();
+
+      try {
+        const text =
+          await file.text();
+
+        const preview =
+          await ApiClient.previewLibraryImport(text);
+
+        __libraryImportPreviewState =
+          preview;
+
+        _renderLibraryImportPreview(
+          preview
+        );
+      } catch (error) {
+        console.error(
+          "[Library import preview]",
+          error
+        );
+
+        _showLibraryImportError(
+          _libraryImportErrorMessage(
+            error,
+            "library_import_preview_failed"
+          )
+        );
+      } finally {
+        if (button) {
+          button.disabled = false;
+          delete button.dataset.busy;
+          button.innerHTML =
+            previousHtml ||
+            _escapeLibraryHtml(
+              _addLibraryT(
+                "library_import_analyze"
+              )
+            );
+        }
+      }
+    });
+
+    document.getElementById("confirmImportLibraryBtn")?.addEventListener("click", async () => {
+      if (
+        !__libraryImportPreviewState ||
+        !Array.isArray(
+          __libraryImportPreviewState.rows
+        )
+      ) {
+        return;
+      }
+
+      const matchedRows =
+        __libraryImportPreviewState.rows.filter(
+          (row) =>
+            String(row?.status || "") ===
+            "matched"
+        );
+
+      if (!matchedRows.length) {
+        return;
+      }
+
+      const button =
+        document.getElementById(
+          "confirmImportLibraryBtn"
+        );
+
+      if (button?.dataset.busy === "1") {
+        return;
+      }
+
+      const previousHtml =
+        button?.innerHTML || "";
+
+      if (button) {
+        button.disabled = true;
+        button.dataset.busy = "1";
+      }
+
+      _showLibraryImportError("");
+
+      try {
+        const result =
+          await ApiClient.confirmLibraryImport(
+            __libraryImportPreviewState.rows
+          );
+
+        _renderLibraryImportResult(
+          result
+        );
+
+        __libraryImportPreviewState = null;
+      } catch (error) {
+        console.error(
+          "[Library import confirm]",
+          error
+        );
+
+        _showLibraryImportError(
+          _libraryImportErrorMessage(
+            error,
+            "library_import_confirm_failed"
+          )
+        );
+      } finally {
+        if (button) {
+          delete button.dataset.busy;
+          button.innerHTML =
+            previousHtml ||
+            _escapeLibraryHtml(
+              _addLibraryT(
+                "library_import_confirm"
+              )
+            );
+
+          if (
+            __libraryImportPreviewState
+          ) {
+            button.disabled =
+              Number(
+                __libraryImportPreviewState
+                  ?.summary
+                  ?.matched || 0
+              ) <= 0;
+          }
+        }
+      }
     });
 
     // Abrir modal "Añadir a lista"

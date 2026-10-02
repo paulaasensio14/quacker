@@ -47,6 +47,10 @@ import {
 } from "./lib/content-identity.js";
 
 import {
+  buildLibraryImportPreview
+} from "./lib/library-import-preview.js";
+
+import {
   buildExploreFallbackItems
 } from "./lib/explore-fallback.js";
 
@@ -8693,6 +8697,65 @@ app.get(
   })
 );
 
+app.post("/api/library/import/preview", _requireAuth, async (req, res) => {
+  const text = String(req.body?.text ?? "");
+
+  if (!text.trim()) {
+    return res.status(400).json({
+      error: "missing_import_text"
+    });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(
+    db,
+    req.session.userId
+  );
+
+  try {
+    const preview =
+      await buildLibraryImportPreview({
+        text,
+        library: Array.isArray(bucket.library)
+          ? bucket.library
+          : []
+      });
+
+    return res.json(preview);
+  } catch (error) {
+    const code = String(
+      error?.code ||
+      "library_import_preview_failed"
+    );
+
+    const clientErrors = new Set([
+      "unsupported_import_format",
+      "csv_unclosed_quote",
+      "csv_empty",
+      "csv_empty_header",
+      "csv_duplicate_header",
+      "csv_missing_required_headers",
+      "csv_column_count_mismatch",
+      "csv_unsupported_header"
+    ]);
+
+    if (clientErrors.has(code)) {
+      return res.status(400).json({
+        error: code
+      });
+    }
+
+    console.error(
+      "[Library import preview]",
+      error
+    );
+
+    return res.status(500).json({
+      error: "library_import_preview_failed"
+    });
+  }
+});
+
 app.get("/api/library", _requireAuth, (req, res) => {
   const db = _readDb();
   const bucket = _getUserBucket(db, req.session.userId);
@@ -9015,6 +9078,143 @@ function _addLibraryItem(
     item
   };
 }
+
+app.post(
+  "/api/library/import/confirm",
+  _requireAuth,
+  (req, res) => {
+    const rows =
+      Array.isArray(req.body?.rows)
+        ? req.body.rows
+        : null;
+
+    if (!rows) {
+      return res.status(400).json({
+        error: "missing_import_rows"
+      });
+    }
+
+    const db = _readDb();
+
+    const bucket =
+      _getUserBucket(
+        db,
+        req.session.userId
+      );
+
+    const summary = {
+      total: rows.length,
+      imported: 0,
+      duplicate: 0,
+      skipped: 0,
+      failed: 0
+    };
+
+    const items = [];
+
+    for (const row of rows) {
+      if (
+        String(row?.status || "") !==
+        "matched"
+      ) {
+        summary.skipped += 1;
+        continue;
+      }
+
+      const match =
+        row?.match &&
+        typeof row.match === "object" &&
+        !Array.isArray(row.match)
+          ? row.match
+          : null;
+
+      const data =
+        row?.data &&
+        typeof row.data === "object" &&
+        !Array.isArray(row.data)
+          ? row.data
+          : {};
+
+      if (!match) {
+        summary.failed += 1;
+        continue;
+      }
+
+      const matchMeta =
+        match?.meta &&
+        typeof match.meta === "object" &&
+        !Array.isArray(match.meta)
+          ? match.meta
+          : {};
+
+      const meta = {
+        ...matchMeta
+      };
+
+      if (
+        data.year != null &&
+        data.year !== "" &&
+        meta.year == null
+      ) {
+        meta.year = data.year;
+      }
+
+      if (
+        data.author != null &&
+        String(data.author).trim() &&
+        meta.author == null
+      ) {
+        meta.author =
+          String(data.author).trim();
+      }
+
+      const result =
+        _addLibraryItem(
+          bucket,
+          {
+            title:
+              match.title ||
+              data.title,
+            type:
+              match.type ||
+              data.type,
+            source:
+              match.source,
+            externalId:
+              match.externalId,
+            status:
+              data.status,
+            progress:
+              data.progress,
+            meta
+          }
+        );
+
+      if (!result.ok) {
+        summary.failed += 1;
+        continue;
+      }
+
+      if (result.alreadyExists) {
+        summary.duplicate += 1;
+        continue;
+      }
+
+      summary.imported += 1;
+      items.push(result.item);
+    }
+
+    if (summary.imported > 0) {
+      _writeDb(db);
+    }
+
+    return res.json({
+      ok: true,
+      summary,
+      items
+    });
+  }
+);
 
 app.post(
   "/api/library",
