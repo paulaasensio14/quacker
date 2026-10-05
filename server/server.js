@@ -51,6 +51,10 @@ import {
 } from "./lib/library-import-preview.js";
 
 import {
+  hydrateLibraryImportMeta
+} from "./lib/library-import-series-hydration.js";
+
+import {
   buildExploreFallbackItems
 } from "./lib/explore-fallback.js";
 
@@ -9082,7 +9086,7 @@ function _addLibraryItem(
 app.post(
   "/api/library/import/confirm",
   _requireAuth,
-  (req, res) => {
+  async (req, res) => {
     const rows =
       Array.isArray(req.body?.rows)
         ? req.body.rows
@@ -9168,6 +9172,13 @@ app.post(
           String(data.author).trim();
       }
 
+      const hydratedMeta =
+        await hydrateLibraryImportMeta({
+          match,
+          meta,
+          getTmdbDetail
+        });
+
       const result =
         _addLibraryItem(
           bucket,
@@ -9190,7 +9201,7 @@ app.post(
               data.status,
             progress:
               data.progress,
-            meta
+            meta: hydratedMeta
           }
         );
 

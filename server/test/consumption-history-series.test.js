@@ -176,3 +176,49 @@ test("la edición manual de una serie no se convierte en historial canónico", (
     /rawPatch\?\.activityPayload/
   );
 });
+
+test("el fallback de una serie sin total de episodios no inventa progreso del 10%", () => {
+  const quickProgress = extractBetween(
+    librarySource,
+    "async function applyQuickProgressWithUndo",
+    "\nasync function"
+  );
+
+  const seriesBranch = extractBetween(
+    quickProgress,
+    '} else if (nextItem.type === "serie") {',
+    '} else if (nextItem.type === "game") {'
+  );
+
+  assert.doesNotMatch(
+    seriesBranch,
+    /currentProgress\s*\+\s*10/,
+    "una serie sin metadatos no debe avanzar un 10% arbitrario por episodio"
+  );
+
+  assert.doesNotMatch(
+    seriesBranch,
+    /nextProgress\s*>=\s*100\s*\?\s*"completed"/,
+    "el fallback sin un total fiable no debe poder completar automáticamente la serie"
+  );
+});
+
+test("ApiClient no aplica delta genérico a una serie sin metadata estructural", () => {
+  const progressLibraryItem = extractBetween(
+    apiClientSource,
+    "async function progressLibraryItem",
+    "// === biblioteca ==="
+  );
+
+  assert.match(
+    progressLibraryItem,
+    /const next\s*=\s*seriesPatch\s*\?\s*seriesPatch\.progress\s*:\s*current\.type\s*===\s*"serie"\s*\?\s*Math\.max\(0,\s*Math\.min\(99,\s*prev\)\)/s,
+    "una serie sin seriesPatch debe conservar un progreso seguro y nunca usar safeDelta"
+  );
+
+  assert.match(
+    progressLibraryItem,
+    /const justCompleted\s*=\s*seriesPatch\s*\?\s*seriesPatch\.justCompleted\s*:\s*current\.type\s*===\s*"serie"\s*\?\s*false/s,
+    "una serie sin seriesPatch no debe poder completarse por el fallback genérico"
+  );
+});

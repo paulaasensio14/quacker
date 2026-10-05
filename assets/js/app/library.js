@@ -2594,11 +2594,14 @@ const LibraryUI = (() => {
           if (totalEpisodes > 0) {
             nextItem.meta.totalEpisodes = totalEpisodes;
             nextProgress = Math.round((nextItem.meta.episode / totalEpisodes) * 100);
+            nextItem.status =
+              nextItem.meta.episode >= totalEpisodes
+                ? "completed"
+                : "watching";
           } else {
-            nextProgress = Math.min(100, Math.max(10, currentProgress + 10));
+            nextProgress = Math.max(0, Math.min(99, currentProgress));
+            nextItem.status = "watching";
           }
-
-          nextItem.status = nextProgress >= 100 ? "completed" : "watching";
         }
       } else if (nextItem.type === "game") {
         const currentHours = Math.max(0, Number(nextItem.meta.hoursPlayed || 0));

@@ -5500,10 +5500,14 @@ if (externalSignal?.aborted) {
     const safeDelta = Math.max(1, Math.min(100, Number(delta || 0)));
     const next = seriesPatch
       ? seriesPatch.progress
-      : Math.min(100, Math.max(0, prev + safeDelta));
+      : current.type === "serie"
+        ? Math.max(0, Math.min(99, prev))
+        : Math.min(100, Math.max(0, prev + safeDelta));
     const justCompleted = seriesPatch
       ? seriesPatch.justCompleted
-      : next >= 100 && prev < 100;
+      : current.type === "serie"
+        ? false
+        : next >= 100 && prev < 100;
 
     const nextItem = seriesPatch
       ? {
@@ -5513,10 +5517,16 @@ if (externalSignal?.aborted) {
         meta: seriesPatch.meta,
         activityPayload: seriesPatch.activityPayload
       }
-      : {
-        ...current,
-        progress: next
-      };
+      : current.type === "serie"
+        ? {
+          ...current,
+          status: "watching",
+          progress: next
+        }
+        : {
+          ...current,
+          progress: next
+        };
 
     if (!seriesPatch && current.type === "book") {
       const totalPages = Number(current.meta?.totalPages || 0);
