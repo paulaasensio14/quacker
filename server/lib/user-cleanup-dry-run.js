@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import createKruptein from "kruptein";
+
 import {
   readJsonFile
 } from "./json-db.js";
@@ -122,9 +124,84 @@ function analyzeCrossUserReferences(
   };
 }
 
+function isEncryptedSessionEnvelope(value) {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    ["ct", "hmac", "iv", "salt"].every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(
+          value,
+          key
+        )
+    )
+  );
+}
+
+function decodeEncryptedSession(
+  rawValue,
+  sessionSecret
+) {
+  if (!sessionSecret) {
+    throw createCleanupError(
+      "No se puede inspeccionar una sesión cifrada sin SESSION_SECRET.",
+      "SESSION_SECRET_REQUIRED"
+    );
+  }
+
+  const crypto = createKruptein({
+    algorithm: "aes-256-gcm",
+    hashing: "sha512",
+    use_scrypt: true
+  });
+
+  let plaintext;
+  let decryptError;
+
+  crypto.get(
+    sessionSecret,
+    rawValue,
+    (error, value) => {
+      decryptError = error || null;
+      plaintext = value;
+    }
+  );
+
+  if (decryptError || typeof plaintext !== "string") {
+    throw createCleanupError(
+      "No se pudo descifrar una sesión.",
+      "SESSION_DECRYPT_FAILED"
+    );
+  }
+
+  const decoded = JSON.parse(plaintext);
+
+  return typeof decoded === "string"
+    ? JSON.parse(decoded)
+    : decoded;
+}
+
+function decodeSessionValue(
+  rawValue,
+  sessionSecret
+) {
+  const parsed = JSON.parse(rawValue);
+
+  if (!isEncryptedSessionEnvelope(parsed)) {
+    return parsed;
+  }
+
+  return decodeEncryptedSession(
+    rawValue,
+    sessionSecret
+  );
+}
+
 function analyzeSessions(
   sessionDirectory,
-  targetUserIds
+  targetUserIds,
+  sessionSecret
 ) {
   const result = {
     files: 0,
@@ -164,11 +241,12 @@ function analyzeSessions(
     let sessionValue;
 
     try {
-      sessionValue = JSON.parse(
+      sessionValue = decodeSessionValue(
         fs.readFileSync(
           sessionPath,
           "utf8"
-        )
+        ),
+        sessionSecret
       );
 
       result.validJson += 1;
@@ -196,6 +274,7 @@ function analyzeSessions(
 export function analyzeUserCleanupDryRun({
   dbPath,
   sessionDirectory,
+  sessionSecret = "",
   targetUserIds
 }) {
   const normalizedTargets =
@@ -260,7 +339,8 @@ export function analyzeUserCleanupDryRun({
       ),
     sessions: analyzeSessions(
       sessionDirectory,
-      normalizedTargets
+      normalizedTargets,
+      sessionSecret
     )
   };
 }
