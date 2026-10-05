@@ -103,6 +103,7 @@ function writeReport(
 export function runUserCleanupDryRunCommand({
   dbPath,
   sessionDirectory,
+  sessionSecret = "",
   args = [],
   writeLine = console.log
 }) {
@@ -125,6 +126,7 @@ export function runUserCleanupDryRunCommand({
       analyzeUserCleanupDryRun({
         dbPath,
         sessionDirectory,
+        sessionSecret,
         targetUserIds
       });
 

@@ -1,6 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import "../config/env.js";
+
 import {
   runUserCleanupDryRunCommand
 } from "../lib/user-cleanup-dry-run-cli.js";
@@ -27,6 +29,9 @@ const exitCode =
   runUserCleanupDryRunCommand({
     dbPath,
     sessionDirectory,
+    sessionSecret: String(
+      process.env.SESSION_SECRET || ""
+    ).trim(),
     args: process.argv.slice(2),
     writeLine: console.log
   });

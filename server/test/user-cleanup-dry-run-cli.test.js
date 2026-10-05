@@ -4,6 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import session from "express-session";
+import sessionFileStore from "session-file-store";
+
 import {
   runUserCleanupDryRunCommand
 } from "../lib/user-cleanup-dry-run-cli.js";
@@ -438,6 +441,101 @@ test("bloquea el procedimiento si existen sesiones con JSON inválido", () => {
     assert.doesNotMatch(
       text,
       /user_1|corrupt-session/
+    );
+  } finally {
+    cleanupFixture(fixture.directory);
+  }
+});
+
+test("informa sesiones cifradas objetivo sin mostrar identificadores", async () => {
+  const fixture = createFixture({
+    users: {
+      user_1: {
+        profile: {
+          id: "user_1"
+        },
+        auth: {
+          authVersion: 1
+        }
+      },
+      user_2: {
+        profile: {
+          id: "user_2"
+        },
+        auth: {
+          authVersion: 1
+        }
+      }
+    }
+  });
+
+  const sessionSecret =
+    "test-session-secret-for-encrypted-cli-fixture";
+
+  const FileStore = sessionFileStore(session);
+  const store = new FileStore({
+    path: fixture.sessionDirectory,
+    ttl: 60 * 60,
+    reapInterval: -1,
+    secret: sessionSecret,
+    logFn: () => {}
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      store.set(
+        "encrypted-target-session",
+        {
+          cookie: {
+            originalMaxAge: 60 * 60 * 1000
+          },
+          userId: "user_1",
+          authVersion: 1
+        },
+        (error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve();
+        }
+      );
+    });
+
+    const output = [];
+
+    const exitCode =
+      runUserCleanupDryRunCommand({
+        dbPath: fixture.dbPath,
+        sessionDirectory:
+          fixture.sessionDirectory,
+        sessionSecret,
+        args: [
+          "--user",
+          "user_1"
+        ],
+        writeLine: (line) =>
+          output.push(line)
+      });
+
+    const text = output.join("\n");
+
+    assert.equal(exitCode, 0);
+
+    assert.match(
+      text,
+      /Archivos de sesión: 1/
+    );
+
+    assert.match(
+      text,
+      /Sesiones objetivo: 1/
+    );
+
+    assert.doesNotMatch(
+      text,
+      /user_1|user_2|encrypted-target-session|test-session-secret/
     );
   } finally {
     cleanupFixture(fixture.directory);

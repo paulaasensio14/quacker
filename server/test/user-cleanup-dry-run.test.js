@@ -4,6 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import session from "express-session";
+import sessionFileStore from "session-file-store";
+
 import {
   analyzeUserCleanupDryRun
 } from "../lib/user-cleanup-dry-run.js";
@@ -160,6 +163,8 @@ test("genera un informe sanitizado sin modificar la base", () => {
       dbPath: fixture.dbPath,
       sessionDirectory:
         fixture.sessionDirectory,
+      sessionSecret:
+        "test-session-secret-for-encrypted-fixture",
       targetUserIds: ["user_1"]
     });
 
@@ -444,6 +449,128 @@ test("detecta referencias cuando el usuario objetivo se usa como clave de objeto
       ),
       /user_1|user_2/
     );
+  } finally {
+    cleanupFixture(fixture.directory);
+  }
+});
+
+test("detecta sesiones cifradas por session-file-store sin modificarlas", async () => {
+  const fixture = createFixture({
+    users: {
+      user_1: {
+        profile: {
+          id: "user_1"
+        },
+        auth: {
+          authVersion: 1
+        }
+      },
+      user_2: {
+        profile: {
+          id: "user_2"
+        },
+        auth: {
+          authVersion: 1
+        }
+      }
+    }
+  });
+
+  const FileStore = sessionFileStore(session);
+  const store = new FileStore({
+    path: fixture.sessionDirectory,
+    ttl: 60 * 60,
+    reapInterval: -1,
+    secret: "test-session-secret-for-encrypted-fixture",
+    logFn: () => {}
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      store.set(
+        "encrypted-target-session",
+        {
+          cookie: {
+            originalMaxAge: 60 * 60 * 1000
+          },
+          userId: "user_1",
+          authVersion: 1
+        },
+        (error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve();
+        }
+      );
+    });
+
+    const before = fs
+      .readdirSync(fixture.sessionDirectory)
+      .sort()
+      .map((name) => ({
+        name,
+        content: fs.readFileSync(
+          path.join(
+            fixture.sessionDirectory,
+            name
+          ),
+          "utf8"
+        )
+      }));
+
+    assert.equal(before.length, 1);
+    assert.doesNotMatch(
+      before[0].content,
+      /user_1/
+    );
+
+    const report = analyzeUserCleanupDryRun({
+      dbPath: fixture.dbPath,
+      sessionDirectory:
+        fixture.sessionDirectory,
+      sessionSecret:
+        "test-session-secret-for-encrypted-fixture",
+      targetUserIds: ["user_1"]
+    });
+
+    const after = fs
+      .readdirSync(fixture.sessionDirectory)
+      .sort()
+      .map((name) => ({
+        name,
+        content: fs.readFileSync(
+          path.join(
+            fixture.sessionDirectory,
+            name
+          ),
+          "utf8"
+        )
+      }));
+
+    assert.equal(
+      report.sessions.files,
+      1
+    );
+
+    assert.equal(
+      report.sessions.validJson,
+      1
+    );
+
+    assert.equal(
+      report.sessions.invalidJson,
+      0
+    );
+
+    assert.equal(
+      report.sessions.targetSessions,
+      1
+    );
+
+    assert.deepEqual(before, after);
   } finally {
     cleanupFixture(fixture.directory);
   }
