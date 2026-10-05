@@ -605,3 +605,107 @@ test(
     );
   }
 );
+
+test(
+  "el resumen final transforma las acciones del importador en un estado de cierre claro",
+  () => {
+    const resultMatch =
+      librarySource.match(
+        /function _renderLibraryImportResult\s*\([\s\S]*?\n\}/
+      );
+
+    assert.ok(
+      resultMatch,
+      "_renderLibraryImportResult debe existir"
+    );
+
+    const resultSource = resultMatch[0];
+
+    assert.match(
+      resultSource,
+      /getElementById\(\s*"confirmImportLibraryBtn"\s*\)[\s\S]*classList\.add\(\s*"is-initially-hidden"\s*\)/
+    );
+
+    assert.match(
+      resultSource,
+      /getElementById\(\s*"analyzeImportLibraryBtn"\s*\)[\s\S]*classList\.add\(\s*"is-initially-hidden"\s*\)/
+    );
+
+    assert.match(
+      resultSource,
+      /getElementById\(\s*"cancelImportLibraryModal"\s*\)/
+    );
+
+    assert.match(
+      resultSource,
+      /setAttribute\(\s*"data-i18n"\s*,\s*"common_close"\s*\)/
+    );
+
+    assert.match(
+      resultSource,
+      /textContent\s*=\s*_addLibraryT\(\s*"common_close"\s*\)/
+    );
+  }
+);
+
+test(
+  "resetear el importador restaura las acciones originales después de un resultado final",
+  () => {
+    const resetMatch =
+      librarySource.match(
+        /function _resetLibraryImportPreview\s*\(\)\s*\{([\s\S]*?)\n\}/
+      );
+
+    assert.ok(
+      resetMatch,
+      "_resetLibraryImportPreview debe existir"
+    );
+
+    const resetSource = resetMatch[1];
+
+    assert.match(
+      resetSource,
+      /getElementById\(\s*"confirmImportLibraryBtn"\s*\)[\s\S]*classList\.remove\(\s*"is-initially-hidden"\s*\)/
+    );
+
+    assert.match(
+      resetSource,
+      /getElementById\(\s*"analyzeImportLibraryBtn"\s*\)[\s\S]*classList\.remove\(\s*"is-initially-hidden"\s*\)/
+    );
+
+    assert.match(
+      resetSource,
+      /getElementById\(\s*"cancelImportLibraryModal"\s*\)/
+    );
+
+    assert.match(
+      resetSource,
+      /setAttribute\(\s*"data-i18n"\s*,\s*"common_cancel"\s*\)/
+    );
+  }
+);
+
+test(
+  "el resultado final de importación usa un resumen visual legible",
+  () => {
+    assert.match(
+      librarySource,
+      /class="library-import-result-panel"/
+    );
+
+    assert.match(
+      librarySource,
+      /class="library-import-summary-item"/
+    );
+
+    assert.match(
+      dashboardCssSource,
+      /#importLibraryResult\s+\.library-import-summary\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:/s
+    );
+
+    assert.match(
+      dashboardCssSource,
+      /#importLibraryResult\s+\.library-import-summary-item\s*\{[^}]*border:/s
+    );
+  }
+);

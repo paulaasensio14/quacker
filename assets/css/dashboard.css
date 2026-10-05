@@ -11936,3 +11936,37 @@ body.dark-theme .profile-privacy-row input[type="checkbox"]:checked {
   overflow-y: auto;
   flex: 1 1 auto;
 }
+
+#importLibraryResult .library-import-result-panel {
+  padding: 4px 0 2px;
+}
+
+#importLibraryResult .library-import-result-panel h4 {
+  margin: 0 0 16px;
+}
+
+#importLibraryResult .library-import-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 10px;
+}
+
+#importLibraryResult .library-import-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+#importLibraryResult .library-import-summary-item span {
+  font-size: 0.82rem;
+  opacity: 0.72;
+}
+
+#importLibraryResult .library-import-summary-item strong {
+  font-size: 1.15rem;
+  line-height: 1;
+}

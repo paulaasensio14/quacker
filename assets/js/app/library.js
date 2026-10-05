@@ -338,6 +338,9 @@ function _resetLibraryImportPreview() {
 
   if (confirmButton) {
     confirmButton.disabled = true;
+    confirmButton.classList.remove(
+      "is-initially-hidden"
+    );
   }
 
   const analyzeButton =
@@ -347,6 +350,25 @@ function _resetLibraryImportPreview() {
 
   if (analyzeButton) {
     analyzeButton.disabled = false;
+    analyzeButton.classList.remove(
+      "is-initially-hidden"
+    );
+  }
+
+  const closeButton =
+    document.getElementById(
+      "cancelImportLibraryModal"
+    );
+
+  if (closeButton) {
+    closeButton.setAttribute(
+      "data-i18n",
+      "common_cancel"
+    );
+    closeButton.textContent =
+      _addLibraryT(
+        "common_cancel"
+      );
   }
 
   const result =
@@ -378,43 +400,51 @@ function _renderLibraryImportResult(
       ? result.summary
       : {};
 
+  const summaryItems = [
+    [
+      "library_import_result_total",
+      summary.total
+    ],
+    [
+      "library_import_result_imported",
+      summary.imported
+    ],
+    [
+      "library_import_result_duplicate",
+      summary.duplicate
+    ],
+    [
+      "library_import_result_skipped",
+      summary.skipped
+    ],
+    [
+      "library_import_result_failed",
+      summary.failed
+    ]
+  ];
+
   root.innerHTML = `
-    <h4>${_escapeLibraryHtml(
-      _addLibraryT(
-        "library_import_result_title"
-      )
-    )}</h4>
-
-    <div class="library-import-summary">
-      <span>${_escapeLibraryHtml(
+    <div class="library-import-result-panel">
+      <h4>${_escapeLibraryHtml(
         _addLibraryT(
-          "library_import_result_total"
+          "library_import_result_title"
         )
-      )}: ${Number(summary.total || 0)}</span>
+      )}</h4>
 
-      <span>${_escapeLibraryHtml(
-        _addLibraryT(
-          "library_import_result_imported"
-        )
-      )}: ${Number(summary.imported || 0)}</span>
-
-      <span>${_escapeLibraryHtml(
-        _addLibraryT(
-          "library_import_result_duplicate"
-        )
-      )}: ${Number(summary.duplicate || 0)}</span>
-
-      <span>${_escapeLibraryHtml(
-        _addLibraryT(
-          "library_import_result_skipped"
-        )
-      )}: ${Number(summary.skipped || 0)}</span>
-
-      <span>${_escapeLibraryHtml(
-        _addLibraryT(
-          "library_import_result_failed"
-        )
-      )}: ${Number(summary.failed || 0)}</span>
+      <div class="library-import-summary">
+        ${summaryItems.map(
+          ([key, value]) => `
+            <div class="library-import-summary-item">
+              <span>${_libraryHtmlT(key)}</span>
+              <strong>${_escapeLibraryHtml(
+                Number.isFinite(Number(value))
+                  ? Number(value)
+                  : 0
+              )}</strong>
+            </div>
+          `
+        ).join("")}
+      </div>
     </div>
   `;
 
@@ -431,6 +461,18 @@ function _renderLibraryImportResult(
     "is-initially-hidden"
   );
 
+  const confirmButton =
+    document.getElementById(
+      "confirmImportLibraryBtn"
+    );
+
+  if (confirmButton) {
+    confirmButton.disabled = true;
+    confirmButton.classList.add(
+      "is-initially-hidden"
+    );
+  }
+
   const analyzeButton =
     document.getElementById(
       "analyzeImportLibraryBtn"
@@ -438,6 +480,25 @@ function _renderLibraryImportResult(
 
   if (analyzeButton) {
     analyzeButton.disabled = true;
+    analyzeButton.classList.add(
+      "is-initially-hidden"
+    );
+  }
+
+  const closeButton =
+    document.getElementById(
+      "cancelImportLibraryModal"
+    );
+
+  if (closeButton) {
+    closeButton.setAttribute(
+      "data-i18n",
+      "common_close"
+    );
+    closeButton.textContent =
+      _addLibraryT(
+        "common_close"
+      );
   }
 }
 
