@@ -96,6 +96,13 @@ import {
 } from "./lib/following.js";
 
 import {
+  addUserBlock,
+  areUsersBlocked,
+  normalizeBlockedUserIds,
+  removeUserBlock
+} from "./lib/user-blocks.js";
+
+import {
   addFollowRequest,
   normalizeFollowRequests,
   removeFollowRequest
@@ -2081,6 +2088,7 @@ function _getUserBucket(db, userId) {
     opinions: [],
     favorites: normalizeFavorites(),
     following: normalizeFollowing(),
+    blockedUserIds: normalizeBlockedUserIds(),
     followRequests: normalizeFollowRequests(),
     recommendations: normalizeRecommendations(),
     notifications: [],
@@ -2129,6 +2137,13 @@ function _getUserBucket(db, userId) {
 
   db.users[userId].following = normalizeFollowing(
     db.users[userId].following,
+    {
+      ownerUserId: userId
+    }
+  );
+
+  db.users[userId].blockedUserIds = normalizeBlockedUserIds(
+    db.users[userId].blockedUserIds,
     {
       ownerUserId: userId
     }
