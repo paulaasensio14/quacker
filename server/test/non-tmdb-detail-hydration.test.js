@@ -81,3 +81,121 @@ test(
     );
   }
 );
+
+
+test(
+  "Explore refresca los metadatos de catálogo de una serie sin perder el progreso del usuario",
+  async () => {
+    const source = fs.readFileSync(
+      new URL("../../assets/js/app/explore.js", import.meta.url),
+      "utf8"
+    );
+
+    const fn = extractFunction(
+      source,
+      "_fetchHydratedExploreItemDetail"
+    );
+
+    const ApiClient = {
+      async getExploreItemDetail() {
+        return {
+          eid: "tmdb:series:123",
+          source: "tmdb",
+          externalId: "123",
+          type: "serie",
+          title: "Serie de prueba",
+          meta: {
+            totalSeasons: 2,
+            totalEpisodes: 16,
+            lastAirDate: "2026-11-20",
+            seasonBreakdown: [
+              {
+                seasonNumber: 1,
+                episodeCount: 8
+              },
+              {
+                seasonNumber: 2,
+                episodeCount: 8
+              }
+            ]
+          }
+        };
+      },
+      async getLibraryItemActivities() {
+        return [];
+      }
+    };
+
+    const fetchHydrated = Function(
+      "ApiClient",
+      "__drawerDetailCache",
+      "_safeText",
+      "_normalizeId",
+      "_normalizeDetailRelatedItem",
+      "_getDetailEpisodeActivityCacheKey",
+      "__detailEpisodeActivityCache",
+      "_buildDetailEpisodeActivityMap",
+      `"use strict"; return (${fn});`
+    )(
+      ApiClient,
+      new Map(),
+      (value) => String(value || ""),
+      (value) => String(value || "").trim(),
+      (value) => value,
+      () => "",
+      new Map(),
+      () => ({})
+    );
+
+    const hydrated = await fetchHydrated({
+      eid: "tmdb:series:123",
+      source: "tmdb",
+      externalId: "123",
+      type: "serie",
+      title: "Serie de prueba",
+      meta: {
+        totalSeasons: 1,
+        totalEpisodes: 8,
+        lastAirDate: "2026-01-01",
+        seasonBreakdown: [
+          {
+            seasonNumber: 1,
+            episodeCount: 8
+          }
+        ],
+        season: 1,
+        episode: 8,
+        episodeSeenMap: {
+          "1:8": "2026-01-10T20:00:00.000Z"
+        }
+      }
+    });
+
+    assert.equal(hydrated.meta.totalSeasons, 2);
+    assert.equal(hydrated.meta.totalEpisodes, 16);
+    assert.equal(hydrated.meta.lastAirDate, "2026-11-20");
+
+    assert.deepEqual(
+      hydrated.meta.seasonBreakdown,
+      [
+        {
+          seasonNumber: 1,
+          episodeCount: 8
+        },
+        {
+          seasonNumber: 2,
+          episodeCount: 8
+        }
+      ]
+    );
+
+    assert.equal(hydrated.meta.season, 1);
+    assert.equal(hydrated.meta.episode, 8);
+    assert.deepEqual(
+      hydrated.meta.episodeSeenMap,
+      {
+        "1:8": "2026-01-10T20:00:00.000Z"
+      }
+    );
+  }
+);

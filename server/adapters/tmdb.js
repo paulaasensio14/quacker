@@ -166,6 +166,32 @@ function _mapTmdbSeasonEpisodes(episodes = []) {
     .sort((a, b) => a.episodeNumber - b.episodeNumber);
 }
 
+function _mapTmdbEpisodePointer(episode) {
+  if (!episode || typeof episode !== "object") {
+    return null;
+  }
+
+  const season = Math.max(
+    0,
+    Number(episode?.season_number || 0) || 0
+  );
+
+  const episodeNumber = Math.max(
+    0,
+    Number(episode?.episode_number || 0) || 0
+  );
+
+  if (season <= 0 || episodeNumber <= 0) {
+    return null;
+  }
+
+  return {
+    season,
+    episode: episodeNumber,
+    airDate: String(episode?.air_date || "").trim()
+  };
+}
+
 function _pickTmdbBackdrop(data) {
   const primaryPath = String(data?.backdrop_path || "").trim();
   const candidates = Array.isArray(data?.images?.backdrops)
@@ -572,6 +598,76 @@ export async function getWeeklyTrendingTmdbByType(type, limit = 3) {
  throw err;
 }
 
+export async function getTmdbSeriesLifecycle({ externalId }) {
+  const safeId = String(externalId || "").trim();
+
+  if (!safeId) {
+    const err = new Error("missing_external_id");
+    err.status = 400;
+    throw err;
+  }
+
+  const data = await _tmdbGet(
+    `/tv/${encodeURIComponent(safeId)}`,
+    {
+      language: "es-ES"
+    }
+  );
+
+  const seasonBreakdown = Array.isArray(data?.seasons)
+    ? data.seasons
+        .map((season) => ({
+          seasonNumber:
+            Number(season?.season_number || 0) || 0,
+          episodeCount:
+            Number(season?.episode_count || 0) || 0,
+          name: String(season?.name || "").trim(),
+          airDate: String(season?.air_date || "").trim(),
+          poster: _posterUrl(season?.poster_path)
+        }))
+        .filter(
+          (season) =>
+            season.seasonNumber > 0 &&
+            season.episodeCount > 0
+        )
+        .sort(
+          (a, b) =>
+            a.seasonNumber - b.seasonNumber
+        )
+    : [];
+
+  const totalEpisodesFromBreakdown =
+    seasonBreakdown.reduce(
+      (sum, season) =>
+        sum + season.episodeCount,
+      0
+    );
+
+  return {
+    lastAirDate:
+      String(data?.last_air_date || "").trim(),
+    seriesStatus:
+      String(data?.status || "").trim(),
+    inProduction:
+      data?.in_production === true,
+    lastEpisodeToAir:
+      _mapTmdbEpisodePointer(
+        data?.last_episode_to_air
+      ),
+    nextEpisodeToAir:
+      _mapTmdbEpisodePointer(
+        data?.next_episode_to_air
+      ),
+    totalSeasons:
+      seasonBreakdown.length ||
+      (Number(data?.number_of_seasons || 0) || 0),
+    totalEpisodes:
+      totalEpisodesFromBreakdown ||
+      (Number(data?.number_of_episodes || 0) || 0),
+    seasonBreakdown
+  };
+}
+
 export async function getTmdbDetail({ type, externalId }) {
   const safeType = String(type || "").trim().toLowerCase();
   const safeId = String(externalId || "").trim();
@@ -717,6 +813,10 @@ const seasonBreakdown = Array.isArray(data.seasons)
       year: _yearFromDate(data.first_air_date),
       creator: _joinTmdbNamedEntries(data?.created_by, 2),
       lastAirDate: String(data?.last_air_date || "").trim(),
+      seriesStatus: String(data?.status || "").trim(),
+      inProduction: data?.in_production === true,
+      lastEpisodeToAir: _mapTmdbEpisodePointer(data?.last_episode_to_air),
+      nextEpisodeToAir: _mapTmdbEpisodePointer(data?.next_episode_to_air),
       totalSeasons: seasonBreakdown.length || (Number(data.number_of_seasons || 0) || 0),
       totalEpisodes: totalEpisodesFromBreakdown || (Number(data.number_of_episodes || 0) || 0),
       seasonBreakdown,
