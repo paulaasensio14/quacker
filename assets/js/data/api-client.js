@@ -207,6 +207,12 @@ if (externalSignal?.aborted) {
 
   const LIBRARY_CACHE_TTL_MS = 30 * 1000;
   const LISTS_CACHE_TTL_MS = 30 * 1000;
+  const SERIES_LIFECYCLE_REFRESH_TTL_MS =
+    6 * 60 * 60 * 1000;
+  const SERIES_LIFECYCLE_REFRESH_RETRY_MS =
+    15 * 60 * 1000;
+
+  const _seriesLifecycleRefreshNextAt = new Map();
 
   let _libraryCache = {
     transport: "",
@@ -232,6 +238,10 @@ if (externalSignal?.aborted) {
     };
   }
     return FakeBackend.getState();
+  }
+
+  function _safeText(value) {
+    return value == null ? "" : String(value);
   }
 
   function _makeApiError(errorCode, status = 400, body = null) {
@@ -762,7 +772,12 @@ if (externalSignal?.aborted) {
       "episodeSeenMap",
       "hoursPlayed",
       "pagesRead",
-      "seasonBreakdown"
+      "seasonBreakdown",
+      "lastAirDate",
+      "seriesStatus",
+      "inProduction",
+      "lastEpisodeToAir",
+      "nextEpisodeToAir"
     ]);
 
     const sanitizedMeta = {};
@@ -775,11 +790,46 @@ if (externalSignal?.aborted) {
       if (allowedMetaKeys.has(key)) {
         sanitizedMeta[key] = key === "episodeSeenMap"
           ? _sanitizeEpisodeSeenMap(meta[key])
-          : meta[key];
+          : (
+              key === "lastEpisodeToAir" ||
+              key === "nextEpisodeToAir"
+            )
+            ? _sanitizeSeriesEpisodePointer(meta[key])
+            : meta[key];
       }
     }
 
     return sanitizedMeta;
+  }
+
+  function _sanitizeSeriesEpisodePointer(value) {
+    if (value == null) return null;
+
+    if (
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      return null;
+    }
+
+    const season = Math.max(
+      0,
+      Number(value.season || 0) || 0
+    );
+    const episode = Math.max(
+      0,
+      Number(value.episode || 0) || 0
+    );
+
+    if (season <= 0 || episode <= 0) {
+      return null;
+    }
+
+    return {
+      season,
+      episode,
+      airDate: String(value.airDate || "").trim()
+    };
   }
 
   function _sanitizeEpisodeSeenMap(value) {
@@ -4020,6 +4070,86 @@ if (externalSignal?.aborted) {
       }];
     }
 
+    const lastEpisodeToAir =
+      meta.lastEpisodeToAir &&
+      typeof meta.lastEpisodeToAir === "object" &&
+      !Array.isArray(meta.lastEpisodeToAir)
+        ? meta.lastEpisodeToAir
+        : null;
+
+    let lastAiredSeason = Math.max(
+      0,
+      Number(lastEpisodeToAir?.season || 0) || 0
+    );
+
+    let lastAiredEpisode = Math.max(
+      0,
+      Number(lastEpisodeToAir?.episode || 0) || 0
+    );
+
+    if (
+      (lastAiredSeason <= 0 || lastAiredEpisode <= 0) &&
+      meta.nextEpisodeToAir &&
+      typeof meta.nextEpisodeToAir === "object" &&
+      !Array.isArray(meta.nextEpisodeToAir)
+    ) {
+      const nextSeason = Math.max(
+        0,
+        Number(meta.nextEpisodeToAir.season || 0) || 0
+      );
+
+      const nextEpisode = Math.max(
+        0,
+        Number(meta.nextEpisodeToAir.episode || 0) || 0
+      );
+
+      if (nextSeason > 0 && nextEpisode > 1) {
+        lastAiredSeason = nextSeason;
+        lastAiredEpisode = nextEpisode - 1;
+      } else if (nextSeason > 0 && nextEpisode === 1) {
+        const previousSeason = [...seasonBreakdown]
+          .filter(
+            (season) => season.seasonNumber < nextSeason
+          )
+          .sort(
+            (a, b) => b.seasonNumber - a.seasonNumber
+          )[0];
+
+        if (previousSeason) {
+          lastAiredSeason = previousSeason.seasonNumber;
+          lastAiredEpisode = previousSeason.episodeCount;
+        }
+      }
+    }
+
+    if (
+      seasonBreakdown.length > 0 &&
+      lastAiredSeason > 0 &&
+      lastAiredEpisode > 0 &&
+      seasonBreakdown.some(
+        (season) => season.seasonNumber === lastAiredSeason
+      )
+    ) {
+      seasonBreakdown = seasonBreakdown
+        .filter(
+          (season) => season.seasonNumber <= lastAiredSeason
+        )
+        .map((season) => {
+          if (season.seasonNumber !== lastAiredSeason) {
+            return season;
+          }
+
+          return {
+            ...season,
+            episodeCount: Math.min(
+              season.episodeCount,
+              lastAiredEpisode
+            )
+          };
+        })
+        .filter((season) => season.episodeCount > 0);
+    }
+
     const orderedEpisodes = [];
     const allowedKeys = new Set();
 
@@ -5619,6 +5749,332 @@ if (externalSignal?.aborted) {
     return result;
   }
 
+  function _isTerminalSeriesLifecycleStatus(status) {
+    const normalized = String(status || "")
+      .trim()
+      .toLowerCase();
+
+    return (
+      normalized === "ended" ||
+      normalized === "canceled" ||
+      normalized === "cancelled"
+    );
+  }
+
+  function _shouldRefreshDynamicSeries(item) {
+    if (
+      String(item?.type || "").trim() !== "serie" ||
+      String(item?.source || "").trim().toLowerCase() !== "tmdb" ||
+      !String(item?.externalId || "").trim()
+    ) {
+      return false;
+    }
+
+    const progress = Math.max(
+      0,
+      Number(item?.progress || 0) || 0
+    );
+    const status = String(item?.status || "")
+      .trim()
+      .toLowerCase();
+
+    const activeOrCompleted =
+      progress > 0 ||
+      status === "watching" ||
+      status === "in_progress" ||
+      status === "completed";
+
+    if (!activeOrCompleted) return false;
+
+    const meta =
+      item?.meta &&
+      typeof item.meta === "object" &&
+      !Array.isArray(item.meta)
+        ? item.meta
+        : {};
+
+    if (
+      _isTerminalSeriesLifecycleStatus(
+        meta.seriesStatus
+      )
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function _dynamicSeriesRefreshKey(item) {
+    return [
+      String(item?.source || "").trim().toLowerCase(),
+      String(item?.externalId || "").trim()
+    ].join(":");
+  }
+
+  function _isDynamicSeriesRefreshDue(item) {
+    const key = _dynamicSeriesRefreshKey(item);
+    if (!key || key === ":") return false;
+
+    const nextAt = Number(
+      _seriesLifecycleRefreshNextAt.get(key) || 0
+    );
+
+    return Date.now() >= nextAt;
+  }
+
+  function _scheduleDynamicSeriesRefresh(
+    item,
+    delayMs
+  ) {
+    const key = _dynamicSeriesRefreshKey(item);
+    if (!key || key === ":") return;
+
+    _seriesLifecycleRefreshNextAt.set(
+      key,
+      Date.now() + Math.max(0, Number(delayMs) || 0)
+    );
+  }
+
+  async function _getExploreSeriesLifecycle({
+    source,
+    type,
+    externalId
+  }) {
+    if (!_isHttp()) return null;
+    if (!source || type !== "serie" || !externalId) {
+      return null;
+    }
+
+    return _httpJson(
+      "GET",
+      `/explore/item/${encodeURIComponent(source)}/${encodeURIComponent(type)}/${encodeURIComponent(externalId)}/lifecycle`
+    );
+  }
+
+  function _hasDynamicSeriesStateChanged(
+    item,
+    nextMeta,
+    nextProgress,
+    nextStatus
+  ) {
+    if (
+      Number(item?.progress || 0) !==
+      Number(nextProgress || 0)
+    ) {
+      return true;
+    }
+
+    if (
+      String(item?.status || "")
+        .trim()
+        .toLowerCase() !==
+      String(nextStatus || "")
+        .trim()
+        .toLowerCase()
+    ) {
+      return true;
+    }
+
+    const currentMeta =
+      item?.meta &&
+      typeof item.meta === "object" &&
+      !Array.isArray(item.meta)
+        ? item.meta
+        : {};
+
+    const lifecycleKeys = [
+      "lastAirDate",
+      "seriesStatus",
+      "inProduction",
+      "lastEpisodeToAir",
+      "nextEpisodeToAir",
+      "totalSeasons",
+      "totalEpisodes",
+      "seasonBreakdown"
+    ];
+
+    return lifecycleKeys.some((key) => {
+      return JSON.stringify(currentMeta[key] ?? null) !==
+        JSON.stringify(nextMeta[key] ?? null);
+    });
+  }
+
+  async function _refreshDynamicSeriesLibraryItem(item) {
+    if (
+      !_shouldRefreshDynamicSeries(item) ||
+      !_isDynamicSeriesRefreshDue(item)
+    ) {
+      return item;
+    }
+
+    _scheduleDynamicSeriesRefresh(
+      item,
+      SERIES_LIFECYCLE_REFRESH_TTL_MS
+    );
+
+    try {
+      const lifecycle =
+        await _getExploreSeriesLifecycle({
+          source: item.source,
+          type: item.type,
+          externalId: item.externalId
+        });
+
+      if (
+        !lifecycle ||
+        typeof lifecycle !== "object" ||
+        Array.isArray(lifecycle)
+      ) {
+        return item;
+      }
+
+      const currentMeta =
+        item?.meta &&
+        typeof item.meta === "object" &&
+        !Array.isArray(item.meta)
+          ? item.meta
+          : {};
+
+      const nextMeta = {
+        ...currentMeta,
+        ...lifecycle
+      };
+
+      const history = await getConsumptionHistory({
+        itemId: item.id
+      });
+
+      const hasCanonicalEpisodeHistory =
+        (Array.isArray(history) ? history : []).some(
+          (event) =>
+            String(event?.eventType || "").trim() ===
+              "episode_watched" &&
+            _normalizeDataId(event?.itemId) ===
+              _normalizeDataId(item.id)
+        );
+
+      let summaryHistory = history;
+
+      if (!hasCanonicalEpisodeHistory) {
+        const legacySeenMap =
+          _sanitizeEpisodeSeenMap(
+            currentMeta.episodeSeenMap
+          );
+
+        const legacyHistory = Object.entries(
+          legacySeenMap
+        ).map(([key, occurredAt], index) => {
+          const match = key.match(/^(\d+):(\d+)$/);
+
+          if (!match) return null;
+
+          return {
+            id: `legacy_seen_${index + 1}`,
+            itemId: item.id,
+            contentType: "serie",
+            eventType: "episode_watched",
+            occurredAt,
+            meta: {
+              season:
+                Math.max(
+                  0,
+                  Number(match[1] || 0) || 0
+                ),
+              episode:
+                Math.max(
+                  0,
+                  Number(match[2] || 0) || 0
+                )
+            }
+          };
+        }).filter(Boolean);
+
+        if (legacyHistory.length > 0) {
+          summaryHistory = legacyHistory;
+        }
+      }
+
+      const summary =
+        _buildSeriesConsumptionSummary(
+          {
+            ...item,
+            meta: nextMeta
+          },
+          summaryHistory
+        );
+
+      const nextProgress = summary.progress;
+      const nextStatus = summary.completed
+        ? "completed"
+        : "watching";
+
+      if (
+        !_hasDynamicSeriesStateChanged(
+          item,
+          nextMeta,
+          nextProgress,
+          nextStatus
+        )
+      ) {
+        return item;
+      }
+
+      const result = await updateLibraryItem(
+        {
+          id: item.id,
+          expectedUpdatedAt: String(
+            item?.updatedAt || ""
+          ).trim(),
+          progress: nextProgress,
+          status: nextStatus,
+          meta: lifecycle
+        },
+        {
+          logActivity: false
+        }
+      );
+
+      if (result?.ok && result.item) {
+        return result.item;
+      }
+
+      return item;
+    } catch (error) {
+      _scheduleDynamicSeriesRefresh(
+        item,
+        SERIES_LIFECYCLE_REFRESH_RETRY_MS
+      );
+
+      const isStaleLibraryUpdate =
+        error?.status === 409 &&
+        error?.error === "stale_library_update";
+
+      if (!isStaleLibraryUpdate) {
+        console.error(
+          "[ApiClient] dynamic series refresh failed",
+          error
+        );
+      }
+
+      return item;
+    }
+  }
+
+  async function _refreshDynamicSeriesLibrary(items) {
+    const sourceItems =
+      Array.isArray(items) ? items : [];
+
+    const refreshedItems = [];
+
+    for (const item of sourceItems) {
+      refreshedItems.push(
+        await _refreshDynamicSeriesLibraryItem(item)
+      );
+    }
+
+    return refreshedItems;
+  }
+
   async function getLibrary() {
     const cachedItems = _getLibraryCacheSnapshot();
     if (cachedItems) {
@@ -5635,6 +6091,15 @@ if (externalSignal?.aborted) {
           : (res && Array.isArray(res.items) ? res.items : []);
 
         _setLibraryCache(items);
+
+        void _refreshDynamicSeriesLibrary(items)
+          .catch((error) => {
+            console.error(
+              "[ApiClient] dynamic series library refresh failed",
+              error
+            );
+          });
+
         return _cloneCollection(items);
       } catch (error) {
         console.error("[ApiClient] getLibrary failed", error);

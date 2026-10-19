@@ -10,6 +10,7 @@ import {
  searchTmdb,
  getTmdbDetail,
  getTmdbSeasonDetail,
+ getTmdbSeriesLifecycle,
  getWeeklyTrendingTmdbByType
 } from "./adapters/tmdb.js";
 import {
@@ -1242,7 +1243,12 @@ function _sanitizeLibraryMeta(meta) {
     "episodeSeenMap",
     "hoursPlayed",
     "pagesRead",
-    "seasonBreakdown"
+    "seasonBreakdown",
+    "lastAirDate",
+    "seriesStatus",
+    "inProduction",
+    "lastEpisodeToAir",
+    "nextEpisodeToAir"
   ]);
 
   const sanitizedMeta = {};
@@ -1255,11 +1261,46 @@ function _sanitizeLibraryMeta(meta) {
     if (allowedMetaKeys.has(key)) {
       sanitizedMeta[key] = key === "episodeSeenMap"
         ? _sanitizeEpisodeSeenMap(meta[key])
-        : meta[key];
+        : (
+            key === "lastEpisodeToAir" ||
+            key === "nextEpisodeToAir"
+          )
+          ? _sanitizeSeriesEpisodePointer(meta[key])
+          : meta[key];
     }
   }
 
   return sanitizedMeta;
+}
+
+function _sanitizeSeriesEpisodePointer(value) {
+  if (value == null) return null;
+
+  if (
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return null;
+  }
+
+  const season = Math.max(
+    0,
+    Number(value.season || 0) || 0
+  );
+  const episode = Math.max(
+    0,
+    Number(value.episode || 0) || 0
+  );
+
+  if (season <= 0 || episode <= 0) {
+    return null;
+  }
+
+  return {
+    season,
+    episode,
+    airDate: String(value.airDate || "").trim()
+  };
 }
 
 function _sanitizeEpisodeSeenMap(value) {
@@ -3702,6 +3743,38 @@ app.get("/api/explore/item/:source/:type/:externalId/season/:seasonNumber", _req
     );
     return res.status(err?.status || 500).json({
       error: err?.message || "explore_season_detail_failed"
+    });
+  }
+});
+
+app.get("/api/explore/item/:source/:type/:externalId/lifecycle", _requireAuth, async (req, res) => {
+  const source = String(req.params.source || "").trim().toLowerCase();
+  const type = String(req.params.type || "").trim().toLowerCase();
+  const externalId = String(req.params.externalId || "").trim();
+
+  try {
+    if (source === "tmdb" && type === "serie") {
+      const lifecycle = await getTmdbSeriesLifecycle({
+        externalId
+      });
+
+      return res.json(lifecycle);
+    }
+
+    return res.status(400).json({
+      error: "unsupported_lifecycle_source"
+    });
+  } catch (err) {
+    logProviderFailure(
+      source,
+      "series_lifecycle",
+      err
+    );
+
+    return res.status(err?.status || 500).json({
+      error:
+        err?.message ||
+        "explore_series_lifecycle_failed"
     });
   }
 });
@@ -9557,6 +9630,20 @@ app.patch("/api/library/:id", _requireAuth, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: "not_found" });
 
   const prev = bucket.library[idx];
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      rawPatch,
+      "expectedUpdatedAt"
+    ) &&
+    String(prev.updatedAt || "") !==
+      String(rawPatch.expectedUpdatedAt || "")
+  ) {
+    return res.status(409).json({
+      error: "stale_library_update"
+    });
+  }
+
   const nowIso = new Date().toISOString();
   const prevProgress = Math.max(0, Math.min(100, Number(prev.progress ?? 0)));
   const prevCompleted = prevProgress >= 100 || String(prev.status || "").trim().toLowerCase() === "completed";

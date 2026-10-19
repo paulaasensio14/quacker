@@ -1566,13 +1566,29 @@ const ExploreModule = (() => {
     const detailMeta = detail?.meta && typeof detail.meta === "object" ? detail.meta : {};
     const itemMeta = item?.meta && typeof item.meta === "object" ? item.meta : {};
 
+    const mergedMeta = type === "serie"
+      ? {
+          ...itemMeta,
+          ...detailMeta,
+          ...(Object.prototype.hasOwnProperty.call(itemMeta, "season")
+            ? { season: itemMeta.season }
+            : {}),
+          ...(Object.prototype.hasOwnProperty.call(itemMeta, "episode")
+            ? { episode: itemMeta.episode }
+            : {}),
+          ...(Object.prototype.hasOwnProperty.call(itemMeta, "episodeSeenMap")
+            ? { episodeSeenMap: itemMeta.episodeSeenMap }
+            : {})
+        }
+      : {
+          ...detailMeta,
+          ...itemMeta
+        };
+
     const mergedItem = {
       ...item,
       ...detail,
-      meta: {
-        ...detailMeta,
-        ...itemMeta
-      },
+      meta: mergedMeta,
       relatedItems: (Array.isArray(detail?.relatedItems) ? detail.relatedItems : [])
         .map((entry, index) => _normalizeDetailRelatedItem(entry, index))
         .filter((entry) => _normalizeId(entry?.eid) !== eid),

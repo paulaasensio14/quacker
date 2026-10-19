@@ -323,3 +323,126 @@ test(
     assert.equal(patch.status, "watching");
   }
 );
+
+function createCompletedSeriesWithFutureSeasonFixture(lastEpisodeToAir) {
+  return {
+    id: "series-dynamic-1",
+    type: "serie",
+    progress: 100,
+    status: "completed",
+    meta: {
+      season: 1,
+      episode: 8,
+      totalSeasons: 2,
+      totalEpisodes: 16,
+      seasonBreakdown: [
+        {
+          seasonNumber: 1,
+          episodeCount: 8
+        },
+        {
+          seasonNumber: 2,
+          episodeCount: 8
+        }
+      ],
+      lastEpisodeToAir
+    }
+  };
+}
+
+function createCompletedFirstSeasonHistoryFixture() {
+  return Array.from(
+    { length: 8 },
+    (_, index) => ({
+      id: `event-dynamic-${index + 1}`,
+      itemId: "series-dynamic-1",
+      contentType: "serie",
+      eventType: "episode_watched",
+      occurredAt: `2026-01-${String(index + 1).padStart(2, "0")}T20:00:00.000Z`,
+      meta: {
+        season: 1,
+        episode: index + 1
+      }
+    })
+  );
+}
+
+test(
+  "una temporada futura anunciada no reabre una serie al día",
+  () => {
+    const { buildSummary } = buildApiHelpers();
+
+    const summary = buildSummary(
+      createCompletedSeriesWithFutureSeasonFixture({
+        season: 1,
+        episode: 8,
+        airDate: "2026-01-08"
+      }),
+      createCompletedFirstSeasonHistoryFixture()
+    );
+
+    assert.equal(summary.watchedEpisodes, 8);
+    assert.equal(summary.totalEpisodes, 8);
+    assert.equal(summary.progress, 100);
+    assert.equal(summary.completed, true);
+    assert.equal(summary.nextEpisode, null);
+  }
+);
+
+test(
+  "el estreno de T2E1 reabre la serie y lo convierte en siguiente episodio",
+  () => {
+    const { buildSummary } = buildApiHelpers();
+
+    const summary = buildSummary(
+      createCompletedSeriesWithFutureSeasonFixture({
+        season: 2,
+        episode: 1,
+        airDate: "2026-11-05"
+      }),
+      createCompletedFirstSeasonHistoryFixture()
+    );
+
+    assert.equal(summary.watchedEpisodes, 8);
+    assert.equal(summary.totalEpisodes, 9);
+    assert.equal(summary.progress, 89);
+    assert.equal(summary.completed, false);
+
+    assert.deepEqual(
+      summary.nextEpisode,
+      {
+        season: 2,
+        episode: 1
+      }
+    );
+  }
+);
+
+test(
+  "un especial S0 como último emitido no hace contar una temporada futura si nextEpisodeToAir marca T2E1",
+  () => {
+    const { buildSummary } = buildApiHelpers();
+
+    const item =
+      createCompletedSeriesWithFutureSeasonFixture(
+        null
+      );
+
+    item.meta.nextEpisodeToAir = {
+      season: 2,
+      episode: 1,
+      airDate: "2026-11-05"
+    };
+
+    const summary = buildSummary(
+      item,
+      createCompletedFirstSeasonHistoryFixture()
+    );
+
+    assert.equal(summary.watchedEpisodes, 8);
+    assert.equal(summary.totalEpisodes, 8);
+    assert.equal(summary.progress, 100);
+    assert.equal(summary.completed, true);
+    assert.equal(summary.nextEpisode, null);
+  }
+);
