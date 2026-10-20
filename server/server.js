@@ -4495,6 +4495,19 @@ app.post(
       });
     }
 
+    const blockRateLimit =
+      socialRateLimits.consumeBlock({
+        userId: ownerUserId
+      });
+
+    if (!blockRateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "social_block_rate_limited",
+        blockRateLimit.retryAfterSeconds
+      );
+    }
+
     const targetBucket = _getUserBucket(db, targetUserId);
 
     // Remove follows in both directions.
@@ -4574,6 +4587,19 @@ app.delete(
       ).json({
         error: result.error
       });
+    }
+
+    const blockRateLimit =
+      socialRateLimits.consumeBlock({
+        userId: ownerUserId
+      });
+
+    if (!blockRateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "social_block_rate_limited",
+        blockRateLimit.retryAfterSeconds
+      );
     }
 
     ownerBucket.blockedUserIds = result.blockedUserIds;

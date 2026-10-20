@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  SOCIAL_BLOCK_USER_MAX_ATTEMPTS,
+  SOCIAL_BLOCK_WINDOW_MS,
   SOCIAL_FOLLOW_USER_MAX_ATTEMPTS,
   SOCIAL_FOLLOW_WINDOW_MS,
   SOCIAL_RECOMMENDATION_USER_MAX_ATTEMPTS,
@@ -211,7 +213,8 @@ test(
       limits.size(),
       {
         followUsers: 1,
-        recommendationUsers: 1
+        recommendationUsers: 1,
+        blockUsers: 0
       }
     );
 
@@ -221,13 +224,106 @@ test(
       limits.size(),
       {
         followUsers: 0,
-        recommendationUsers: 0
+        recommendationUsers: 0,
+        blockUsers: 0
       }
     );
 
     assert.equal(
       Object.isFrozen(limits),
       true
+    );
+  }
+);
+
+
+test(
+  "limita los bloqueos por usuario y ventana",
+  () => {
+    let currentTime = 1000;
+
+    const limits = createSocialRateLimiters({
+      now: () => currentTime
+    });
+
+    for (
+      let attempt = 0;
+      attempt < SOCIAL_BLOCK_USER_MAX_ATTEMPTS;
+      attempt += 1
+    ) {
+      assert.equal(
+        limits.consumeBlock({
+          userId: "user-a"
+        }).allowed,
+        true
+      );
+    }
+
+    assert.deepEqual(
+      limits.checkBlock({
+        userId: "user-a"
+      }),
+      {
+        allowed: false,
+        remaining: 0,
+        retryAfterMs: SOCIAL_BLOCK_WINDOW_MS,
+        retryAfterSeconds:
+          SOCIAL_BLOCK_WINDOW_MS / 1000
+      }
+    );
+
+    assert.equal(
+      limits.consumeBlock({
+        userId: "user-a"
+      }).allowed,
+      false
+    );
+
+    assert.equal(
+      limits.checkBlock({
+        userId: "user-b"
+      }).allowed,
+      true
+    );
+
+    assert.equal(
+      limits.checkFollow({
+        userId: "user-a"
+      }).allowed,
+      true
+    );
+
+    assert.deepEqual(
+      limits.size(),
+      {
+        followUsers: 0,
+        recommendationUsers: 0,
+        blockUsers: 1
+      }
+    );
+
+    currentTime += SOCIAL_BLOCK_WINDOW_MS;
+
+    assert.equal(
+      limits.checkBlock({
+        userId: "user-a"
+      }).allowed,
+      true
+    );
+
+    limits.consumeBlock({
+      userId: "user-b"
+    });
+
+    limits.clear();
+
+    assert.deepEqual(
+      limits.size(),
+      {
+        followUsers: 0,
+        recommendationUsers: 0,
+        blockUsers: 0
+      }
     );
   }
 );

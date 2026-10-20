@@ -685,3 +685,173 @@ test(
     }
   }
 );
+
+
+test(
+  "limita por HTTP bloquear y desbloquear sin alterar datos",
+  { timeout: 20000 },
+  async () => {
+    const directory = createTemporaryDirectory();
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath = path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    let child = null;
+
+    async function register(handle) {
+      const response = await requestJson(
+        `${baseUrl}/api/auth/register`,
+        {
+          method: "POST",
+          body: {
+            email: `${handle}@example.test`,
+            password: "runtime-pass-123",
+            name: handle,
+            language: "es"
+          }
+        }
+      );
+
+      assert.equal(response.statusCode, 200);
+
+      const cookie = sessionCookie(response);
+
+      const update = await requestJson(
+        `${baseUrl}/api/user`,
+        {
+          method: "PATCH",
+          cookie,
+          body: { handle: `@${handle}` }
+        }
+      );
+
+      assert.equal(update.statusCode, 200);
+      return { cookie, handle };
+    }
+
+    try {
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port
+      });
+
+      const alice = await register("limit_alice");
+      const bob = await register("limit_bob");
+      const charlie = await register("limit_charlie");
+      const dave = await register("limit_dave");
+
+      const blockUrl =
+        `${baseUrl}/api/user/blocks/${bob.handle}`;
+
+      // Las primeras 18 operaciones son válidas.
+      for (let attempt = 0; attempt < 18; attempt += 1) {
+        const blocking = attempt % 2 === 0;
+
+        const response = await requestJson(
+          blockUrl,
+          {
+            method: blocking ? "POST" : "DELETE",
+            cookie: alice.cookie
+          }
+        );
+
+        assert.equal(
+          response.statusCode,
+          blocking ? 201 : 200,
+          `operación ${attempt + 1}`
+        );
+      }
+
+      // Operaciones 19 y 20: ambas permitidas.
+      for (const target of [bob, charlie]) {
+        const response = await requestJson(
+          `${baseUrl}/api/user/blocks/${target.handle}`,
+          {
+            method: "POST",
+            cookie: alice.cookie
+          }
+        );
+
+        assert.equal(response.statusCode, 201);
+      }
+
+      const previousDb = fs.readFileSync(
+        dbPath,
+        "utf8"
+      );
+
+      // Operación 21: DELETE debe rechazarse.
+      const rejectedDelete = await requestJson(
+        blockUrl,
+        {
+          method: "DELETE",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(rejectedDelete.statusCode, 429);
+      assert.equal(
+        rejectedDelete.json?.error,
+        "social_block_rate_limited"
+      );
+      assert.ok(
+        Number(rejectedDelete.headers["retry-after"]) > 0
+      );
+
+      assert.equal(
+        fs.readFileSync(dbPath, "utf8"),
+        previousDb,
+        "DELETE rechazado no debe modificar la base de datos"
+      );
+
+      // POST comparte el mismo contador.
+      const rejectedPost = await requestJson(
+        `${baseUrl}/api/user/blocks/${dave.handle}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(rejectedPost.statusCode, 429);
+      assert.equal(
+        rejectedPost.json?.error,
+        "social_block_rate_limited"
+      );
+      assert.ok(
+        Number(rejectedPost.headers["retry-after"]) > 0
+      );
+
+      assert.equal(
+        fs.readFileSync(dbPath, "utf8"),
+        previousDb,
+        "POST rechazado no debe modificar la base de datos"
+      );
+
+      // El límite es independiente para cada usuario.
+      const otherUser = await requestJson(
+        `${baseUrl}/api/user/blocks/${dave.handle}`,
+        {
+          method: "POST",
+          cookie: bob.cookie
+        }
+      );
+
+      assert.equal(otherUser.statusCode, 201);
+    } finally {
+      await stopTestServer(child);
+      fs.rmSync(directory, {
+        recursive: true,
+        force: true
+      });
+    }
+  }
+);
