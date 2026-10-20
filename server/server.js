@@ -2494,6 +2494,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     opinions: [],
     favorites: normalizeFavorites(),
     following: normalizeFollowing(),
+    blockedUserIds: normalizeBlockedUserIds(),
     followRequests: normalizeFollowRequests(),
     recommendations: normalizeRecommendations(),
     notifications: [],
