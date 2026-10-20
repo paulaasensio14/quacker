@@ -1541,6 +1541,92 @@ test(
 );
 
 test(
+  "los grafos sociales excluyen identidades bloqueadas para el visitante",
+  () => {
+    const users = {
+      u_target: {
+        profile: {
+          name: "Target",
+          handle: "@target_social"
+        },
+        privacy: {
+          profileVisibility: "public"
+        },
+        following: ["u_alice", "u_bob"]
+      },
+      u_alice: {
+        profile: {
+          name: "Alice",
+          handle: "@alice_social"
+        },
+        privacy: {
+          profileVisibility: "public"
+        },
+        following: ["u_target"],
+        blockedUserIds: ["u_bob"]
+      },
+      u_bob: {
+        profile: {
+          name: "Bob",
+          handle: "@bob_social"
+        },
+        privacy: {
+          profileVisibility: "public"
+        },
+        following: ["u_target"],
+        blockedUserIds: []
+      },
+      u_other: {
+        profile: {
+          name: "Other",
+          handle: "@other_social"
+        },
+        privacy: {
+          profileVisibility: "public"
+        },
+        following: [],
+        blockedUserIds: []
+      }
+    };
+
+    for (const [viewerUserId, excludedUsername] of [
+      ["u_alice", "bob_social"],
+      ["u_bob", "alice_social"]
+    ]) {
+      const result = getPublicProfileByUsername(
+        users,
+        "target_social",
+        { viewerUserId }
+      );
+
+      const visible = JSON.stringify(result);
+
+      assert.equal(
+        visible.includes(excludedUsername),
+        false,
+        "el perfil no debe exponer identidades bloqueadas"
+      );
+
+      assert.deepEqual(result.social, {
+        followersCount: 1,
+        followingCount: 1
+      });
+    }
+
+    const other = getPublicProfileByUsername(
+      users,
+      "target_social",
+      { viewerUserId: "u_other" }
+    );
+
+    assert.deepEqual(other.social, {
+      followersCount: 2,
+      followingCount: 2
+    });
+  }
+);
+
+test(
   "el perfil público informa cuando el objetivo ya sigue al visitante",
   () => {
     const users = {

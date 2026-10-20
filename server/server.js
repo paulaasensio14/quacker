@@ -4295,6 +4295,19 @@ app.post(
         target.userId
       );
 
+    if (
+      areUsersBlocked(
+        ownerUserId,
+        ownerBucket.blockedUserIds,
+        target.userId,
+        targetBucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
     const areFriends =
       ownerBucket.following.includes(
         target.userId
@@ -4402,6 +4415,179 @@ app.post(
   }
 );
 
+app.get(
+  "/api/user/blocks",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+    const ownerBucket = _getUserBucket(db, ownerUserId);
+
+    const blocks = ownerBucket.blockedUserIds
+      .map((blockedUserId) => {
+        const targetBucket = db.users[blockedUserId];
+        if (!targetBucket) return null;
+
+        const username = normalizePublicUsername(
+          targetBucket.profile?.handle
+        );
+
+        return username ? { username } : null;
+      })
+      .filter(Boolean);
+
+    return res.json({ blocks });
+  }
+);
+
+app.post(
+  "/api/user/blocks/:username",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+    const ownerBucket = _getUserBucket(db, ownerUserId);
+
+    const requestedUsername = normalizePublicUsername(
+      req.params.username
+    );
+
+    if (!requestedUsername) {
+      return res.status(400).json({
+        error: "invalid_block_target"
+      });
+    }
+
+    const targetEntry = Object.entries(db.users).find(
+      ([, candidateBucket]) =>
+        normalizePublicUsername(
+          candidateBucket?.profile?.handle
+        ) === requestedUsername
+    );
+
+    if (!targetEntry) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const [targetUserId] = targetEntry;
+
+    if (targetUserId === ownerUserId) {
+      return res.status(400).json({
+        error: "cannot_block_self"
+      });
+    }
+
+    const result = addUserBlock(
+      ownerBucket.blockedUserIds,
+      targetUserId,
+      { ownerUserId }
+    );
+
+    if (!result.ok) {
+      return res.status(
+        result.error === "already_blocked" ? 409 : 400
+      ).json({
+        error: result.error
+      });
+    }
+
+    const targetBucket = _getUserBucket(db, targetUserId);
+
+    // Remove follows in both directions.
+    ownerBucket.following = ownerBucket.following.filter(
+      (userId) => userId !== targetUserId
+    );
+
+    targetBucket.following = targetBucket.following.filter(
+      (userId) => userId !== ownerUserId
+    );
+
+    // Remove pending follow requests in both directions.
+    ownerBucket.followRequests =
+      ownerBucket.followRequests.filter(
+        (userId) => userId !== targetUserId
+      );
+
+    targetBucket.followRequests =
+      targetBucket.followRequests.filter(
+        (userId) => userId !== ownerUserId
+      );
+
+    ownerBucket.blockedUserIds = result.blockedUserIds;
+
+    _writeDb(db);
+
+    return res.status(201).json({
+      blocked: true,
+      username: requestedUsername
+    });
+  }
+);
+
+app.delete(
+  "/api/user/blocks/:username",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+    const ownerBucket = _getUserBucket(db, ownerUserId);
+
+    const requestedUsername = normalizePublicUsername(
+      req.params.username
+    );
+
+    if (!requestedUsername) {
+      return res.status(400).json({
+        error: "invalid_block_target"
+      });
+    }
+
+    const targetEntry = Object.entries(db.users).find(
+      ([, candidateBucket]) =>
+        normalizePublicUsername(
+          candidateBucket?.profile?.handle
+        ) === requestedUsername
+    );
+
+    if (!targetEntry) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const [targetUserId] = targetEntry;
+
+    const result = removeUserBlock(
+      ownerBucket.blockedUserIds,
+      targetUserId,
+      { ownerUserId }
+    );
+
+    if (!result.ok) {
+      return res.status(
+        result.error === "not_blocked" ? 404 : 400
+      ).json({
+        error: result.error
+      });
+    }
+
+    ownerBucket.blockedUserIds = result.blockedUserIds;
+
+    // Unblocking does not restore previous follows.
+    _writeDb(db);
+
+    return res.json({
+      blocked: false,
+      username: requestedUsername
+    });
+  }
+);
+
 app.post(
   "/api/user/following/:username",
   _requireAuth,
@@ -4443,6 +4629,19 @@ app.post(
       );
 
     if (!target) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    if (
+      areUsersBlocked(
+        ownerUserId,
+        ownerBucket.blockedUserIds,
+        target.userId,
+        target.bucket.blockedUserIds
+      )
+    ) {
       return res.status(404).json({
         error: "not_found"
       });
@@ -4800,6 +4999,19 @@ app.post(
         db,
         requesterUserId
       );
+
+    if (
+      areUsersBlocked(
+        targetUserId,
+        targetBucket.blockedUserIds,
+        requesterUserId,
+        requesterBucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
 
     const followResult =
       addFollowing(
@@ -5472,6 +5684,17 @@ function _getVisibleListsForUser(
         ownerUserId
       );
 
+    if (
+      areUsersBlocked(
+        safeUserId,
+        bucket.blockedUserIds,
+        ownerUserId,
+        ownerBucket.blockedUserIds
+      )
+    ) {
+      continue;
+    }
+
     for (const list of ownerBucket.lists) {
       if (
         list.visibility !== "collab" ||
@@ -5625,6 +5848,17 @@ function _resolveCollaborativeListForUser(
         db,
         ownerUserId
       );
+
+    if (
+      areUsersBlocked(
+        safeUserId,
+        ownBucket.blockedUserIds,
+        ownerUserId,
+        ownerBucket.blockedUserIds
+      )
+    ) {
+      continue;
+    }
 
     const listIndex =
       ownerBucket.lists.findIndex(
@@ -6019,6 +6253,19 @@ app.post(
       });
     }
 
+    if (
+      areUsersBlocked(
+        ownerUserId,
+        ownerBucket.blockedUserIds,
+        target.userId,
+        target.bucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
     const inviteResult =
       addCollaborativeListInvite(
         list,
@@ -6176,6 +6423,29 @@ app.post(
       });
     }
 
+    const invitedBucket =
+      _getUserBucket(db, targetUserId);
+
+    const listOwnerUserId =
+      String(list.ownerUserId || "").trim();
+
+    const listOwnerBucket =
+      db.users?.[listOwnerUserId];
+
+    if (
+      !listOwnerBucket ||
+      areUsersBlocked(
+        listOwnerUserId,
+        listOwnerBucket.blockedUserIds,
+        targetUserId,
+        invitedBucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "invite_not_found"
+      });
+    }
+
     const result =
       addCollaborativeListCollaborator(
         list,
@@ -6290,6 +6560,33 @@ app.post(
     ) {
       return res.status(400).json({
         error: "list_not_collaborative"
+      });
+    }
+
+    const invitedBucket =
+      _getUserBucket(db, targetUserId);
+
+    const listOwnerUserId =
+      String(
+        matchedOwnerBucket
+          .lists[matchedListIndex]
+          .ownerUserId || ""
+      ).trim();
+
+    const listOwnerBucket =
+      db.users?.[listOwnerUserId];
+
+    if (
+      !listOwnerBucket ||
+      areUsersBlocked(
+        listOwnerUserId,
+        listOwnerBucket.blockedUserIds,
+        targetUserId,
+        invitedBucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "invite_not_found"
       });
     }
 
@@ -6658,10 +6955,26 @@ app.get(
 
     const invites = [];
 
+    const targetBucket =
+      _getUserBucket(
+        db,
+        targetUserId
+      );
+
     for (
       const [ownerUserId, ownerBucket]
       of Object.entries(db.users || {})
     ) {
+      if (
+        areUsersBlocked(
+          ownerUserId,
+          ownerBucket?.blockedUserIds,
+          targetUserId,
+          targetBucket.blockedUserIds
+        )
+      ) {
+        continue;
+      }
       const lists =
         normalizeCollaborativeLists(
           ownerBucket?.lists,
@@ -7869,7 +8182,13 @@ app.post("/api/lists/:id/items", _requireAuth, (req, res) => {
         getCollaborativeListRole(
           candidate,
           userId
-        ) !== "collaborator"
+        ) !== "collaborator" ||
+        areUsersBlocked(
+          userId,
+          bucket.blockedUserIds,
+          ownerUserId,
+          ownerBucket.blockedUserIds
+        )
       ) {
         continue;
       }
@@ -8071,7 +8390,13 @@ app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
         getCollaborativeListRole(
           candidate,
           userId
-        ) !== "collaborator"
+        ) !== "collaborator" ||
+        areUsersBlocked(
+          userId,
+          bucket.blockedUserIds,
+          ownerUserId,
+          ownerBucket.blockedUserIds
+        )
       ) {
         continue;
       }

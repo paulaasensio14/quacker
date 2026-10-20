@@ -9,6 +9,10 @@ import {
 import {
   normalizeProfilePrivacy
 } from "./profile-privacy.js";
+import {
+  areUsersBlocked
+} from "./user-blocks.js";
+
 
 export function normalizePublicUsername(value) {
   if (typeof value !== "string") return "";
@@ -598,6 +602,19 @@ export function getPublicProfileByUsername(
       ? users[normalizedViewerUserId]
       : null;
 
+  if (
+    normalizedViewerUserId &&
+    normalizedViewerUserId !== targetUserId &&
+    areUsersBlocked(
+      normalizedViewerUserId,
+      viewerBucket?.blockedUserIds,
+      targetUserId,
+      userBucket?.blockedUserIds
+    )
+  ) {
+    return null;
+  }
+
   const viewerFollowing =
     Array.isArray(viewerBucket?.following)
       ? viewerBucket.following
@@ -802,6 +819,19 @@ export function getPublicSocialGraphByUsername(
       ? users[normalizedViewerUserId]
       : null;
 
+  if (
+    normalizedViewerUserId &&
+    normalizedViewerUserId !== targetUserId &&
+    areUsersBlocked(
+      normalizedViewerUserId,
+      viewerBucket?.blockedUserIds,
+      targetUserId,
+      targetBucket?.blockedUserIds
+    )
+  ) {
+    return null;
+  }
+
   const viewerFollowing =
     Array.isArray(viewerBucket?.following)
       ? viewerBucket.following
@@ -854,9 +884,23 @@ export function getPublicSocialGraphByUsername(
   }
 
   const toVisibleIdentity = (
-    userBucket
+    userBucket,
+    relatedUserId
   ) => {
     if (!userBucket) return null;
+
+    if (
+      normalizedViewerUserId &&
+      normalizedViewerUserId !== relatedUserId &&
+      areUsersBlocked(
+        normalizedViewerUserId,
+        viewerBucket?.blockedUserIds,
+        relatedUserId,
+        userBucket.blockedUserIds
+      )
+    ) {
+      return null;
+    }
 
     const privacy =
       normalizeProfilePrivacy(
@@ -894,8 +938,8 @@ export function getPublicSocialGraphByUsername(
             targetUserId
           )
       )
-      .map(([, userBucket]) =>
-        toVisibleIdentity(userBucket)
+      .map(([userId, userBucket]) =>
+        toVisibleIdentity(userBucket, userId)
       )
       .filter(Boolean);
 
@@ -903,7 +947,8 @@ export function getPublicSocialGraphByUsername(
     targetFollowing
       .map((followedUserId) =>
         toVisibleIdentity(
-          users[followedUserId]
+          users[followedUserId],
+          followedUserId
         )
       )
       .filter(Boolean);
