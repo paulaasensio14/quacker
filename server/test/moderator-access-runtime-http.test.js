@@ -344,6 +344,7 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     const adminUrl = `${baseUrl}/api/moderation/reports`;
+    const accessUrl = `${baseUrl}/api/moderation/access`;
 
     let child = null;
 
@@ -451,6 +452,11 @@ test(
       const anonymous = await readReports();
 
       assert.equal(anonymous.statusCode, 401);
+
+      const anonymousAccess =
+        await requestJson(accessUrl);
+
+      assert.equal(anonymousAccess.statusCode, 401);
       assert.equal(
         anonymous.text.includes("EVIDENCIA_PRIVADA"),
         false
@@ -462,6 +468,21 @@ test(
       assert.equal(
         noModeratorConfigured.statusCode,
         403
+      );
+
+      const unconfiguredAccess = await requestJson(
+        accessUrl,
+        { cookie: moderator.cookie }
+      );
+
+      assert.equal(unconfiguredAccess.statusCode, 200);
+      assert.deepEqual(unconfiguredAccess.json, {
+        isModerator: false
+      });
+
+      assert.equal(
+        unconfiguredAccess.headers["cache-control"],
+        "no-store"
       );
 
       const forgedProfile = await requestJson(
@@ -485,6 +506,16 @@ test(
 
       assert.equal(forgedAccess.statusCode, 403);
 
+      const forgedCapability = await requestJson(
+        accessUrl,
+        { cookie: ordinary.cookie }
+      );
+
+      assert.equal(forgedCapability.statusCode, 200);
+      assert.deepEqual(forgedCapability.json, {
+        isModerator: false
+      });
+
       // Reiniciamos SOLO el servidor de prueba.
       // La base y las sesiones temporales se conservan.
       await stopTestServer(child);
@@ -502,6 +533,26 @@ test(
       );
 
       assert.equal(permitted.statusCode, 200);
+
+      const authorizedCapability = await requestJson(
+        accessUrl,
+        { cookie: moderator.cookie }
+      );
+
+      assert.equal(authorizedCapability.statusCode, 200);
+      assert.deepEqual(authorizedCapability.json, {
+        isModerator: true
+      });
+
+      const ordinaryCapability = await requestJson(
+        accessUrl,
+        { cookie: ordinary.cookie }
+      );
+
+      assert.equal(ordinaryCapability.statusCode, 200);
+      assert.deepEqual(ordinaryCapability.json, {
+        isModerator: false
+      });
       assert.equal(
         permitted.headers["cache-control"],
         "no-store"

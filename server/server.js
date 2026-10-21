@@ -4644,6 +4644,21 @@ app.post(
   }
 );
 
+app.get(
+  "/api/moderation/access",
+  _requireAuth,
+  (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    return res.json({
+      isModerator: isModeratorUserId(
+        req.session.userId,
+        ENV.MODERATOR_USER_IDS
+      )
+    });
+  }
+);
+
 app.post(
   "/api/moderation/reports/:reportId/decision",
   _requireAuth,

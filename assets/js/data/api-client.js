@@ -2869,6 +2869,108 @@ if (externalSignal?.aborted) {
   }
 
 
+  async function getModeratorAccess() {
+    if (!_isHttp()) {
+      return { isModerator: false };
+    }
+
+    const response = await _httpJson(
+      "GET",
+      "/moderation/access"
+    );
+
+    return {
+      isModerator: response?.isModerator === true
+    };
+  }
+
+  async function getModerationReports() {
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const response = await _httpJson(
+      "GET",
+      "/moderation/reports"
+    );
+
+    return {
+      totalPending:
+        Number.isInteger(response?.totalPending) &&
+        response.totalPending >= 0
+          ? response.totalPending
+          : 0,
+      reports: Array.isArray(response?.reports)
+        ? response.reports
+        : []
+    };
+  }
+
+  async function decideModerationReport(
+    reportId,
+    action,
+    notes = ""
+  ) {
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const normalizedId =
+      typeof reportId === "string"
+        ? reportId.trim()
+        : "";
+
+    const normalizedAction =
+      typeof action === "string"
+        ? action.trim().toLowerCase()
+        : "";
+
+    if (
+      !/^[a-zA-Z0-9_-]{1,128}$/.test(normalizedId)
+    ) {
+      throw _makeApiError(
+        "invalid_report_id",
+        400
+      );
+    }
+
+    if (
+      !["resolve", "dismiss"].includes(
+        normalizedAction
+      )
+    ) {
+      throw _makeApiError(
+        "invalid_moderation_action",
+        400
+      );
+    }
+
+    if (
+      typeof notes !== "string" ||
+      notes.trim().length > 500
+    ) {
+      throw _makeApiError(
+        "invalid_moderation_notes",
+        400
+      );
+    }
+
+    return _httpJson(
+      "POST",
+      `/moderation/reports/${encodeURIComponent(normalizedId)}/decision`,
+      {
+        action: normalizedAction,
+        notes: notes.trim()
+      }
+    );
+  }
+
   async function getBlockedUsers() {
     if (!_isHttp()) return [];
 
@@ -8066,6 +8168,9 @@ if (externalSignal?.aborted) {
     updateUser,
     getUserPrivacy,
     updateUserPrivacy,
+    getModeratorAccess,
+    getModerationReports,
+    decideModerationReport,
     getBlockedUsers,
     unblockUser,
     getFollowRequests,

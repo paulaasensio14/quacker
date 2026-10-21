@@ -31,6 +31,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 1) Restaurar primero la vista correcta
   Router.init();
 
+  // La vista administrativa solo se registra si el servidor autoriza.
+  try {
+    window.ModerationModule?.init?.().catch?.(console.error);
+  } catch (e) {
+    console.error("ModerationModule.init error", e);
+  }
+
   // 2) Iniciar módulos después
   try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }
   try { window.ListsModule?.init?.(); } catch (e) { console.error("ListsModule.init error", e); }

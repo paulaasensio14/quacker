@@ -105,6 +105,18 @@
             <span class="nav-label" data-i18n="nav_profile">Mi perfil</span>
           </button>
         </li>
+        <li id="moderationNavItem" hidden>
+          <button class="nav-item-btn" data-view="moderation" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor"
+              stroke-width="2.4" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+            <span class="nav-label" data-i18n="nav_moderation">Moderación</span>
+          </button>
+        </li>
       </ul>
     </nav>
 
@@ -1781,6 +1793,32 @@
           </div>
         </div>
       </section>
+
+      <!-- Vista administrativa: activación exclusiva tras permiso HTTP -->
+      <section class="view" id="view-moderation" hidden>
+        <div class="profile-layout">
+          <div class="profile-card">
+            <h2 class="profile-title" data-i18n="moderation_title">
+              Moderación
+            </h2>
+            <p class="profile-meta" data-i18n="moderation_description">
+              Gestiona las denuncias pendientes de revisión.
+            </p>
+            <button
+              type="button"
+              class="btn-secondary moderation-refresh"
+              id="moderationReportsRefresh"
+              data-i18n="moderation_refresh"
+            >Actualizar denuncias</button>
+            <div id="moderationReportsStatus" role="status" aria-live="polite">
+              <span data-i18n="moderation_initial_state">
+                Preparando la bandeja de denuncias.
+              </span>
+            </div>
+            <div id="moderationReportsList"></div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 </div>
@@ -2360,6 +2398,7 @@
   <script src="assets/js/app/router.js"></script>
   <script src="assets/js/app/i18n.js"></script>
   <script src="assets/js/app/whats-new.js"></script>
+  <script src="assets/js/app/moderation.js"></script>
   <script src="assets/js/app/app-core.js"></script>
 
   <script src="assets/js/app/library.js"></script>

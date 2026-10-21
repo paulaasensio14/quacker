@@ -12056,3 +12056,109 @@ body.dark-theme .profile-privacy-row input[type="checkbox"]:checked {
   font-size: 1.15rem;
   line-height: 1;
 }
+
+
+/* Semana 17: ocultación inicial de la navegación administrativa */
+#moderationNavItem[hidden],
+#view-moderation[hidden] {
+  display: none !important;
+}
+
+
+/* Semana 17: bandeja de moderación */
+.moderation-refresh {
+  margin: 12px 0;
+}
+
+#moderationReportsStatus {
+  color: var(--text-muted);
+  margin: 10px 0 16px;
+}
+
+#moderationReportsList {
+  display: grid;
+  gap: 18px;
+}
+
+.moderation-report-card {
+  background: var(--bg-body);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  padding: 18px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.moderation-report-title {
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.moderation-report-meta {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.moderation-report-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.moderation-evidence-text {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-card);
+}
+
+.moderation-report-warning {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+
+/* Semana 17: decisiones administrativas */
+.moderation-report-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.moderation-note-label {
+  display: grid;
+  gap: 7px;
+  font-weight: 500;
+}
+
+.moderation-note-input {
+  display: block;
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  font: inherit;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  resize: vertical;
+}
+
+.moderation-decision-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.moderation-decision-buttons button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.moderation-decision-feedback {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
