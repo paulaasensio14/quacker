@@ -2868,6 +2868,66 @@ if (externalSignal?.aborted) {
     };
   }
 
+
+  async function getBlockedUsers() {
+    if (!_isHttp()) return [];
+
+    const response =
+      await _httpJson("GET", "/user/blocks");
+
+    const blocks =
+      Array.isArray(response?.blocks)
+        ? response.blocks
+        : [];
+
+    return blocks
+      .map((entry) => ({
+        username: String(
+          entry?.username || ""
+        )
+          .trim()
+          .replace(/^@/, "")
+          .toLowerCase()
+      }))
+      .filter((entry) => entry.username);
+  }
+
+  async function unblockUser(username) {
+    const normalizedUsername =
+      String(username || "")
+        .trim()
+        .replace(/^@/, "")
+        .toLowerCase();
+
+    if (!normalizedUsername) {
+      throw _makeApiError(
+        "invalid_block_target",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const response =
+      await _httpJson(
+        "DELETE",
+        `/user/blocks/${encodeURIComponent(normalizedUsername)}`
+      );
+
+    _emitDataChanged({
+      kind: "user_blocks",
+      action: "unblock",
+      username: normalizedUsername
+    });
+
+    return response;
+  }
+
   async function getFollowRequests() {
     if (!_isHttp()) return [];
 
@@ -8006,6 +8066,8 @@ if (externalSignal?.aborted) {
     updateUser,
     getUserPrivacy,
     updateUserPrivacy,
+    getBlockedUsers,
+    unblockUser,
     getFollowRequests,
     getListInvites,
     acceptListInvite,

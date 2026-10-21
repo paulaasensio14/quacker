@@ -95,6 +95,37 @@
         </a>
       </section>
 
+      <section
+        id="publicProfileBlocked"
+        class="public-profile-state"
+        role="status"
+        aria-live="polite"
+        hidden
+      >
+        <h1
+          id="publicProfileBlockedTitle"
+          tabindex="-1"
+          data-i18n="public_block_done_title"
+        >
+          Usuario bloqueado
+        </h1>
+        <p data-i18n="public_block_done_description">
+          Has bloqueado a este usuario.
+          Ya no podréis interactuar mediante las
+          funciones sociales protegidas de Quacker.
+        </p>
+        <p data-i18n="public_block_done_manage">
+          Puedes gestionar los bloqueos
+          desde tu perfil.
+        </p>
+        <a
+          href="/dashboard.html"
+          data-i18n="public_block_done_return"
+        >
+          Volver a Quacker
+        </a>
+      </section>
+
       <div
         id="publicProfileContent"
         hidden
@@ -174,6 +205,16 @@
                 class="public-profile-social-action"
                 type="button"
               ></button>
+
+              <button
+                id="publicProfileBlockAction"
+                class="public-profile-social-action public-profile-block-action"
+                data-i18n="public_block_button"
+                type="button"
+                hidden
+              >
+                Bloquear usuario
+              </button>
 
               <p
                 id="publicProfileAccessNote"
@@ -458,6 +499,11 @@
       ></div>
     </div>
   </div>
+
+  <script
+    src="/assets/js/app/i18n.js"
+    defer
+  ></script>
 
   <script
     src="/assets/js/app/ui-modal.js"

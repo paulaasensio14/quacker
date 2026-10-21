@@ -11182,6 +11182,92 @@ body.dark-theme .profile-opinions-list-empty {
   }
 }
 
+/* ===== Perfil · Usuarios bloqueados ===== */
+
+.profile-blocked-users-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-blocked-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-blocked-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 2px solid var(--border-soft);
+  border-radius: 16px;
+  background: #f9fafb;
+}
+
+.profile-blocked-user-handle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.profile-blocked-user-action {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: 2px 2px 0 var(--border-strong);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-blocked-user-action:hover:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
+.profile-blocked-user-action:focus-visible {
+  outline: 3px solid var(--bg-yellow);
+  outline-offset: 3px;
+}
+
+.profile-blocked-user-action:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+body.dark-theme .profile-blocked-user-row {
+  background: #102235;
+  border-color: #24384c;
+}
+
+body.dark-theme .profile-blocked-user-action {
+  background: #0b1724;
+  color: var(--text-main);
+  border-color: #010b16;
+  box-shadow: 2px 2px 0 #010b16;
+}
+
+@media (max-width: 640px) {
+  .profile-blocked-user-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .profile-blocked-user-action {
+    align-self: flex-start;
+  }
+}
+
 /* ===== Perfil · Solicitudes de seguimiento ===== */
 
 .profile-follow-requests-card {

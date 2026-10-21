@@ -2,7 +2,7 @@
 
 const ProfileModule = (() => {
   const $ = (sel) => document.querySelector(sel);
-  const t = (key) => window.I18n?.t?.(key) ?? key;
+  const t = (key, params) => window.I18n?.t?.(key, params) ?? key;
   const PRESET_AVATARS = Object.freeze([
     { id: "av1", name: "Avatar 1", src: "assets/img/avatars/avatar-1.png" },
     { id: "av2", name: "Avatar 2", src: "assets/img/avatars/avatar-2.png" },
@@ -1406,6 +1406,212 @@ const ProfileModule = (() => {
   }
 
 
+
+  let blockedUsersLoadVersion = 0;
+
+  function renderBlockedUsers(blocks = []) {
+    const list = $("#profileBlockedUsersList");
+    const status = $("#profileBlockedUsersStatus");
+
+    if (!list) return;
+
+    list.replaceChildren();
+
+    const users = (
+      Array.isArray(blocks) ? blocks : []
+    ).filter((entry) =>
+      String(entry?.username || "").trim()
+    );
+
+    if (!users.length) {
+      if (status) {
+        status.textContent =
+          t("profile_blocks_empty");
+      }
+      return;
+    }
+
+    if (status) {
+      status.textContent = "";
+    }
+
+    for (const entry of users) {
+      const username =
+        String(entry.username || "")
+          .trim()
+          .replace(/^@/, "")
+          .toLowerCase();
+
+      if (!username) continue;
+
+      const row = document.createElement("article");
+      row.className = "profile-blocked-user-row";
+
+      const handle = document.createElement("span");
+      handle.className = "profile-blocked-user-handle";
+      handle.textContent = `@${username}`;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "profile-blocked-user-action";
+      button.dataset.blockedUserAction = "unblock";
+      button.dataset.username = username;
+      button.textContent = t("profile_blocks_unblock");
+      button.setAttribute(
+        "aria-label",
+        t("profile_blocks_unblock_aria", { username })
+      );
+
+      row.append(handle, button);
+      list.append(row);
+    }
+  }
+
+  async function loadBlockedUsers() {
+    const requestId = ++blockedUsersLoadVersion;
+    const status = $("#profileBlockedUsersStatus");
+    const list = $("#profileBlockedUsersList");
+
+    // No mostrar datos antiguos mientras se consulta.
+    if (list) list.replaceChildren();
+
+    if (status) {
+      status.textContent =
+        t("profile_blocks_loading");
+    }
+
+    try {
+      const blocks =
+        await ApiClient.getBlockedUsers();
+
+      // Ignorar respuestas de consultas anteriores.
+      if (requestId !== blockedUsersLoadVersion) {
+        return null;
+      }
+
+      renderBlockedUsers(blocks);
+      return true;
+    } catch (err) {
+      // Un error antiguo no debe alterar el estado actual.
+      if (requestId !== blockedUsersLoadVersion) {
+        return null;
+      }
+
+      console.error(
+        "ProfileModule: failed to load blocked users",
+        err
+      );
+
+      if (status) {
+        status.textContent =
+          t("profile_blocks_load_error");
+      }
+
+      return false;
+    }
+  }
+
+  function bindBlockedUsers() {
+    const list = $("#profileBlockedUsersList");
+
+    if (!list) return;
+
+    list.addEventListener(
+      "click",
+      async (event) => {
+        const button = event.target.closest(
+          '[data-blocked-user-action="unblock"]'
+        );
+
+        if (
+          !button ||
+          !list.contains(button) ||
+          button.disabled
+        ) {
+          return;
+        }
+
+        const username =
+          String(button.dataset.username || "")
+            .trim();
+
+        if (!username) return;
+
+        const confirmed = window.confirm(
+          t("profile_blocks_confirm", { username })
+        );
+
+        if (!confirmed) return;
+
+        const status =
+          $("#profileBlockedUsersStatus");
+
+        button.disabled = true;
+
+        if (status) {
+          status.textContent = "";
+        }
+
+        try {
+          await ApiClient.unblockUser(username);
+
+          const refreshed =
+            await loadBlockedUsers();
+
+          if (refreshed === false) {
+            button
+              .closest(".profile-blocked-user-row")
+              ?.remove();
+
+            if (status) {
+              status.textContent =
+                t("profile_blocks_refresh_error");
+            }
+          }
+
+          window.toast?.({
+            title: t("profile_blocks_success", { username }),
+            type: "success",
+            duration: 2500
+          });
+        } catch (err) {
+          console.error(
+            "ProfileModule: failed to unblock user",
+            err
+          );
+
+          let message =
+            t("profile_blocks_unblock_error");
+
+          if (err?.status === 429) {
+            const seconds = Number(
+              err?.body?.retryAfterSeconds
+            );
+
+            message =
+              Number.isFinite(seconds) && seconds > 0
+                ? t("profile_blocks_rate_wait", {
+                    seconds: Math.ceil(seconds)
+                  })
+                : t("profile_blocks_rate_later");
+          } else if (err?.status === 401) {
+            message =
+              t("profile_blocks_session_error");
+          } else if (err?.status === 404) {
+            message =
+              t("profile_blocks_not_found");
+          }
+
+          if (status) {
+            status.textContent = message;
+          }
+
+          button.disabled = false;
+        }
+      }
+    );
+  }
+
   function resolveFollowRequestAvatarSrc(avatarUrl) {
     const safeAvatar = String(avatarUrl || "").trim();
 
@@ -2119,6 +2325,15 @@ const ProfileModule = (() => {
       bindDirtyTracking();
       bindPrivacyForm();
       bindFollowRequests();
+      bindBlockedUsers();
+
+      document.addEventListener(
+        "quacker:lang-change",
+        () => {
+          loadBlockedUsers();
+        }
+      );
+
       bindRecommendations();
       bindFavoriteActions();
       bindFavoritePicker();
@@ -2132,6 +2347,7 @@ const ProfileModule = (() => {
       loadProfileIntoForm(),
       loadPrivacyIntoForm(),
       loadFollowRequests(),
+      loadBlockedUsers(),
       loadRecommendations(),
       loadFavoritesIntoProfile(),
       loadOpinionsSummary()
@@ -2149,6 +2365,7 @@ const ProfileModule = (() => {
       loadProfileIntoForm(),
       loadPrivacyIntoForm(),
       loadFollowRequests(),
+      loadBlockedUsers(),
       loadRecommendations(),
       loadFavoritesIntoProfile(),
       loadOpinionsSummary()

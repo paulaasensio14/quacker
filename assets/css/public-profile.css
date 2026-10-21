@@ -223,6 +223,20 @@ body {
   transform: none;
 }
 
+.public-profile-block-action {
+  border-color: var(--public-border);
+  background: var(--public-surface-soft);
+  color: var(--public-text);
+}
+
+.public-profile-block-action:hover:not(:disabled) {
+  border-color: var(--public-text-soft);
+}
+
+.public-profile-block-action[hidden] {
+  display: none;
+}
+
 .public-profile-access-note {
   margin: 0;
   color: var(--public-text-soft);

@@ -1535,6 +1535,44 @@
             </form>
           </div>
 
+          <section
+            class="profile-card profile-blocked-users-card"
+            id="profileBlockedUsersCard"
+            aria-labelledby="profileBlockedUsersTitle"
+          >
+            <h3
+              class="profile-title"
+              id="profileBlockedUsersTitle"
+              data-i18n="profile_blocks_title"
+            >
+              Usuarios bloqueados
+            </h3>
+
+            <p
+              class="profile-meta"
+              data-i18n="profile_blocks_description"
+            >
+              Gestiona las personas que has bloqueado.
+              Al desbloquear a alguien no se restauran
+              automáticamente los seguimientos anteriores.
+            </p>
+
+            <p
+              id="profileBlockedUsersStatus"
+              class="profile-meta"
+              role="status"
+              aria-live="polite"
+            >
+              Cargando usuarios bloqueados...
+            </p>
+
+            <div
+              id="profileBlockedUsersList"
+              class="profile-blocked-users-list"
+              aria-label="Lista de usuarios bloqueados"
+            ></div>
+          </section>
+
           <div class="profile-card profile-follow-requests-card" id="profileFollowRequestsCard">
             <h3
               class="profile-title"
