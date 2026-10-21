@@ -25,5 +25,11 @@ export const ENV = {
   SMTP_PASS: String(process.env.SMTP_PASS || ""),
   CONTACT_TO: String(
     process.env.CONTACT_TO || process.env.SMTP_USER || ""
+  ).trim(),
+
+  // Identificadores internos autorizados, separados por comas.
+  // Vacío por defecto: nadie tiene privilegios.
+  MODERATOR_USER_IDS: String(
+    process.env.QUACKER_MODERATOR_USER_IDS || ""
   ).trim()
 };

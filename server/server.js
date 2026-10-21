@@ -167,6 +167,14 @@ import {
 } from "./lib/social-rate-limit.js";
 
 import {
+  isModeratorUserId
+} from "./lib/moderator-access.js";
+
+import {
+  applyModerationDecision
+} from "./lib/moderation-decisions.js";
+
+import {
   createSlidingWindowRateLimiter
 } from "./lib/rate-limit.js";
 
@@ -2098,6 +2106,26 @@ async function _requireAuthAsync(req, res, next) {
 const _requireAuth = _asyncHandler(
   _requireAuthAsync
 );
+
+function _requireModerator(req, res, next) {
+  res.set("Cache-Control", "no-store");
+
+  const userId =
+    String(req.session?.userId || "");
+
+  if (
+    !isModeratorUserId(
+      userId,
+      ENV.MODERATOR_USER_IDS
+    )
+  ) {
+    return res.status(403).json({
+      error: "forbidden"
+    });
+  }
+
+  return next();
+}
 
 function _getUserBucket(db, userId) {
   db.users[userId] = db.users[userId] || {
@@ -4612,6 +4640,139 @@ app.post(
     return res.status(201).json({
       ok: true,
       reportId: result.report.id
+    });
+  }
+);
+
+app.post(
+  "/api/moderation/reports/:reportId/decision",
+  _requireAuth,
+  _requireModerator,
+  (req, res) => {
+    const db = _readDb();
+
+    const previousReports =
+      Array.isArray(db.moderationReports)
+        ? db.moderationReports
+        : [];
+
+    const result = applyModerationDecision(
+      previousReports,
+      {
+        reportId: req.params.reportId,
+        action: req.body?.action,
+        notes: req.body?.notes
+      },
+      {
+        moderatorUserId: req.session.userId,
+        allowedModeratorUserIds:
+          ENV.MODERATOR_USER_IDS,
+        decidedAt: new Date().toISOString()
+      }
+    );
+
+    if (!result.ok) {
+      const statusByError = {
+        forbidden: 403,
+        report_not_found: 404,
+        report_already_reviewed: 409
+      };
+
+      return res.status(
+        statusByError[result.error] || 400
+      ).json({
+        error: result.error
+      });
+    }
+
+    db.moderationReports = result.reports;
+    _writeDb(db);
+
+    // Nunca devolver evidencia ni notas privadas.
+    return res.json({
+      ok: true,
+      reportId: result.report.id,
+      status: result.report.status
+    });
+  }
+);
+
+app.get(
+  "/api/moderation/reports",
+  _requireAuth,
+  _requireModerator,
+  (req, res) => {
+    const db = _readDb();
+
+    const pending = (
+      Array.isArray(db.moderationReports)
+        ? db.moderationReports
+        : []
+    ).filter(
+      (entry) =>
+        entry &&
+        typeof entry === "object" &&
+        !Array.isArray(entry) &&
+        entry.status === "pending" &&
+        ["user", "review"].includes(entry.kind)
+    );
+
+    // Primera versión: últimas 50 denuncias pendientes.
+    // Sin acceso a datos completos de las cuentas.
+    const reports = pending
+      .slice(-50)
+      .reverse()
+      .map((entry) => ({
+        id: String(entry.id || "").slice(0, 128),
+        reporterUserId:
+          String(entry.reporterUserId || "").slice(0, 128),
+        targetUserId:
+          String(entry.targetUserId || "").slice(0, 128),
+        kind: entry.kind,
+        reason: String(entry.reason || "").slice(0, 80),
+        details: String(entry.details || "").slice(0, 500),
+        status: "pending",
+        createdAt: String(entry.createdAt || "").slice(0, 40),
+        reviewIdentity:
+          entry.kind === "review"
+            ? {
+                source:
+                  String(entry.reviewIdentity?.source || "")
+                    .slice(0, 80),
+                contentType:
+                  String(entry.reviewIdentity?.contentType || "")
+                    .slice(0, 40),
+                externalId:
+                  String(entry.reviewIdentity?.externalId || "")
+                    .slice(0, 200),
+                key:
+                  String(entry.reviewIdentity?.key || "")
+                    .slice(0, 350)
+              }
+            : null,
+        reviewEvidence:
+          entry.kind === "review"
+            ? {
+                title:
+                  String(entry.reviewEvidence?.title || "")
+                    .slice(0, 120),
+                text:
+                  String(entry.reviewEvidence?.text || "")
+                    .slice(0, 4000),
+                textTruncated:
+                  entry.reviewEvidence?.textTruncated === true,
+                spoiler:
+                  entry.reviewEvidence?.spoiler === true,
+                updatedAt:
+                  String(entry.reviewEvidence?.updatedAt || "")
+                    .slice(0, 40)
+              }
+            : null
+      }));
+
+    return res.json({
+      totalPending: pending.length,
+      reports
     });
   }
 );
