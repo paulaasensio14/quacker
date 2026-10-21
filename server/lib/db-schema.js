@@ -16,7 +16,12 @@ export function validateDb(db) {
     typeof db.users === "object" &&
     !Array.isArray(db.users);
 
-  if (!hasValidUsers) {
+  const hasValidReports =
+    !isValidRoot ||
+    !Object.hasOwn(db, "moderationReports") ||
+    Array.isArray(db.moderationReports);
+
+  if (!hasValidUsers || !hasValidReports) {
     const error = new Error(
       "La base de datos no contiene una estructura users válida."
     );

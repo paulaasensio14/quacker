@@ -167,6 +167,14 @@ import {
 } from "./lib/social-rate-limit.js";
 
 import {
+  createSlidingWindowRateLimiter
+} from "./lib/rate-limit.js";
+
+import {
+  addModerationReport
+} from "./lib/moderation-reports.js";
+
+import {
   PASSWORD_RESET_TOKEN_TTL_MS,
   applyPasswordCredentialReset,
   createPasswordResetToken,
@@ -334,6 +342,20 @@ const authRateLimits =
 
 const socialRateLimits =
   createSocialRateLimiters();
+
+const moderationReportRateLimit =
+  createSlidingWindowRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    maxAttempts: 5,
+    maxEntries: 5000
+  });
+
+const moderationReportAttemptRateLimit =
+  createSlidingWindowRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    maxAttempts: 30,
+    maxEntries: 5000
+  });
 
 let mailTransporter = null;
 
@@ -4411,6 +4433,185 @@ app.post(
     return res.status(201).json({
       recommendation:
         result.recommendation
+    });
+  }
+);
+
+
+app.post(
+  "/api/user/reports",
+  _requireAuth,
+  (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    const reporterUserId =
+      String(req.session.userId || "").trim();
+
+    const attemptLimit =
+      moderationReportAttemptRateLimit.consume(
+        reporterUserId
+      );
+
+    if (!attemptLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "moderation_report_attempt_rate_limited",
+        attemptLimit.retryAfterSeconds
+      );
+    }
+
+    const db = _readDb();
+
+    const requestedUsername =
+      normalizePublicUsername(
+        req.body?.username
+      );
+
+    if (!requestedUsername) {
+      return res.status(400).json({
+        error: "invalid_report_target"
+      });
+    }
+
+    const target =
+      _findFollowTarget(
+        db.users,
+        requestedUsername
+      );
+
+    if (!target) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const reportKind =
+      String(req.body?.kind || "")
+        .trim()
+        .toLowerCase();
+
+    const suppliedIdentity =
+      req.body?.reviewIdentity;
+
+    let reviewEvidence = null;
+
+    if (reportKind === "review") {
+      const profile =
+        getPublicProfileByUsername(
+          db.users,
+          requestedUsername,
+          {
+            viewerUserId: reporterUserId
+          }
+        );
+
+      const requestedIdentity =
+        normalizeContentIdentity({
+          source: suppliedIdentity?.source,
+          type:
+            suppliedIdentity?.contentType ??
+            suppliedIdentity?.type,
+          externalId:
+            suppliedIdentity?.externalId
+        });
+
+      if (!requestedIdentity.ok) {
+        return res.status(400).json({
+          error: "invalid_report_review"
+        });
+      }
+
+      const publicReviews =
+        Array.isArray(profile?.reviews)
+          ? profile.reviews
+          : [];
+
+      const foundReview = publicReviews.find(
+        (review) => {
+          const identity =
+            normalizeContentIdentity({
+              source: review.source,
+              type: review.contentType,
+              externalId: review.externalId
+            });
+
+          return (
+            identity.ok &&
+            identity.key ===
+              requestedIdentity.key
+          );
+        }
+      );
+
+      if (!foundReview) {
+        return res.status(404).json({
+          error: "not_found"
+        });
+      }
+
+      reviewEvidence = {
+        title: foundReview.itemSnapshot?.title,
+        text: foundReview.review?.text,
+        spoiler: foundReview.review?.spoiler,
+        updatedAt: foundReview.review?.updatedAt
+      };
+    }
+
+    // Compatibilidad con bases existentes sin reportes.
+    const previousReports =
+      Array.isArray(db.moderationReports)
+        ? db.moderationReports
+        : [];
+
+    const result =
+      addModerationReport(
+        previousReports,
+        {
+          reporterUserId,
+          targetUserId: target.userId,
+          kind: req.body?.kind,
+          reason: req.body?.reason,
+          details: req.body?.details,
+          reviewIdentity: suppliedIdentity
+        },
+        {
+          id: `report_${crypto.randomUUID()}`,
+          createdAt: new Date().toISOString(),
+          reviewEvidence
+        }
+      );
+
+    if (!result.ok) {
+      const status =
+        result.error === "report_already_exists"
+          ? 409
+          : 400;
+
+      return res.status(status).json({
+        error: result.error
+      });
+    }
+
+    const limit =
+      moderationReportRateLimit.consume(
+        reporterUserId
+      );
+
+    if (!limit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "moderation_report_rate_limited",
+        limit.retryAfterSeconds
+      );
+    }
+
+    db.moderationReports = result.reports;
+
+    _writeDb(db);
+
+    return res.status(201).json({
+      ok: true,
+      reportId: result.report.id
     });
   }
 );
