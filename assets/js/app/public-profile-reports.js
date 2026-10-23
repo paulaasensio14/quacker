@@ -142,27 +142,29 @@
       );
     }
 
-    const impersonation =
-      get("publicProfileReportReasonImpersonation");
+    const reasonSelect =
+      get("publicProfileReportReason");
 
-    const spoilers =
-      get("publicProfileReportReasonSpoilers");
+    if (!reasonSelect) return;
 
-    const inappropriate =
-      get("publicProfileReportReasonInappropriate");
+    // Safari puede mostrar las opciones deshabilitadas.
+    // Solo insertamos en el DOM los motivos permitidos.
+    const options = ["", ...REASONS[kind]].map((value) => {
+      const option = document.createElement("option");
 
-    if (impersonation) {
-      impersonation.hidden = kind === "review";
-      impersonation.disabled = kind === "review";
-    }
+      const translationKey = value
+        ? `moderation_reason_${value}`
+        : "public_report_select";
 
-    for (const option of [spoilers, inappropriate]) {
-      if (!option) continue;
-      option.hidden = kind !== "review";
-      option.disabled = kind !== "review";
-    }
+      option.value = value;
+      option.textContent = t(translationKey);
+      option.setAttribute("data-i18n", translationKey);
 
-    get("publicProfileReportReason").value = "";
+      return option;
+    });
+
+    reasonSelect.replaceChildren(...options);
+    reasonSelect.value = "";
     get("publicProfileReportDetails").value = "";
     get("publicProfileReportStatus").textContent = "";
 
@@ -256,7 +258,7 @@
     if (
       busy ||
       !targetUsername ||
-      button?.hidden ||
+      (activeKind === "user" && button?.hidden) ||
       !reason ||
       !details ||
       !status ||

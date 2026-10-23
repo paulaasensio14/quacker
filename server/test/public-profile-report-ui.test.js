@@ -43,7 +43,11 @@ function createHarness({ error = null } = {}) {
       disabled: false,
       value: "",
       textContent: "",
+      children: [],
       handlers: {},
+      replaceChildren(...nodes) {
+        this.children = [...nodes];
+      },
       addEventListener(name, handler) {
         this.handlers[name] = handler;
       }
@@ -79,6 +83,16 @@ function createHarness({ error = null } = {}) {
       document: {
         getElementById(id) {
           return elements.get(id) || null;
+        },
+        createElement() {
+          return {
+            value: "",
+            textContent: "",
+            attributes: {},
+            setAttribute(name, value) {
+              this.attributes[name] = value;
+            }
+          };
         }
       }
     },
@@ -168,6 +182,19 @@ test("se muestra en el perfil de otro usuario autenticado", () => {
 
   h.open();
   assert.equal(h.opened.length, 1);
+
+  assert.deepEqual(
+    h.element("publicProfileReportReason")
+      .children.map((option) => option.value),
+    [
+      "",
+      "spam",
+      "harassment",
+      "hate",
+      "impersonation",
+      "other"
+    ]
+  );
 });
 
 test("envía motivo y descripción sin identidad manipulable", async () => {

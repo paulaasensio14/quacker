@@ -56,6 +56,10 @@ class FakeElement {
     this.children.push(...children);
   }
 
+  replaceChildren(...children) {
+    this.children = [...children];
+  }
+
   setAttribute(name, value) {
     this.attributes[name] = value;
   }
@@ -201,15 +205,17 @@ test("la tarjeta de reseña incorpora el botón", () => {
   );
 
   assert.ok(
-    html.includes(
-      'id="publicProfileReportReasonSpoilers"'
-    )
+    html.includes('id="publicProfileReportReason"')
   );
 
-  assert.ok(
-    html.includes(
-      'id="publicProfileReportReasonInappropriate"'
-    )
+  assert.equal(
+    html.includes('id="publicProfileReportReasonSpoilers"'),
+    false
+  );
+
+  assert.equal(
+    html.includes('id="publicProfileReportReasonImpersonation"'),
+    false
   );
 });
 
@@ -257,19 +263,35 @@ test("muestra los motivos específicos de reseñas", () => {
     "public_report_review_title"
   );
 
-  assert.equal(
-    h.element("publicProfileReportReasonSpoilers").disabled,
-    false
+  const options =
+    h.element("publicProfileReportReason").children;
+
+  assert.deepEqual(
+    options.map((option) => option.value),
+    [
+      "",
+      "spam",
+      "harassment",
+      "hate",
+      "spoilers",
+      "inappropriate_content",
+      "other"
+    ]
   );
 
-  assert.equal(
-    h.element("publicProfileReportReasonInappropriate").disabled,
-    false
-  );
-
-  assert.equal(
-    h.element("publicProfileReportReasonImpersonation").disabled,
-    true
+  assert.deepEqual(
+    options.map(
+      (option) => option.attributes["data-i18n"]
+    ),
+    [
+      "public_report_select",
+      "moderation_reason_spam",
+      "moderation_reason_harassment",
+      "moderation_reason_hate",
+      "moderation_reason_spoilers",
+      "moderation_reason_inappropriate_content",
+      "moderation_reason_other"
+    ]
   );
 
   assert.equal(
@@ -361,19 +383,17 @@ test("el formulario vuelve a modo perfil sin motivos de reseña", () => {
 
   h.element("publicProfileReportAction").handlers.click();
 
-  assert.equal(
-    h.element("publicProfileReportReasonSpoilers").disabled,
-    true
-  );
-
-  assert.equal(
-    h.element("publicProfileReportReasonInappropriate").disabled,
-    true
-  );
-
-  assert.equal(
-    h.element("publicProfileReportReasonImpersonation").disabled,
-    false
+  assert.deepEqual(
+    h.element("publicProfileReportReason")
+      .children.map((option) => option.value),
+    [
+      "",
+      "spam",
+      "harassment",
+      "hate",
+      "impersonation",
+      "other"
+    ]
   );
 
   assert.equal(
@@ -381,6 +401,76 @@ test("el formulario vuelve a modo perfil sin motivos de reseña", () => {
     "public_report_title"
   );
 });
+
+test(
+  "denunciar usuario no impide denunciar una reseña diferente",
+  async () => {
+    const h = createHarness();
+
+    h.element("publicProfileReportAction").handlers.click();
+
+    h.element("publicProfileReportReason").value = "spam";
+
+    assert.equal(await h.submit(), true);
+
+    assert.equal(
+      h.element("publicProfileReportAction").hidden,
+      true
+    );
+
+    const { button } = h.decorate();
+    assert.ok(button);
+
+    button.handlers.click();
+
+    h.element("publicProfileReportReason").value =
+      "spoilers";
+
+    assert.equal(await h.submit(), true);
+
+    assert.deepEqual(
+      h.calls.map((call) => call.kind),
+      ["user", "review"]
+    );
+
+    assert.equal(button.hidden, true);
+  }
+);
+
+test(
+  "alternar tipos reconstruye el selector sin duplicados",
+  () => {
+    const h = createHarness();
+    const { button } = h.decorate();
+
+    button.handlers.click();
+    button.handlers.click();
+
+    const reviewReasons =
+      h.element("publicProfileReportReason").children;
+
+    assert.equal(reviewReasons.length, 7);
+    assert.equal(
+      reviewReasons.some(
+        (option) => option.value === "impersonation"
+      ),
+      false
+    );
+
+    h.element("publicProfileReportAction").handlers.click();
+
+    const userReasons =
+      h.element("publicProfileReportReason").children;
+
+    assert.equal(userReasons.length, 6);
+    assert.equal(
+      userReasons.some(
+        (option) => option.value === "spoilers"
+      ),
+      false
+    );
+  }
+);
 
 test("traducciones españolas e inglesas completas", () => {
   assert.ok(
