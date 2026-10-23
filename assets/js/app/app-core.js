@@ -28,15 +28,55 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // 1) Restaurar primero la vista correcta
-  Router.init();
+  // La autorización no debe retrasar las vistas normales.
+  // Solo esperamos cuando hay que restaurar Moderación.
+  const requestedView = String(
+    window.location.hash || ""
+  ).replace(/^#/, "").trim();
 
-  // La vista administrativa solo se registra si el servidor autoriza.
+  const storedView = (() => {
+    try {
+      return String(
+        window.sessionStorage.getItem(
+          "quacker:last-view"
+        ) || ""
+      ).trim();
+    } catch (_) {
+      return "";
+    }
+  })();
+
+  // El hash explícito prevalece sobre la vista guardada.
+  const restoreModeration =
+    requestedView === "moderation" ||
+    (!requestedView && storedView === "moderation");
+
   try {
-    window.ModerationModule?.init?.().catch?.(console.error);
-  } catch (e) {
-    console.error("ModerationModule.init error", e);
+    const moderationInit =
+      window.ModerationModule?.init?.();
+
+    if (restoreModeration) {
+      // Esperar para que Router pueda restaurar
+      // únicamente las vistas autorizadas.
+      await moderationInit;
+    } else {
+      // En el resto de vistas, continuar la carga
+      // mientras se comprueban los permisos.
+      moderationInit?.catch?.((error) => {
+        console.error(
+          "ModerationModule.init error",
+          error
+        );
+      });
+    }
+  } catch (error) {
+    console.error(
+      "ModerationModule.init error",
+      error
+    );
   }
+
+  Router.init();
 
   // 2) Iniciar módulos después
   try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }
