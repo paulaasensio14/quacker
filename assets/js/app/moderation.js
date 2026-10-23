@@ -15,6 +15,16 @@ const ModerationModule = (() => {
     return node;
   }
 
+  function reportUserLabel(username, userId) {
+    const validUsername =
+      typeof username === "string" &&
+      /^[a-z0-9_]{2,20}$/.test(username);
+
+    return validUsername
+      ? `@${username}`
+      : String(userId || "—");
+  }
+
   function renderReport(report) {
     if (!report || !["user", "review"].includes(report.kind)) {
       return null;
@@ -38,18 +48,40 @@ const ModerationModule = (() => {
 
     const fields = [
       [t("moderation_report_id"), report.id],
-      [t("moderation_reporter"), report.reporterUserId],
-      [t("moderation_target"), report.targetUserId],
+      [
+        t("moderation_reporter"),
+        reportUserLabel(
+          report.reporterUsername,
+          report.reporterUserId
+        ),
+        report.reporterUserId
+      ],
+      [
+        t("moderation_target"),
+        reportUserLabel(
+          report.targetUsername,
+          report.targetUserId
+        ),
+        report.targetUserId
+      ],
       [t("moderation_reason"), reasonText],
       [t("moderation_created_at"), report.createdAt]
     ];
 
     card.append(title);
 
-    for (const [label, value] of fields) {
+    for (const [label, value, originalId] of fields) {
       const line = element("p", "moderation-report-meta");
       const strong = element("strong", "", label + ": ");
       const span = element("span", "", value || "—");
+
+      if (originalId && value !== originalId) {
+        span.setAttribute(
+          "title",
+          `${t("moderation_report_id")}: ${originalId}`
+        );
+      }
+
       line.append(strong, span);
       card.append(line);
     }

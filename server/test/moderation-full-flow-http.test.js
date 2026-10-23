@@ -741,6 +741,39 @@ test(
       assert.equal(pendingReview.reporterUserId, reporter.userId);
       assert.equal(pendingReview.targetUserId, author.userId);
       assert.equal(
+        pendingReview.reporterUsername,
+        reporter.handle
+      );
+      assert.equal(
+        pendingReview.targetUsername,
+        author.handle
+      );
+      assert.equal(
+        pendingUser.reporterUsername,
+        reporter.handle
+      );
+      assert.equal(
+        pendingUser.targetUsername,
+        author.handle
+      );
+
+      // La respuesta autorizada no incorpora datos de cuenta.
+      for (const report of inbox.json.reports) {
+        assert.equal(
+          Object.hasOwn(report, "email"),
+          false
+        );
+        assert.equal(
+          Object.hasOwn(report, "profile"),
+          false
+        );
+        assert.equal(
+          Object.hasOwn(report, "password"),
+          false
+        );
+      }
+
+      assert.equal(
         pendingReview.reviewEvidence?.text,
         "Reseña de prueba 603"
       );

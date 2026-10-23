@@ -4732,8 +4732,14 @@ app.get(
         ["user", "review"].includes(entry.kind)
     );
 
-    // Primera versión: últimas 50 denuncias pendientes.
-    // Sin acceso a datos completos de las cuentas.
+    // Resolver identificadores públicos solo para moderadores.
+    // No exponer correos ni perfiles completos.
+    const usernameFor = (userId) =>
+      normalizePublicUsername(
+        db.users?.[userId]?.profile?.handle
+      );
+
+    // Últimas 50 denuncias pendientes.
     const reports = pending
       .slice(-50)
       .reverse()
@@ -4741,8 +4747,12 @@ app.get(
         id: String(entry.id || "").slice(0, 128),
         reporterUserId:
           String(entry.reporterUserId || "").slice(0, 128),
+        reporterUsername:
+          usernameFor(entry.reporterUserId),
         targetUserId:
           String(entry.targetUserId || "").slice(0, 128),
+        targetUsername:
+          usernameFor(entry.targetUserId),
         kind: entry.kind,
         reason: String(entry.reason || "").slice(0, 80),
         details: String(entry.details || "").slice(0, 500),

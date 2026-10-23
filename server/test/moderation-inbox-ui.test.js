@@ -247,6 +247,93 @@ test("muestra denuncias y evidencias como texto seguro", async () => {
   assert.ok(text.includes("moderation_evidence_truncated"));
 });
 
+test("muestra @usuarios sin perder identificadores", async () => {
+  const h = createHarness({
+    response: {
+      totalPending: 1,
+      reports: [{
+        id: "report_qa",
+        kind: "user",
+        reason: "spam",
+        reporterUserId: "internal_reporter_123",
+        reporterUsername: "qa_reporter",
+        targetUserId: "internal_author_456",
+        targetUsername: "qa_author",
+        createdAt: "2026-10-23"
+      }]
+    }
+  });
+
+  await h.module.init();
+  assert.equal(await h.module.loadReports(), true);
+
+  const card = h.elements.moderationReportsList.children[0];
+  const lines = card.children.filter(
+    (node) => node.className === "moderation-report-meta"
+  );
+
+  const reporter = lines.find(
+    (line) => line.children[0]?.textContent ===
+      "moderation_reporter: "
+  ).children[1];
+
+  const target = lines.find(
+    (line) => line.children[0]?.textContent ===
+      "moderation_target: "
+  ).children[1];
+
+  assert.equal(reporter.textContent, "@qa_reporter");
+  assert.equal(target.textContent, "@qa_author");
+
+  assert.match(
+    reporter.attributes.title,
+    /internal_reporter_123/
+  );
+
+  assert.match(
+    target.attributes.title,
+    /internal_author_456/
+  );
+
+  assert.equal(
+    allText(card).includes("internal_reporter_123"),
+    false
+  );
+});
+
+test("un usuario eliminado o inválido conserva su ID", async () => {
+  const h = createHarness({
+    response: {
+      totalPending: 1,
+      reports: [{
+        id: "report_missing",
+        kind: "user",
+        reason: "spam",
+        reporterUserId: "historical_reporter_1",
+        reporterUsername: "",
+        targetUserId: "historical_author_2",
+        targetUsername: "<script>alert(1)</script>",
+        createdAt: "2026-10-23"
+      }]
+    }
+  });
+
+  await h.module.init();
+  assert.equal(await h.module.loadReports(), true);
+
+  const text = allText(
+    h.elements.moderationReportsList
+  );
+
+  assert.ok(text.includes("historical_reporter_1"));
+  assert.ok(text.includes("historical_author_2"));
+
+  assert.equal(
+    text.includes("<script>"),
+    false
+  );
+});
+
 test("la bandeja vacía muestra un estado informativo", async () => {
   const h = createHarness();
   await h.module.init();
