@@ -216,6 +216,14 @@
                 Bloquear usuario
               </button>
 
+              <button
+                id="publicProfileReportAction"
+                class="public-profile-social-action public-profile-report-action"
+                type="button"
+                data-i18n="public_report_button"
+                hidden
+              >Denunciar usuario</button>
+
               <p
                 id="publicProfileAccessNote"
                 class="public-profile-access-note"
@@ -500,6 +508,84 @@
     </div>
   </div>
 
+  <div
+    id="publicProfileReportModal"
+    class="modal-overlay public-profile-connections-modal public-profile-report-modal"
+    aria-hidden="true"
+  >
+    <div
+      class="modal-card public-profile-connections-card public-profile-report-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="publicProfileReportTitle"
+    >
+      <div class="public-profile-connections-header">
+        <h2 id="publicProfileReportTitle" data-i18n="public_report_title">
+          Denunciar usuario
+        </h2>
+        <button
+          id="publicProfileReportClose"
+          class="public-profile-connections-close"
+          type="button"
+          aria-label="Cerrar"
+          data-i18n-aria-label="common_close"
+        >×</button>
+      </div>
+
+      <form id="publicProfileReportForm" class="public-profile-report-form">
+        <label for="publicProfileReportReason"
+          data-i18n="public_report_reason">Motivo de la denuncia</label>
+
+        <select id="publicProfileReportReason" required>
+          <option value="" data-i18n="public_report_select">
+            Selecciona un motivo
+          </option>
+          <option value="spam" data-i18n="moderation_reason_spam">Spam</option>
+          <option value="harassment" data-i18n="moderation_reason_harassment">Acoso</option>
+          <option value="hate" data-i18n="moderation_reason_hate">Discurso de odio</option>
+          <option id="publicProfileReportReasonImpersonation" value="impersonation" data-i18n="moderation_reason_impersonation">Suplantación de identidad</option>
+          <option id="publicProfileReportReasonSpoilers" value="spoilers" data-i18n="moderation_reason_spoilers" hidden disabled>Spoilers</option>
+          <option id="publicProfileReportReasonInappropriate" value="inappropriate_content" data-i18n="moderation_reason_inappropriate_content" hidden disabled>Contenido inapropiado</option>
+          <option value="other" data-i18n="moderation_reason_other">Otro motivo</option>
+        </select>
+
+        <label for="publicProfileReportDetails"
+          data-i18n="public_report_details">Descripción (opcional)</label>
+
+        <textarea
+          id="publicProfileReportDetails"
+          rows="4"
+          maxlength="500"
+          data-i18n-placeholder="public_report_details_placeholder"
+          placeholder="Explica brevemente lo sucedido"
+        ></textarea>
+
+        <p
+          id="publicProfileReportStatus"
+          class="public-profile-report-status"
+          role="status"
+          aria-live="polite"
+        ></p>
+
+        <div class="public-profile-report-actions">
+          <button
+            type="button"
+            id="publicProfileReportCancel"
+            class="public-profile-social-action public-profile-report-secondary"
+            data-i18n="common_cancel"
+          >Cancelar</button>
+
+          <button
+            type="submit"
+            id="publicProfileReportSubmit"
+            class="public-profile-social-action"
+            data-i18n="public_report_submit"
+          >Enviar denuncia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script
     src="/assets/js/app/i18n.js"
     defer
@@ -507,6 +593,16 @@
 
   <script
     src="/assets/js/app/ui-modal.js"
+    defer
+  ></script>
+
+  <script
+    src="/assets/js/app/report-submission.js"
+    defer
+  ></script>
+
+  <script
+    src="/assets/js/app/public-profile-reports.js"
     defer
   ></script>
 

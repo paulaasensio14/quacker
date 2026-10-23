@@ -728,6 +728,11 @@
         card.append(tagsEl);
       }
 
+      window.PublicProfileReportUI?.decorateReview?.(
+        card,
+        entry
+      );
+
       container.append(card);
     }
 
@@ -1463,6 +1468,10 @@
     }
 
     renderSocialRelationship(data.viewer);
+    window.PublicProfileReportUI?.sync?.(
+      data.viewer,
+      profile
+    );
     renderSocialStats(data.social);
 
     const name = String(
@@ -1599,6 +1608,7 @@
         );
       }
 
+      window.PublicProfileReportUI?.init?.();
       setupSocialConnections();
       loadPublicProfile();
     }
