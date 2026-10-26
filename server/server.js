@@ -10625,10 +10625,21 @@ app.get("/u/:username", (req, res, next) => {
 
   const db = _readDb();
 
+  // Aplicar también a la página HTML las restricciones
+  // de privacidad y bloqueo de la API pública.
+  const viewerUserId =
+    getAuthenticatedUserId(
+      req.session,
+      db.users
+    );
+
   const publicProfile =
     getPublicProfileByUsername(
       db.users,
-      req.params.username
+      req.params.username,
+      {
+        viewerUserId
+      }
     );
 
   if (!publicProfile) {

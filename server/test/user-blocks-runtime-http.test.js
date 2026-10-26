@@ -463,6 +463,47 @@ test(
         }
       }
 
+      // QA-005: el documento HTML debe respetar los
+      // mismos bloqueos que la API pública.
+      // Un visitante anónimo conserva el acceso público.
+      const anonymousProfilePage = await requestJson(
+        `${baseUrl}/u/blocks_alice`
+      );
+
+      assert.equal(
+        anonymousProfilePage.statusCode,
+        200,
+        "un perfil público debe seguir visible sin sesión"
+      );
+
+      // El propietario conserva el acceso a su perfil.
+      const ownerProfilePage = await requestJson(
+        `${baseUrl}/u/blocks_alice`,
+        { cookie: alice.cookie }
+      );
+
+      assert.equal(
+        ownerProfilePage.statusCode,
+        200,
+        "el propietario debe poder abrir su propio perfil"
+      );
+
+      for (const [viewer, target] of [
+        [bob, alice],
+        [alice, bob]
+      ]) {
+        const blockedProfilePage = await requestJson(
+          `${baseUrl}/u/${target.handle}`,
+          { cookie: viewer.cookie }
+        );
+
+        assert.equal(
+          blockedProfilePage.statusCode,
+          404,
+          "QA-005: la página HTML debe respetar los bloqueos"
+        );
+      }
+
       // Un usuario bloqueado no puede volver a seguir
       // a quien ha establecido el bloqueo.
       const forbiddenFollow = await requestJson(
@@ -661,6 +702,24 @@ test(
 
       assert.equal(unblock.statusCode, 200);
       assert.equal(unblock.json?.blocked, false);
+
+      // QA-005: después de desbloquear, ambos perfiles
+      // públicos vuelven a ser accesibles.
+      for (const [viewer, target] of [
+        [bob, alice],
+        [alice, bob]
+      ]) {
+        const restoredProfilePage = await requestJson(
+          `${baseUrl}/u/${target.handle}`,
+          { cookie: viewer.cookie }
+        );
+
+        assert.equal(
+          restoredProfilePage.statusCode,
+          200,
+          "el desbloqueo debe restaurar el acceso HTML"
+        );
+      }
 
       const finalDb = JSON.parse(
         fs.readFileSync(dbPath, "utf8")
