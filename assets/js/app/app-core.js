@@ -266,6 +266,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       applySidebarCollapsed(collapsed);
       window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
     });
+
+    // QA-007: cerrar el menú móvil al seleccionar una sección.
+    // En escritorio se conserva el comportamiento existente.
+    document.querySelectorAll(".nav-item-btn[data-view]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (!window.matchMedia("(max-width: 640px)").matches) {
+          return;
+        }
+
+        if (sidebar.classList.contains("collapsed")) {
+          return;
+        }
+
+        applySidebarCollapsed(true);
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "true");
+      });
+    });
   }
 
   // ===== PROFILE MENU (chip arriba derecha) =====
