@@ -889,6 +889,22 @@ export function getPublicSocialGraphByUsername(
   ) => {
     if (!userBucket) return null;
 
+    // QA-006: no mostrar relaciones antiguas entre
+    // el propietario del perfil y usuarios bloqueados.
+    // Comprobar el bloqueo en ambas direcciones.
+    if (
+      relatedUserId !== targetUserId &&
+      areUsersBlocked(
+        targetUserId,
+        targetBucket?.blockedUserIds,
+        relatedUserId,
+        userBucket.blockedUserIds
+      )
+    ) {
+      return null;
+    }
+
+    // Mantener también los bloqueos del visitante.
     if (
       normalizedViewerUserId &&
       normalizedViewerUserId !== relatedUserId &&

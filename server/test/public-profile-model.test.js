@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   normalizePublicUsername,
-  getPublicProfileByUsername
+  getPublicProfileByUsername,
+  getPublicSocialGraphByUsername
 } from "../lib/public-profile.js";
 
 test("normaliza el username público sin @ y en minúsculas", () => {
@@ -1623,6 +1624,106 @@ test(
       followersCount: 2,
       followingCount: 2
     });
+  }
+);
+
+test(
+  "QA-006: los grafos sociales excluyen relaciones legacy entre usuarios bloqueados",
+  () => {
+    for (const targetBlocks of [true, false]) {
+      const users = {
+        u_target: {
+          profile: {
+            name: "Target",
+            handle: "@target_social"
+          },
+          privacy: {
+            profileVisibility: "public"
+          },
+          following: ["u_blocked", "u_visible"],
+          blockedUserIds: targetBlocks
+            ? ["u_blocked"]
+            : []
+        },
+        u_blocked: {
+          profile: {
+            name: "Blocked",
+            handle: "@blocked_social"
+          },
+          privacy: {
+            profileVisibility: "public"
+          },
+          following: ["u_target"],
+          blockedUserIds: targetBlocks
+            ? []
+            : ["u_target"]
+        },
+        u_visible: {
+          profile: {
+            name: "Visible",
+            handle: "@visible_social"
+          },
+          privacy: {
+            profileVisibility: "public"
+          },
+          following: ["u_target"],
+          blockedUserIds: []
+        },
+        u_third: {
+          profile: {
+            name: "Third",
+            handle: "@third_social"
+          },
+          privacy: {
+            profileVisibility: "public"
+          },
+          following: [],
+          blockedUserIds: []
+        }
+      };
+
+      // Comprobar visitantes anónimos, terceros y propietario.
+      for (const viewerUserId of [
+        "",
+        "u_third",
+        "u_target"
+      ]) {
+        const graph = getPublicSocialGraphByUsername(
+          users,
+          "target_social",
+          { viewerUserId }
+        );
+
+        assert.equal(graph?.access, "full");
+
+        assert.deepEqual(
+          graph.followers.map(item => item.username),
+          ["visible_social"],
+          "QA-006: los seguidores no deben mostrar relaciones bloqueadas"
+        );
+
+        assert.deepEqual(
+          graph.following.map(item => item.username),
+          ["visible_social"],
+          "QA-006: los seguidos no deben mostrar relaciones bloqueadas"
+        );
+
+        const profile = getPublicProfileByUsername(
+          users,
+          "target_social",
+          { viewerUserId }
+        );
+
+        assert.deepEqual(
+          profile?.social,
+          {
+            followersCount: 1,
+            followingCount: 1
+          },
+          "QA-006: los contadores deben excluir relaciones bloqueadas"
+        );
+      }
+    }
   }
 );
 
