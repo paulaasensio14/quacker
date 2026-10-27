@@ -2869,6 +2869,38 @@ if (externalSignal?.aborted) {
   }
 
 
+  async function getCommunityUsers(
+    query,
+    { signal } = {}
+  ) {
+    const term =
+      typeof query === "string"
+        ? query.trim()
+        : "";
+
+    if (
+      term.replace(/^@/, "").length < 2 ||
+      term.length > 80
+    ) {
+      return [];
+    }
+
+    if (!_isHttp()) {
+      return [];
+    }
+
+    const response = await _httpJson(
+      "GET",
+      `/community/users?q=${encodeURIComponent(term)}`,
+      null,
+      { signal }
+    );
+
+    return Array.isArray(response?.users)
+      ? response.users
+      : [];
+  }
+
   async function getModeratorAccess() {
     if (!_isHttp()) {
       return { isModerator: false };
@@ -8163,6 +8195,7 @@ if (externalSignal?.aborted) {
     setBaseUrl,
     getTransportInfo,
     getCurrentSession,
+    getCommunityUsers,
     // perfil
     getUser,
     updateUser,

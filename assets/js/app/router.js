@@ -64,6 +64,7 @@ const Router = (() => {
       detail: "nav_detail",
       library: "nav_library",
       lists: "nav_lists",
+      community: "nav_community",
       profile: "nav_profile",
       opinions: "profile_opinions_title",
       moderation: "nav_moderation"
@@ -80,6 +81,7 @@ const Router = (() => {
       detail: "detail_summary",
       library: "library_summary",
       lists: "lists_subtitle",
+      community: "community_summary",
       profile: "profile_summary",
       opinions: "profile_opinions_all_summary",
       moderation: "moderation_description"

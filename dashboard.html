@@ -94,6 +94,34 @@
           </button>
         </li>
         <li>
+          <button
+            class="nav-item-btn"
+            data-view="community"
+            type="button"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="8" r="3"></circle>
+              <path d="M3 20v-2a6 6 0 0 1 12 0v2"></path>
+              <path d="M17 5a3 3 0 0 1 0 6"></path>
+              <path d="M18 14a5 5 0 0 1 3 5v1"></path>
+            </svg>
+            <span
+              class="nav-label"
+              data-i18n="nav_community"
+            >Comunidad</span>
+          </button>
+        </li>
+        <li>
           <button class="nav-item-btn" data-view="profile">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2.4"
@@ -1322,6 +1350,64 @@
         </div>
       </div>
 
+      <!-- ===== VIEW: COMMUNITY ===== -->
+      <section
+        class="view"
+        id="view-community"
+        data-view-id="community"
+      >
+        <div class="community-layout">
+          <div class="community-panel">
+            <h2 data-i18n="nav_community">
+              Comunidad
+            </h2>
+
+            <p
+              class="community-description"
+              data-i18n="community_summary"
+            >
+              Encuentra personas y conecta en Quacker.
+            </p>
+
+            <label
+              class="community-search-label"
+              for="communitySearchInput"
+              data-i18n="community_search_label"
+            >
+              Buscar personas
+            </label>
+
+            <input
+              id="communitySearchInput"
+              type="search"
+              class="community-search-input"
+              maxlength="80"
+              autocomplete="off"
+              spellcheck="false"
+              data-i18n-placeholder="community_search_placeholder"
+              placeholder="Nombre o @usuario..."
+            >
+
+            <p
+              id="communitySearchStatus"
+              class="community-search-status"
+              role="status"
+              aria-live="polite"
+            >
+              Escribe al menos dos caracteres.
+            </p>
+
+            <div
+              id="communityResults"
+              class="community-results"
+              role="list"
+              aria-label="Resultados de búsqueda"
+              data-i18n-aria-label="community_search_label"
+            ></div>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== VIEW: PROFILE ===== -->
       <section class="view" id="view-profile" data-view-id="profile">
         <div class="profile-layout">
@@ -2399,6 +2485,7 @@
   <script src="assets/js/app/i18n.js"></script>
   <script src="assets/js/app/whats-new.js"></script>
   <script src="assets/js/app/moderation.js"></script>
+  <script src="assets/js/app/community.js"></script>
   <script src="assets/js/app/app-core.js"></script>
 
   <script src="assets/js/app/library.js"></script>
