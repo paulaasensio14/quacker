@@ -85,6 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { window.DetailModule?.init?.(); } catch (e) { console.error("DetailModule.init error", e); }
   try { window.ExploreModule?.init?.(); } catch (e) { console.error("ExploreModule.init error", e); }
   try { window.CommunityModule?.init?.(); } catch (e) { console.error("CommunityModule.init error", e); }
+  try { window.CommunityProfileModule?.init?.(); } catch (e) { console.error("CommunityProfileModule.init error", e); }
   try { window.HomeUI?.init?.(); } catch (e) { console.error("HomeUI.init error", e); }
   try { window.WhatsNewModule?.init?.(); } catch (e) { console.error("WhatsNewModule.init error", e); }
 

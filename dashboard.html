@@ -1408,6 +1408,231 @@
         </div>
       </section>
 
+      <!-- ===== VIEW: COMMUNITY PROFILE ===== -->
+      <section
+        class="view"
+        id="view-community-profile"
+        data-view-id="community-profile"
+      >
+        <div class="community-profile-layout">
+          <button
+            id="communityProfileBack"
+            class="community-profile-back"
+            type="button"
+            data-i18n="community_profile_back"
+          >
+            ← Volver a Comunidad
+          </button>
+
+          <p
+            id="communityProfileStatus"
+            class="community-profile-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+
+          <div
+            id="communityProfileBlocked"
+            class="community-profile-blocked"
+            role="status"
+            aria-live="polite"
+            hidden
+          >
+            <h2 data-i18n="community_block_success">
+              Usuario bloqueado
+            </h2>
+
+            <p data-i18n="community_block_description">
+              Se han eliminado los seguimientos y
+              las solicitudes pendientes entre ambos.
+            </p>
+
+            <button
+              id="communityProfileBlockedBack"
+              type="button"
+              class="community-profile-back"
+              data-i18n="community_block_back"
+            >
+              Volver a Comunidad
+            </button>
+          </div>
+
+          <div
+            id="communityProfileContent"
+            class="community-profile-card"
+            hidden
+          >
+            <div class="community-profile-header">
+              <img
+                id="communityProfileAvatar"
+                class="community-profile-avatar"
+                src="/assets/img/logo-quacker.png"
+                alt=""
+                width="96"
+                height="96"
+              >
+
+              <div class="community-profile-identity">
+                <h2 id="communityProfileName"></h2>
+                <p id="communityProfileUsername"></p>
+              </div>
+            </div>
+
+            <div
+              id="communityProfileBioSection"
+              class="community-profile-section"
+              hidden
+            >
+              <h3 data-i18n="community_profile_bio">
+                Biografía
+              </h3>
+              <p id="communityProfileBio"></p>
+            </div>
+
+            <div
+              id="communityProfileSocial"
+              class="community-profile-social"
+              hidden
+            >
+              <div class="community-profile-social-metric">
+                <strong id="communityProfileFollowers">0</strong>
+                <span data-i18n="community_profile_followers">
+                  Seguidores
+                </span>
+              </div>
+
+              <div class="community-profile-social-metric">
+                <strong id="communityProfileFollowing">0</strong>
+                <span data-i18n="community_profile_following">
+                  Siguiendo
+                </span>
+              </div>
+            </div>
+
+            <div
+              id="communityProfileActions"
+              class="community-profile-actions"
+              hidden
+            >
+              <button
+                id="communityProfileFollowAction"
+                type="button"
+                class="community-profile-follow-action"
+                disabled
+              ></button>
+
+              <button
+                id="communityProfileBlockAction"
+                type="button"
+                class="community-profile-block-action"
+                data-i18n="community_block_button"
+                hidden
+              >
+                Bloquear usuario
+              </button>
+
+              <p
+                id="communityProfileSocialStatus"
+                class="community-profile-social-status"
+                role="status"
+                aria-live="polite"
+              ></p>
+            </div>
+
+            <p
+              id="communityProfileRestricted"
+              class="community-profile-restricted"
+              hidden
+            ></p>
+
+            <section
+              id="communityProfileFavorites"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileFavoritesTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileFavoritesTitle"
+                data-i18n="community_profile_favorites"
+              >Favoritos</h3>
+
+              <div
+                id="communityProfileFavoritesContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+
+            <section
+              id="communityProfileStats"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileStatsTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileStatsTitle"
+                data-i18n="community_profile_stats"
+              >Estadísticas</h3>
+
+              <div
+                id="communityProfileStatsContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+
+            <section
+              id="communityProfileLists"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileListsTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileListsTitle"
+                data-i18n="community_profile_lists"
+              >Listas públicas</h3>
+
+              <div
+                id="communityProfileListsContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+
+            <section
+              id="communityProfileReviews"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileReviewsTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileReviewsTitle"
+                data-i18n="community_profile_reviews"
+              >Reseñas</h3>
+
+              <div
+                id="communityProfileReviewsContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+
+            <section
+              id="communityProfileActivity"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileActivityTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileActivityTitle"
+                data-i18n="community_profile_activity"
+              >Actividad</h3>
+
+              <div
+                id="communityProfileActivityContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== VIEW: PROFILE ===== -->
       <section class="view" id="view-profile" data-view-id="profile">
         <div class="profile-layout">
@@ -2486,6 +2711,7 @@
   <script src="assets/js/app/whats-new.js"></script>
   <script src="assets/js/app/moderation.js"></script>
   <script src="assets/js/app/community.js"></script>
+  <script src="assets/js/app/community-profile.js"></script>
   <script src="assets/js/app/app-core.js"></script>
 
   <script src="assets/js/app/library.js"></script>

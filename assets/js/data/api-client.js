@@ -2901,6 +2901,118 @@ if (externalSignal?.aborted) {
       : [];
   }
 
+  async function getCommunityProfile(
+    username,
+    { signal } = {}
+  ) {
+    const normalized =
+      typeof username === "string"
+        ? username.trim().replace(/^@/, "").toLowerCase()
+        : "";
+
+    if (!/^[a-z0-9_]{2,20}$/.test(normalized)) {
+      throw _makeApiError(
+        "invalid_username",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    return _httpJson(
+      "GET",
+      `/public/users/${encodeURIComponent(username)}`,
+      null,
+      { signal }
+    );
+  }
+
+  async function updateCommunityFollowing(
+    username,
+    action
+  ) {
+    const normalized =
+      typeof username === "string"
+        ? username.trim().replace(/^@/, "").toLowerCase()
+        : "";
+
+    if (!/^[a-z0-9_]{2,20}$/.test(normalized)) {
+      throw _makeApiError(
+        "invalid_username",
+        400
+      );
+    }
+
+    if (
+      action !== "follow" &&
+      action !== "unfollow"
+    ) {
+      throw _makeApiError(
+        "invalid_follow_action",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const method =
+      action === "follow" ? "POST" : "DELETE";
+
+    const response = await _httpJson(
+      method,
+      `/user/following/${encodeURIComponent(normalized)}`
+    );
+
+    return {
+      following: response?.following === true,
+      requested: response?.requested === true
+    };
+  }
+
+  async function blockCommunityUser(username) {
+    const normalized =
+      typeof username === "string"
+        ? username.trim().replace(/^@/, "").toLowerCase()
+        : "";
+
+    if (!/^[a-z0-9_]{2,20}$/.test(normalized)) {
+      throw _makeApiError(
+        "invalid_username",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const response = await _httpJson(
+      "POST",
+      `/user/blocks/${encodeURIComponent(normalized)}`,
+      null
+    );
+
+    return {
+      blocked: response?.blocked === true,
+      username: String(
+        response?.username || ""
+      ).trim().toLowerCase()
+    };
+  }
+
   async function getModeratorAccess() {
     if (!_isHttp()) {
       return { isModerator: false };
@@ -8196,6 +8308,9 @@ if (externalSignal?.aborted) {
     getTransportInfo,
     getCurrentSession,
     getCommunityUsers,
+    getCommunityProfile,
+    updateCommunityFollowing,
+    blockCommunityUser,
     // perfil
     getUser,
     updateUser,

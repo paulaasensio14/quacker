@@ -79,6 +79,31 @@ const CommunityModule = (() => {
         `${t("community_view_profile", "Ver perfil")}: @${username}`
       );
 
+      // Mantener href para copiar o abrir el perfil
+      // compartible. El clic normal usa la vista interna.
+      link.addEventListener("click", (event) => {
+        if (
+          event.defaultPrevented ||
+          event.button !== 0 ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return;
+        }
+
+        const open =
+          window.CommunityProfileModule?.open;
+
+        if (typeof open !== "function") {
+          return;
+        }
+
+        event.preventDefault();
+        open(username, link);
+      });
+
       const avatar = document.createElement("img");
       avatar.className = "community-user-avatar";
       avatar.src = safeAvatar(user.avatar);
