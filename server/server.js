@@ -146,6 +146,10 @@ import {
 } from "./lib/public-profile.js";
 
 import {
+  searchCommunityUsers
+} from "./lib/community-search.js";
+
+import {
   resolveActivityCreatedAt
 } from "./lib/activity-timestamp.js";
 
@@ -350,6 +354,13 @@ const authRateLimits =
 
 const socialRateLimits =
   createSocialRateLimiters();
+
+const communitySearchRateLimit =
+  createSlidingWindowRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    maxAttempts: 30,
+    maxEntries: 5000
+  });
 
 const moderationReportRateLimit =
   createSlidingWindowRateLimiter({
@@ -2289,6 +2300,55 @@ function _findFollowTarget(
 
   return null;
 }
+
+// Comunidad: búsqueda autenticada de identidades
+// públicas, con privacidad y límite por usuario.
+app.get(
+  "/api/community/users",
+  (req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  },
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const viewerUserId =
+      getAuthenticatedUserId(
+        req.session,
+        db.users
+      );
+
+    if (!viewerUserId) {
+      return res.status(401).json({
+        error: "not_authenticated"
+      });
+    }
+
+    const rateLimit =
+      communitySearchRateLimit.consume(
+        viewerUserId
+      );
+
+    if (!rateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "community_search_rate_limited",
+        rateLimit.retryAfterSeconds
+      );
+    }
+
+    const users = searchCommunityUsers(
+      db.users,
+      req.query.q,
+      {
+        viewerUserId
+      }
+    );
+
+    return res.json({ users });
+  }
+);
 
 app.get("/api/public/users/:username", (req, res) => {
   res.set("Cache-Control", "no-store");
