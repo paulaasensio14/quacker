@@ -145,3 +145,145 @@ test("rechaza la limpieza cuando la verificación real de producción falla", ()
     f.cleanup();
   }
 });
+
+
+test("restaura una base parcialmente escrita", () => {
+  const f = fixture();
+
+  try {
+    assert.throws(
+      () => executeBetaCleanup({
+        ...f.options,
+        writeDatabase: (dbPath) => {
+          fs.writeFileSync(dbPath, '{"users":');
+
+          const error = new Error("Escritura incompleta");
+          error.code = "SIMULATED_PARTIAL_WRITE";
+          throw error;
+        }
+      }),
+      { code: "SIMULATED_PARTIAL_WRITE" }
+    );
+
+    assert.equal(
+      fs.readFileSync(f.options.dbPath, "utf8"),
+      f.raw
+    );
+
+    assert.deepEqual(
+      fs.readdirSync(f.options.sessionDirectory),
+      ["session-one"]
+    );
+
+    assert.equal(
+      fs.readFileSync(
+        path.join(f.options.sessionDirectory, "session-one"),
+        "utf8"
+      ),
+      "{}"
+    );
+
+    assert.equal(
+      fs.readdirSync(f.options.backupDirectory).length,
+      1
+    );
+  } finally {
+    f.cleanup();
+  }
+});
+
+test("restaura la base si falla después de escribir datos diferentes", () => {
+  const f = fixture();
+
+  try {
+    assert.throws(
+      () => executeBetaCleanup({
+        ...f.options,
+        writeDatabase: (dbPath) => {
+          fs.writeFileSync(
+            dbPath,
+            JSON.stringify({ users: {} })
+          );
+
+          const error = new Error("Fallo posterior");
+          error.code = "SIMULATED_POST_WRITE_FAILURE";
+          throw error;
+        }
+      }),
+      { code: "SIMULATED_POST_WRITE_FAILURE" }
+    );
+
+    assert.equal(
+      fs.readFileSync(f.options.dbPath, "utf8"),
+      f.raw
+    );
+
+    assert.deepEqual(
+      fs.readdirSync(f.options.sessionDirectory),
+      ["session-one"]
+    );
+
+    assert.equal(
+      fs.readdirSync(f.options.backupDirectory).length,
+      1
+    );
+  } finally {
+    f.cleanup();
+  }
+});
+
+
+test("informa un fallo crítico si el backup no permite recuperar", () => {
+  const f = fixture();
+
+  try {
+    assert.throws(
+      () => executeBetaCleanup({
+        ...f.options,
+        writeDatabase: (dbPath) => {
+          fs.writeFileSync(dbPath, '{"users":');
+
+          const backupName = fs.readdirSync(
+            f.options.backupDirectory
+          )[0];
+
+          fs.writeFileSync(
+            path.join(
+              f.options.backupDirectory,
+              backupName
+            ),
+            "BACKUP_CORRUPTED_IN_TEST"
+          );
+
+          const error = new Error("Fallo simulado");
+          error.code = "SIMULATED_FAILURE";
+          throw error;
+        }
+      }),
+      { code: "BETA_CLEANUP_ROLLBACK_FAILED" }
+    );
+
+    const parent = path.dirname(
+      f.options.sessionDirectory
+    );
+
+    const prefix =
+      path.basename(f.options.sessionDirectory) +
+      ".beta-cleanup-";
+
+    const quarantines = fs.readdirSync(parent)
+      .filter((name) => name.startsWith(prefix));
+
+    assert.equal(quarantines.length, 1);
+
+    assert.equal(
+      fs.readFileSync(
+        path.join(parent, quarantines[0], "session-one"),
+        "utf8"
+      ),
+      "{}"
+    );
+  } finally {
+    f.cleanup();
+  }
+});

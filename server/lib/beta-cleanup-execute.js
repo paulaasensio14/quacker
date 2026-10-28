@@ -22,6 +22,54 @@ function sha256(filePath) {
     .digest("hex");
 }
 
+
+function restoreDatabaseFromBackup(
+  dbPath,
+  backupPath,
+  expectedSha256
+) {
+  if (sha256(backupPath) !== expectedSha256) {
+    fail("ROLLBACK_BACKUP_MISMATCH");
+  }
+
+  const temporaryPath =
+    `${dbPath}.rollback-${crypto.randomBytes(8).toString("hex")}`;
+
+  let descriptor = null;
+
+  try {
+    descriptor = fs.openSync(temporaryPath, "wx", 0o600);
+
+    fs.writeFileSync(
+      descriptor,
+      fs.readFileSync(backupPath)
+    );
+
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = null;
+
+    fs.renameSync(temporaryPath, dbPath);
+    fs.chmodSync(dbPath, 0o600);
+
+    if (sha256(dbPath) !== expectedSha256) {
+      fail("ROLLBACK_DATABASE_MISMATCH");
+    }
+  } finally {
+    if (descriptor !== null) {
+      fs.closeSync(descriptor);
+    }
+
+    try {
+      fs.unlinkSync(temporaryPath);
+    } catch (error) {
+      if (error?.code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+}
+
 export function executeBetaCleanup({
   dbPath,
   sessionDirectory,
@@ -82,16 +130,41 @@ export function executeBetaCleanup({
       fail("CLEANUP_VERIFICATION_FAILED");
     }
   } catch (error) {
-    // Si la base sigue intacta, recuperar las sesiones automáticamente.
-    if (sha256(dbPath) === expectedSha256) {
-      if (fs.existsSync(sessionDirectory) &&
-          fs.readdirSync(sessionDirectory).length === 0) {
+    try {
+      if (sha256(dbPath) !== expectedSha256) {
+        restoreDatabaseFromBackup(
+          dbPath,
+          backup.path,
+          expectedSha256
+        );
+      }
+
+      if (fs.existsSync(sessionDirectory)) {
+        if (fs.readdirSync(sessionDirectory).length !== 0) {
+          fail("ROLLBACK_SESSION_DIRECTORY_NOT_EMPTY");
+        }
+
         fs.rmdirSync(sessionDirectory);
       }
-      if (!fs.existsSync(sessionDirectory)) {
-        fs.renameSync(quarantineDirectory, sessionDirectory);
+
+      fs.renameSync(
+        quarantineDirectory,
+        sessionDirectory
+      );
+
+      if (sha256(dbPath) !== expectedSha256) {
+        fail("ROLLBACK_DATABASE_MISMATCH");
       }
+    } catch (recoveryError) {
+      const failure = new Error(
+        "BETA_CLEANUP_ROLLBACK_FAILED"
+      );
+
+      failure.code = "BETA_CLEANUP_ROLLBACK_FAILED";
+      failure.cause = recoveryError;
+      throw failure;
     }
+
     throw error;
   }
 
