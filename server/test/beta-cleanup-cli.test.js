@@ -228,3 +228,84 @@ test("el comando rechaza ejecución fuera de producción", async () => {
     );
   }
 });
+
+
+test("rechaza ejecución completa fuera de producción", () => {
+  const f = fixture();
+
+  try {
+    const lines = [];
+
+    const code = runBetaCleanupCommand({
+      dbPath: f.dbPath,
+      sessionDirectory: f.sessionDirectory,
+      args: [
+        "--execute",
+        "--expected-users", "2",
+        "--sha256", f.sha256,
+        "--confirm", "DELETE_ALL_BETA_USERS"
+      ],
+      writeLine: (line) => lines.push(line)
+    });
+
+    assert.equal(code, 1);
+
+    assert.equal(
+      fs.readFileSync(f.dbPath, "utf8"),
+      f.raw
+    );
+
+    assert.deepEqual(
+      fs.readdirSync(f.sessionDirectory),
+      ["session-one"]
+    );
+  } finally {
+    f.cleanup();
+  }
+});
+
+test("rechaza confirmación incorrecta y argumentos no autorizados", () => {
+  const f = fixture();
+
+  try {
+    for (const args of [
+      [
+        "--execute",
+        "--expected-users", "2",
+        "--sha256", f.sha256,
+        "--confirm", "WRONG_CONFIRMATION"
+      ],
+      [
+        "--execute",
+        "--expected-users", "2",
+        "--sha256", f.sha256,
+        "--confirm", "DELETE_ALL_BETA_USERS",
+        "--production-check", "skip"
+      ],
+      [
+        "--execute",
+        "--expected-users", "2",
+        "--sha256", f.sha256,
+        "--confirm", "DELETE_ALL_BETA_USERS",
+        "--write-database", "skip"
+      ]
+    ]) {
+      assert.equal(
+        runBetaCleanupCommand({
+          dbPath: f.dbPath,
+          sessionDirectory: f.sessionDirectory,
+          args,
+          writeLine: () => {}
+        }),
+        1
+      );
+    }
+
+    assert.equal(
+      fs.readFileSync(f.dbPath, "utf8"),
+      f.raw
+    );
+  } finally {
+    f.cleanup();
+  }
+});

@@ -1,8 +1,13 @@
 import { planBetaCleanup } from "./beta-cleanup-plan.js";
+import {
+  executeProductionBetaCleanup
+} from "./beta-cleanup-execute.js";
 
 function parseArguments(args) {
   const allowed = new Set([
     "--plan",
+    "--execute",
+    "--confirm",
     "--expected-users",
     "--sha256"
   ]);
@@ -16,7 +21,7 @@ function parseArguments(args) {
       throw new Error("INVALID_CLEANUP_ARGUMENTS");
     }
 
-    if (argument === "--plan") {
+    if (argument === "--plan" || argument === "--execute") {
       values.set(argument, true);
       continue;
     }
@@ -31,8 +36,25 @@ function parseArguments(args) {
     index += 1;
   }
 
+  const isPlan = values.get("--plan") === true;
+  const isExecute = values.get("--execute") === true;
+
+  if (isPlan === isExecute) {
+    throw new Error("INVALID_CLEANUP_ARGUMENTS");
+  }
+
+  if (isExecute) {
+    if (
+      values.get("--confirm") !==
+      "DELETE_ALL_BETA_USERS"
+    ) {
+      throw new Error("INVALID_CLEANUP_ARGUMENTS");
+    }
+  } else if (values.has("--confirm")) {
+    throw new Error("INVALID_CLEANUP_ARGUMENTS");
+  }
+
   if (
-    values.get("--plan") !== true ||
     !values.has("--expected-users") ||
     !values.has("--sha256")
   ) {
@@ -52,6 +74,7 @@ function parseArguments(args) {
   }
 
   return {
+    mode: isExecute ? "execute" : "plan",
     expectedUsers,
     expectedSha256: values.get("--sha256")
   };
@@ -66,10 +89,34 @@ export function runBetaCleanupCommand({
   try {
     const options = parseArguments(args);
 
+    if (options.mode === "execute") {
+      if (
+        dbPath !== "/home/ubuntu/apps/quacker/server/db.json" ||
+        sessionDirectory !==
+          "/home/ubuntu/apps/quacker/server/.sessions"
+      ) {
+        throw new Error("PRODUCTION_INSTALL_REQUIRED");
+      }
+
+      const result = executeProductionBetaCleanup({
+        expectedUsers: options.expectedUsers,
+        expectedSha256: options.expectedSha256,
+        confirmation: "DELETE_ALL_BETA_USERS"
+      });
+
+      writeLine("Modo: execute");
+      writeLine(`Usuarios eliminados: ${result.removedUsers}`);
+      writeLine("Backup de recuperación: creado");
+      writeLine("Sesiones anteriores: en cuarentena");
+
+      return 0;
+    }
+
     const report = planBetaCleanup({
       dbPath,
       sessionDirectory,
-      ...options
+      expectedUsers: options.expectedUsers,
+      expectedSha256: options.expectedSha256
     });
 
     writeLine("Modo: dry-run");
@@ -81,8 +128,12 @@ export function runBetaCleanupCommand({
 
     return 0;
   } catch (error) {
+    const operation = args.includes("--execute")
+      ? "Ejecución"
+      : "Simulación";
+
     writeLine(
-      `Simulación rechazada: ${
+      `${operation} rechazada: ${
         error?.code ||
         (
           error?.message === "INVALID_CLEANUP_ARGUMENTS" ||
