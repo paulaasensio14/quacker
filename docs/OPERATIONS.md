@@ -538,6 +538,35 @@ After restoration, confirm that Quacker starts normally and perform the health c
 
 Never restore an arbitrary JSON file by renaming it to look like a Quacker backup without first verifying its contents and origin.
 
+
+### Week 18 beta cleanup recovery
+
+If cleanup is interrupted, keep Quacker stopped.
+
+1. Identify the pre-cleanup database backup.
+2. Verify its origin, SHA-256, permissions and JSON structure.
+3. Inspect the database before attempting restoration.
+4. Identify the matching session quarantine directory.
+5. Preserve all backup and quarantine files.
+6. Restore the database only from a verified backup.
+7. Recover sessions only if the original accounts are restored.
+8. Verify database integrity and permissions.
+9. Restart Quacker only after successful verification.
+
+Cleanup backups are stored in /var/backups/quacker.
+
+The existing db:restore CLI accepts backups located beside
+the production database. A verified backup must therefore
+be securely staged there before using that command.
+
+Never merge session directories blindly.
+
+If automatic recovery fails, report a critical incident
+and keep the application stopped.
+
+Do not restore old sessions after a successful intentional
+cleanup of beta accounts.
+
 ## 7. Sensitive files and permissions
 
 Quacker contains several files that must not be publicly readable or committed to Git.
