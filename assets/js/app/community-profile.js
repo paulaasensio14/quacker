@@ -70,6 +70,7 @@ const CommunityProfileModule = (() => {
   }
 
   function clearProfile() {
+    window.CommunityReportUI?.clear?.();
     const content = $("#communityProfileContent");
     const bio = $("#communityProfileBioSection");
     const social = $("#communityProfileSocial");
@@ -688,6 +689,10 @@ const CommunityProfileModule = (() => {
     );
 
     renderFollowAction(data?.viewer);
+    window.CommunityReportUI?.sync?.(
+      data?.viewer,
+      activeUsername
+    );
 
     if (content) {
       content.hidden = false;
@@ -1155,6 +1160,7 @@ const CommunityProfileModule = (() => {
   }
 
   function back() {
+    window.CommunityReportUI?.clear?.();
     cancelRequest();
 
     followOperationVersion += 1;
@@ -1195,6 +1201,7 @@ const CommunityProfileModule = (() => {
     }
 
     initialized = true;
+    window.CommunityReportUI?.init?.();
 
     backButton.addEventListener("click", back);
 
@@ -1228,6 +1235,7 @@ const CommunityProfileModule = (() => {
         }
 
         cancelRequest();
+        window.CommunityReportUI?.clear?.();
 
         followOperationVersion += 1;
         followBusy = false;

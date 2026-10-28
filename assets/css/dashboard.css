@@ -12710,6 +12710,102 @@ body.dark-theme .community-profile-follow-action {
 
 /* ===== COMMUNITY PROFILE BLOCKING ===== */
 
+.community-profile-report-action {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.community-profile-report-action[hidden] { display: none; }
+.community-profile-report-action:disabled { opacity: 0.55; cursor: not-allowed; }
+.community-profile-report-action:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 3px; }
+
+.community-report-modal .community-report-card {
+  width: min(92vw, 480px);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 24px;
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+
+.community-report-header,
+.community-report-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.community-report-header h2 { margin: 0; font-size: 1.4rem; line-height: 1.25; }
+.community-report-header #communityReportClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.community-report-header #communityReportClose:hover {
+  background: var(--bg-pill-alt);
+}
+.community-report-form { display: grid; gap: 12px; margin-top: 20px; }
+.community-report-form label { font-weight: 600; }
+.community-report-form select,
+.community-report-form textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 2px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+}
+.community-report-form textarea { resize: vertical; }
+.community-report-actions { justify-content: flex-end; flex-wrap: wrap; }
+.community-report-actions button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-yellow);
+  color: #111827;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.community-report-actions #communityReportCancel {
+  background: transparent;
+  color: var(--text-main);
+}
+.community-report-actions #communityReportSubmit:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+.community-report-actions #communityReportCancel:hover:not(:disabled) {
+  background: var(--bg-pill-alt);
+}
+.community-report-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
+.community-report-modal :is(button, select, textarea):focus-visible {
+  outline: 3px solid var(--accent-blue);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .community-profile-report-action { width: 100%; }
+  .community-report-modal .community-report-card { padding: 18px; }
+}
+
 .community-profile-block-action {
   min-height: 44px;
   padding: 10px 18px;
@@ -12780,4 +12876,77 @@ body.dark-theme .community-profile-blocked {
   .community-profile-blocked {
     padding: 16px;
   }
+}
+
+
+/* QA-014: diseño coherente con el modal de listas */
+
+#communityReportModal .community-report-card {
+  max-width: 420px;
+  padding: 18px 18px 16px;
+}
+
+#communityReportModal .modal-header {
+  margin-bottom: 10px;
+}
+
+#communityReportModal .community-report-form {
+  display: block;
+  margin-top: 0;
+}
+
+#communityReportModal .community-report-form label {
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+
+#communityReportModal label[for="communityReportDetails"] {
+  margin-top: 12px;
+}
+
+#communityReportModal .community-report-form select {
+  min-height: 0;
+  padding: 7px 9px;
+  border-radius: 12px;
+  background: #fff;
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+#communityReportModal .community-report-form textarea {
+  min-height: 96px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #fff;
+  color: #111827;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+#communityReportModal .modal-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#communityReportModal .modal-actions .btn-secondary {
+  background: #fff;
+  color: #111827;
+}
+
+#communityReportModal .modal-actions .btn-primary {
+  background: var(--bg-yellow);
+  color: #111827;
+}
+
+#communityReportModal .modal-actions button {
+  min-height: 44px;
+}
+
+#communityReportModal .modal-close {
+  background: #fff;
+  color: #111827;
 }

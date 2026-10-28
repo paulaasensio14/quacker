@@ -1531,6 +1531,14 @@
                 Bloquear usuario
               </button>
 
+              <button
+                id="communityProfileReportAction"
+                type="button"
+                class="community-profile-report-action"
+                data-i18n="public_report_button"
+                hidden
+              >Denunciar usuario</button>
+
               <p
                 id="communityProfileSocialStatus"
                 class="community-profile-social-status"
@@ -2687,6 +2695,38 @@
   </div>
 </div>
 
+  <div id="communityReportModal" class="modal-overlay community-report-modal" aria-hidden="true">
+    <div class="modal-card community-report-card" role="dialog" aria-modal="true"
+      aria-labelledby="communityReportTitle">
+      <div class="modal-header">
+        <h3 id="communityReportTitle" data-i18n="public_report_title">Denunciar usuario</h3>
+        <button id="communityReportClose" class="modal-close" type="button"
+          aria-label="Cerrar" data-i18n-aria-label="common_close">
+      <svg width="14" height="14" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2.4"
+        stroke-linecap="round" stroke-linejoin="round"
+        aria-hidden="true">
+        <path d="M6 6l12 12M6 18L18 6"/>
+      </svg>
+    </button>
+      </div>
+      <form id="communityReportForm" class="community-report-form">
+        <label for="communityReportReason" data-i18n="public_report_reason">Motivo de la denuncia</label>
+        <select id="communityReportReason" required></select>
+        <label for="communityReportDetails" data-i18n="public_report_details">Descripción (opcional)</label>
+        <textarea id="communityReportDetails" rows="4" maxlength="500"
+          data-i18n-placeholder="public_report_details_placeholder"
+          placeholder="Explica brevemente lo sucedido"></textarea>
+        <p id="communityReportStatus" role="status" aria-live="polite"></p>
+        <div class="modal-actions">
+          <button id="communityReportCancel" class="btn-secondary" type="button" data-i18n="common_cancel">Cancelar</button>
+          <button id="communityReportSubmit" class="btn-primary" type="submit"
+            data-i18n="public_report_submit">Enviar denuncia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
 
@@ -2711,6 +2751,8 @@
   <script src="assets/js/app/whats-new.js"></script>
   <script src="assets/js/app/moderation.js"></script>
   <script src="assets/js/app/community.js"></script>
+  <script src="assets/js/app/report-submission.js"></script>
+  <script src="assets/js/app/community-report.js"></script>
   <script src="assets/js/app/community-profile.js"></script>
   <script src="assets/js/app/app-core.js"></script>
 
