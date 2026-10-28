@@ -495,6 +495,25 @@ test(
         200
       );
 
+
+      // QA-016: simular cuenta anterior a campos sociales.
+      const legacyDb = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const legacyUser = legacyDb.users[followerUserId];
+      const originalProfile = JSON.stringify(legacyUser.profile);
+
+      delete legacyUser.following;
+      delete legacyUser.followRequests;
+      delete legacyUser.blockedUserIds;
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(legacyDb, null, 2),
+        "utf8"
+      );
+
       const anonymousFollow =
         await requestJson(
           `${baseUrl}/api/user/following/week13_target`,
@@ -546,6 +565,25 @@ test(
           targetUserId
         ],
         "following debe persistir el userId objetivo"
+      );
+
+
+      assert.deepEqual(
+        persistedAfterFollow.users[followerUserId].followRequests,
+        [],
+        "QA-016: inicializa solicitudes ausentes"
+      );
+
+      assert.deepEqual(
+        persistedAfterFollow.users[followerUserId].blockedUserIds,
+        [],
+        "QA-016: inicializa bloqueos ausentes"
+      );
+
+      assert.equal(
+        JSON.stringify(persistedAfterFollow.users[followerUserId].profile),
+        originalProfile,
+        "QA-016: conserva el perfil de la cuenta antigua"
       );
 
       const directFollowNotification =
