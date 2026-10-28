@@ -1,5 +1,59 @@
 # Quacker Release Notes
 
+## 1.1.0-rc.1
+
+Primera versión candidata de Quacker 1.1.0, centrada en Comunidad,
+moderación, privacidad y preparación del lanzamiento.
+
+### Funcionalidades
+
+- Búsqueda autenticada de usuarios con restricciones de privacidad,
+  bloqueos y límites de uso.
+- Perfiles internos accesibles desde Comunidad, con información y
+  contenido público según los permisos de cada usuario.
+- Acciones de seguimiento, solicitudes pendientes y dejar de seguir.
+- Bloqueo de usuarios y protección de relaciones sociales.
+- Denuncias de usuarios y reseñas.
+- Panel de moderación con revisión y resolución de denuncias.
+- Mejoras de navegación, accesibilidad y adaptación móvil.
+- Actualizaciones de seguridad de dependencias y workflows de CI.
+
+### Validación de QA
+
+- Suite completa: 1326/1326 pruebas superadas.
+- Auditoría npm: 0 vulnerabilidades.
+- Pruebas funcionales con dos cuentas de desarrollo y permisos diferentes.
+- Comprobaciones manuales de moderación, solicitudes, bloqueos y denuncias.
+- Navegación mediante teclado, gestión del foco y modales comprobadas.
+- Revisión de Comunidad y Moderación en simulador móvil de 393 px.
+- Compatibilidad con cuentas antiguas verificada mediante QA-016.
+- Sistema de backups diarios comprobado.
+- Tres copias reales validadas como JSON con estructura correcta.
+- Pruebas aisladas de backup y restauración: 16/16 superadas.
+- Rendimiento de búsqueda medido con 100, 1000 y 5000 usuarios simulados.
+- Concurrencia HTTP ligera: 20/20 respuestas correctas.
+
+### Alcance y limitaciones
+
+- Esta versión es candidata y no constituye un lanzamiento público.
+- No se modifica ni elimina la base de datos de producción.
+- No se ejecuta limpieza de cuentas beta o de desarrollo.
+- La limpieza previa al lanzamiento público queda reservada para Semana 18.
+- Las mediciones de rendimiento no equivalen a una prueba de capacidad máxima.
+- La accesibilidad automatizada y con teclado no sustituye una auditoría
+  completa con lector de pantalla.
+- La validación estructural de backups no sustituye un simulacro integral
+  de recuperación de infraestructura.
+- La publicación del contenido definitivo de «Qué hay de nuevo» queda
+  pendiente de la versión estable 1.1.0.
+
+### Estado de publicación
+
+- Rama de preparación: feat/week17-community-ux.
+- Pull request: #144.
+- Versión candidata: 1.1.0-rc.1.
+- Producción permanece en 1.0.6 hasta una autorización de despliegue.
+
 ## 1.0.6
 
 Actualización de robustez operativa y preparación posterior a `1.0.5`.
