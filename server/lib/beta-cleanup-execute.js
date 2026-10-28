@@ -175,3 +175,23 @@ export function executeBetaCleanup({
     quarantineDirectory
   };
 }
+
+
+// Entrada operativa: rutas fijas y comprobaciones reales.
+// No admite sustitución de dependencias utilizada en los tests.
+export function executeProductionBetaCleanup({
+  expectedUsers,
+  expectedSha256,
+  confirmation
+}) {
+  return executeBetaCleanup({
+    dbPath: "/home/ubuntu/apps/quacker/server/db.json",
+    sessionDirectory:
+      "/home/ubuntu/apps/quacker/server/.sessions",
+    backupDirectory: "/var/backups/quacker",
+    expectedUsers,
+    expectedSha256,
+    confirmation,
+    serviceStopped: true
+  });
+}

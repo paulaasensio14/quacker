@@ -5,7 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { executeBetaCleanup } from "../lib/beta-cleanup-execute.js";
+import {
+  executeBetaCleanup,
+  executeProductionBetaCleanup
+} from "../lib/beta-cleanup-execute.js";
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "quacker-beta-exec-"));
@@ -286,4 +289,26 @@ test("informa un fallo crítico si el backup no permite recuperar", () => {
   } finally {
     f.cleanup();
   }
+});
+
+
+test("la entrada de producción ignora dependencias externas", () => {
+  const options = {
+    expectedUsers: 16,
+    expectedSha256: "0".repeat(64),
+    confirmation: "",
+
+    get productionCheck() {
+      throw new Error("NO_DEBE_LEERSE_PRODUCTION_CHECK");
+    },
+
+    get writeDatabase() {
+      throw new Error("NO_DEBE_LEERSE_WRITE_DATABASE");
+    }
+  };
+
+  assert.throws(
+    () => executeProductionBetaCleanup(options),
+    { code: "EXPLICIT_CONFIRMATION_REQUIRED" }
+  );
 });
