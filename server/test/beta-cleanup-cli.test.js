@@ -195,3 +195,36 @@ test("rechaza argumentos incompletos o duplicados", () => {
     f.cleanup();
   }
 });
+
+
+test("el comando rechaza ejecución fuera de producción", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const { fileURLToPath } = await import("node:url");
+
+  const script = fileURLToPath(
+    new URL("../scripts/beta-cleanup.js", import.meta.url)
+  );
+
+  const result = spawnSync(
+    process.execPath,
+    [script, "--execute"],
+    { encoding: "utf8", timeout: 5000 }
+  );
+
+  assert.equal(result.status, 1);
+
+  const productionScript =
+    "/home/ubuntu/apps/quacker/server/scripts/beta-cleanup.js";
+
+  if (script === productionScript) {
+    assert.match(
+      result.stdout,
+      /INVALID_CLEANUP_ARGUMENTS/
+    );
+  } else {
+    assert.match(
+      result.stderr,
+      /PRODUCTION_INSTALL_REQUIRED/
+    );
+  }
+});
