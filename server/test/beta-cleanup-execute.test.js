@@ -22,7 +22,8 @@ function fixture() {
     expectedUsers: 2,
     expectedSha256: crypto.createHash("sha256").update(raw).digest("hex"),
     confirmation: "DELETE_ALL_BETA_USERS",
-    serviceStopped: true
+    serviceStopped: true,
+    productionCheck: () => true
   };
   return {
     options, raw,
@@ -100,6 +101,46 @@ test("si falla la escritura recupera sesiones y conserva los usuarios", () => {
     assert.equal(fs.readFileSync(f.options.dbPath, "utf8"), f.raw);
     assert.deepEqual(fs.readdirSync(f.options.sessionDirectory), ["session-one"]);
     assert.equal(fs.readdirSync(f.options.backupDirectory).length, 1);
+  } finally {
+    f.cleanup();
+  }
+});
+
+
+test("rechaza la limpieza cuando la verificación real de producción falla", () => {
+  const f = fixture();
+
+  try {
+    let checks = 0;
+
+    assert.throws(
+      () => executeBetaCleanup({
+        ...f.options,
+        productionCheck: () => {
+          checks += 1;
+          const error = new Error("Producción activa");
+          error.code = "PRODUCTION_PM2_NOT_STOPPED";
+          throw error;
+        }
+      }),
+      { code: "PRODUCTION_PM2_NOT_STOPPED" }
+    );
+
+    assert.equal(checks, 1);
+    assert.equal(
+      fs.readFileSync(f.options.dbPath, "utf8"),
+      f.raw
+    );
+
+    assert.deepEqual(
+      fs.readdirSync(f.options.sessionDirectory),
+      ["session-one"]
+    );
+
+    assert.deepEqual(
+      fs.readdirSync(f.options.backupDirectory),
+      []
+    );
   } finally {
     f.cleanup();
   }

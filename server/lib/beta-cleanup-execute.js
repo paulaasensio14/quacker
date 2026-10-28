@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { planBetaCleanup } from "./beta-cleanup-plan.js";
+import { assertProductionStopped } from "./beta-cleanup-production-guard.js";
 import {
   createJsonFileBackup,
   writeJsonFileAtomic
@@ -29,6 +30,7 @@ export function executeBetaCleanup({
   expectedSha256,
   confirmation,
   serviceStopped = false,
+  productionCheck = assertProductionStopped,
   writeDatabase = writeJsonFileAtomic
 }) {
   if (confirmation !== "DELETE_ALL_BETA_USERS") {
@@ -37,6 +39,8 @@ export function executeBetaCleanup({
   if (serviceStopped !== true) {
     fail("SERVICE_MUST_BE_STOPPED");
   }
+  productionCheck();
+
   if (typeof backupDirectory !== "string" ||
       !path.isAbsolute(backupDirectory)) {
     fail("INVALID_BACKUP_DIRECTORY");
