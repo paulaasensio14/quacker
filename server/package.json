@@ -8,7 +8,8 @@
     "test": "node --test",
     "db:backup": "node scripts/backup-db.js",
     "db:restore": "node scripts/restore-db.js",
-    "db:user-cleanup-dry-run": "node scripts/user-cleanup-dry-run.js"
+    "db:user-cleanup-dry-run": "node scripts/user-cleanup-dry-run.js",
+    "db:beta-cleanup": "node scripts/beta-cleanup.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",
