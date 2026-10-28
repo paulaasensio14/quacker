@@ -93,6 +93,18 @@ function getWeekdayLabelEs(date = new Date()) {
   return dias[date.getDay()];
 }
 
+// Icono del botón de última actividad para cuentas sin progreso.
+function getCheckIconSvg() {
+  return `
+    <svg width="16" height="16" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2.4"
+      stroke-linecap="round" stroke-linejoin="round"
+      aria-hidden="true">
+      <path d="M20 6 9 17l-5-5"></path>
+    </svg>
+  `;
+}
+
 function setHomeDashboardLoading(isLoading) {
   const t = window.I18n?.t?.bind(window.I18n) || ((key) => key);
   const homeView = document.getElementById("view-home");

@@ -64,8 +64,11 @@ const Router = (() => {
       detail: "nav_detail",
       library: "nav_library",
       lists: "nav_lists",
+      community: "nav_community",
+      "community-profile": "community_profile_title",
       profile: "nav_profile",
-      opinions: "profile_opinions_title"
+      opinions: "profile_opinions_title",
+      moderation: "nav_moderation"
     };
     const titleEl = document.querySelector("#sectionTitle");
     if (titleEl) {
@@ -79,8 +82,11 @@ const Router = (() => {
       detail: "detail_summary",
       library: "library_summary",
       lists: "lists_subtitle",
+      community: "community_summary",
+      "community-profile": "community_summary",
       profile: "profile_summary",
-      opinions: "profile_opinions_all_summary"
+      opinions: "profile_opinions_all_summary",
+      moderation: "moderation_description"
     };
     const subtitleTextEl = document.querySelector("#sectionSubtitleText");
     if (subtitleTextEl) {
@@ -191,7 +197,12 @@ const Router = (() => {
     currentView = id;
 
     try {
-      const persistedView = id === "detail" ? "explore" : id;
+      const persistedView =
+        id === "detail"
+          ? "explore"
+          : id === "community-profile"
+            ? "community"
+            : id;
       window.sessionStorage.setItem("quacker:last-view", persistedView);
     } catch (_) {}
 
@@ -225,6 +236,7 @@ const Router = (() => {
     document.querySelectorAll(".nav-item-btn[data-view]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.dataset.view;
+        if (!views[id]) return;
         showView(id);
 
         document.querySelectorAll(".nav-item-btn").forEach((b) =>
@@ -341,7 +353,7 @@ const Router = (() => {
     }
   }
 
-  return { init, showView };
+  return { init, showView, registerView };
 })();
 
 window.Router = Router;

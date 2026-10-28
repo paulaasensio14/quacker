@@ -1207,6 +1207,546 @@ test(
 
 
 test(
+  "un bloqueo impide enviar nuevas invitaciones colaborativas",
+  { timeout: 20000 },
+  async () => {
+    const directory = createTemporaryDirectory();
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath = path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    let child = null;
+
+    try {
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port
+      });
+
+      async function register(email, name) {
+        const response = await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email,
+              password: "runtime-pass-123",
+              name,
+              language: "es"
+            }
+          }
+        );
+
+        assert.equal(response.statusCode, 200);
+
+        return {
+          cookie: response.headers["set-cookie"][0].split(";")[0],
+          userId: response.json?.user?.id,
+          username: response.json?.user?.handle
+        };
+      }
+
+      const alice = await register(
+        "week17-new-invite-alice@example.test",
+        "Week17 New Invite Alice"
+      );
+
+      const bob = await register(
+        "week17-new-invite-bob@example.test",
+        "Week17 New Invite Bob"
+      );
+
+      assert.ok(alice.userId);
+      assert.ok(bob.userId);
+      assert.ok(bob.username);
+
+      const privacy = await requestJson(
+        `${baseUrl}/api/user/privacy`,
+        {
+          method: "PATCH",
+          cookie: bob.cookie,
+          body: { profileVisibility: "public" }
+        }
+      );
+
+      assert.equal(privacy.statusCode, 200);
+
+      const created = await requestJson(
+        `${baseUrl}/api/lists`,
+        {
+          method: "POST",
+          cookie: alice.cookie,
+          body: {
+            name: "Lista sin invitaciones bloqueadas",
+            description: "",
+            visibility: "collab"
+          }
+        }
+      );
+
+      assert.equal(created.statusCode, 201);
+
+      const listId = created.json?.id;
+      assert.ok(listId);
+
+      const blocked = await requestJson(
+        `${baseUrl}/api/user/blocks/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(blocked.statusCode, 201);
+
+      const before = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const previousList = before.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      assert.ok(previousList);
+
+      const invited = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(invited.statusCode, 404);
+      assert.equal(invited.json?.error, "not_found");
+
+      const after = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const currentList = after.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      assert.deepEqual(
+        currentList.invitedUserIds,
+        previousList.invitedUserIds,
+        "no debe añadirse una invitación"
+      );
+
+      assert.deepEqual(
+        currentList.collaborators,
+        previousList.collaborators,
+        "no deben modificarse los colaboradores"
+      );
+    } finally {
+      await stopTestServer(child);
+      fs.rmSync(directory, {
+        recursive: true,
+        force: true
+      });
+    }
+  }
+);
+
+test(
+  "un enlace colaborativo no permite eludir un bloqueo",
+  { timeout: 20000 },
+  async () => {
+    const directory = createTemporaryDirectory();
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath = path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    let child = null;
+
+    try {
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port
+      });
+
+      async function register(email, name) {
+        const response = await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email,
+              password: "runtime-pass-123",
+              name,
+              language: "es"
+            }
+          }
+        );
+
+        assert.equal(response.statusCode, 200);
+
+        const cookie =
+          response.headers["set-cookie"][0].split(";")[0];
+
+        const userId = response.json?.user?.id;
+        const username = response.json?.user?.handle;
+
+        assert.ok(cookie);
+        assert.ok(userId);
+        assert.ok(username);
+
+        return { cookie, userId, username };
+      }
+
+      const alice = await register(
+        "week17-link-block-alice@example.test",
+        "Week17 Link Block Alice"
+      );
+
+      const bob = await register(
+        "week17-link-block-bob@example.test",
+        "Week17 Link Block Bob"
+      );
+
+      const privacy = await requestJson(
+        `${baseUrl}/api/user/privacy`,
+        {
+          method: "PATCH",
+          cookie: bob.cookie,
+          body: { profileVisibility: "public" }
+        }
+      );
+
+      assert.equal(privacy.statusCode, 200);
+
+      const created = await requestJson(
+        `${baseUrl}/api/lists`,
+        {
+          method: "POST",
+          cookie: alice.cookie,
+          body: {
+            name: "Lista con enlace bloqueado",
+            description: "",
+            visibility: "collab"
+          }
+        }
+      );
+
+      assert.equal(created.statusCode, 201);
+
+      const listId = created.json?.id;
+      assert.ok(listId);
+
+      const generated = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(generated.statusCode, 201);
+
+      const inviteUrl = String(
+        generated.json?.invite?.url || ""
+      );
+
+      const token = decodeURIComponent(
+        inviteUrl.split("#list-invite=")[1] || ""
+      );
+
+      assert.ok(token);
+
+      const blocked = await requestJson(
+        `${baseUrl}/api/user/blocks/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(blocked.statusCode, 201);
+
+      const before = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const previousList = before.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      const previousChallenge =
+        before.users[alice.userId]
+          .collaborativeListLinkInvites?.[listId];
+
+      assert.ok(previousList);
+      assert.ok(previousChallenge);
+
+      const accepted = await requestJson(
+        `${baseUrl}/api/user/list-invites/link/accept`,
+        {
+          method: "POST",
+          cookie: bob.cookie,
+          body: { token }
+        }
+      );
+
+      assert.equal(accepted.statusCode, 404);
+      assert.equal(
+        accepted.json?.error,
+        "invite_not_found"
+      );
+
+      const after = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const currentList = after.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      assert.deepEqual(
+        currentList.collaborators,
+        previousList.collaborators,
+        "el enlace rechazado no debe añadir colaboradores"
+      );
+
+      assert.deepEqual(
+        currentList.invitedUserIds,
+        previousList.invitedUserIds,
+        "el enlace rechazado no debe modificar invitaciones"
+      );
+
+      assert.deepEqual(
+        after.users[alice.userId]
+          .collaborativeListLinkInvites?.[listId],
+        previousChallenge,
+        "el intento rechazado no debe modificar el enlace"
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(directory, {
+        recursive: true,
+        force: true
+      });
+    }
+  }
+);
+
+test(
+  "una invitación pendiente no puede aceptarse después de un bloqueo",
+  { timeout: 20000 },
+  async () => {
+    const directory = createTemporaryDirectory();
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath = path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    let child = null;
+
+    try {
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port
+      });
+
+      async function register(email, name) {
+        const response = await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email,
+              password: "runtime-pass-123",
+              name,
+              language: "es"
+            }
+          }
+        );
+
+        assert.equal(response.statusCode, 200);
+
+        const cookie =
+          response.headers["set-cookie"][0].split(";")[0];
+
+        const userId = response.json?.user?.id;
+        const username = response.json?.user?.handle;
+
+        assert.ok(userId);
+        assert.ok(username);
+
+        return { cookie, userId, username };
+      }
+
+      const alice = await register(
+        "week17-invite-alice@example.test",
+        "Week17 Invite Alice"
+      );
+
+      const bob = await register(
+        "week17-invite-bob@example.test",
+        "Week17 Invite Bob"
+      );
+
+      const privacyUpdated = await requestJson(
+        `${baseUrl}/api/user/privacy`,
+        {
+          method: "PATCH",
+          cookie: bob.cookie,
+          body: {
+            profileVisibility: "public"
+          }
+        }
+      );
+
+      assert.equal(privacyUpdated.statusCode, 200);
+
+      const created = await requestJson(
+        `${baseUrl}/api/lists`,
+        {
+          method: "POST",
+          cookie: alice.cookie,
+          body: {
+            name: "Lista bloqueada Semana 17",
+            description: "",
+            visibility: "collab"
+          }
+        }
+      );
+
+      assert.equal(created.statusCode, 201);
+
+      const listId = created.json?.id;
+      assert.ok(listId);
+
+      const invited = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(invited.statusCode, 201);
+
+      const visibleInvites = await requestJson(
+        `${baseUrl}/api/user/list-invites`,
+        { cookie: bob.cookie }
+      );
+
+      assert.equal(visibleInvites.statusCode, 200);
+      assert.equal(
+        visibleInvites.json?.invites?.some(
+          (invite) => invite.list?.id === listId
+        ),
+        true,
+        "la invitación debe verse antes del bloqueo"
+      );
+
+      const blocked = await requestJson(
+        `${baseUrl}/api/user/blocks/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(blocked.statusCode, 201);
+
+      const hiddenInvites = await requestJson(
+        `${baseUrl}/api/user/list-invites`,
+        { cookie: bob.cookie }
+      );
+
+      assert.equal(hiddenInvites.statusCode, 200);
+      assert.equal(
+        hiddenInvites.json?.invites?.some(
+          (invite) => invite.list?.id === listId
+        ),
+        false,
+        "la invitación debe ocultarse tras el bloqueo"
+      );
+
+      const before = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const listBefore =
+        before.users[alice.userId].lists.find(
+          (list) => list.id === listId
+        );
+
+      assert.ok(listBefore);
+      assert.equal(
+        listBefore.collaborators.includes(bob.userId),
+        false
+      );
+
+      const accepted = await requestJson(
+        `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+        {
+          method: "POST",
+          cookie: bob.cookie
+        }
+      );
+
+      assert.equal(accepted.statusCode, 404);
+      assert.equal(
+        accepted.json?.error,
+        "invite_not_found"
+      );
+
+      const after = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const listAfter =
+        after.users[alice.userId].lists.find(
+          (list) => list.id === listId
+        );
+
+      assert.deepEqual(
+        listAfter.collaborators,
+        listBefore.collaborators,
+        "el bloqueo no debe añadir colaboradores"
+      );
+
+      assert.deepEqual(
+        listAfter.invitedUserIds,
+        listBefore.invitedUserIds,
+        "el intento rechazado no debe modificar invitaciones"
+      );
+
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(directory, {
+        recursive: true,
+        force: true
+      });
+    }
+  }
+);
+
+test(
   "el destinatario puede aceptar una invitación y pasa a ser colaborador",
   {
     timeout: 15000
@@ -6527,6 +7067,464 @@ test(
 );
 
 test(
+  "el propietario puede expulsar a un colaborador bloqueado",
+  { timeout: 30000 },
+  async () => {
+    const directory = createTemporaryDirectory();
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath = path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    let child = null;
+
+    try {
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port
+      });
+
+      async function register(email, name) {
+        const response = await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email,
+              password: "runtime-pass-123",
+              name,
+              language: "es"
+            }
+          }
+        );
+
+        assert.equal(response.statusCode, 200);
+
+        const cookie =
+          response.headers["set-cookie"][0].split(";")[0];
+
+        const userId = response.json?.user?.id;
+        const username = response.json?.user?.handle;
+
+        assert.ok(cookie);
+        assert.ok(userId);
+        assert.ok(username);
+
+        return { cookie, userId, username };
+      }
+
+      const alice = await register(
+        "week17-expel-alice@example.test",
+        "Week17 Expel Alice"
+      );
+
+      const bob = await register(
+        "week17-expel-bob@example.test",
+        "Week17 Expel Bob"
+      );
+
+      const privacy = await requestJson(
+        `${baseUrl}/api/user/privacy`,
+        {
+          method: "PATCH",
+          cookie: bob.cookie,
+          body: { profileVisibility: "public" }
+        }
+      );
+
+      assert.equal(privacy.statusCode, 200);
+
+      const created = await requestJson(
+        `${baseUrl}/api/lists`,
+        {
+          method: "POST",
+          cookie: alice.cookie,
+          body: {
+            name: "Lista con colaborador bloqueado",
+            description: "Conservar contenido",
+            visibility: "collab"
+          }
+        }
+      );
+
+      assert.equal(created.statusCode, 201);
+
+      const listId = created.json?.id;
+      assert.ok(listId);
+
+      const invited = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(invited.statusCode, 201);
+
+      const accepted = await requestJson(
+        `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+        {
+          method: "POST",
+          cookie: bob.cookie
+        }
+      );
+
+      assert.equal(accepted.statusCode, 200);
+
+      const blocked = await requestJson(
+        `${baseUrl}/api/user/blocks/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(blocked.statusCode, 201);
+
+      const before = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const listBefore = before.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      assert.ok(listBefore);
+      assert.ok(
+        listBefore.collaborators.includes(bob.userId),
+        "Bob debe conservar la membresía tras el bloqueo"
+      );
+
+      const removed = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/${encodeURIComponent(bob.userId)}`,
+        {
+          method: "DELETE",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(removed.statusCode, 200);
+      assert.equal(removed.json?.removed, true);
+
+      const after = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const listAfter = after.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      assert.ok(listAfter, "la lista debe conservarse");
+
+      assert.equal(
+        listAfter.collaborators.includes(bob.userId),
+        false,
+        "Bob debe dejar de ser colaborador"
+      );
+
+      assert.deepEqual(
+        listAfter.items,
+        listBefore.items,
+        "expulsar no debe eliminar elementos"
+      );
+
+      assert.deepEqual(
+        listAfter.polls,
+        listBefore.polls,
+        "expulsar no debe eliminar votaciones"
+      );
+
+      assert.deepEqual(
+        after.users[alice.userId].blockedUserIds,
+        before.users[alice.userId].blockedUserIds,
+        "expulsar no debe levantar el bloqueo"
+      );
+
+      const ownerLists = await requestJson(
+        `${baseUrl}/api/lists`,
+        { cookie: alice.cookie }
+      );
+
+      assert.equal(ownerLists.statusCode, 200);
+      assert.ok(
+        ownerLists.json?.some(
+          (list) => list.id === listId
+        ),
+        "Alice debe conservar acceso a su lista"
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(directory, {
+        recursive: true,
+        force: true
+      });
+    }
+  }
+);
+
+test(
+  "un colaborador bloqueado pierde acceso sin borrar su membresía",
+  { timeout: 30000 },
+  async () => {
+    const directory = createTemporaryDirectory();
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath = path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    let child = null;
+
+    try {
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port
+      });
+
+      async function register(email, name) {
+        const response = await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email,
+              password: "runtime-pass-123",
+              name,
+              language: "es"
+            }
+          }
+        );
+
+        assert.equal(response.statusCode, 200);
+
+        const cookie =
+          response.headers["set-cookie"][0].split(";")[0];
+
+        return {
+          cookie,
+          userId: response.json?.user?.id,
+          username: response.json?.user?.handle
+        };
+      }
+
+      const alice = await register(
+        "week17-member-alice@example.test",
+        "Week17 Member Alice"
+      );
+
+      const bob = await register(
+        "week17-member-bob@example.test",
+        "Week17 Member Bob"
+      );
+
+      assert.ok(alice.userId);
+      assert.ok(bob.userId);
+      assert.ok(bob.username);
+
+      const privacy = await requestJson(
+        `${baseUrl}/api/user/privacy`,
+        {
+          method: "PATCH",
+          cookie: bob.cookie,
+          body: { profileVisibility: "public" }
+        }
+      );
+
+      assert.equal(privacy.statusCode, 200);
+
+      const created = await requestJson(
+        `${baseUrl}/api/lists`,
+        {
+          method: "POST",
+          cookie: alice.cookie,
+          body: {
+            name: "Lista colaborativa con bloqueo",
+            description: "",
+            visibility: "collab"
+          }
+        }
+      );
+
+      assert.equal(created.statusCode, 201);
+
+      const listId = created.json?.id;
+      assert.ok(listId);
+
+      const invited = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(invited.statusCode, 201);
+
+      const accepted = await requestJson(
+        `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+        {
+          method: "POST",
+          cookie: bob.cookie
+        }
+      );
+
+      assert.equal(accepted.statusCode, 200);
+
+      const listsBefore = await requestJson(
+        `${baseUrl}/api/lists`,
+        { cookie: bob.cookie }
+      );
+
+      assert.equal(listsBefore.statusCode, 200);
+      assert.ok(
+        listsBefore.json?.some(
+          (list) => list.id === listId
+        ),
+        "Bob debe ver la lista antes del bloqueo"
+      );
+
+      const blocked = await requestJson(
+        `${baseUrl}/api/user/blocks/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(blocked.statusCode, 201);
+
+      const persistedBefore = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const ownerListBefore =
+        persistedBefore.users[alice.userId].lists.find(
+          (list) => list.id === listId
+        );
+
+      assert.ok(ownerListBefore);
+      assert.ok(
+        ownerListBefore.collaborators.includes(bob.userId),
+        "el bloqueo no debe borrar la membresía"
+      );
+
+      const listsAfter = await requestJson(
+        `${baseUrl}/api/lists`,
+        { cookie: bob.cookie }
+      );
+
+      assert.equal(listsAfter.statusCode, 200);
+      assert.equal(
+        listsAfter.json?.some(
+          (list) => list.id === listId
+        ),
+        false,
+        "Bob no debe ver la lista durante el bloqueo"
+      );
+
+      for (const method of ["POST", "DELETE"]) {
+        const response =
+          method === "POST"
+            ? await requestJson(
+                `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items`,
+                {
+                  method,
+                  cookie: bob.cookie,
+                  body: {
+                    itemId: "blocked-access-probe"
+                  }
+                }
+              )
+            : await requestJson(
+                `${baseUrl}/api/lists/${encodeURIComponent(listId)}/items/blocked-access-probe`,
+                {
+                  method,
+                  cookie: bob.cookie
+                }
+              );
+
+        assert.equal(response.statusCode, 404);
+        assert.equal(response.json?.error, "list_not_found");
+      }
+
+      const persistedAfter = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const ownerListAfter =
+        persistedAfter.users[alice.userId].lists.find(
+          (list) => list.id === listId
+        );
+
+      assert.deepEqual(
+        ownerListAfter,
+        ownerListBefore,
+        "el acceso rechazado no debe modificar la lista"
+      );
+
+      const ownerLists = await requestJson(
+        `${baseUrl}/api/lists`,
+        { cookie: alice.cookie }
+      );
+
+      assert.equal(ownerLists.statusCode, 200);
+      assert.ok(
+        ownerLists.json?.some(
+          (list) => list.id === listId
+        ),
+        "Alice debe conservar su lista"
+      );
+
+      const left = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/members/me`,
+        {
+          method: "DELETE",
+          cookie: bob.cookie
+        }
+      );
+
+      assert.equal(left.statusCode, 200);
+      assert.equal(left.json?.left, true);
+
+      const persistedAfterLeaving = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const finalList =
+        persistedAfterLeaving.users[alice.userId].lists.find(
+          (list) => list.id === listId
+        );
+
+      assert.equal(
+        finalList.collaborators.includes(bob.userId),
+        false,
+        "Bob debe poder abandonar la lista durante el bloqueo"
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(directory, {
+        recursive: true,
+        force: true
+      });
+    }
+  }
+);
+
+test(
   "outsiders y ex-colaboradores no pueden mutar items de una lista colaborativa",
   {
     timeout: 30000
@@ -6890,6 +7888,298 @@ test(
           force: true
         }
       );
+    }
+  }
+);
+
+test(
+  "un colaborador bloqueado no puede operar sobre votaciones",
+  { timeout: 30000 },
+  async () => {
+    const directory = createTemporaryDirectory();
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath = path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    let child = null;
+
+    try {
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port
+      });
+
+      async function register(email, name) {
+        const response = await requestJson(
+          `${baseUrl}/api/auth/register`,
+          {
+            method: "POST",
+            body: {
+              email,
+              password: "runtime-pass-123",
+              name,
+              language: "es"
+            }
+          }
+        );
+
+        assert.equal(response.statusCode, 200);
+
+        const cookie =
+          response.headers["set-cookie"][0].split(";")[0];
+
+        const userId = response.json?.user?.id;
+        const username = response.json?.user?.handle;
+
+        assert.ok(cookie);
+        assert.ok(userId);
+        assert.ok(username);
+
+        return { cookie, userId, username };
+      }
+
+      const alice = await register(
+        "week17-poll-block-alice@example.test",
+        "Week17 Poll Block Alice"
+      );
+
+      const bob = await register(
+        "week17-poll-block-bob@example.test",
+        "Week17 Poll Block Bob"
+      );
+
+      const privacy = await requestJson(
+        `${baseUrl}/api/user/privacy`,
+        {
+          method: "PATCH",
+          cookie: bob.cookie,
+          body: { profileVisibility: "public" }
+        }
+      );
+
+      assert.equal(privacy.statusCode, 200);
+
+      const createdList = await requestJson(
+        `${baseUrl}/api/lists`,
+        {
+          method: "POST",
+          cookie: alice.cookie,
+          body: {
+            name: "Lista votaciones bloqueadas",
+            description: "",
+            visibility: "collab"
+          }
+        }
+      );
+
+      assert.equal(createdList.statusCode, 201);
+      const listId = createdList.json?.id;
+      assert.ok(listId);
+
+      const invited = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(invited.statusCode, 201);
+
+      const accepted = await requestJson(
+        `${baseUrl}/api/user/list-invites/${encodeURIComponent(listId)}/accept`,
+        {
+          method: "POST",
+          cookie: bob.cookie
+        }
+      );
+
+      assert.equal(accepted.statusCode, 200);
+
+      // Preparar contenido válido para crear una votación.
+      const preparedDb = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const preparedList = preparedDb.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      assert.ok(preparedList);
+
+      preparedList.items = [
+        {
+          id: "movie-123",
+          source: "tmdb",
+          type: "pelicula",
+          externalId: "123",
+          itemSnapshot: {
+            title: "Dune",
+            cover: ""
+          },
+          addedAt: "2026-09-30T09:00:00.000Z"
+        },
+        {
+          id: "movie-456",
+          source: "tmdb",
+          type: "pelicula",
+          externalId: "456",
+          itemSnapshot: {
+            title: "Arrival",
+            cover: ""
+          },
+          addedAt: "2026-09-30T09:05:00.000Z"
+        }
+      ];
+      preparedList.itemsCount = 2;
+
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify(preparedDb, null, 2),
+        "utf8"
+      );
+
+      const pollPayload = {
+        title: "Qué película vemos",
+        optionContentKeys: [
+          "tmdb::pelicula::123",
+          "tmdb::pelicula::456"
+        ],
+        allowMultipleVotes: false,
+        deadlineAt: null
+      };
+
+      const createdPoll = await requestJson(
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}/polls`,
+        {
+          method: "POST",
+          cookie: alice.cookie,
+          body: pollPayload
+        }
+      );
+
+      assert.equal(createdPoll.statusCode, 201);
+
+      const pollId = createdPoll.json?.poll?.id;
+      assert.ok(pollId);
+
+      const blocked = await requestJson(
+        `${baseUrl}/api/user/blocks/${encodeURIComponent(bob.username)}`,
+        {
+          method: "POST",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(blocked.statusCode, 201);
+
+      const before = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const listBefore = before.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      assert.ok(
+        listBefore.collaborators.includes(bob.userId),
+        "el bloqueo debe conservar la membresía"
+      );
+
+      const listUrl =
+        `${baseUrl}/api/lists/${encodeURIComponent(listId)}`;
+      const pollUrl =
+        `${listUrl}/polls/${encodeURIComponent(pollId)}`;
+
+      const attempts = [
+        {
+          label: "crear votación",
+          url: `${listUrl}/polls`,
+          method: "POST",
+          body: pollPayload
+        },
+        {
+          label: "consultar resultados",
+          url: `${pollUrl}/results`,
+          method: "GET"
+        },
+        {
+          label: "cerrar votación",
+          url: `${pollUrl}/close`,
+          method: "POST"
+        },
+        {
+          label: "emitir voto",
+          url: `${pollUrl}/votes/me`,
+          method: "PUT",
+          body: {
+            optionContentKeys: ["tmdb::pelicula::123"]
+          }
+        }
+      ];
+
+      for (const attempt of attempts) {
+        const response = await requestJson(
+          attempt.url,
+          {
+            method: attempt.method,
+            cookie: bob.cookie,
+            ...(attempt.body ? { body: attempt.body } : {})
+          }
+        );
+
+        assert.equal(
+          response.statusCode,
+          404,
+          `${attempt.label}: debe denegarse el acceso`
+        );
+
+        assert.equal(
+          response.json?.error,
+          "list_not_found",
+          `${attempt.label}: error inesperado`
+        );
+      }
+
+      const after = JSON.parse(
+        fs.readFileSync(dbPath, "utf8")
+      );
+
+      const listAfter = after.users[alice.userId]
+        .lists.find((list) => list.id === listId);
+
+      assert.deepEqual(
+        listAfter,
+        listBefore,
+        "los intentos rechazados no deben alterar la lista"
+      );
+
+      const ownerResults = await requestJson(
+        `${pollUrl}/results`,
+        {
+          method: "GET",
+          cookie: alice.cookie
+        }
+      );
+
+      assert.equal(
+        ownerResults.statusCode,
+        200,
+        "Alice debe conservar acceso a su votación"
+      );
+    } finally {
+      await stopTestServer(child);
+
+      fs.rmSync(directory, {
+        recursive: true,
+        force: true
+      });
     }
   }
 );

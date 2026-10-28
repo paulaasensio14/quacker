@@ -14,6 +14,10 @@
   let publicFavorites = {};
   let socialConnectionsRequestId = 0;
 
+  function blockT(key, fallback, params) {
+    return window.I18n?.t?.(key, params) ?? fallback;
+  }
+
   function $(selector) {
     return document.querySelector(selector);
   }
@@ -724,6 +728,11 @@
         card.append(tagsEl);
       }
 
+      window.PublicProfileReportUI?.decorateReview?.(
+        card,
+        entry
+      );
+
       container.append(card);
     }
 
@@ -1149,7 +1158,15 @@
     const accessNote =
       $("#publicProfileAccessNote");
 
-    if (!container || !action || !accessNote) {
+    const blockAction =
+      $("#publicProfileBlockAction");
+
+    if (
+      !container ||
+      !action ||
+      !accessNote ||
+      !blockAction
+    ) {
       return;
     }
 
@@ -1159,6 +1176,7 @@
       Array.isArray(viewer)
     ) {
       container.hidden = true;
+      blockAction.hidden = true;
       action.textContent = "";
       accessNote.textContent = "";
       return;
@@ -1190,6 +1208,7 @@
 
     if (!label) {
       container.hidden = true;
+      blockAction.hidden = true;
       action.textContent = "";
       accessNote.textContent = "";
       return;
@@ -1197,6 +1216,7 @@
 
     action.textContent = label;
     action.dataset.socialState = state;
+    blockAction.hidden = state === "self";
 
     action.disabled =
       ![
@@ -1284,6 +1304,157 @@
     }
   }
 
+
+  async function performBlockAction() {
+    const button =
+      $("#publicProfileBlockAction");
+
+    const accessNote =
+      $("#publicProfileAccessNote");
+
+    const followButton =
+      $("#publicProfileSocialAction");
+
+    if (
+      !button ||
+      button.disabled ||
+      button.hidden
+    ) {
+      return;
+    }
+
+    const username = getUsernameFromPath();
+    if (!username) return;
+
+    const confirmed = window.confirm(
+      blockT(
+        "public_block_confirm",
+        `¿Quieres bloquear a @${username}?\n\n` +
+          "Se eliminarán los seguimientos y " +
+          "solicitudes pendientes entre ambos. " +
+          "Podrás desbloquearlo después, pero " +
+          "no se restaurarán esas relaciones.",
+        { username }
+      )
+    );
+
+    if (!confirmed) return;
+
+    button.disabled = true;
+
+    const wasFollowDisabled =
+      followButton?.disabled;
+
+    if (followButton) {
+      followButton.disabled = true;
+    }
+
+    if (accessNote) {
+      accessNote.textContent = "";
+    }
+
+    try {
+      const response = await fetch(
+        `/api/user/blocks/${encodeURIComponent(username)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json"
+          },
+          credentials: "same-origin"
+        }
+      );
+
+      if (!response.ok) {
+        let message =
+          blockT(
+            "public_block_error",
+            "No se ha podido bloquear al usuario."
+          );
+
+        if (response.status === 429) {
+          const retryAfter = Number(
+            response.headers.get("Retry-After")
+          );
+
+          const seconds = Math.ceil(retryAfter);
+
+          message =
+            Number.isFinite(retryAfter) && retryAfter > 0
+              ? blockT(
+                  "public_block_rate_wait",
+                  `Has realizado demasiadas operaciones. Inténtalo de nuevo en ${seconds} segundos.`,
+                  { seconds }
+                )
+              : blockT(
+                  "public_block_rate_later",
+                  "Has realizado demasiadas operaciones. Inténtalo de nuevo más tarde."
+                );
+        } else if (response.status === 401) {
+          message =
+            blockT(
+              "public_block_session",
+              "Tu sesión ha caducado. Inicia sesión de nuevo."
+            );
+        } else if (response.status === 409) {
+          message =
+            blockT(
+              "public_block_already",
+              "Ya has bloqueado a este usuario."
+            );
+        } else if (response.status === 404) {
+          message =
+            blockT(
+              "public_block_not_found",
+              "No se ha encontrado este usuario."
+            );
+        }
+
+        if (accessNote) {
+          accessNote.textContent = message;
+        }
+
+        return;
+      }
+
+      const content =
+        $("#publicProfileContent");
+
+      const loading =
+        $("#publicProfileLoading");
+
+      const error =
+        $("#publicProfileError");
+
+      const blocked =
+        $("#publicProfileBlocked");
+
+      if (content) content.hidden = true;
+      if (loading) loading.hidden = true;
+      if (error) error.hidden = true;
+
+      if (blocked) {
+        blocked.hidden = false;
+        $("#publicProfileBlockedTitle")?.focus();
+      }
+    } catch (_) {
+      if (accessNote) {
+        accessNote.textContent =
+          blockT(
+            "public_block_network",
+            "Error de conexión. Inténtalo de nuevo."
+          );
+      }
+    } finally {
+      button.disabled = false;
+
+      if (followButton) {
+        followButton.disabled =
+          wasFollowDisabled === true;
+      }
+    }
+  }
+
   function renderProfile(data) {
     const profile =
       data?.profile &&
@@ -1297,6 +1468,10 @@
     }
 
     renderSocialRelationship(data.viewer);
+    window.PublicProfileReportUI?.sync?.(
+      data.viewer,
+      profile
+    );
     renderSocialStats(data.social);
 
     const name = String(
@@ -1410,6 +1585,9 @@
   document.addEventListener(
     "DOMContentLoaded",
     () => {
+      // Aplicar el idioma guardado también en la página pública.
+      window.I18n?.init?.();
+
       const action =
         $("#publicProfileSocialAction");
 
@@ -1420,6 +1598,17 @@
         );
       }
 
+      const blockAction =
+        $("#publicProfileBlockAction");
+
+      if (blockAction) {
+        blockAction.addEventListener(
+          "click",
+          performBlockAction
+        );
+      }
+
+      window.PublicProfileReportUI?.init?.();
       setupSocialConnections();
       loadPublicProfile();
     }

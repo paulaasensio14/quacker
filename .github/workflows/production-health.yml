@@ -12,7 +12,7 @@ permissions:
 jobs:
   health:
     name: Comprobar Quacker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
 
     steps:
@@ -27,7 +27,7 @@ jobs:
 
       - name: Abrir alerta si falla producción
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const title = "Alerta: salud de producción";
@@ -59,7 +59,7 @@ jobs:
 
       - name: Cerrar alerta tras recuperación
         if: success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const title = "Alerta: salud de producción";

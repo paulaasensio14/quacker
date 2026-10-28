@@ -94,6 +94,34 @@
           </button>
         </li>
         <li>
+          <button
+            class="nav-item-btn"
+            data-view="community"
+            type="button"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="8" r="3"></circle>
+              <path d="M3 20v-2a6 6 0 0 1 12 0v2"></path>
+              <path d="M17 5a3 3 0 0 1 0 6"></path>
+              <path d="M18 14a5 5 0 0 1 3 5v1"></path>
+            </svg>
+            <span
+              class="nav-label"
+              data-i18n="nav_community"
+            >Comunidad</span>
+          </button>
+        </li>
+        <li>
           <button class="nav-item-btn" data-view="profile">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2.4"
@@ -103,6 +131,18 @@
             </svg>
 
             <span class="nav-label" data-i18n="nav_profile">Mi perfil</span>
+          </button>
+        </li>
+        <li id="moderationNavItem" hidden>
+          <button class="nav-item-btn" data-view="moderation" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor"
+              stroke-width="2.4" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+            <span class="nav-label" data-i18n="nav_moderation">Moderación</span>
           </button>
         </li>
       </ul>
@@ -1310,6 +1350,297 @@
         </div>
       </div>
 
+      <!-- ===== VIEW: COMMUNITY ===== -->
+      <section
+        class="view"
+        id="view-community"
+        data-view-id="community"
+      >
+        <div class="community-layout">
+          <div class="community-panel">
+            <h2 data-i18n="nav_community">
+              Comunidad
+            </h2>
+
+            <p
+              class="community-description"
+              data-i18n="community_summary"
+            >
+              Encuentra personas y conecta en Quacker.
+            </p>
+
+            <label
+              class="community-search-label"
+              for="communitySearchInput"
+              data-i18n="community_search_label"
+            >
+              Buscar personas
+            </label>
+
+            <input
+              id="communitySearchInput"
+              type="search"
+              class="community-search-input"
+              maxlength="80"
+              autocomplete="off"
+              spellcheck="false"
+              data-i18n-placeholder="community_search_placeholder"
+              placeholder="Nombre o @usuario..."
+            >
+
+            <p
+              id="communitySearchStatus"
+              class="community-search-status"
+              role="status"
+              aria-live="polite"
+            >
+              Escribe al menos dos caracteres.
+            </p>
+
+            <div
+              id="communityResults"
+              class="community-results"
+              role="list"
+              aria-label="Resultados de búsqueda"
+              data-i18n-aria-label="community_search_label"
+            ></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== VIEW: COMMUNITY PROFILE ===== -->
+      <section
+        class="view"
+        id="view-community-profile"
+        data-view-id="community-profile"
+      >
+        <div class="community-profile-layout">
+          <button
+            id="communityProfileBack"
+            class="community-profile-back"
+            type="button"
+            data-i18n="community_profile_back"
+          >
+            ← Volver a Comunidad
+          </button>
+
+          <p
+            id="communityProfileStatus"
+            class="community-profile-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+
+          <div
+            id="communityProfileBlocked"
+            class="community-profile-blocked"
+            role="status"
+            aria-live="polite"
+            hidden
+          >
+            <h2 data-i18n="community_block_success">
+              Usuario bloqueado
+            </h2>
+
+            <p data-i18n="community_block_description">
+              Se han eliminado los seguimientos y
+              las solicitudes pendientes entre ambos.
+            </p>
+
+            <button
+              id="communityProfileBlockedBack"
+              type="button"
+              class="community-profile-back"
+              data-i18n="community_block_back"
+            >
+              Volver a Comunidad
+            </button>
+          </div>
+
+          <div
+            id="communityProfileContent"
+            class="community-profile-card"
+            hidden
+          >
+            <div class="community-profile-header">
+              <img
+                id="communityProfileAvatar"
+                class="community-profile-avatar"
+                src="/assets/img/logo-quacker.png"
+                alt=""
+                width="96"
+                height="96"
+              >
+
+              <div class="community-profile-identity">
+                <h2 id="communityProfileName"></h2>
+                <p id="communityProfileUsername"></p>
+              </div>
+            </div>
+
+            <div
+              id="communityProfileBioSection"
+              class="community-profile-section"
+              hidden
+            >
+              <h3 data-i18n="community_profile_bio">
+                Biografía
+              </h3>
+              <p id="communityProfileBio"></p>
+            </div>
+
+            <div
+              id="communityProfileSocial"
+              class="community-profile-social"
+              hidden
+            >
+              <div class="community-profile-social-metric">
+                <strong id="communityProfileFollowers">0</strong>
+                <span data-i18n="community_profile_followers">
+                  Seguidores
+                </span>
+              </div>
+
+              <div class="community-profile-social-metric">
+                <strong id="communityProfileFollowing">0</strong>
+                <span data-i18n="community_profile_following">
+                  Siguiendo
+                </span>
+              </div>
+            </div>
+
+            <div
+              id="communityProfileActions"
+              class="community-profile-actions"
+              hidden
+            >
+              <button
+                id="communityProfileFollowAction"
+                type="button"
+                class="community-profile-follow-action"
+                disabled
+              ></button>
+
+              <button
+                id="communityProfileBlockAction"
+                type="button"
+                class="community-profile-block-action"
+                data-i18n="community_block_button"
+                hidden
+              >
+                Bloquear usuario
+              </button>
+
+              <button
+                id="communityProfileReportAction"
+                type="button"
+                class="community-profile-report-action"
+                data-i18n="public_report_button"
+                hidden
+              >Denunciar usuario</button>
+
+              <p
+                id="communityProfileSocialStatus"
+                class="community-profile-social-status"
+                role="status"
+                aria-live="polite"
+              ></p>
+            </div>
+
+            <p
+              id="communityProfileRestricted"
+              class="community-profile-restricted"
+              hidden
+            ></p>
+
+            <section
+              id="communityProfileFavorites"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileFavoritesTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileFavoritesTitle"
+                data-i18n="community_profile_favorites"
+              >Favoritos</h3>
+
+              <div
+                id="communityProfileFavoritesContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+
+            <section
+              id="communityProfileStats"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileStatsTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileStatsTitle"
+                data-i18n="community_profile_stats"
+              >Estadísticas</h3>
+
+              <div
+                id="communityProfileStatsContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+
+            <section
+              id="communityProfileLists"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileListsTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileListsTitle"
+                data-i18n="community_profile_lists"
+              >Listas públicas</h3>
+
+              <div
+                id="communityProfileListsContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+
+            <section
+              id="communityProfileReviews"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileReviewsTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileReviewsTitle"
+                data-i18n="community_profile_reviews"
+              >Reseñas</h3>
+
+              <div
+                id="communityProfileReviewsContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+
+            <section
+              id="communityProfileActivity"
+              class="community-profile-content-section"
+              aria-labelledby="communityProfileActivityTitle"
+              hidden
+            >
+              <h3
+                id="communityProfileActivityTitle"
+                data-i18n="community_profile_activity"
+              >Actividad</h3>
+
+              <div
+                id="communityProfileActivityContent"
+                class="community-profile-content-grid"
+              ></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== VIEW: PROFILE ===== -->
       <section class="view" id="view-profile" data-view-id="profile">
         <div class="profile-layout">
@@ -1535,6 +1866,44 @@
             </form>
           </div>
 
+          <section
+            class="profile-card profile-blocked-users-card"
+            id="profileBlockedUsersCard"
+            aria-labelledby="profileBlockedUsersTitle"
+          >
+            <h3
+              class="profile-title"
+              id="profileBlockedUsersTitle"
+              data-i18n="profile_blocks_title"
+            >
+              Usuarios bloqueados
+            </h3>
+
+            <p
+              class="profile-meta"
+              data-i18n="profile_blocks_description"
+            >
+              Gestiona las personas que has bloqueado.
+              Al desbloquear a alguien no se restauran
+              automáticamente los seguimientos anteriores.
+            </p>
+
+            <p
+              id="profileBlockedUsersStatus"
+              class="profile-meta"
+              role="status"
+              aria-live="polite"
+            >
+              Cargando usuarios bloqueados...
+            </p>
+
+            <div
+              id="profileBlockedUsersList"
+              class="profile-blocked-users-list"
+              aria-label="Lista de usuarios bloqueados"
+            ></div>
+          </section>
+
           <div class="profile-card profile-follow-requests-card" id="profileFollowRequestsCard">
             <h3
               class="profile-title"
@@ -1740,6 +2109,32 @@
               id="profileOpinionsAllList"
               aria-live="polite"
             ></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Vista administrativa: activación exclusiva tras permiso HTTP -->
+      <section class="view" id="view-moderation" hidden>
+        <div class="profile-layout">
+          <div class="profile-card">
+            <h2 class="profile-title" data-i18n="moderation_title">
+              Moderación
+            </h2>
+            <p class="profile-meta" data-i18n="moderation_description">
+              Gestiona las denuncias pendientes de revisión.
+            </p>
+            <button
+              type="button"
+              class="btn-secondary moderation-refresh"
+              id="moderationReportsRefresh"
+              data-i18n="moderation_refresh"
+            >Actualizar denuncias</button>
+            <div id="moderationReportsStatus" role="status" aria-live="polite">
+              <span data-i18n="moderation_initial_state">
+                Preparando la bandeja de denuncias.
+              </span>
+            </div>
+            <div id="moderationReportsList"></div>
           </div>
         </div>
       </section>
@@ -2300,6 +2695,38 @@
   </div>
 </div>
 
+  <div id="communityReportModal" class="modal-overlay community-report-modal" aria-hidden="true">
+    <div class="modal-card community-report-card" role="dialog" aria-modal="true"
+      aria-labelledby="communityReportTitle">
+      <div class="modal-header">
+        <h3 id="communityReportTitle" data-i18n="public_report_title">Denunciar usuario</h3>
+        <button id="communityReportClose" class="modal-close" type="button"
+          aria-label="Cerrar" data-i18n-aria-label="common_close">
+      <svg width="14" height="14" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2.4"
+        stroke-linecap="round" stroke-linejoin="round"
+        aria-hidden="true">
+        <path d="M6 6l12 12M6 18L18 6"/>
+      </svg>
+    </button>
+      </div>
+      <form id="communityReportForm" class="community-report-form">
+        <label for="communityReportReason" data-i18n="public_report_reason">Motivo de la denuncia</label>
+        <select id="communityReportReason" required></select>
+        <label for="communityReportDetails" data-i18n="public_report_details">Descripción (opcional)</label>
+        <textarea id="communityReportDetails" rows="4" maxlength="500"
+          data-i18n-placeholder="public_report_details_placeholder"
+          placeholder="Explica brevemente lo sucedido"></textarea>
+        <p id="communityReportStatus" role="status" aria-live="polite"></p>
+        <div class="modal-actions">
+          <button id="communityReportCancel" class="btn-secondary" type="button" data-i18n="common_cancel">Cancelar</button>
+          <button id="communityReportSubmit" class="btn-primary" type="submit"
+            data-i18n="public_report_submit">Enviar denuncia</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
 
@@ -2322,6 +2749,11 @@
   <script src="assets/js/app/router.js"></script>
   <script src="assets/js/app/i18n.js"></script>
   <script src="assets/js/app/whats-new.js"></script>
+  <script src="assets/js/app/moderation.js"></script>
+  <script src="assets/js/app/community.js"></script>
+  <script src="assets/js/app/report-submission.js"></script>
+  <script src="assets/js/app/community-report.js"></script>
+  <script src="assets/js/app/community-profile.js"></script>
   <script src="assets/js/app/app-core.js"></script>
 
   <script src="assets/js/app/library.js"></script>

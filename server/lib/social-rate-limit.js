@@ -15,6 +15,12 @@ export const SOCIAL_RECOMMENDATION_WINDOW_MS =
 export const SOCIAL_RECOMMENDATION_USER_MAX_ATTEMPTS =
   20;
 
+export const SOCIAL_BLOCK_WINDOW_MS =
+  15 * 60 * 1000;
+
+export const SOCIAL_BLOCK_USER_MAX_ATTEMPTS =
+  20;
+
 
 function _createUserKey(userId) {
   return (
@@ -43,6 +49,15 @@ export function createSocialRateLimiters({
         SOCIAL_RECOMMENDATION_WINDOW_MS,
       maxAttempts:
         SOCIAL_RECOMMENDATION_USER_MAX_ATTEMPTS,
+      maxEntries: 5000,
+      now
+    });
+
+
+  const blockByUser =
+    createSlidingWindowRateLimiter({
+      windowMs: SOCIAL_BLOCK_WINDOW_MS,
+      maxAttempts: SOCIAL_BLOCK_USER_MAX_ATTEMPTS,
       maxEntries: 5000,
       now
     });
@@ -84,9 +99,28 @@ export function createSocialRateLimiters({
   }
 
 
+  function checkBlock({
+    userId
+  } = {}) {
+    return blockByUser.check(
+      _createUserKey(userId)
+    );
+  }
+
+
+  function consumeBlock({
+    userId
+  } = {}) {
+    return blockByUser.consume(
+      _createUserKey(userId)
+    );
+  }
+
+
   function clear() {
     followByUser.clear();
     recommendationByUser.clear();
+    blockByUser.clear();
   }
 
 
@@ -95,7 +129,9 @@ export function createSocialRateLimiters({
       followUsers:
         followByUser.size(),
       recommendationUsers:
-        recommendationByUser.size()
+        recommendationByUser.size(),
+      blockUsers:
+        blockByUser.size()
     };
   }
 
@@ -105,6 +141,8 @@ export function createSocialRateLimiters({
     consumeFollow,
     checkRecommendation,
     consumeRecommendation,
+    checkBlock,
+    consumeBlock,
     clear,
     size
   });

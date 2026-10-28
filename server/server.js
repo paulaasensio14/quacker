@@ -96,6 +96,13 @@ import {
 } from "./lib/following.js";
 
 import {
+  addUserBlock,
+  areUsersBlocked,
+  normalizeBlockedUserIds,
+  removeUserBlock
+} from "./lib/user-blocks.js";
+
+import {
   addFollowRequest,
   normalizeFollowRequests,
   removeFollowRequest
@@ -139,6 +146,10 @@ import {
 } from "./lib/public-profile.js";
 
 import {
+  searchCommunityUsers
+} from "./lib/community-search.js";
+
+import {
   resolveActivityCreatedAt
 } from "./lib/activity-timestamp.js";
 
@@ -158,6 +169,22 @@ import {
 import {
   createSocialRateLimiters
 } from "./lib/social-rate-limit.js";
+
+import {
+  isModeratorUserId
+} from "./lib/moderator-access.js";
+
+import {
+  applyModerationDecision
+} from "./lib/moderation-decisions.js";
+
+import {
+  createSlidingWindowRateLimiter
+} from "./lib/rate-limit.js";
+
+import {
+  addModerationReport
+} from "./lib/moderation-reports.js";
 
 import {
   PASSWORD_RESET_TOKEN_TTL_MS,
@@ -327,6 +354,27 @@ const authRateLimits =
 
 const socialRateLimits =
   createSocialRateLimiters();
+
+const communitySearchRateLimit =
+  createSlidingWindowRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    maxAttempts: 30,
+    maxEntries: 5000
+  });
+
+const moderationReportRateLimit =
+  createSlidingWindowRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    maxAttempts: 5,
+    maxEntries: 5000
+  });
+
+const moderationReportAttemptRateLimit =
+  createSlidingWindowRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    maxAttempts: 30,
+    maxEntries: 5000
+  });
 
 let mailTransporter = null;
 
@@ -2070,6 +2118,26 @@ const _requireAuth = _asyncHandler(
   _requireAuthAsync
 );
 
+function _requireModerator(req, res, next) {
+  res.set("Cache-Control", "no-store");
+
+  const userId =
+    String(req.session?.userId || "");
+
+  if (
+    !isModeratorUserId(
+      userId,
+      ENV.MODERATOR_USER_IDS
+    )
+  ) {
+    return res.status(403).json({
+      error: "forbidden"
+    });
+  }
+
+  return next();
+}
+
 function _getUserBucket(db, userId) {
   db.users[userId] = db.users[userId] || {
     profile: null,
@@ -2081,6 +2149,7 @@ function _getUserBucket(db, userId) {
     opinions: [],
     favorites: normalizeFavorites(),
     following: normalizeFollowing(),
+    blockedUserIds: normalizeBlockedUserIds(),
     followRequests: normalizeFollowRequests(),
     recommendations: normalizeRecommendations(),
     notifications: [],
@@ -2129,6 +2198,13 @@ function _getUserBucket(db, userId) {
 
   db.users[userId].following = normalizeFollowing(
     db.users[userId].following,
+    {
+      ownerUserId: userId
+    }
+  );
+
+  db.users[userId].blockedUserIds = normalizeBlockedUserIds(
+    db.users[userId].blockedUserIds,
     {
       ownerUserId: userId
     }
@@ -2224,6 +2300,55 @@ function _findFollowTarget(
 
   return null;
 }
+
+// Comunidad: búsqueda autenticada de identidades
+// públicas, con privacidad y límite por usuario.
+app.get(
+  "/api/community/users",
+  (req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  },
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+
+    const viewerUserId =
+      getAuthenticatedUserId(
+        req.session,
+        db.users
+      );
+
+    if (!viewerUserId) {
+      return res.status(401).json({
+        error: "not_authenticated"
+      });
+    }
+
+    const rateLimit =
+      communitySearchRateLimit.consume(
+        viewerUserId
+      );
+
+    if (!rateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "community_search_rate_limited",
+        rateLimit.retryAfterSeconds
+      );
+    }
+
+    const users = searchCommunityUsers(
+      db.users,
+      req.query.q,
+      {
+        viewerUserId
+      }
+    );
+
+    return res.json({ users });
+  }
+);
 
 app.get("/api/public/users/:username", (req, res) => {
   res.set("Cache-Control", "no-store");
@@ -2479,6 +2604,7 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     opinions: [],
     favorites: normalizeFavorites(),
     following: normalizeFollowing(),
+    blockedUserIds: normalizeBlockedUserIds(),
     followRequests: normalizeFollowRequests(),
     recommendations: normalizeRecommendations(),
     notifications: [],
@@ -4279,6 +4405,19 @@ app.post(
         target.userId
       );
 
+    if (
+      areUsersBlocked(
+        ownerUserId,
+        ownerBucket.blockedUserIds,
+        target.userId,
+        targetBucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
     const areFriends =
       ownerBucket.following.includes(
         target.userId
@@ -4386,6 +4525,542 @@ app.post(
   }
 );
 
+
+app.post(
+  "/api/user/reports",
+  _requireAuth,
+  (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    const reporterUserId =
+      String(req.session.userId || "").trim();
+
+    const attemptLimit =
+      moderationReportAttemptRateLimit.consume(
+        reporterUserId
+      );
+
+    if (!attemptLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "moderation_report_attempt_rate_limited",
+        attemptLimit.retryAfterSeconds
+      );
+    }
+
+    const db = _readDb();
+
+    const requestedUsername =
+      normalizePublicUsername(
+        req.body?.username
+      );
+
+    if (!requestedUsername) {
+      return res.status(400).json({
+        error: "invalid_report_target"
+      });
+    }
+
+    const target =
+      _findFollowTarget(
+        db.users,
+        requestedUsername
+      );
+
+    if (!target) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const reportKind =
+      String(req.body?.kind || "")
+        .trim()
+        .toLowerCase();
+
+    const suppliedIdentity =
+      req.body?.reviewIdentity;
+
+    let reviewEvidence = null;
+
+    if (reportKind === "review") {
+      const profile =
+        getPublicProfileByUsername(
+          db.users,
+          requestedUsername,
+          {
+            viewerUserId: reporterUserId
+          }
+        );
+
+      const requestedIdentity =
+        normalizeContentIdentity({
+          source: suppliedIdentity?.source,
+          type:
+            suppliedIdentity?.contentType ??
+            suppliedIdentity?.type,
+          externalId:
+            suppliedIdentity?.externalId
+        });
+
+      if (!requestedIdentity.ok) {
+        return res.status(400).json({
+          error: "invalid_report_review"
+        });
+      }
+
+      const publicReviews =
+        Array.isArray(profile?.reviews)
+          ? profile.reviews
+          : [];
+
+      const foundReview = publicReviews.find(
+        (review) => {
+          const identity =
+            normalizeContentIdentity({
+              source: review.source,
+              type: review.contentType,
+              externalId: review.externalId
+            });
+
+          return (
+            identity.ok &&
+            identity.key ===
+              requestedIdentity.key
+          );
+        }
+      );
+
+      if (!foundReview) {
+        return res.status(404).json({
+          error: "not_found"
+        });
+      }
+
+      reviewEvidence = {
+        title: foundReview.itemSnapshot?.title,
+        text: foundReview.review?.text,
+        spoiler: foundReview.review?.spoiler,
+        updatedAt: foundReview.review?.updatedAt
+      };
+    }
+
+    // Compatibilidad con bases existentes sin reportes.
+    const previousReports =
+      Array.isArray(db.moderationReports)
+        ? db.moderationReports
+        : [];
+
+    const result =
+      addModerationReport(
+        previousReports,
+        {
+          reporterUserId,
+          targetUserId: target.userId,
+          kind: req.body?.kind,
+          reason: req.body?.reason,
+          details: req.body?.details,
+          reviewIdentity: suppliedIdentity
+        },
+        {
+          id: `report_${crypto.randomUUID()}`,
+          createdAt: new Date().toISOString(),
+          reviewEvidence
+        }
+      );
+
+    if (!result.ok) {
+      const status =
+        result.error === "report_already_exists"
+          ? 409
+          : 400;
+
+      return res.status(status).json({
+        error: result.error
+      });
+    }
+
+    const limit =
+      moderationReportRateLimit.consume(
+        reporterUserId
+      );
+
+    if (!limit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "moderation_report_rate_limited",
+        limit.retryAfterSeconds
+      );
+    }
+
+    db.moderationReports = result.reports;
+
+    _writeDb(db);
+
+    return res.status(201).json({
+      ok: true,
+      reportId: result.report.id
+    });
+  }
+);
+
+app.get(
+  "/api/moderation/access",
+  _requireAuth,
+  (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    return res.json({
+      isModerator: isModeratorUserId(
+        req.session.userId,
+        ENV.MODERATOR_USER_IDS
+      )
+    });
+  }
+);
+
+app.post(
+  "/api/moderation/reports/:reportId/decision",
+  _requireAuth,
+  _requireModerator,
+  (req, res) => {
+    const db = _readDb();
+
+    const previousReports =
+      Array.isArray(db.moderationReports)
+        ? db.moderationReports
+        : [];
+
+    const result = applyModerationDecision(
+      previousReports,
+      {
+        reportId: req.params.reportId,
+        action: req.body?.action,
+        notes: req.body?.notes
+      },
+      {
+        moderatorUserId: req.session.userId,
+        allowedModeratorUserIds:
+          ENV.MODERATOR_USER_IDS,
+        decidedAt: new Date().toISOString()
+      }
+    );
+
+    if (!result.ok) {
+      const statusByError = {
+        forbidden: 403,
+        report_not_found: 404,
+        report_already_reviewed: 409
+      };
+
+      return res.status(
+        statusByError[result.error] || 400
+      ).json({
+        error: result.error
+      });
+    }
+
+    db.moderationReports = result.reports;
+    _writeDb(db);
+
+    // Nunca devolver evidencia ni notas privadas.
+    return res.json({
+      ok: true,
+      reportId: result.report.id,
+      status: result.report.status
+    });
+  }
+);
+
+app.get(
+  "/api/moderation/reports",
+  _requireAuth,
+  _requireModerator,
+  (req, res) => {
+    const db = _readDb();
+
+    const pending = (
+      Array.isArray(db.moderationReports)
+        ? db.moderationReports
+        : []
+    ).filter(
+      (entry) =>
+        entry &&
+        typeof entry === "object" &&
+        !Array.isArray(entry) &&
+        entry.status === "pending" &&
+        ["user", "review"].includes(entry.kind)
+    );
+
+    // Resolver identificadores públicos solo para moderadores.
+    // No exponer correos ni perfiles completos.
+    const usernameFor = (userId) =>
+      normalizePublicUsername(
+        db.users?.[userId]?.profile?.handle
+      );
+
+    // Últimas 50 denuncias pendientes.
+    const reports = pending
+      .slice(-50)
+      .reverse()
+      .map((entry) => ({
+        id: String(entry.id || "").slice(0, 128),
+        reporterUserId:
+          String(entry.reporterUserId || "").slice(0, 128),
+        reporterUsername:
+          usernameFor(entry.reporterUserId),
+        targetUserId:
+          String(entry.targetUserId || "").slice(0, 128),
+        targetUsername:
+          usernameFor(entry.targetUserId),
+        kind: entry.kind,
+        reason: String(entry.reason || "").slice(0, 80),
+        details: String(entry.details || "").slice(0, 500),
+        status: "pending",
+        createdAt: String(entry.createdAt || "").slice(0, 40),
+        reviewIdentity:
+          entry.kind === "review"
+            ? {
+                source:
+                  String(entry.reviewIdentity?.source || "")
+                    .slice(0, 80),
+                contentType:
+                  String(entry.reviewIdentity?.contentType || "")
+                    .slice(0, 40),
+                externalId:
+                  String(entry.reviewIdentity?.externalId || "")
+                    .slice(0, 200),
+                key:
+                  String(entry.reviewIdentity?.key || "")
+                    .slice(0, 350)
+              }
+            : null,
+        reviewEvidence:
+          entry.kind === "review"
+            ? {
+                title:
+                  String(entry.reviewEvidence?.title || "")
+                    .slice(0, 120),
+                text:
+                  String(entry.reviewEvidence?.text || "")
+                    .slice(0, 4000),
+                textTruncated:
+                  entry.reviewEvidence?.textTruncated === true,
+                spoiler:
+                  entry.reviewEvidence?.spoiler === true,
+                updatedAt:
+                  String(entry.reviewEvidence?.updatedAt || "")
+                    .slice(0, 40)
+              }
+            : null
+      }));
+
+    return res.json({
+      totalPending: pending.length,
+      reports
+    });
+  }
+);
+
+app.get(
+  "/api/user/blocks",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+    const ownerBucket = _getUserBucket(db, ownerUserId);
+
+    const blocks = ownerBucket.blockedUserIds
+      .map((blockedUserId) => {
+        const targetBucket = db.users[blockedUserId];
+        if (!targetBucket) return null;
+
+        const username = normalizePublicUsername(
+          targetBucket.profile?.handle
+        );
+
+        return username ? { username } : null;
+      })
+      .filter(Boolean);
+
+    return res.json({ blocks });
+  }
+);
+
+app.post(
+  "/api/user/blocks/:username",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+    const ownerBucket = _getUserBucket(db, ownerUserId);
+
+    const requestedUsername = normalizePublicUsername(
+      req.params.username
+    );
+
+    if (!requestedUsername) {
+      return res.status(400).json({
+        error: "invalid_block_target"
+      });
+    }
+
+    const targetEntry = Object.entries(db.users).find(
+      ([, candidateBucket]) =>
+        normalizePublicUsername(
+          candidateBucket?.profile?.handle
+        ) === requestedUsername
+    );
+
+    if (!targetEntry) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const [targetUserId] = targetEntry;
+
+    if (targetUserId === ownerUserId) {
+      return res.status(400).json({
+        error: "cannot_block_self"
+      });
+    }
+
+    const result = addUserBlock(
+      ownerBucket.blockedUserIds,
+      targetUserId,
+      { ownerUserId }
+    );
+
+    if (!result.ok) {
+      return res.status(
+        result.error === "already_blocked" ? 409 : 400
+      ).json({
+        error: result.error
+      });
+    }
+
+    const blockRateLimit =
+      socialRateLimits.consumeBlock({
+        userId: ownerUserId
+      });
+
+    if (!blockRateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "social_block_rate_limited",
+        blockRateLimit.retryAfterSeconds
+      );
+    }
+
+    const targetBucket = _getUserBucket(db, targetUserId);
+
+    // Remove follows in both directions.
+    ownerBucket.following = ownerBucket.following.filter(
+      (userId) => userId !== targetUserId
+    );
+
+    targetBucket.following = targetBucket.following.filter(
+      (userId) => userId !== ownerUserId
+    );
+
+    // Remove pending follow requests in both directions.
+    ownerBucket.followRequests =
+      ownerBucket.followRequests.filter(
+        (userId) => userId !== targetUserId
+      );
+
+    targetBucket.followRequests =
+      targetBucket.followRequests.filter(
+        (userId) => userId !== ownerUserId
+      );
+
+    ownerBucket.blockedUserIds = result.blockedUserIds;
+
+    _writeDb(db);
+
+    return res.status(201).json({
+      blocked: true,
+      username: requestedUsername
+    });
+  }
+);
+
+app.delete(
+  "/api/user/blocks/:username",
+  _requireAuth,
+  (req, res) => {
+    const db = _readDb();
+    const ownerUserId =
+      String(req.session.userId || "").trim();
+    const ownerBucket = _getUserBucket(db, ownerUserId);
+
+    const requestedUsername = normalizePublicUsername(
+      req.params.username
+    );
+
+    if (!requestedUsername) {
+      return res.status(400).json({
+        error: "invalid_block_target"
+      });
+    }
+
+    const targetEntry = Object.entries(db.users).find(
+      ([, candidateBucket]) =>
+        normalizePublicUsername(
+          candidateBucket?.profile?.handle
+        ) === requestedUsername
+    );
+
+    if (!targetEntry) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const [targetUserId] = targetEntry;
+
+    const result = removeUserBlock(
+      ownerBucket.blockedUserIds,
+      targetUserId,
+      { ownerUserId }
+    );
+
+    if (!result.ok) {
+      return res.status(
+        result.error === "not_blocked" ? 404 : 400
+      ).json({
+        error: result.error
+      });
+    }
+
+    const blockRateLimit =
+      socialRateLimits.consumeBlock({
+        userId: ownerUserId
+      });
+
+    if (!blockRateLimit.allowed) {
+      return _sendRateLimitResponse(
+        res,
+        "social_block_rate_limited",
+        blockRateLimit.retryAfterSeconds
+      );
+    }
+
+    ownerBucket.blockedUserIds = result.blockedUserIds;
+
+    // Unblocking does not restore previous follows.
+    _writeDb(db);
+
+    return res.json({
+      blocked: false,
+      username: requestedUsername
+    });
+  }
+);
+
 app.post(
   "/api/user/following/:username",
   _requireAuth,
@@ -4427,6 +5102,19 @@ app.post(
       );
 
     if (!target) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    if (
+      areUsersBlocked(
+        ownerUserId,
+        ownerBucket.blockedUserIds,
+        target.userId,
+        target.bucket.blockedUserIds
+      )
+    ) {
       return res.status(404).json({
         error: "not_found"
       });
@@ -4784,6 +5472,19 @@ app.post(
         db,
         requesterUserId
       );
+
+    if (
+      areUsersBlocked(
+        targetUserId,
+        targetBucket.blockedUserIds,
+        requesterUserId,
+        requesterBucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
 
     const followResult =
       addFollowing(
@@ -5456,6 +6157,17 @@ function _getVisibleListsForUser(
         ownerUserId
       );
 
+    if (
+      areUsersBlocked(
+        safeUserId,
+        bucket.blockedUserIds,
+        ownerUserId,
+        ownerBucket.blockedUserIds
+      )
+    ) {
+      continue;
+    }
+
     for (const list of ownerBucket.lists) {
       if (
         list.visibility !== "collab" ||
@@ -5609,6 +6321,17 @@ function _resolveCollaborativeListForUser(
         db,
         ownerUserId
       );
+
+    if (
+      areUsersBlocked(
+        safeUserId,
+        ownBucket.blockedUserIds,
+        ownerUserId,
+        ownerBucket.blockedUserIds
+      )
+    ) {
+      continue;
+    }
 
     const listIndex =
       ownerBucket.lists.findIndex(
@@ -6003,6 +6726,19 @@ app.post(
       });
     }
 
+    if (
+      areUsersBlocked(
+        ownerUserId,
+        ownerBucket.blockedUserIds,
+        target.userId,
+        target.bucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
     const inviteResult =
       addCollaborativeListInvite(
         list,
@@ -6160,6 +6896,29 @@ app.post(
       });
     }
 
+    const invitedBucket =
+      _getUserBucket(db, targetUserId);
+
+    const listOwnerUserId =
+      String(list.ownerUserId || "").trim();
+
+    const listOwnerBucket =
+      db.users?.[listOwnerUserId];
+
+    if (
+      !listOwnerBucket ||
+      areUsersBlocked(
+        listOwnerUserId,
+        listOwnerBucket.blockedUserIds,
+        targetUserId,
+        invitedBucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "invite_not_found"
+      });
+    }
+
     const result =
       addCollaborativeListCollaborator(
         list,
@@ -6274,6 +7033,33 @@ app.post(
     ) {
       return res.status(400).json({
         error: "list_not_collaborative"
+      });
+    }
+
+    const invitedBucket =
+      _getUserBucket(db, targetUserId);
+
+    const listOwnerUserId =
+      String(
+        matchedOwnerBucket
+          .lists[matchedListIndex]
+          .ownerUserId || ""
+      ).trim();
+
+    const listOwnerBucket =
+      db.users?.[listOwnerUserId];
+
+    if (
+      !listOwnerBucket ||
+      areUsersBlocked(
+        listOwnerUserId,
+        listOwnerBucket.blockedUserIds,
+        targetUserId,
+        invitedBucket.blockedUserIds
+      )
+    ) {
+      return res.status(404).json({
+        error: "invite_not_found"
       });
     }
 
@@ -6642,10 +7428,26 @@ app.get(
 
     const invites = [];
 
+    const targetBucket =
+      _getUserBucket(
+        db,
+        targetUserId
+      );
+
     for (
       const [ownerUserId, ownerBucket]
       of Object.entries(db.users || {})
     ) {
+      if (
+        areUsersBlocked(
+          ownerUserId,
+          ownerBucket?.blockedUserIds,
+          targetUserId,
+          targetBucket.blockedUserIds
+        )
+      ) {
+        continue;
+      }
       const lists =
         normalizeCollaborativeLists(
           ownerBucket?.lists,
@@ -7853,7 +8655,13 @@ app.post("/api/lists/:id/items", _requireAuth, (req, res) => {
         getCollaborativeListRole(
           candidate,
           userId
-        ) !== "collaborator"
+        ) !== "collaborator" ||
+        areUsersBlocked(
+          userId,
+          bucket.blockedUserIds,
+          ownerUserId,
+          ownerBucket.blockedUserIds
+        )
       ) {
         continue;
       }
@@ -8055,7 +8863,13 @@ app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
         getCollaborativeListRole(
           candidate,
           userId
-        ) !== "collaborator"
+        ) !== "collaborator" ||
+        areUsersBlocked(
+          userId,
+          bucket.blockedUserIds,
+          ownerUserId,
+          ownerBucket.blockedUserIds
+        )
       ) {
         continue;
       }
@@ -9871,10 +10685,21 @@ app.get("/u/:username", (req, res, next) => {
 
   const db = _readDb();
 
+  // Aplicar también a la página HTML las restricciones
+  // de privacidad y bloqueo de la API pública.
+  const viewerUserId =
+    getAuthenticatedUserId(
+      req.session,
+      db.users
+    );
+
   const publicProfile =
     getPublicProfileByUsername(
       db.users,
-      req.params.username
+      req.params.username,
+      {
+        viewerUserId
+      }
     );
 
   if (!publicProfile) {

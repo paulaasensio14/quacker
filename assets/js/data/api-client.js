@@ -2868,6 +2868,312 @@ if (externalSignal?.aborted) {
     };
   }
 
+
+  async function getCommunityUsers(
+    query,
+    { signal } = {}
+  ) {
+    const term =
+      typeof query === "string"
+        ? query.trim()
+        : "";
+
+    if (
+      term.replace(/^@/, "").length < 2 ||
+      term.length > 80
+    ) {
+      return [];
+    }
+
+    if (!_isHttp()) {
+      return [];
+    }
+
+    const response = await _httpJson(
+      "GET",
+      `/community/users?q=${encodeURIComponent(term)}`,
+      null,
+      { signal }
+    );
+
+    return Array.isArray(response?.users)
+      ? response.users
+      : [];
+  }
+
+  async function getCommunityProfile(
+    username,
+    { signal } = {}
+  ) {
+    const normalized =
+      typeof username === "string"
+        ? username.trim().replace(/^@/, "").toLowerCase()
+        : "";
+
+    if (!/^[a-z0-9_]{2,20}$/.test(normalized)) {
+      throw _makeApiError(
+        "invalid_username",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    return _httpJson(
+      "GET",
+      `/public/users/${encodeURIComponent(username)}`,
+      null,
+      { signal }
+    );
+  }
+
+  async function updateCommunityFollowing(
+    username,
+    action
+  ) {
+    const normalized =
+      typeof username === "string"
+        ? username.trim().replace(/^@/, "").toLowerCase()
+        : "";
+
+    if (!/^[a-z0-9_]{2,20}$/.test(normalized)) {
+      throw _makeApiError(
+        "invalid_username",
+        400
+      );
+    }
+
+    if (
+      action !== "follow" &&
+      action !== "unfollow"
+    ) {
+      throw _makeApiError(
+        "invalid_follow_action",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const method =
+      action === "follow" ? "POST" : "DELETE";
+
+    const response = await _httpJson(
+      method,
+      `/user/following/${encodeURIComponent(normalized)}`
+    );
+
+    return {
+      following: response?.following === true,
+      requested: response?.requested === true
+    };
+  }
+
+  async function blockCommunityUser(username) {
+    const normalized =
+      typeof username === "string"
+        ? username.trim().replace(/^@/, "").toLowerCase()
+        : "";
+
+    if (!/^[a-z0-9_]{2,20}$/.test(normalized)) {
+      throw _makeApiError(
+        "invalid_username",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const response = await _httpJson(
+      "POST",
+      `/user/blocks/${encodeURIComponent(normalized)}`,
+      null
+    );
+
+    return {
+      blocked: response?.blocked === true,
+      username: String(
+        response?.username || ""
+      ).trim().toLowerCase()
+    };
+  }
+
+  async function getModeratorAccess() {
+    if (!_isHttp()) {
+      return { isModerator: false };
+    }
+
+    const response = await _httpJson(
+      "GET",
+      "/moderation/access"
+    );
+
+    return {
+      isModerator: response?.isModerator === true
+    };
+  }
+
+  async function getModerationReports() {
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const response = await _httpJson(
+      "GET",
+      "/moderation/reports"
+    );
+
+    return {
+      totalPending:
+        Number.isInteger(response?.totalPending) &&
+        response.totalPending >= 0
+          ? response.totalPending
+          : 0,
+      reports: Array.isArray(response?.reports)
+        ? response.reports
+        : []
+    };
+  }
+
+  async function decideModerationReport(
+    reportId,
+    action,
+    notes = ""
+  ) {
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const normalizedId =
+      typeof reportId === "string"
+        ? reportId.trim()
+        : "";
+
+    const normalizedAction =
+      typeof action === "string"
+        ? action.trim().toLowerCase()
+        : "";
+
+    if (
+      !/^[a-zA-Z0-9_-]{1,128}$/.test(normalizedId)
+    ) {
+      throw _makeApiError(
+        "invalid_report_id",
+        400
+      );
+    }
+
+    if (
+      !["resolve", "dismiss"].includes(
+        normalizedAction
+      )
+    ) {
+      throw _makeApiError(
+        "invalid_moderation_action",
+        400
+      );
+    }
+
+    if (
+      typeof notes !== "string" ||
+      notes.trim().length > 500
+    ) {
+      throw _makeApiError(
+        "invalid_moderation_notes",
+        400
+      );
+    }
+
+    return _httpJson(
+      "POST",
+      `/moderation/reports/${encodeURIComponent(normalizedId)}/decision`,
+      {
+        action: normalizedAction,
+        notes: notes.trim()
+      }
+    );
+  }
+
+  async function getBlockedUsers() {
+    if (!_isHttp()) return [];
+
+    const response =
+      await _httpJson("GET", "/user/blocks");
+
+    const blocks =
+      Array.isArray(response?.blocks)
+        ? response.blocks
+        : [];
+
+    return blocks
+      .map((entry) => ({
+        username: String(
+          entry?.username || ""
+        )
+          .trim()
+          .replace(/^@/, "")
+          .toLowerCase()
+      }))
+      .filter((entry) => entry.username);
+  }
+
+  async function unblockUser(username) {
+    const normalizedUsername =
+      String(username || "")
+        .trim()
+        .replace(/^@/, "")
+        .toLowerCase();
+
+    if (!normalizedUsername) {
+      throw _makeApiError(
+        "invalid_block_target",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const response =
+      await _httpJson(
+        "DELETE",
+        `/user/blocks/${encodeURIComponent(normalizedUsername)}`
+      );
+
+    _emitDataChanged({
+      kind: "user_blocks",
+      action: "unblock",
+      username: normalizedUsername
+    });
+
+    return response;
+  }
+
   async function getFollowRequests() {
     if (!_isHttp()) return [];
 
@@ -8001,11 +8307,20 @@ if (externalSignal?.aborted) {
     setBaseUrl,
     getTransportInfo,
     getCurrentSession,
+    getCommunityUsers,
+    getCommunityProfile,
+    updateCommunityFollowing,
+    blockCommunityUser,
     // perfil
     getUser,
     updateUser,
     getUserPrivacy,
     updateUserPrivacy,
+    getModeratorAccess,
+    getModerationReports,
+    decideModerationReport,
+    getBlockedUsers,
+    unblockUser,
     getFollowRequests,
     getListInvites,
     acceptListInvite,

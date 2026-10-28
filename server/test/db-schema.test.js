@@ -29,3 +29,31 @@ test("rechaza una base de datos sin users válido", () => {
     }
   );
 });
+
+
+test("acepta una colección privada de denuncias", () => {
+  const db = {
+    users: {},
+    moderationReports: []
+  };
+
+  assert.equal(validateDb(db), db);
+});
+
+test("rechaza una colección de denuncias corrupta", () => {
+  for (const moderationReports of [
+    null,
+    {},
+    "invalid"
+  ]) {
+    assert.throws(
+      () => validateDb({
+        users: {},
+        moderationReports
+      }),
+      (error) =>
+        error.code ===
+        "INVALID_DATABASE_STRUCTURE"
+    );
+  }
+});

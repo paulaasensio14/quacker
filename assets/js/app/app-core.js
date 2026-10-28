@@ -28,7 +28,54 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // 1) Restaurar primero la vista correcta
+  // La autorización no debe retrasar las vistas normales.
+  // Solo esperamos cuando hay que restaurar Moderación.
+  const requestedView = String(
+    window.location.hash || ""
+  ).replace(/^#/, "").trim();
+
+  const storedView = (() => {
+    try {
+      return String(
+        window.sessionStorage.getItem(
+          "quacker:last-view"
+        ) || ""
+      ).trim();
+    } catch (_) {
+      return "";
+    }
+  })();
+
+  // El hash explícito prevalece sobre la vista guardada.
+  const restoreModeration =
+    requestedView === "moderation" ||
+    (!requestedView && storedView === "moderation");
+
+  try {
+    const moderationInit =
+      window.ModerationModule?.init?.();
+
+    if (restoreModeration) {
+      // Esperar para que Router pueda restaurar
+      // únicamente las vistas autorizadas.
+      await moderationInit;
+    } else {
+      // En el resto de vistas, continuar la carga
+      // mientras se comprueban los permisos.
+      moderationInit?.catch?.((error) => {
+        console.error(
+          "ModerationModule.init error",
+          error
+        );
+      });
+    }
+  } catch (error) {
+    console.error(
+      "ModerationModule.init error",
+      error
+    );
+  }
+
   Router.init();
 
   // 2) Iniciar módulos después
@@ -37,6 +84,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { window.ProfileModule?.init?.(); } catch (e) { console.error("ProfileModule.init error", e); }
   try { window.DetailModule?.init?.(); } catch (e) { console.error("DetailModule.init error", e); }
   try { window.ExploreModule?.init?.(); } catch (e) { console.error("ExploreModule.init error", e); }
+  try { window.CommunityModule?.init?.(); } catch (e) { console.error("CommunityModule.init error", e); }
+  try { window.CommunityProfileModule?.init?.(); } catch (e) { console.error("CommunityProfileModule.init error", e); }
   try { window.HomeUI?.init?.(); } catch (e) { console.error("HomeUI.init error", e); }
   try { window.WhatsNewModule?.init?.(); } catch (e) { console.error("WhatsNewModule.init error", e); }
 
@@ -218,6 +267,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       const collapsed = !sidebar.classList.contains("collapsed");
       applySidebarCollapsed(collapsed);
       window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+    });
+
+    // QA-007: cerrar el menú móvil al seleccionar una sección.
+    // En escritorio se conserva el comportamiento existente.
+    document.querySelectorAll(".nav-item-btn[data-view]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (!window.matchMedia("(max-width: 640px)").matches) {
+          return;
+        }
+
+        if (sidebar.classList.contains("collapsed")) {
+          return;
+        }
+
+        applySidebarCollapsed(true);
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "true");
+      });
     });
   }
 
