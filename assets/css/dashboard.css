@@ -12950,3 +12950,125 @@ body.dark-theme .community-profile-blocked {
   background: #fff;
   color: #111827;
 }
+
+
+/* QA-015: COMPACT COMMUNITY PROFILE */
+
+.community-profile-card:not([hidden]) {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  column-gap: 22px;
+  align-items: start;
+}
+
+.community-profile-header {
+  display: contents;
+}
+
+.community-profile-avatar {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+}
+
+.community-profile-identity {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.community-profile-section:not([hidden]) {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 10px;
+}
+
+.community-profile-social:not([hidden]) {
+  grid-column: 2;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+}
+
+.community-profile-social-metric {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.community-profile-social-metric strong {
+  font-size: 1rem;
+}
+
+.community-profile-social-metric span {
+  font-size: 0.9rem;
+}
+
+.community-profile-actions:not([hidden]) {
+  grid-column: 2;
+  grid-row: 4;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.community-profile-actions button:not([hidden]) {
+  width: auto;
+  max-width: 100%;
+  min-height: 40px;
+  padding: 8px 15px;
+  font-size: 0.9rem;
+}
+
+.community-profile-social-status {
+  flex-basis: 100%;
+  min-height: 0;
+}
+
+.community-profile-social-status:empty {
+  display: none;
+}
+
+.community-profile-restricted,
+.community-profile-content-section {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 699px) {
+  .community-profile-card:not([hidden]) {
+    grid-template-columns: 64px minmax(0, 1fr);
+    column-gap: 14px;
+  }
+
+  .community-profile-avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .community-profile-identity h2 {
+    font-size: 1.2rem;
+  }
+
+  .community-profile-section:not([hidden]),
+  .community-profile-social:not([hidden]),
+  .community-profile-actions:not([hidden]) {
+    grid-column: 1 / -1;
+  }
+
+  .community-profile-actions:not([hidden]) {
+    align-items: center;
+  }
+
+  .community-profile-actions button:not([hidden]) {
+    flex: 0 1 auto;
+  }
+}
