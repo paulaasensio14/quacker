@@ -7896,6 +7896,18 @@ app.patch("/api/lists/:id", _requireAuth, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: "not_found" });
 
   const prev = bucket.lists[idx];
+
+  if (
+    getCollaborativeListRole(
+      prev,
+      req.session.userId
+    ) !== "owner"
+  ) {
+    return res.status(403).json({
+      error: "not_list_owner"
+    });
+  }
+
   const next = {
     ...prev,
     updatedAt: new Date().toISOString()
@@ -7950,6 +7962,17 @@ app.delete("/api/lists/:id", _requireAuth, (req, res) => {
   if (!deletedList) {
     return res.status(404).json({
       error: "not_found"
+    });
+  }
+
+  if (
+    getCollaborativeListRole(
+      deletedList,
+      req.session.userId
+    ) !== "owner"
+  ) {
+    return res.status(403).json({
+      error: "not_list_owner"
     });
   }
 
