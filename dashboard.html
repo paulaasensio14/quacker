@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="quacker-booting">
 <head>
 
   <script src="assets/js/app/canonical-dev-host.js"></script>
@@ -18,6 +18,22 @@
 
 </head>
 <body>
+<div class="quacker-boot-loader" role="status" aria-label="Cargando Quacker / Loading Quacker">
+  <div class="quacker-boot-track" aria-hidden="true">
+    <div class="quacker-boot-duck">
+      <img src="assets/img/quacker-run/duck-run-1.png" alt="" />
+      <img src="assets/img/quacker-run/duck-run-2.png" alt="" />
+      <img src="assets/img/quacker-run/duck-run-3.png" alt="" />
+      <img src="assets/img/quacker-run/duck-run-4.png" alt="" />
+    </div>
+  </div>
+</div>
+<noscript>
+  <style>
+    .quacker-boot-loader { display: none !important; }
+    .quacker-booting .app-shell { visibility: visible !important; }
+  </style>
+</noscript>
 <div class="app-shell">
   <!-- ===== SIDEBAR ===== -->
   <aside class="sidebar" id="sidebar">
