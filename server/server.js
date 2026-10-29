@@ -1,6 +1,10 @@
 import express from "express";
 
 import {
+  unexpectedErrorHandler
+} from "./lib/unexpected-error-handler.js";
+
+import {
   getAllowedRequestOrigins,
   isRequestOriginAllowed
 } from "./lib/request-origin-security.js";
@@ -10808,6 +10812,9 @@ app.use(
     NOT_FOUND_HTML_PATH
   )
 );
+
+// Último middleware: respuestas seguras ante errores inesperados.
+app.use(unexpectedErrorHandler);
 
 const PORT = Number.parseInt(
   process.env.PORT || "3000",
