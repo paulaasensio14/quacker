@@ -13193,3 +13193,30 @@ body.dark-theme .community-profile-blocked {
     flex: 0 1 auto;
   }
 }
+
+
+/* Week 18: botones de progreso sin solapamientos */
+#view-library .lib-footer-actions {
+  min-width: 0;
+}
+
+#view-library .lib-footer-actions .lib-primary-btn {
+  min-width: 0;
+  overflow: hidden;
+  gap: 6px;
+}
+
+#view-library .lib-footer-actions .lib-primary-btn span:not(.btn-spinner) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#view-library .lib-footer-actions .lib-primary-btn .btn-spinner {
+  flex: 0 0 auto;
+}
+
+#view-library .lib-footer-actions .lib-complete-btn {
+  flex-shrink: 0;
+}

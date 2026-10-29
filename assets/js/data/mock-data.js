@@ -29,15 +29,46 @@ const FakeBackend = (() => {
       .map((activity, index) => normalizeMockActivityEntry(activity, index))
       .filter(Boolean);
 
+  // Identidades manuales estables para los 11 registros demo históricos.
+  // Nunca se atribuyen a proveedores externos.
+  const DEMO_LIBRARY_IDENTITIES = {
+    "bbad": { type: "serie", title: "Breaking Bad", externalId: "cd515bdb-75ec-5040-9aa6-168d86cdfd2c" },
+    "dune": { type: "book", title: "Dune", externalId: "4bffcd39-d803-566a-a35c-f123232bd0a0" },
+    "witcher3": { type: "game", title: "The Witcher 3", externalId: "4db7fec3-f93c-50e4-b40d-0ad2e64d3200" },
+    "backlog_test_1": { type: "book", title: "Libro olvidado de prueba", externalId: "f20ad0e1-19f8-54bf-a1fc-d639d49ef767" },
+    "bk_serie_03": { type: "serie", title: "The Bear", externalId: "fc32502f-41fc-5015-b44b-9b1306807ea6" },
+    "bk_pelicula_02": { type: "pelicula", title: "Arrival", externalId: "c1cfbeb4-d61a-561e-b683-4bb29acdea82" },
+    "bk_serie_01": { type: "serie", title: "Dark", externalId: "bf3dfdab-0ebe-5717-b125-b22322df9f89" },
+    "bk_serie_02": { type: "serie", title: "The Expanse", externalId: "6134c8c1-f915-5fad-b181-e723c6860441" },
+    "bk_pelicula_01": { type: "pelicula", title: "Blade Runner 2049", externalId: "9e30b10b-fe5d-5d2f-a125-b66855bda4f4" },
+    "bk_book_01": { type: "book", title: "Dune Messiah", externalId: "75b94c70-c893-5a21-a823-522fd2cdfb2d" },
+    "bk_game_01": { type: "game", title: "Hades", externalId: "4aaa4eec-7839-519e-b707-99d3c3d5491b" }
+  };
+
   const normalizeMockLibraryEntry = (item) => {
     if (!item || typeof item !== "object") return null;
 
     const itemId = normalizeMockId(item.id);
     if (!itemId) return null;
 
+    const demo = DEMO_LIBRARY_IDENTITIES[itemId];
+
+    // Reparar solo registros demo conocidos y sin identidad.
+    // Conservar cualquier identidad ya existente, incluso parcial,
+    // para no ocultar datos inválidos o de otros orígenes.
+    const isLegacyDemo =
+      demo &&
+      item.type === demo.type &&
+      item.title === demo.title &&
+      !item.source &&
+      !item.externalId;
+
     return {
       ...item,
-      id: itemId
+      id: itemId,
+      ...(isLegacyDemo
+        ? { source: "manual", externalId: demo.externalId }
+        : {})
     };
   };
 
