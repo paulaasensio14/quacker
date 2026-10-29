@@ -221,7 +221,8 @@ function requestJson(
           : JSON.stringify(body);
 
       const headers = {
-        Accept: "application/json"
+        Accept: "application/json",
+        Origin: new URL(url).origin
       };
 
       if (serializedBody !== null) {

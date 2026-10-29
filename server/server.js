@@ -1,4 +1,10 @@
 import express from "express";
+
+import {
+  getAllowedRequestOrigins,
+  isRequestOriginAllowed
+} from "./lib/request-origin-security.js";
+
 import session from "express-session";
 import sessionFileStore from "session-file-store";
 import cookieParser from "cookie-parser";
@@ -389,6 +395,40 @@ app.use(
     cookie: sessionCookieOptions
   })
 );
+
+const REQUEST_ORIGINS = getAllowedRequestOrigins({
+  environment: process.env.NODE_ENV,
+  port: Number.parseInt(process.env.PORT || "3000", 10)
+});
+
+app.use("/api", (req, res, next) => {
+  const protocol =
+    process.env.NODE_ENV === "production"
+      ? "https:"
+      : "http:";
+
+  const host = String(
+    req.headers.host || ""
+  ).trim().toLowerCase();
+
+  const targetOrigin = `${protocol}//${host}`;
+
+  const allowed = isRequestOriginAllowed({
+    method: req.method,
+    origin: req.headers.origin,
+    targetOrigin,
+    fetchSite: req.headers["sec-fetch-site"],
+    allowedOrigins: REQUEST_ORIGINS
+  });
+
+  if (!allowed) {
+    return res.status(403).json({
+      error: "invalid_request_origin"
+    });
+  }
+
+  return next();
+});
 
 // ===== Helpers DB =====
 function _readDb() {
