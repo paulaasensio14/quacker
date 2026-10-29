@@ -13220,3 +13220,69 @@ body.dark-theme .community-profile-blocked {
 #view-library .lib-footer-actions .lib-complete-btn {
   flex-shrink: 0;
 }
+
+
+/* Semana 18: navegación por pestañas en Mi perfil */
+#view-profile .profile-settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+#view-profile .profile-settings-tabs button {
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg-card, var(--bg-secondary));
+  color: var(--text-main);
+  padding: 11px 17px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#view-profile .profile-settings-tabs button[aria-pressed="true"] {
+  background: var(--bg-yellow);
+  color: #17202d;
+  border-color: var(--bg-yellow);
+}
+
+#view-profile .profile-settings-tabs button:focus-visible {
+  outline: 3px solid var(--bg-yellow);
+  outline-offset: 3px;
+}
+
+#view-profile .profile-layout[data-active-profile-tab] > [data-profile-panel] {
+  display: none !important;
+}
+
+#view-profile .profile-layout[data-active-profile-tab="perfil"] > [data-profile-panel="perfil"]:not([hidden]),
+#view-profile .profile-layout[data-active-profile-tab="privacidad"] > [data-profile-panel="privacidad"]:not([hidden]),
+#view-profile .profile-layout[data-active-profile-tab="ajustes"] > [data-profile-panel="ajustes"]:not([hidden]) {
+  display: block !important;
+}
+
+#view-profile .profile-layout > [hidden],
+#view-profile .profile-layout > [data-profile-panel][hidden] {
+  display: none !important;
+}
+
+/* Semana 18: nota de privacidad integrada en la cabecera */
+#view-profile .profile-privacy-note {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  padding: 0;
+  margin: 6px 0 20px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+body.dark-theme #view-profile .profile-privacy-note {
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+}
