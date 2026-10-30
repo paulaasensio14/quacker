@@ -13286,3 +13286,59 @@ body.dark-theme #view-profile .profile-privacy-note {
   border: 0;
   color: var(--text-muted);
 }
+
+/* QA-02-002: series watch controls */
+.content-detail-season-watch-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
+
+.content-detail-season-watch-button,
+.content-detail-episode-watch-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.content-detail-season-watch-button:hover,
+.content-detail-episode-watch-button:hover {
+  background: rgba(128, 128, 128, 0.12);
+}
+
+.content-detail-season-watch-button:focus-visible,
+.content-detail-episode-watch-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.content-detail-season-watch-button:disabled,
+.content-detail-episode-watch-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.content-detail-episode-watch-button {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .content-detail-episode-watch-button {
+    margin-left: 0;
+  }
+
+  .content-detail-season-watch-button {
+    width: 100%;
+  }
+}

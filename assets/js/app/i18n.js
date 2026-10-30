@@ -934,6 +934,18 @@
       explore_detail_season_loading: "Cargando episodios…",
       explore_detail_season_error: "No se pudieron cargar los episodios.",
       explore_detail_episode_seen_on: "Visto el {date}",
+      explore_detail_episode_mark_watched: "Marcar como visto",
+      explore_detail_episode_unmark_watched: "Desmarcar visto",
+      explore_detail_season_mark_watched: "Marcar temporada completa",
+      explore_detail_season_unmark_watched: "Desmarcar temporada",
+
+      explore_detail_season_mark_confirm: "¿Marcar todos los episodios de la temporada {season} como vistos?",
+      explore_detail_season_unmark_confirm: "¿Desmarcar todos los episodios de la temporada {season}? Esta acción actualizará tu progreso.",
+      explore_detail_watch_saved: "Seguimiento actualizado correctamente.",
+      explore_detail_watch_error: "No se pudo actualizar el seguimiento de episodios.",
+      explore_detail_watch_conflict: "Los datos de esta serie han cambiado. Vuelve a abrir la ficha antes de intentarlo de nuevo.",
+
+
       explore_detail_episode_next: "Siguiente",
       explore_detail_label_author: "Autor",
       explore_detail_label_creator: "Creado por",
@@ -1962,6 +1974,18 @@
       explore_detail_season_loading: "Loading episodes…",
       explore_detail_season_error: "Could not load the episodes.",
       explore_detail_episode_seen_on: "Watched on {date}",
+      explore_detail_episode_mark_watched: "Mark as watched",
+      explore_detail_episode_unmark_watched: "Mark as unwatched",
+      explore_detail_season_mark_watched: "Mark entire season as watched",
+      explore_detail_season_unmark_watched: "Mark season as unwatched",
+
+      explore_detail_season_mark_confirm: "Mark every episode of season {season} as watched?",
+      explore_detail_season_unmark_confirm: "Mark every episode of season {season} as unwatched? Your progress will be updated.",
+      explore_detail_watch_saved: "Episode tracking updated.",
+      explore_detail_watch_error: "Could not update episode tracking.",
+      explore_detail_watch_conflict: "This series has changed. Reopen its details before trying again.",
+
+
       explore_detail_episode_next: "Next up",
       explore_detail_label_author: "Author",
       explore_detail_label_creator: "Created by",
