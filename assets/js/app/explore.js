@@ -194,6 +194,9 @@ const ExploreModule = (() => {
     }
 
     if (safeType === "serie") {
+      // La posicion T1-E1 puede ser inicial: no demuestra visionado.
+      if (safeStatus === "not_started") return false;
+
       const safeSeason = Math.max(0, Number(item?.meta?.season || 0) || 0);
       const safeEpisode = Math.max(0, Number(item?.meta?.episode || 0) || 0);
       return safeSeason > 0 && safeEpisode > 0;
