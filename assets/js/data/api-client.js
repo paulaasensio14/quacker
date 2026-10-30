@@ -8434,3 +8434,6 @@ if (externalSignal?.aborted) {
     maybeNotifyStreak
   };
 })();
+
+// Exponer el cliente para los inicializadores del navegador.
+window.ApiClient = ApiClient;
