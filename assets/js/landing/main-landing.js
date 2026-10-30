@@ -453,27 +453,82 @@
     // - Si no: restauramos sessionStorage (para modo local / pruebas)
     (function initApiTransport() {
       try {
-        const isNodeServer = String(window.location.port) === "3000";
+        const explicitTransport =
+          window.__QUACKER_RUNTIME_TRANSPORT__;
+
+        const hostname =
+          String(window.location.hostname || "").toLowerCase();
+
+        const protocol =
+          String(window.location.protocol || "").toLowerCase();
+
+        const isLocalHost =
+          hostname === "localhost" ||
+          hostname === "127.0.0.1";
+
+        const isPublicHttpHost =
+          (protocol === "http:" || protocol === "https:") &&
+          !isLocalHost;
+
+        if (isPublicHttpHost) {
+          if (window.ApiClient?.setBaseUrl) {
+            ApiClient.setBaseUrl("/api");
+          }
+          if (window.ApiClient?.setTransport) {
+            ApiClient.setTransport("http");
+          }
+          return;
+        }
+
+        if (
+          explicitTransport === "http" ||
+          explicitTransport === "local"
+        ) {
+          if (window.ApiClient?.setBaseUrl) {
+            ApiClient.setBaseUrl("/api");
+          }
+          if (window.ApiClient?.setTransport) {
+            ApiClient.setTransport(explicitTransport);
+          }
+          return;
+        }
+
+        const isNodeServer =
+          String(window.location.port) === "3000";
 
         if (isNodeServer) {
-          if (window.ApiClient?.setBaseUrl) ApiClient.setBaseUrl("/api");
-          if (window.ApiClient?.setTransport) ApiClient.setTransport("http");
+          if (window.ApiClient?.setBaseUrl) {
+            ApiClient.setBaseUrl("/api");
+          }
+          if (window.ApiClient?.setTransport) {
+            ApiClient.setTransport("http");
+          }
 
-          // Persistimos para que al recargar no vuelva a "local"
           try {
-            sessionStorage.setItem("quacker_transport", "http");
-            sessionStorage.setItem("quacker_baseUrl", "/api");
+            sessionStorage.setItem(
+              "quacker_transport", "http"
+            );
+            sessionStorage.setItem(
+              "quacker_baseUrl", "/api"
+            );
           } catch (_) {}
 
           return;
         }
 
-        // En estático, respetamos sessionStorage si existe
-        const savedTransport = sessionStorage.getItem("quacker_transport");
-        const savedBaseUrl = sessionStorage.getItem("quacker_baseUrl");
+        const savedTransport =
+          sessionStorage.getItem("quacker_transport");
 
-        if (savedBaseUrl && window.ApiClient?.setBaseUrl) ApiClient.setBaseUrl(savedBaseUrl);
-        if (savedTransport && window.ApiClient?.setTransport) ApiClient.setTransport(savedTransport);
+        const savedBaseUrl =
+          sessionStorage.getItem("quacker_baseUrl");
+
+        if (savedBaseUrl && window.ApiClient?.setBaseUrl) {
+          ApiClient.setBaseUrl(savedBaseUrl);
+        }
+
+        if (savedTransport && window.ApiClient?.setTransport) {
+          ApiClient.setTransport(savedTransport);
+        }
       } catch (_) {}
     })();
 

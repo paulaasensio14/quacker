@@ -13,15 +13,16 @@ const source = fs.readFileSync(
 
 function createHarness({
   status = 200,
-  body = {}
+  body = {},
+  local = false
 } = {}) {
   const requests = [];
 
   const window = {
     location: {
-      hostname: "quacker.es",
-      port: "",
-      protocol: "https:",
+      hostname: local ? "127.0.0.1" : "quacker.es",
+      port: local ? "5500" : "",
+      protocol: local ? "http:" : "https:",
       pathname: "/dashboard.html",
       href: "/dashboard.html"
     }
@@ -91,7 +92,7 @@ test("solo acepta isModerator booleano verdadero", async () => {
 });
 
 test("el modo local nunca concede permisos", async () => {
-  const h = createHarness();
+  const h = createHarness({ local: true });
 
   h.api.setTransport("local");
 
@@ -207,7 +208,7 @@ test("un servidor que deniega acceso no devuelve denuncias", async () => {
 });
 
 test("el modo local no admite moderación", async () => {
-  const h = createHarness();
+  const h = createHarness({ local: true });
 
   h.api.setTransport("local");
 

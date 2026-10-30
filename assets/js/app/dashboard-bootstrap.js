@@ -1,7 +1,49 @@
 (function () {
   try {
     // En el server real (3000) NO restauramos nada: HTTP debe ser la verdad.
-    const isNodeServer = String(window.location.port) === "3000";
+    const explicitTransport =
+      window.__QUACKER_RUNTIME_TRANSPORT__;
+
+    const hostname =
+      String(window.location.hostname || "").toLowerCase();
+
+    const protocol =
+      String(window.location.protocol || "").toLowerCase();
+
+    const isLocalHost =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1";
+
+    const isPublicHttpHost =
+      (protocol === "http:" || protocol === "https:") &&
+      !isLocalHost;
+
+    if (isPublicHttpHost) {
+      if (window.ApiClient?.setBaseUrl) {
+        ApiClient.setBaseUrl("/api");
+      }
+      if (window.ApiClient?.setTransport) {
+        ApiClient.setTransport("http");
+      }
+      return;
+    }
+
+    if (
+      explicitTransport === "http" ||
+      explicitTransport === "local"
+    ) {
+      if (window.ApiClient?.setBaseUrl) {
+        ApiClient.setBaseUrl("/api");
+      }
+      if (window.ApiClient?.setTransport) {
+        ApiClient.setTransport(explicitTransport);
+      }
+      return;
+    }
+
+    const isNodeServer =
+      String(window.location.port) === "3000";
+
     if (isNodeServer) return;
 
     // En estático, respetamos sessionStorage si existe

@@ -21,14 +21,38 @@ const ApiClient = (() => {
   const __isLocalHost = __hostname === "localhost" || __hostname === "127.0.0.1";
   const __isNodeServer = __isLocalHost && __port === "3000";
   const __isStaticLocalDev = __isLocalHost && __port !== "3000";
+  const __automaticTransport =
+    (__isFileProtocol || __isStaticLocalDev) ? "local" : "http";
+
+  // Permite configurar explícitamente un backend HTTP de pruebas.
+  // Si no hay una configuración válida, conserva el modo automático.
+  const __explicitTransport =
+    window.__QUACKER_RUNTIME_TRANSPORT__;
+
+  const __isPublicHttpHost =
+    !__isFileProtocol &&
+    (__protocol === "http:" || __protocol === "https:") &&
+    !__isLocalHost;
+
   const __cfg = {
-    transport: (__isFileProtocol || __isStaticLocalDev) ? "local" : "http",
+    transport: __isPublicHttpHost
+      ? "http"
+      : (
+          __explicitTransport === "http" ||
+          __explicitTransport === "local"
+        )
+        ? __explicitTransport
+        : __automaticTransport,
     baseUrl: "/api",
     timeoutMs: 12000
   };
 
   function setTransport(mode) {
-    __cfg.transport = (mode === "http") ? "http" : "local";
+    if (__isPublicHttpHost) {
+      __cfg.transport = "http";
+    } else {
+      __cfg.transport = mode === "http" ? "http" : "local";
+    }
     return { ok: true, transport: __cfg.transport };
   }
 
