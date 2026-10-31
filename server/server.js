@@ -40,6 +40,11 @@ import {
 } from "./adapters/wikipedia-game.js";
 import nodemailer from "nodemailer";
 import { ENV } from "./config/env.js";
+import {
+  buildContactEmail,
+  buildWelcomeEmail,
+  buildPasswordResetEmail
+} from "./lib/email-messages.js";
 
 import {
   readJsonFile,
@@ -575,7 +580,13 @@ async function _sendContactEmail({ name, email, message, language }) {
   }
 
   const transporter = _getMailTransporter();
-  const languageLabel = language === "en" ? "English" : "Español";
+
+  const mail = buildContactEmail({
+    name,
+    email,
+    message,
+    language
+  });
 
   await transporter.sendMail({
     from: {
@@ -587,344 +598,19 @@ async function _sendContactEmail({ name, email, message, language }) {
       name,
       address: email
     },
-    subject: `[Quacker] Nuevo mensaje de ${name}`,
-    text: [
-      "Nuevo mensaje desde el formulario de contacto de Quacker.",
-      "",
-      `Nombre: ${name}`,
-      `Email: ${email}`,
-      `Idioma: ${languageLabel}`,
-      "",
-      "Mensaje:",
-      message
-    ].join("\n"),
-    html: `
-      <h2>Nuevo mensaje desde Quacker</h2>
-      <p><strong>Nombre:</strong> ${_escapeContactHtml(name)}</p>
-      <p><strong>Email:</strong> ${_escapeContactHtml(email)}</p>
-      <p><strong>Idioma:</strong> ${_escapeContactHtml(languageLabel)}</p>
-      <p><strong>Mensaje:</strong></p>
-      <p>${_escapeContactHtml(message).replace(/\n/g, "<br>")}</p>
-    `
+    subject: mail.subject,
+    text: mail.text,
+    html: mail.html
   });
 }
 
 async function _sendWelcomeEmail({ name, email, language }) {
   const transporter = _getMailTransporter();
-  const isEnglish = language === "en";
-  const safeName = _normalizeContactName(name);
-  const safeHtmlName = _escapeContactHtml(safeName);
 
-  const copy = isEnglish
-    ? {
-        subject: safeName
-          ? `${safeName}, your Quacker nest is ready`
-          : "Your Quacker nest is ready",
-        preheader:
-          "Your account is ready. Start building your personal entertainment library.",
-        kicker: "YOUR NEW ENTERTAINMENT HOME",
-        title: "Welcome to Quacker!",
-        greeting: "Hi",
-        intro:
-          "Your account is ready, and your next favorite story now has a place to land.",
-        body:
-          "Quacker brings your shows, movies, books and video games together, so you always know what you are enjoying, what comes next and what you have already finished.",
-        stepsTitle: "Start in three simple steps",
-        steps: [
-          {
-            title: "Explore",
-            text: "Find a show, movie, book or game you are excited about."
-          },
-          {
-            title: "Build your library",
-            text: "Save everything you want to watch, read or play."
-          },
-          {
-            title: "Keep moving",
-            text: "Update your progress and organize titles into custom lists."
-          }
-        ],
-        button: "Open my library",
-        support:
-          "Questions, ideas or feedback? Reply to this email or write to hello@quacker.es.",
-        signoff: "See you in the nest,",
-        team: "The Quacker team",
-        footer: "One place for everything you watch, read and play."
-      }
-    : {
-        subject: safeName
-          ? `${safeName}, tu nido en Quacker está listo`
-          : "Tu nido en Quacker está listo",
-        preheader:
-          "Tu cuenta está lista. Empieza a crear tu biblioteca personal.",
-        kicker: "TU NUEVO HOGAR PARA TODO LO QUE DISFRUTAS",
-        title: "¡Te damos la bienvenida a Quacker!",
-        greeting: "Hola",
-        intro:
-          "Tu cuenta ya está lista y tus próximas obsesiones ya tienen dónde aterrizar.",
-        body:
-          "Quacker reúne tus series, películas, libros y videojuegos para que siempre sepas qué estás disfrutando, qué viene después y qué has terminado.",
-        stepsTitle: "Empieza en tres pasos sencillos",
-        steps: [
-          {
-            title: "Explora",
-            text: "Encuentra una serie, película, libro o juego que te apetezca descubrir."
-          },
-          {
-            title: "Crea tu biblioteca",
-            text: "Guarda todo lo que quieras ver, leer o jugar."
-          },
-          {
-            title: "Sigue avanzando",
-            text: "Actualiza tu progreso y organiza títulos en listas personalizadas."
-          }
-        ],
-        button: "Abrir mi biblioteca",
-        support:
-          "¿Tienes alguna duda, idea o sugerencia? Responde a este correo o escríbenos a hello@quacker.es.",
-        signoff: "Nos vemos en el nido,",
-        team: "El equipo de Quacker",
-        footer: "Un solo sitio para todo lo que ves, lees y juegas."
-      };
-
-  const safeHtmlSubject = _escapeContactHtml(copy.subject);
-
-  const greeting = safeName
-    ? `${copy.greeting} ${safeName},`
-    : `${copy.greeting},`;
-
-  const htmlGreeting = safeName
-    ? `${copy.greeting} ${safeHtmlName},`
-    : `${copy.greeting},`;
-
-  const text = [
-    greeting,
-    "",
-    copy.intro,
-    "",
-    copy.body,
-    "",
-    copy.stepsTitle,
-    ...copy.steps.map(
-      (step, index) => `${index + 1}. ${step.title}: ${step.text}`
-    ),
-    "",
-    `${copy.button}: https://quacker.es`,
-    "",
-    copy.support,
-    "",
-    copy.signoff,
-    copy.team
-  ].join("\n");
-
-  const html = `
-    <!doctype html>
-    <html lang="${isEnglish ? "en" : "es"}">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="color-scheme" content="light only">
-        <meta name="supported-color-schemes" content="light only">
-        <title>${safeHtmlSubject}</title>
-      </head>
-
-      <body style="margin:0;padding:0;background:#f3f0e7;font-family:Arial,Helvetica,sans-serif;color:#0d3340;">
-        <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
-          ${copy.preheader}
-        </div>
-
-        <table
-          role="presentation"
-          width="100%"
-          cellpadding="0"
-          cellspacing="0"
-          border="0"
-          style="width:100%;margin:0;padding:0;background:#f3f0e7;"
-        >
-          <tr>
-            <td align="center" style="padding:32px 14px;">
-              <table
-                role="presentation"
-                width="600"
-                cellpadding="0"
-                cellspacing="0"
-                border="0"
-                style="width:100%;max-width:600px;background:#ffffff;border:2px solid #0d3340;border-radius:24px;overflow:hidden;"
-              >
-                <tr>
-                  <td style="padding:24px 28px;background:#f2c230;">
-                    <table
-                      role="presentation"
-                      cellpadding="0"
-                      cellspacing="0"
-                      border="0"
-                    >
-                      <tr>
-                        <td
-                          width="56"
-                          height="56"
-                          align="center"
-                          valign="middle"
-                          style="width:56px;height:56px;"
-                        >
-                          <img
-                            src="https://quacker.es/assets/img/logo-quacker.png"
-                            alt="Quacker"
-                            width="52"
-                            height="52"
-                            style="
-                              display:block;
-                              width:52px;
-                              height:52px;
-                              border:2px solid #0d3340;
-                              border-radius:50%;
-                              outline:none;
-                              text-decoration:none;
-                            "
-                          >
-                        </td>
-
-                        <td
-                          valign="middle"
-                          style="padding-left:14px;color:#0d3340;font-size:30px;font-weight:900;letter-spacing:-1px;"
-                        >
-                          Quacker
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding:34px 36px 16px;">
-                    <p style="margin:0 0 10px;color:#9a7410;font-size:12px;font-weight:800;letter-spacing:1.5px;">
-                      ${copy.kicker}
-                    </p>
-
-                    <h1 style="margin:0 0 22px;color:#0d3340;font-size:32px;line-height:1.18;letter-spacing:-0.7px;">
-                      ${copy.title}
-                    </h1>
-
-                    <p style="margin:0 0 14px;color:#0d3340;font-size:18px;line-height:1.55;font-weight:700;">
-                      ${htmlGreeting}
-                    </p>
-
-                    <table
-                      role="presentation"
-                      width="100%"
-                      cellpadding="0"
-                      cellspacing="0"
-                      border="0"
-                      style="width:100%;margin:0 0 22px;background:#fff7d6;border:1px solid #ead47d;border-radius:16px;"
-                    >
-                      <tr>
-                        <td style="padding:20px 22px;">
-                          <p style="margin:0;color:#0d3340;font-size:17px;line-height:1.55;font-weight:700;">
-                            ${copy.intro}
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style="margin:0 0 26px;color:#405b64;font-size:16px;line-height:1.65;">
-                      ${copy.body}
-                    </p>
-
-                    <h2 style="margin:0 0 14px;color:#0d3340;font-size:20px;line-height:1.35;">
-                      ${copy.stepsTitle}
-                    </h2>
-
-                    ${copy.steps
-                      .map(
-                        (step, index) => `
-                          <table
-                            role="presentation"
-                            width="100%"
-                            cellpadding="0"
-                            cellspacing="0"
-                            border="0"
-                            style="width:100%;margin:0 0 10px;background:#f8f6ef;border:1px solid #ded9c9;border-radius:14px;"
-                          >
-                            <tr>
-                              <td
-                                width="54"
-                                valign="top"
-                                style="width:54px;padding:17px 0 17px 18px;"
-                              >
-                                <div style="width:34px;height:34px;border-radius:50%;background:#0d3340;color:#f2c230;font-size:16px;font-weight:800;line-height:34px;text-align:center;">
-                                  ${index + 1}
-                                </div>
-                              </td>
-
-                              <td style="padding:15px 18px 15px 10px;">
-                                <p style="margin:0 0 3px;color:#0d3340;font-size:16px;line-height:1.4;font-weight:800;">
-                                  ${step.title}
-                                </p>
-
-                                <p style="margin:0;color:#526a72;font-size:14px;line-height:1.55;">
-                                  ${step.text}
-                                </p>
-                              </td>
-                            </tr>
-                          </table>
-                        `
-                      )
-                      .join("")}
-
-                    <table
-                      role="presentation"
-                      cellpadding="0"
-                      cellspacing="0"
-                      border="0"
-                      style="margin:28px auto 26px;"
-                    >
-                      <tr>
-                        <td
-                          align="center"
-                          style="border-radius:999px;background:#0d3340;"
-                        >
-                          <a
-                            href="https://quacker.es"
-                            style="display:inline-block;padding:15px 28px;color:#ffffff;font-size:16px;font-weight:800;line-height:1;text-decoration:none;border-radius:999px;"
-                          >
-                            ${copy.button} &rarr;
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style="margin:0 0 24px;color:#526a72;font-size:14px;line-height:1.65;text-align:center;">
-                      ${copy.support}
-                    </p>
-
-                    <p style="margin:0;color:#0d3340;font-size:15px;line-height:1.6;">
-                      ${copy.signoff}<br>
-                      <strong>${copy.team}</strong>
-                    </p>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td
-                    align="center"
-                    style="padding:20px 28px;background:#0d3340;"
-                  >
-                    <p style="margin:0 0 6px;color:#ffffff;font-size:13px;line-height:1.5;font-weight:700;">
-                      ${copy.footer}
-                    </p>
-
-                    <p style="margin:0;color:#a9bbc0;font-size:12px;line-height:1.5;">
-                      quacker.es · hello@quacker.es
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `;
+  const mail = buildWelcomeEmail({
+    name: _normalizeContactName(name),
+    language
+  });
 
   await transporter.sendMail({
     from: {
@@ -933,9 +619,9 @@ async function _sendWelcomeEmail({ name, email, language }) {
     },
     to: email,
     replyTo: ENV.CONTACT_TO || ENV.SMTP_USER,
-    subject: copy.subject,
-    text,
-    html
+    subject: mail.subject,
+    text: mail.text,
+    html: mail.html
   });
 }
 
@@ -946,337 +632,22 @@ async function _sendPasswordResetEmail({
   token
 }) {
   const transporter = _getMailTransporter();
-  const isEnglish = language === "en";
 
-  const safeName =
-    _normalizeContactName(name);
+  const resetUrl = createPasswordResetUrl(token);
 
-  const resetUrl =
-    createPasswordResetUrl(token);
+  const expiryMinutes = Math.max(
+    1,
+    Math.round(
+      PASSWORD_RESET_TOKEN_TTL_MS / (60 * 1000)
+    )
+  );
 
-  const safeHtmlResetUrl =
-    _escapeContactHtml(resetUrl);
-
-  const expiryMinutes =
-    Math.max(
-      1,
-      Math.round(
-        PASSWORD_RESET_TOKEN_TTL_MS /
-          (60 * 1000)
-      )
-    );
-
-  const copy = isEnglish
-    ? {
-        subject:
-          "Reset your Quacker password",
-        preheader:
-          `Your password reset link expires in ${expiryMinutes} minutes.`,
-        kicker:
-          "PASSWORD RECOVERY",
-        title:
-          "Reset your password",
-        greeting: safeName
-          ? `Hi ${safeName},`
-          : "Hi,",
-        intro:
-          "We received a request to reset your Quacker password.",
-        action:
-          "Choose a new password using the secure button below.",
-        button:
-          "Reset password",
-        securityTitle:
-          "A quick security note",
-        expiry:
-          `This link expires in ${expiryMinutes} minutes and can only be used once.`,
-        fallback:
-          "If the button does not work, copy and paste this link into your browser:",
-        ignore:
-          "If you did not request a password reset, you can safely ignore this email. Your password will stay unchanged.",
-        support:
-          "Need help? Reply to this email or write to hello@quacker.es.",
-        signoff:
-          "See you back in the nest,",
-        team:
-          "The Quacker team",
-        footer:
-          "One place for everything you watch, read and play."
-      }
-    : {
-        subject:
-          "Restablece tu contraseña de Quacker",
-        preheader:
-          `Tu enlace para restablecer la contraseña caduca en ${expiryMinutes} minutos.`,
-        kicker:
-          "RECUPERACIÓN DE CONTRASEÑA",
-        title:
-          "Recupera tu contraseña",
-        greeting: safeName
-          ? `Hola ${safeName},`
-          : "Hola,",
-        intro:
-          "Hemos recibido una solicitud para restablecer tu contraseña de Quacker.",
-        action:
-          "Elige una nueva contraseña utilizando el botón seguro que encontrarás a continuación.",
-        button:
-          "Restablecer contraseña",
-        securityTitle:
-          "Un apunte de seguridad",
-        expiry:
-          `Este enlace caduca en ${expiryMinutes} minutos y solo puede utilizarse una vez.`,
-        fallback:
-          "Si el botón no funciona, copia y pega este enlace en tu navegador:",
-        ignore:
-          "Si no has solicitado un cambio de contraseña, puedes ignorar este correo con tranquilidad. Tu contraseña seguirá siendo la misma.",
-        support:
-          "¿Necesitas ayuda? Responde a este correo o escríbenos a hello@quacker.es.",
-        signoff:
-          "Nos vemos de nuevo en el nido,",
-        team:
-          "El equipo de Quacker",
-        footer:
-          "Un solo sitio para todo lo que ves, lees y juegas."
-      };
-
-  const safeHtmlSubject =
-    _escapeContactHtml(copy.subject);
-
-  const text = [
-    copy.greeting,
-    "",
-    copy.intro,
-    "",
-    copy.action,
+  const mail = buildPasswordResetEmail({
+    name: _normalizeContactName(name),
+    language,
     resetUrl,
-    "",
-    copy.expiry,
-    "",
-    copy.ignore,
-    "",
-    copy.support,
-    "",
-    copy.signoff,
-    copy.team
-  ].join("\n");
-
-  const html = `
-    <!doctype html>
-    <html lang="${isEnglish ? "en" : "es"}">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="color-scheme" content="light only">
-        <meta name="supported-color-schemes" content="light only">
-        <title>${safeHtmlSubject}</title>
-      </head>
-
-      <body style="margin:0;padding:0;background:#f3f0e7;font-family:Arial,Helvetica,sans-serif;color:#0d3340;">
-        <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
-          ${_escapeContactHtml(copy.preheader)}
-        </div>
-
-        <table
-          role="presentation"
-          width="100%"
-          cellpadding="0"
-          cellspacing="0"
-          border="0"
-          style="width:100%;margin:0;padding:0;background:#f3f0e7;"
-        >
-          <tr>
-            <td align="center" style="padding:32px 14px;">
-              <table
-                role="presentation"
-                width="600"
-                cellpadding="0"
-                cellspacing="0"
-                border="0"
-                style="width:100%;max-width:600px;background:#ffffff;border:2px solid #0d3340;border-radius:24px;overflow:hidden;"
-              >
-                <tr>
-                  <td style="padding:24px 28px;background:#f2c230;">
-                    <table
-                      role="presentation"
-                      cellpadding="0"
-                      cellspacing="0"
-                      border="0"
-                    >
-                      <tr>
-                        <td
-                          width="56"
-                          height="56"
-                          align="center"
-                          valign="middle"
-                          style="width:56px;height:56px;"
-                        >
-                          <img
-                            src="https://quacker.es/assets/img/logo-quacker.png"
-                            alt="Quacker"
-                            width="52"
-                            height="52"
-                            style="display:block;width:52px;height:52px;border:2px solid #0d3340;border-radius:50%;outline:none;text-decoration:none;"
-                          >
-                        </td>
-
-                        <td
-                          valign="middle"
-                          style="padding-left:14px;color:#0d3340;font-size:30px;font-weight:900;letter-spacing:-1px;"
-                        >
-                          Quacker
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="padding:34px 36px 18px;">
-                    <p style="margin:0 0 10px;color:#9a7410;font-size:12px;font-weight:800;letter-spacing:1.5px;">
-                      ${_escapeContactHtml(copy.kicker)}
-                    </p>
-
-                    <h1 style="margin:0 0 22px;color:#0d3340;font-size:32px;line-height:1.18;letter-spacing:-0.7px;">
-                      ${_escapeContactHtml(copy.title)}
-                    </h1>
-
-                    <p style="margin:0 0 14px;color:#0d3340;font-size:18px;line-height:1.55;font-weight:700;">
-                      ${_escapeContactHtml(copy.greeting)}
-                    </p>
-
-                    <table
-                      role="presentation"
-                      width="100%"
-                      cellpadding="0"
-                      cellspacing="0"
-                      border="0"
-                      style="width:100%;margin:0 0 22px;background:#fff7d6;border:1px solid #ead47d;border-radius:16px;"
-                    >
-                      <tr>
-                        <td style="padding:20px 22px;">
-                          <p style="margin:0;color:#0d3340;font-size:17px;line-height:1.55;font-weight:700;">
-                            ${_escapeContactHtml(copy.intro)}
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style="margin:0 0 8px;color:#405b64;font-size:16px;line-height:1.65;text-align:center;">
-                      ${_escapeContactHtml(copy.action)}
-                    </p>
-
-                    <table
-                      role="presentation"
-                      cellpadding="0"
-                      cellspacing="0"
-                      border="0"
-                      style="margin:24px auto 28px;"
-                    >
-                      <tr>
-                        <td
-                          align="center"
-                          style="border-radius:999px;background:#0d3340;"
-                        >
-                          <a
-                            href="${safeHtmlResetUrl}"
-                            style="display:inline-block;padding:16px 30px;color:#ffffff;font-size:16px;font-weight:800;line-height:1;text-decoration:none;border-radius:999px;"
-                          >
-                            ${_escapeContactHtml(copy.button)} &rarr;
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <table
-                      role="presentation"
-                      width="100%"
-                      cellpadding="0"
-                      cellspacing="0"
-                      border="0"
-                      style="width:100%;margin:0 0 22px;background:#f8f6ef;border:1px solid #ded9c9;border-radius:14px;"
-                    >
-                      <tr>
-                        <td
-                          width="54"
-                          valign="top"
-                          style="width:54px;padding:18px 0 18px 18px;"
-                        >
-                          <div style="width:34px;height:34px;border-radius:50%;background:#0d3340;color:#f2c230;font-size:18px;font-weight:800;line-height:34px;text-align:center;">
-                            !
-                          </div>
-                        </td>
-
-                        <td style="padding:16px 18px 16px 10px;">
-                          <p style="margin:0 0 4px;color:#0d3340;font-size:16px;line-height:1.4;font-weight:800;">
-                            ${_escapeContactHtml(copy.securityTitle)}
-                          </p>
-
-                          <p style="margin:0;color:#526a72;font-size:14px;line-height:1.55;">
-                            ${_escapeContactHtml(copy.expiry)}
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style="margin:0 0 8px;color:#526a72;font-size:13px;line-height:1.55;">
-                      ${_escapeContactHtml(copy.fallback)}
-                    </p>
-
-                    <table
-                      role="presentation"
-                      width="100%"
-                      cellpadding="0"
-                      cellspacing="0"
-                      border="0"
-                      style="width:100%;margin:0 0 24px;background:#ffffff;border:1px solid #ded9c9;border-radius:12px;"
-                    >
-                      <tr>
-                        <td style="padding:13px 15px;">
-                          <a
-                            href="${safeHtmlResetUrl}"
-                            style="color:#0d5b72;font-size:12px;line-height:1.55;text-decoration:underline;word-break:break-all;"
-                          >
-                            ${safeHtmlResetUrl}
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style="margin:0 0 22px;color:#526a72;font-size:14px;line-height:1.65;text-align:center;">
-                      ${_escapeContactHtml(copy.ignore)}
-                    </p>
-
-                    <p style="margin:0 0 24px;color:#526a72;font-size:14px;line-height:1.65;text-align:center;">
-                      ${_escapeContactHtml(copy.support)}
-                    </p>
-
-                    <p style="margin:0;color:#0d3340;font-size:15px;line-height:1.6;">
-                      ${_escapeContactHtml(copy.signoff)}<br>
-                      <strong>${_escapeContactHtml(copy.team)}</strong>
-                    </p>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td
-                    align="center"
-                    style="padding:20px 28px;background:#0d3340;"
-                  >
-                    <p style="margin:0 0 6px;color:#ffffff;font-size:13px;line-height:1.5;font-weight:700;">
-                      ${_escapeContactHtml(copy.footer)}
-                    </p>
-
-                    <p style="margin:0;color:#a9bbc0;font-size:12px;line-height:1.5;">
-                      quacker.es · hello@quacker.es
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `;
+    expiryMinutes
+  });
 
   await transporter.sendMail({
     from: {
@@ -1284,15 +655,12 @@ async function _sendPasswordResetEmail({
       address: ENV.SMTP_USER
     },
     to: email,
-    replyTo:
-      ENV.CONTACT_TO ||
-      ENV.SMTP_USER,
-    subject: copy.subject,
-    text,
-    html
+    replyTo: ENV.CONTACT_TO || ENV.SMTP_USER,
+    subject: mail.subject,
+    text: mail.text,
+    html: mail.html
   });
 }
-
 
 function _normalizeCanonicalIdentity(source, type, externalId) {
   const identity = normalizeContentIdentity({
