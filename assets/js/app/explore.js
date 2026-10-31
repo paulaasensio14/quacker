@@ -53,6 +53,7 @@ const ExploreModule = (() => {
   const __detailExpandedSeasonKeys = new Set();
   const __detailSeasonCache = new Map();
   const __detailEpisodeActivityCache = new Map();
+  let __detailEpisodeWatchBusy = false;
   const __detailRelatedDrag = {
     pointerId: null,
     startX: 0,
@@ -194,6 +195,9 @@ const ExploreModule = (() => {
     }
 
     if (safeType === "serie") {
+      // La posicion T1-E1 puede ser inicial: no demuestra visionado.
+      if (safeStatus === "not_started") return false;
+
       const safeSeason = Math.max(0, Number(item?.meta?.season || 0) || 0);
       const safeEpisode = Math.max(0, Number(item?.meta?.episode || 0) || 0);
       return safeSeason > 0 && safeEpisode > 0;
@@ -1118,7 +1122,41 @@ const ExploreModule = (() => {
     return null;
   }
 
-  function _buildDetailEpisodeActivityMap(item, activities = []) {
+  function _buildDetailEpisodeActivityMap(item, activities = [], canonicalHistory = null) {
+    if (Array.isArray(canonicalHistory)) {
+      const canonicalMap = {};
+
+      canonicalHistory.forEach((event) => {
+        if (event?.eventType !== "episode_watched") return;
+
+        const season = Number(event?.meta?.season);
+        const episode = Number(event?.meta?.episode);
+        const occurredAt = _safeText(event?.occurredAt).trim();
+
+        if (
+          !Number.isSafeInteger(season) ||
+          season <= 0 ||
+          !Number.isSafeInteger(episode) ||
+          episode <= 0 ||
+          !occurredAt ||
+          Number.isNaN(Date.parse(occurredAt))
+        ) {
+          return;
+        }
+
+        const key = `${season}:${episode}`;
+
+        if (
+          !canonicalMap[key] ||
+          new Date(occurredAt) > new Date(canonicalMap[key])
+        ) {
+          canonicalMap[key] = occurredAt;
+        }
+      });
+
+      return canonicalMap;
+    }
+
     const safeMap = {};
     const safeActivities = Array.isArray(activities) ? activities : [];
 
@@ -1275,6 +1313,28 @@ const ExploreModule = (() => {
 
     const episodes = Array.isArray(seasonState.episodes) ? seasonState.episodes : [];
     const nextEpisodePosition = _getDetailSeriesNextEpisodePosition(item);
+    const canManageEpisodes =
+      !!_normalizeId(item?.__libraryItemId) &&
+      _safeText(item?.type) === "serie";
+
+    const breakdown = Array.isArray(item?.meta?.seasonBreakdown)
+      ? item.meta.seasonBreakdown
+      : [];
+
+    const seasonInfo = breakdown.find(
+      (entry) => Number(entry?.seasonNumber) === seasonNumber
+    );
+
+    const totalSeasonEpisodes = Number(seasonInfo?.episodeCount || 0);
+    const watchedSeasonEpisodes = _getDetailWatchedEpisodeCount(
+      item,
+      seasonNumber,
+      totalSeasonEpisodes
+    );
+
+    const isSeasonWatched =
+      totalSeasonEpisodes > 0 &&
+      watchedSeasonEpisodes >= totalSeasonEpisodes;
 
     if (episodes.length === 0) {
       return `
@@ -1288,6 +1348,27 @@ const ExploreModule = (() => {
 
     return `
       <div class="content-detail-season-body">
+        ${
+          canManageEpisodes &&
+          Number.isSafeInteger(totalSeasonEpisodes) &&
+          totalSeasonEpisodes > 0 &&
+          seasonNumber > 0
+            ? `<div class="content-detail-season-watch-actions">
+                <button
+                  type="button"
+                  class="content-detail-season-watch-button"
+                  data-action="set-series-season-watched"
+                  data-season-number="${seasonNumber}"
+                  data-watched="${isSeasonWatched}"
+                  ${__detailEpisodeWatchBusy ? 'disabled aria-disabled="true"' : ""}
+                >${_escapeHtml(window.I18n.t(
+                  isSeasonWatched
+                    ? "explore_detail_season_unmark_watched"
+                    : "explore_detail_season_mark_watched"
+                ))}</button>
+              </div>`
+            : ""
+        }
         <ul class="content-detail-episode-list">
           ${episodes
             .map((episode) => {
@@ -1363,6 +1444,24 @@ const ExploreModule = (() => {
                         : ""
                     }
                   </div>
+                  ${
+                    canManageEpisodes && seasonNumber > 0
+                      ? `<button
+                          type="button"
+                          class="content-detail-episode-watch-button"
+                          data-action="set-series-episode-watched"
+                          data-season-number="${seasonNumber}"
+                          data-episode-number="${episodeNumber}"
+                          data-watched="${!!episodeSeenAt}"
+                          aria-pressed="${!!episodeSeenAt}"
+                          ${__detailEpisodeWatchBusy ? 'disabled aria-disabled="true"' : ""}
+                        >${_escapeHtml(window.I18n.t(
+                          episodeSeenAt
+                            ? "explore_detail_episode_unmark_watched"
+                            : "explore_detail_episode_mark_watched"
+                        ))}</button>`
+                      : ""
+                  }
                 </li>
               `;
             })
@@ -1396,6 +1495,183 @@ const ExploreModule = (() => {
         inline: "nearest"
       });
     });
+  }
+
+
+  async function _setContentDetailSeriesWatchState({
+    season,
+    episode = null,
+    watched,
+    wholeSeason = false
+  } = {}) {
+    if (__detailEpisodeWatchBusy) return;
+
+    const activeItem = _getActiveDetailItem();
+    const itemId = _normalizeId(activeItem?.__libraryItemId);
+    const validSeason = Number.isSafeInteger(season) && season > 0;
+    const validEpisode =
+      wholeSeason ||
+      (Number.isSafeInteger(episode) && episode > 0);
+
+    if (
+      !_isDetailViewActive() ||
+      !itemId ||
+      _norm(activeItem?.type) !== "serie" ||
+      !validSeason ||
+      !validEpisode ||
+      typeof watched !== "boolean"
+    ) {
+      return;
+    }
+
+    if (wholeSeason) {
+      const confirmationKey = watched
+        ? "explore_detail_season_mark_confirm"
+        : "explore_detail_season_unmark_confirm";
+
+      const message = window.I18n
+        .t(confirmationKey)
+        .replace("{season}", String(season));
+
+      if (!window.confirm(message)) return;
+    }
+
+    __detailEpisodeWatchBusy = true;
+
+    const controls = document.querySelectorAll(
+      '[data-action="set-series-episode-watched"], ' +
+      '[data-action="set-series-season-watched"]'
+    );
+
+    controls.forEach((control) => {
+      control.disabled = true;
+      control.setAttribute("aria-disabled", "true");
+    });
+
+    try {
+      const argumentsForApi = {
+        itemId,
+        season,
+        watched,
+        expectedUpdatedAt: activeItem.updatedAt
+      };
+
+      const result = wholeSeason
+        ? await ApiClient.setSeriesSeasonWatched(argumentsForApi)
+        : await ApiClient.setSeriesEpisodeWatched({
+            ...argumentsForApi,
+            episode
+          });
+
+      if (!result?.ok || !result?.item) {
+        throw new Error(result?.reason || "watch_update_failed");
+      }
+
+      // El usuario puede cambiar de ficha durante la operación.
+      const current = _getActiveDetailItem();
+
+      if (
+        !_isDetailViewActive() ||
+        _normalizeId(current?.__libraryItemId) !== itemId ||
+        _normalizeId(current?.eid) !== _normalizeId(activeItem.eid)
+      ) {
+        return;
+      }
+
+      // La respuesta persistida es la fuente de verdad.
+      const saved = result.item;
+      const seenMap = saved.meta?.episodeSeenMap;
+      const episodeActivityMap =
+        seenMap &&
+        typeof seenMap === "object" &&
+        !Array.isArray(seenMap)
+          ? { ...seenMap }
+          : {};
+
+      const updatedItem = {
+        ...current,
+        status: saved.status,
+        progress: saved.progress,
+        updatedAt: saved.updatedAt,
+        meta: {
+          ...(current.meta || {}),
+          ...(saved.meta || {})
+        },
+        __episodeActivityMap: episodeActivityMap
+      };
+
+      const cacheKey = _getDetailEpisodeActivityCacheKey(updatedItem);
+
+      if (cacheKey) {
+        __detailEpisodeActivityCache.set(
+          cacheKey,
+          episodeActivityMap
+        );
+      }
+
+      _setActiveDetailState({
+        item: updatedItem,
+        loading: false,
+        error: false
+      });
+
+      // No eliminamos __detailExpandedSeasonKeys:
+      // las temporadas abiertas continúan desplegadas.
+      window.DetailModule?.render?.(updatedItem);
+
+      window.toast?.({
+        title: window.I18n.t("nav_detail"),
+        message: window.I18n.t("explore_detail_watch_saved"),
+        type: "success",
+        duration: 2500
+      });
+    } catch (error) {
+      console.error(
+        "[Explore] series episode watch update failed",
+        error
+      );
+
+      // No mostrar errores de una operación antigua
+      // cuando el usuario ya está consultando otra serie.
+      const currentItem = _getActiveDetailItem();
+
+      if (
+        !_isDetailViewActive() ||
+        _normalizeId(currentItem?.__libraryItemId) !== itemId ||
+        _normalizeId(currentItem?.eid) !==
+          _normalizeId(activeItem.eid)
+      ) {
+        return;
+      }
+
+      const isConflict =
+        Number(error?.status) === 409 ||
+        error?.message === "conflict" ||
+        error?.message === "stale_library_update";
+
+      window.toast?.({
+        title: window.I18n.t("nav_detail"),
+        message: window.I18n.t(
+          isConflict
+            ? "explore_detail_watch_conflict"
+            : "explore_detail_watch_error"
+        ),
+        type: "error",
+        duration: 5000
+      });
+    } finally {
+      __detailEpisodeWatchBusy = false;
+
+      // Si el panel fue renderizado, actuamos sobre
+      // los controles nuevos; si no, sobre los existentes.
+      document.querySelectorAll(
+        '[data-action="set-series-episode-watched"], ' +
+        '[data-action="set-series-season-watched"]'
+      ).forEach((control) => {
+        control.disabled = false;
+        control.removeAttribute("aria-disabled");
+      });
+    }
   }
 
   async function _toggleContentDetailSeason(seasonNumber) {
@@ -1602,11 +1878,42 @@ const ExploreModule = (() => {
     const activityCacheKey = _getDetailEpisodeActivityCacheKey(mergedItem);
 
     if (activityCacheKey) {
+      const libraryItemId = _normalizeId(mergedItem.__libraryItemId);
       const activities = await ApiClient.getLibraryItemActivities(
-        _normalizeId(mergedItem.__libraryItemId),
+        libraryItemId,
         { filter: "all" }
       );
-      const episodeActivityMap = _buildDetailEpisodeActivityMap(mergedItem, activities);
+
+      const canonicalHistory = await ApiClient.getConsumptionHistory({
+        itemId: libraryItemId
+      });
+
+      const legacySeenMap = mergedItem?.meta?.episodeSeenMap;
+      const hasLegacySeenMap =
+        legacySeenMap &&
+        typeof legacySeenMap === "object" &&
+        Object.keys(legacySeenMap).length > 0;
+
+      const hasCanonicalEvents = canonicalHistory.some(
+        (event) => event?.eventType === "episode_watched"
+      );
+
+      // Los eventos canónicos prevalecen sobre actividades anteriores.
+      // Si no hay eventos pero existe un mapa heredado, conservamos
+      // la compatibilidad hasta disponer de una migración explícita.
+      const hasExplicitTracking =
+        Number(mergedItem?.meta?.episodeTrackingVersion) === 1;
+
+      const useCanonical =
+        hasExplicitTracking ||
+        hasCanonicalEvents ||
+        !hasLegacySeenMap;
+
+      const episodeActivityMap = _buildDetailEpisodeActivityMap(
+        mergedItem,
+        activities,
+        useCanonical ? canonicalHistory : null
+      );
       __detailEpisodeActivityCache.set(activityCacheKey, episodeActivityMap);
 
       mergedItem.__episodeActivityMap = episodeActivityMap;
@@ -4650,6 +4957,44 @@ const ExploreModule = (() => {
           originView: isRelatedTrigger ? "detail" : "explore",
           triggerEl: detailTrigger
         });
+        return;
+      }
+
+      const seriesWatchButton = e.target.closest(
+        '[data-action="set-series-episode-watched"], ' +
+        '[data-action="set-series-season-watched"]'
+      );
+
+      if (seriesWatchButton) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (seriesWatchButton.disabled || __detailEpisodeWatchBusy) {
+          return;
+        }
+
+        const wholeSeason =
+          seriesWatchButton.dataset.action ===
+          "set-series-season-watched";
+
+        const season = Number(
+          seriesWatchButton.dataset.seasonNumber
+        );
+
+        const episode = wholeSeason
+          ? null
+          : Number(seriesWatchButton.dataset.episodeNumber);
+
+        const watched =
+          seriesWatchButton.dataset.watched !== "true";
+
+        await _setContentDetailSeriesWatchState({
+          season,
+          episode,
+          watched,
+          wholeSeason
+        });
+
         return;
       }
 

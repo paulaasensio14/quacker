@@ -16,6 +16,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const session = await ApiClient.getCurrentSession();
 
+    if (!session?.user) {
+      throw new Error("SESSION_REQUIRED");
+    }
+
     const savedLang = localStorage.getItem("quacker:lang");
     const sessionLang = session?.user?.language;
 
@@ -77,6 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   Router.init();
+  document.documentElement?.classList?.remove?.("quacker-booting");
 
   // 2) Iniciar módulos después
   try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }

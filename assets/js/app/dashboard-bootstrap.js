@@ -1,7 +1,49 @@
 (function () {
   try {
     // En el server real (3000) NO restauramos nada: HTTP debe ser la verdad.
-    const isNodeServer = String(window.location.port) === "3000";
+    const explicitTransport =
+      window.__QUACKER_RUNTIME_TRANSPORT__;
+
+    const hostname =
+      String(window.location.hostname || "").toLowerCase();
+
+    const protocol =
+      String(window.location.protocol || "").toLowerCase();
+
+    const isLocalHost =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1";
+
+    const isPublicHttpHost =
+      (protocol === "http:" || protocol === "https:") &&
+      !isLocalHost;
+
+    if (isPublicHttpHost) {
+      if (window.ApiClient?.setBaseUrl) {
+        ApiClient.setBaseUrl("/api");
+      }
+      if (window.ApiClient?.setTransport) {
+        ApiClient.setTransport("http");
+      }
+      return;
+    }
+
+    if (
+      explicitTransport === "http" ||
+      explicitTransport === "local"
+    ) {
+      if (window.ApiClient?.setBaseUrl) {
+        ApiClient.setBaseUrl("/api");
+      }
+      if (window.ApiClient?.setTransport) {
+        ApiClient.setTransport(explicitTransport);
+      }
+      return;
+    }
+
+    const isNodeServer =
+      String(window.location.port) === "3000";
+
     if (isNodeServer) return;
 
     // En estático, respetamos sessionStorage si existe
@@ -46,52 +88,5 @@
     document.addEventListener("DOMContentLoaded", bindLogout);
   } else {
     bindLogout();
-  }
-})();
-
-(async function () {
-  async function waitForApiClient(ms = 2000) {
-    const start = Date.now();
-
-    while (Date.now() - start < ms) {
-      if (window.ApiClient && typeof ApiClient.getCurrentSession === "function") {
-        return true;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 30));
-    }
-
-    return false;
-  }
-
-  try {
-    const isApiClientReady = await waitForApiClient(5000);
-
-    if (!isApiClientReady) {
-      await waitForApiClient(5000);
-    }
-
-    const isNodeServer = String(window.location.port) === "3000";
-
-    if (isNodeServer) {
-      try {
-        if (ApiClient.setBaseUrl) ApiClient.setBaseUrl("/api");
-        if (ApiClient.setTransport) ApiClient.setTransport("http");
-      } catch (_) {}
-    }
-
-    let session = null;
-
-    try {
-      session = await ApiClient.getCurrentSession();
-    } catch (_) {
-      session = null;
-    }
-
-    if (!session || !session.user) {
-      window.location.replace("index.html");
-    }
-  } catch (_) {
-    window.location.replace("index.html");
   }
 })();

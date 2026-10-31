@@ -1,4 +1,15 @@
+import { applySeriesWatchMutation } from "./series-watch-mutations.js";
 import express from "express";
+
+import {
+  unexpectedErrorHandler
+} from "./lib/unexpected-error-handler.js";
+
+import {
+  getAllowedRequestOrigins,
+  isRequestOriginAllowed
+} from "./lib/request-origin-security.js";
+
 import session from "express-session";
 import sessionFileStore from "session-file-store";
 import cookieParser from "cookie-parser";
@@ -389,6 +400,40 @@ app.use(
     cookie: sessionCookieOptions
   })
 );
+
+const REQUEST_ORIGINS = getAllowedRequestOrigins({
+  environment: process.env.NODE_ENV,
+  port: Number.parseInt(process.env.PORT || "3000", 10)
+});
+
+app.use("/api", (req, res, next) => {
+  const protocol =
+    process.env.NODE_ENV === "production"
+      ? "https:"
+      : "http:";
+
+  const host = String(
+    req.headers.host || ""
+  ).trim().toLowerCase();
+
+  const targetOrigin = `${protocol}//${host}`;
+
+  const allowed = isRequestOriginAllowed({
+    method: req.method,
+    origin: req.headers.origin,
+    targetOrigin,
+    fetchSite: req.headers["sec-fetch-site"],
+    allowedOrigins: REQUEST_ORIGINS
+  });
+
+  if (!allowed) {
+    return res.status(403).json({
+      error: "invalid_request_origin"
+    });
+  }
+
+  return next();
+});
 
 // ===== Helpers DB =====
 function _readDb() {
@@ -1289,6 +1334,7 @@ function _sanitizeLibraryMeta(meta) {
     "season",
     "episode",
     "episodeSeenMap",
+    "episodeTrackingVersion",
     "hoursPlayed",
     "pagesRead",
     "seasonBreakdown",
@@ -7856,6 +7902,18 @@ app.patch("/api/lists/:id", _requireAuth, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: "not_found" });
 
   const prev = bucket.lists[idx];
+
+  if (
+    getCollaborativeListRole(
+      prev,
+      req.session.userId
+    ) !== "owner"
+  ) {
+    return res.status(403).json({
+      error: "not_list_owner"
+    });
+  }
+
   const next = {
     ...prev,
     updatedAt: new Date().toISOString()
@@ -7910,6 +7968,17 @@ app.delete("/api/lists/:id", _requireAuth, (req, res) => {
   if (!deletedList) {
     return res.status(404).json({
       error: "not_found"
+    });
+  }
+
+  if (
+    getCollaborativeListRole(
+      deletedList,
+      req.session.userId
+    ) !== "owner"
+  ) {
+    return res.status(403).json({
+      error: "not_list_owner"
     });
   }
 
@@ -8988,6 +9057,258 @@ app.delete("/api/lists/:id/items/:itemId", _requireAuth, (req, res) => {
     removed
   });
 });
+
+
+// QA-02-002: seguimiento individual y por temporadas.
+function _setSeriesEpisodeWatchState(req, res, wholeSeason) {
+  const itemId = String(req.params.itemId || "").trim();
+  const seasonText = String(req.params.season || "");
+  const episodeText = String(req.params.episode || "");
+
+  if (
+    !itemId ||
+    !/^[1-9]\d*$/.test(seasonText) ||
+    (!wholeSeason && !/^[1-9]\d*$/.test(episodeText)) ||
+    typeof req.body?.watched !== "boolean"
+  ) {
+    return res.status(400).json({ error: "invalid_watch_request" });
+  }
+
+  const season = Number(seasonText);
+  const episode = wholeSeason ? null : Number(episodeText);
+
+  if (
+    !Number.isSafeInteger(season) ||
+    (!wholeSeason && !Number.isSafeInteger(episode))
+  ) {
+    return res.status(400).json({ error: "invalid_watch_request" });
+  }
+
+  const db = _readDb();
+  const bucket = _getUserBucket(db, req.session.userId);
+  const idx = bucket.library.findIndex(
+    (item) => String(item?.id || "") === itemId
+  );
+
+  if (idx === -1) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const item = bucket.library[idx];
+
+  if (item.type !== "serie") {
+    return res.status(400).json({ error: "not_a_series" });
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      "expectedUpdatedAt"
+    ) &&
+    String(req.body.expectedUpdatedAt || "") !==
+      String(item.updatedAt || "")
+  ) {
+    return res.status(409).json({
+      error: "stale_library_update"
+    });
+  }
+
+  const breakdown = item.meta?.seasonBreakdown;
+
+  if (!Array.isArray(breakdown) || breakdown.length === 0) {
+    return res.status(409).json({
+      error: "missing_season_breakdown"
+    });
+  }
+
+  const selected = breakdown.find(
+    (entry) => Number(entry?.seasonNumber) === season
+  );
+
+  if (!selected) {
+    return res.status(400).json({ error: "invalid_season" });
+  }
+
+  const count = Number(selected.episodeCount);
+
+  if (!Number.isSafeInteger(count) || count <= 0) {
+    return res.status(400).json({
+      error: "invalid_season_breakdown"
+    });
+  }
+
+  const history = bucket.consumptionHistory;
+
+  const hasCanonicalHistory = history.some(
+    (entry) =>
+      String(entry?.itemId || "") === itemId &&
+      entry?.eventType === "episode_watched"
+  );
+
+  const legacyMap = _sanitizeEpisodeSeenMap(
+    item.meta?.episodeSeenMap
+  );
+
+  if (!hasCanonicalHistory && Object.keys(legacyMap).length) {
+    return res.status(409).json({
+      error: "legacy_episode_history_requires_migration"
+    });
+  }
+
+  const episodes = wholeSeason
+    ? Array.from({ length: count }, (_, i) => i + 1)
+    : [episode];
+
+  let result;
+
+  try {
+    result = applySeriesWatchMutation({
+      itemId,
+      seasonBreakdown: breakdown,
+      history,
+      season,
+      episodes,
+      watched: req.body.watched
+    });
+  } catch (error) {
+    const code = String(error?.message || "");
+
+    if (
+      code.startsWith("invalid_") ||
+      code === "duplicate_season"
+    ) {
+      return res.status(400).json({ error: code });
+    }
+
+    throw error;
+  }
+
+  const changed = result.added.length + result.removed.length;
+
+  if (changed === 0) {
+    let responseItem = item;
+
+    if (Number(item.meta?.episodeTrackingVersion) !== 1) {
+      const now = new Date().toISOString();
+
+      responseItem = {
+        ...item,
+        updatedAt: now,
+        meta: {
+          ...(item.meta || {}),
+          episodeTrackingVersion: 1,
+          episodeSeenMap: {},
+          totalEpisodes: result.totalEpisodes
+        }
+      };
+
+      bucket.library[idx] = responseItem;
+      _writeDb(db);
+    }
+
+    return res.json({
+      ok: true,
+      changed: 0,
+      item: responseItem,
+      watchedEpisodes: result.watchedEpisodes,
+      totalEpisodes: result.totalEpisodes,
+      nextEpisode: result.nextEpisode
+    });
+  }
+
+  const now = new Date().toISOString();
+
+  const addedIds = new Set(
+    result.added.map((entry) => entry.id)
+  );
+
+  const nextHistory = result.history.map((entry) => {
+    if (!addedIds.has(entry.id)) return entry;
+
+    return _normalizeConsumptionEvent({
+      ...entry,
+      id: _uid(),
+      occurredAt: now,
+      itemSnapshot: _buildConsumptionItemSnapshot(item)
+    });
+  });
+
+  if (nextHistory.some((entry) => !entry)) {
+    return res.status(500).json({
+      error: "invalid_generated_consumption_event"
+    });
+  }
+
+  const nextSeenMap = {};
+
+  for (const entry of nextHistory) {
+    if (
+      String(entry?.itemId || "") !== itemId ||
+      entry?.eventType !== "episode_watched"
+    ) {
+      continue;
+    }
+
+    const key = `${entry.meta.season}:${entry.meta.episode}`;
+    nextSeenMap[key] = entry.occurredAt;
+  }
+
+  const next = {
+    ...item,
+    updatedAt: now,
+    progress: result.progress,
+    status: result.completed
+      ? "completed"
+      : result.watchedEpisodes > 0
+        ? "watching"
+        : "not_started",
+    meta: {
+      ...(item.meta || {}),
+      episodeSeenMap: nextSeenMap,
+      episodeTrackingVersion: 1,
+      totalEpisodes: result.totalEpisodes,
+      ...(result.nextEpisode
+        ? {
+            season: result.nextEpisode.season,
+            episode: result.nextEpisode.episode
+          }
+        : {})
+    }
+  };
+
+  // Preparar ambos cambios antes de escribir el JSON una sola vez.
+  bucket.consumptionHistory = nextHistory;
+  bucket.library[idx] = next;
+
+  _writeDb(db);
+
+  return res.json({
+    ok: true,
+    changed,
+    added: result.added.length,
+    removed: result.removed.length,
+    item: next,
+    watchedEpisodes: result.watchedEpisodes,
+    totalEpisodes: result.totalEpisodes,
+    nextEpisode: result.nextEpisode
+  });
+}
+
+app.put(
+  "/api/library/:itemId/episodes/:season/:episode",
+  _requireAuth,
+  (req, res) => {
+    return _setSeriesEpisodeWatchState(req, res, false);
+  }
+);
+
+app.put(
+  "/api/library/:itemId/seasons/:season",
+  _requireAuth,
+  (req, res) => {
+    return _setSeriesEpisodeWatchState(req, res, true);
+  }
+);
 
 app.get("/api/consumption-history", _requireAuth, (req, res) => {
   const db = _readDb();
@@ -10745,6 +11066,9 @@ app.use(
     NOT_FOUND_HTML_PATH
   )
 );
+
+// Último middleware: respuestas seguras ante errores inesperados.
+app.use(unexpectedErrorHandler);
 
 const PORT = Number.parseInt(
   process.env.PORT || "3000",

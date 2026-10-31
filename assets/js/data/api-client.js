@@ -21,14 +21,38 @@ const ApiClient = (() => {
   const __isLocalHost = __hostname === "localhost" || __hostname === "127.0.0.1";
   const __isNodeServer = __isLocalHost && __port === "3000";
   const __isStaticLocalDev = __isLocalHost && __port !== "3000";
+  const __automaticTransport =
+    (__isFileProtocol || __isStaticLocalDev) ? "local" : "http";
+
+  // Permite configurar explícitamente un backend HTTP de pruebas.
+  // Si no hay una configuración válida, conserva el modo automático.
+  const __explicitTransport =
+    window.__QUACKER_RUNTIME_TRANSPORT__;
+
+  const __isPublicHttpHost =
+    !__isFileProtocol &&
+    (__protocol === "http:" || __protocol === "https:") &&
+    !__isLocalHost;
+
   const __cfg = {
-    transport: (__isFileProtocol || __isStaticLocalDev) ? "local" : "http",
+    transport: __isPublicHttpHost
+      ? "http"
+      : (
+          __explicitTransport === "http" ||
+          __explicitTransport === "local"
+        )
+        ? __explicitTransport
+        : __automaticTransport,
     baseUrl: "/api",
     timeoutMs: 12000
   };
 
   function setTransport(mode) {
-    __cfg.transport = (mode === "http") ? "http" : "local";
+    if (__isPublicHttpHost) {
+      __cfg.transport = "http";
+    } else {
+      __cfg.transport = mode === "http" ? "http" : "local";
+    }
     return { ok: true, transport: __cfg.transport };
   }
 
@@ -770,6 +794,7 @@ if (externalSignal?.aborted) {
       "season",
       "episode",
       "episodeSeenMap",
+      "episodeTrackingVersion",
       "hoursPlayed",
       "pagesRead",
       "seasonBreakdown",
@@ -788,6 +813,13 @@ if (externalSignal?.aborted) {
 
     for (const key of Object.keys(meta)) {
       if (allowedMetaKeys.has(key)) {
+        if (key === "episodeTrackingVersion") {
+          if (meta[key] === 1) {
+            sanitizedMeta[key] = 1;
+          }
+          continue;
+        }
+
         sanitizedMeta[key] = key === "episodeSeenMap"
           ? _sanitizeEpisodeSeenMap(meta[key])
           : (
@@ -4494,9 +4526,17 @@ if (externalSignal?.aborted) {
     });
 
     const totalEpisodes = orderedEpisodes.length;
-    const progress = totalEpisodes > 0
-      ? Math.round((watchedKeys.size / totalEpisodes) * 100)
-      : 0;
+    const progress = totalEpisodes === 0 || watchedKeys.size === 0
+      ? 0
+      : watchedKeys.size >= totalEpisodes
+        ? 100
+        : Math.max(
+            1,
+            Math.min(
+              99,
+              Math.round((watchedKeys.size / totalEpisodes) * 100)
+            )
+          );
 
     const nextPosition = orderedEpisodes.find(
       (position) => !watchedKeys.has(position.key)
@@ -4532,6 +4572,646 @@ if (externalSignal?.aborted) {
     });
 
     return _buildSeriesConsumptionSummary(item, history);
+  }
+
+  async function setSeriesEpisodeWatched({
+    itemId,
+    season,
+    episode,
+    watched,
+    expectedUpdatedAt
+  } = {}) {
+    const id = _normalizeDataId(itemId);
+
+    if (
+      !id ||
+      !Number.isSafeInteger(season) ||
+      season < 1 ||
+      !Number.isSafeInteger(episode) ||
+      episode < 1 ||
+      typeof watched !== "boolean"
+    ) {
+      return { ok: false, reason: "invalid_watch_request" };
+    }
+
+    if (!_isHttp()) {
+      const state = _safeState();
+
+      const library = Array.isArray(state.library)
+        ? state.library
+        : [];
+
+      const index = library.findIndex(
+        (entry) => _normalizeDataId(entry?.id) === id
+      );
+
+      if (index < 0) {
+        throw _makeApiError("not_found", 404);
+      }
+
+      const item = library[index];
+
+      if (item?.type !== "serie") {
+        throw _makeApiError("invalid_item_type", 400);
+      }
+
+      if (
+        expectedUpdatedAt !== undefined &&
+        String(expectedUpdatedAt) !== String(item.updatedAt || "")
+      ) {
+        throw _makeApiError("conflict", 409);
+      }
+
+      const meta = item.meta || {};
+      const breakdown = Array.isArray(meta.seasonBreakdown)
+        ? meta.seasonBreakdown
+        : [];
+
+      const uniqueSeasonNumbers = new Set();
+
+      for (const entry of breakdown) {
+        const seasonNumber = Number(entry?.seasonNumber);
+        const episodeCount = Number(entry?.episodeCount);
+
+        if (
+          !Number.isSafeInteger(seasonNumber) ||
+          seasonNumber < 1 ||
+          !Number.isSafeInteger(episodeCount) ||
+          episodeCount < 1
+        ) {
+          throw _makeApiError("invalid_season_breakdown", 400);
+        }
+
+        if (uniqueSeasonNumbers.has(seasonNumber)) {
+          throw _makeApiError("duplicate_season", 400);
+        }
+
+        uniqueSeasonNumbers.add(seasonNumber);
+      }
+
+      const selectedSeason = breakdown.find(
+        (entry) => Number(entry?.seasonNumber) === season
+      );
+
+      const count = Number(selectedSeason?.episodeCount);
+
+      if (
+        !Number.isSafeInteger(count) ||
+        count < 1 ||
+        episode > count
+      ) {
+        throw _makeApiError("invalid_episode", 400);
+      }
+
+      const history = Array.isArray(state.consumptionHistory)
+        ? state.consumptionHistory
+        : [];
+
+      const ownHistory = history.filter(
+        (entry) =>
+          _normalizeDataId(entry?.itemId) === id &&
+          entry?.eventType === "episode_watched"
+      );
+
+      const legacyMap = meta.episodeSeenMap;
+
+      if (
+        Number(meta.episodeTrackingVersion) !== 1 &&
+        legacyMap &&
+        typeof legacyMap === "object" &&
+        Object.keys(legacyMap).length > 0 &&
+        ownHistory.length === 0
+      ) {
+        throw _makeApiError(
+          "legacy_episode_history_requires_migration",
+          409
+        );
+      }
+
+      const isMatching = (entry) =>
+        _normalizeDataId(entry?.itemId) === id &&
+        entry?.eventType === "episode_watched" &&
+        Number(entry?.meta?.season) === season &&
+        Number(entry?.meta?.episode) === episode;
+
+      const alreadyWatched = history.some(isMatching);
+
+      const changed = watched
+        ? (alreadyWatched ? 0 : 1)
+        : history.filter(isMatching).length;
+
+      if (
+        changed === 0 &&
+        Number(meta.episodeTrackingVersion) === 1
+      ) {
+        return {
+          ok: true,
+          changed: 0,
+          item: _cloneData(item),
+          mode: "local"
+        };
+      }
+
+      const now = new Date().toISOString();
+
+      let nextHistory = watched
+        ? history.slice()
+        : history.filter((entry) => !isMatching(entry));
+
+      if (watched && !alreadyWatched) {
+        nextHistory.push({
+          id: `consumption_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+          itemId: id,
+          contentType: "serie",
+          eventType: "episode_watched",
+          occurredAt: now,
+          meta: { season, episode }
+        });
+      }
+
+      const seenMap = {};
+      const watchedKeys = new Set();
+
+      nextHistory.forEach((entry) => {
+        if (
+          _normalizeDataId(entry?.itemId) !== id ||
+          entry?.eventType !== "episode_watched"
+        ) return;
+
+        const s = Number(entry?.meta?.season);
+        const e = Number(entry?.meta?.episode);
+        const date = String(entry?.occurredAt || "");
+
+        if (
+          !Number.isSafeInteger(s) ||
+          s < 1 ||
+          !Number.isSafeInteger(e) ||
+          e < 1 ||
+          !date ||
+          Number.isNaN(Date.parse(date))
+        ) return;
+
+        const key = `${s}:${e}`;
+        watchedKeys.add(key);
+
+        if (
+          !seenMap[key] ||
+          Date.parse(date) > Date.parse(seenMap[key])
+        ) {
+          seenMap[key] = date;
+        }
+      });
+
+      const positions = breakdown
+        .slice()
+        .sort(
+          (a, b) =>
+            Number(a.seasonNumber) - Number(b.seasonNumber)
+        )
+        .flatMap((entry) =>
+          Array.from(
+            { length: Number(entry.episodeCount) || 0 },
+            (_, i) => ({
+              season: Number(entry.seasonNumber),
+              episode: i + 1
+            })
+          )
+        );
+
+      const validKeys = new Set(
+        positions.map(
+          (entry) => `${entry.season}:${entry.episode}`
+        )
+      );
+
+      const watchedEpisodes = [...watchedKeys].filter(
+        (key) => validKeys.has(key)
+      ).length;
+
+      const totalEpisodes = positions.length;
+
+      const progress =
+        watchedEpisodes === 0 || totalEpisodes === 0
+          ? 0
+          : watchedEpisodes >= totalEpisodes
+            ? 100
+            : Math.max(
+                1,
+                Math.min(
+                  99,
+                  Math.round(
+                    (watchedEpisodes / totalEpisodes) * 100
+                  )
+                )
+              );
+
+      const nextEpisode = positions.find(
+        (entry) =>
+          !watchedKeys.has(
+            `${entry.season}:${entry.episode}`
+          )
+      ) || null;
+
+      const nextItem = {
+        ...item,
+        status: progress === 100
+          ? "completed"
+          : progress > 0
+            ? "watching"
+            : "not_started",
+        progress,
+        updatedAt: now,
+        meta: {
+          ...meta,
+          episodeTrackingVersion: 1,
+          episodeSeenMap: seenMap,
+          totalEpisodes,
+          ...(nextEpisode
+            ? {
+                season: nextEpisode.season,
+                episode: nextEpisode.episode
+              }
+            : {})
+        }
+      };
+
+      state.library[index] = nextItem;
+      state.consumptionHistory = nextHistory;
+
+      if (typeof FakeBackend !== "undefined") {
+        FakeBackend.saveState(state);
+      }
+
+      _emitDataChanged({
+        kind: "library",
+        action: "update",
+        itemId: id
+      });
+
+      _emitDataChanged({
+        kind: "consumptionHistory",
+        action: "update",
+        itemId: id
+      });
+
+      return {
+        ok: true,
+        changed,
+        item: _cloneData(nextItem),
+        watchedEpisodes,
+        totalEpisodes,
+        nextEpisode,
+        mode: "local"
+      };
+    }
+
+    const payload = { watched };
+
+    if (expectedUpdatedAt !== undefined) {
+      payload.expectedUpdatedAt = String(expectedUpdatedAt);
+    }
+
+    const path =
+      `/library/${encodeURIComponent(id)}` +
+      `/episodes/${season}/${episode}`;
+
+    const result = await _httpJson("PUT", path, payload);
+
+    if (!result?.ok || !result?.item) {
+      throw new Error("invalid_series_watch_response");
+    }
+
+    _emitDataChanged({
+      kind: "library",
+      action: "update",
+      itemId: id
+    });
+
+    _emitDataChanged({
+      kind: "consumptionHistory",
+      action: "update",
+      itemId: id
+    });
+
+    return result;
+  }
+
+  async function setSeriesSeasonWatched({
+    itemId,
+    season,
+    watched,
+    expectedUpdatedAt
+  } = {}) {
+    const id = _normalizeDataId(itemId);
+
+    if (
+      !id ||
+      !Number.isSafeInteger(season) ||
+      season < 1 ||
+      typeof watched !== "boolean"
+    ) {
+      return { ok: false, reason: "invalid_watch_request" };
+    }
+
+    if (!_isHttp()) {
+      const state = _safeState();
+      const library = Array.isArray(state.library)
+        ? state.library
+        : [];
+
+      const index = library.findIndex(
+        (entry) => _normalizeDataId(entry?.id) === id
+      );
+
+      if (index < 0) {
+        throw _makeApiError("not_found", 404);
+      }
+
+      const item = library[index];
+
+      if (item?.type !== "serie") {
+        throw _makeApiError("invalid_item_type", 400);
+      }
+
+      if (
+        expectedUpdatedAt !== undefined &&
+        String(expectedUpdatedAt) !== String(item.updatedAt || "")
+      ) {
+        throw _makeApiError("conflict", 409);
+      }
+
+      const meta = item.meta || {};
+      const breakdown = Array.isArray(meta.seasonBreakdown)
+        ? meta.seasonBreakdown
+        : [];
+
+      const selected = breakdown.find(
+        (entry) => Number(entry?.seasonNumber) === season
+      );
+
+      const episodeCount = Number(selected?.episodeCount);
+
+      if (
+        !Number.isSafeInteger(episodeCount) ||
+        episodeCount < 1
+      ) {
+        throw _makeApiError("invalid_season", 400);
+      }
+
+      const positions = [];
+      const uniqueSeasonNumbers = new Set();
+
+      for (const entry of breakdown) {
+        const s = Number(entry?.seasonNumber);
+        const count = Number(entry?.episodeCount);
+
+        if (
+          !Number.isSafeInteger(s) || s < 1 ||
+          !Number.isSafeInteger(count) || count < 1
+        ) {
+          throw _makeApiError("invalid_season_breakdown", 400);
+        }
+
+        if (uniqueSeasonNumbers.has(s)) {
+          throw _makeApiError("duplicate_season", 400);
+        }
+
+        uniqueSeasonNumbers.add(s);
+
+        for (let e = 1; e <= count; e += 1) {
+          positions.push({ season: s, episode: e });
+        }
+      }
+
+      const history = Array.isArray(state.consumptionHistory)
+        ? state.consumptionHistory
+        : [];
+
+      const ownHistory = history.filter(
+        (event) =>
+          _normalizeDataId(event?.itemId) === id &&
+          event?.eventType === "episode_watched"
+      );
+
+      const legacyMap = meta.episodeSeenMap;
+
+      if (
+        Number(meta.episodeTrackingVersion) !== 1 &&
+        legacyMap &&
+        typeof legacyMap === "object" &&
+        Object.keys(legacyMap).length > 0 &&
+        ownHistory.length === 0
+      ) {
+        throw _makeApiError(
+          "legacy_episode_history_requires_migration",
+          409
+        );
+      }
+
+      const isTarget = (event) =>
+        _normalizeDataId(event?.itemId) === id &&
+        event?.eventType === "episode_watched" &&
+        Number(event?.meta?.season) === season &&
+        Number.isSafeInteger(Number(event?.meta?.episode)) &&
+        Number(event?.meta?.episode) >= 1 &&
+        Number(event?.meta?.episode) <= episodeCount;
+
+      const alreadyWatched = new Set(
+        history.filter(isTarget).map(
+          (event) => Number(event.meta.episode)
+        )
+      );
+
+      const now = new Date().toISOString();
+      let changed = 0;
+
+      let nextHistory = watched
+        ? history.slice()
+        : history.filter((event) => {
+            if (!isTarget(event)) return true;
+            changed += 1;
+            return false;
+          });
+
+      if (watched) {
+        for (let e = 1; e <= episodeCount; e += 1) {
+          if (alreadyWatched.has(e)) continue;
+
+          nextHistory.push({
+            id: `consumption_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+            itemId: id,
+            contentType: "serie",
+            eventType: "episode_watched",
+            occurredAt: now,
+            meta: { season, episode: e }
+          });
+
+          changed += 1;
+        }
+      }
+
+      if (
+        changed === 0 &&
+        Number(meta.episodeTrackingVersion) === 1
+      ) {
+        return {
+          ok: true,
+          changed: 0,
+          item: _cloneData(item),
+          mode: "local"
+        };
+      }
+
+      const validKeys = new Set(
+        positions.map(
+          (entry) => `${entry.season}:${entry.episode}`
+        )
+      );
+
+      const watchedKeys = new Set();
+      const seenMap = {};
+
+      for (const event of nextHistory) {
+        if (
+          _normalizeDataId(event?.itemId) !== id ||
+          event?.eventType !== "episode_watched"
+        ) continue;
+
+        const s = Number(event?.meta?.season);
+        const e = Number(event?.meta?.episode);
+        const key = `${s}:${e}`;
+        const date = String(event?.occurredAt || "");
+
+        if (
+          !validKeys.has(key) ||
+          !date ||
+          Number.isNaN(Date.parse(date))
+        ) continue;
+
+        watchedKeys.add(key);
+
+        if (
+          !seenMap[key] ||
+          Date.parse(date) > Date.parse(seenMap[key])
+        ) {
+          seenMap[key] = date;
+        }
+      }
+
+      const totalEpisodes = positions.length;
+      const watchedEpisodes = watchedKeys.size;
+
+      const progress =
+        watchedEpisodes === 0 || totalEpisodes === 0
+          ? 0
+          : watchedEpisodes >= totalEpisodes
+            ? 100
+            : Math.max(
+                1,
+                Math.min(
+                  99,
+                  Math.round(
+                    (watchedEpisodes / totalEpisodes) * 100
+                  )
+                )
+              );
+
+      const nextEpisode = positions
+        .slice()
+        .sort(
+          (a, b) =>
+            a.season - b.season ||
+            a.episode - b.episode
+        )
+        .find(
+          (entry) =>
+            !watchedKeys.has(
+              `${entry.season}:${entry.episode}`
+            )
+        ) || null;
+
+      const nextItem = {
+        ...item,
+        status: progress === 100
+          ? "completed"
+          : progress > 0
+            ? "watching"
+            : "not_started",
+        progress,
+        updatedAt: now,
+        meta: {
+          ...meta,
+          episodeTrackingVersion: 1,
+          episodeSeenMap: seenMap,
+          totalEpisodes,
+          ...(nextEpisode
+            ? {
+                season: nextEpisode.season,
+                episode: nextEpisode.episode
+              }
+            : {})
+        }
+      };
+
+      state.library[index] = nextItem;
+      state.consumptionHistory = nextHistory;
+
+      if (typeof FakeBackend !== "undefined") {
+        FakeBackend.saveState(state);
+      }
+
+      _emitDataChanged({
+        kind: "library",
+        action: "update",
+        itemId: id
+      });
+
+      _emitDataChanged({
+        kind: "consumptionHistory",
+        action: "update",
+        itemId: id
+      });
+
+      return {
+        ok: true,
+        changed,
+        item: _cloneData(nextItem),
+        watchedEpisodes,
+        totalEpisodes,
+        nextEpisode,
+        mode: "local"
+      };
+    }
+
+    const payload = { watched };
+
+    if (expectedUpdatedAt !== undefined) {
+      payload.expectedUpdatedAt = String(expectedUpdatedAt);
+    }
+
+    const path =
+      `/library/${encodeURIComponent(id)}` +
+      `/seasons/${season}`;
+
+    const result = await _httpJson("PUT", path, payload);
+
+    if (!result?.ok || !result?.item) {
+      throw new Error("invalid_series_watch_response");
+    }
+
+    _emitDataChanged({
+      kind: "library",
+      action: "update",
+      itemId: id
+    });
+
+    _emitDataChanged({
+      kind: "consumptionHistory",
+      action: "update",
+      itemId: id
+    });
+
+    return result;
   }
 
   async function addConsumptionHistoryEvent({
@@ -8401,6 +9081,8 @@ if (externalSignal?.aborted) {
     applyQuickProgress,
     undoActivitiesForItemSince,
     getConsumptionHistory,
+    setSeriesEpisodeWatched,
+    setSeriesSeasonWatched,
     getSeriesConsumptionSummary,
     addConsumptionHistoryEvent,
     undoConsumptionHistoryForItemSince,
@@ -8410,3 +9092,6 @@ if (externalSignal?.aborted) {
     maybeNotifyStreak
   };
 })();
+
+// Exponer el cliente para los inicializadores del navegador.
+window.ApiClient = ApiClient;

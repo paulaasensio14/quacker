@@ -833,7 +833,18 @@ const ProfileModule = (() => {
     }
 
     box.classList.remove("is-initially-hidden");
-    box.innerHTML = `<ul>${errors.map(e => `<li>${e}</li>`).join("")}</ul>`;
+    box.replaceChildren();
+
+    const list = document.createElement("ul");
+
+    for (const error of errors) {
+      const item = document.createElement("li");
+      item.textContent = String(error);
+      list.append(item);
+    }
+
+    box.append(list);
+    box.focus();
   }
 
   function getFormData() {
@@ -905,15 +916,22 @@ const ProfileModule = (() => {
     );
   }
 
+  let profileSavePending = false;
+
   function updateSaveButtonState() {
-    const btn = $("#profileSaveBtn");
-    if (!btn) return;
+    const buttons = [
+      $("#profileSaveBtn"),
+      $("#profileSettingsSaveBtn")
+    ].filter(Boolean);
 
     const current = getFormData();
     current.handle = normalizeHandle(current.handle);
 
     const hasChanges = !sameData(initialData, current);
-    btn.disabled = !hasChanges;
+
+    for (const button of buttons) {
+      button.disabled = profileSavePending || !hasChanges;
+    }
   }
 
   function showPrivacyErrors(errors) {
@@ -2251,13 +2269,25 @@ const ProfileModule = (() => {
 
       const errors = validate(data);
       if (errors.length) {
+        document.dispatchEvent(new CustomEvent(
+          "quacker:profile-show-tab",
+          { detail: { tab: "perfil" } }
+        ));
         showErrors(errors);
         return;
       }
 
-      if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.textContent = t("profile_saving");
+      if (profileSavePending) return;
+
+      profileSavePending = true;
+      const saveButtons = [
+        $("#profileSaveBtn"),
+        $("#profileSettingsSaveBtn")
+      ].filter(Boolean);
+
+      for (const button of saveButtons) {
+        button.disabled = true;
+        button.textContent = t("profile_saving");
       }
 
       try {
@@ -2272,6 +2302,15 @@ const ProfileModule = (() => {
 
         const updated = await ApiClient.updateUser(payload);
         updateHeaderUI(updated);
+
+        // Aplicar el idioma solo después de guardar correctamente.
+        const savedLanguage = updated?.language;
+        if (
+          (savedLanguage === "es" || savedLanguage === "en") &&
+          window.I18n?.getLang?.() !== savedLanguage
+        ) {
+          window.I18n?.setLang?.(savedLanguage);
+        }
 
         // actualizamos “estado inicial” tras guardar
         pendingAvatarDataUrl = null;
@@ -2305,14 +2344,21 @@ const ProfileModule = (() => {
           invalid_name: t("profile_error_name_short")
         };
 
+        document.dispatchEvent(new CustomEvent(
+          "quacker:profile-show-tab",
+          { detail: { tab: "perfil" } }
+        ));
         showErrors([
           errorMessages[errorCode] || t("profile_save_error")
         ]);
       } finally {
-        if (saveBtn) {
-          saveBtn.textContent = t("profile_save");
-          updateSaveButtonState();
+        profileSavePending = false;
+
+        for (const button of saveButtons) {
+          button.textContent = t("profile_save");
         }
+
+        updateSaveButtonState();
       }
     });
   }

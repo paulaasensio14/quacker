@@ -13,16 +13,17 @@ const source = fs.readFileSync(
 
 function createHarness({
   status = 200,
-  body = {}
+  body = {},
+  local = false
 } = {}) {
   const requests = [];
   const events = [];
 
   const window = {
     location: {
-      hostname: "quacker.es",
-      port: "",
-      protocol: "https:",
+      hostname: local ? "127.0.0.1" : "quacker.es",
+      port: local ? "5500" : "",
+      protocol: local ? "http:" : "https:",
       pathname: "/dashboard.html",
       href: "/dashboard.html"
     }
@@ -252,7 +253,7 @@ test(
 test(
   "el transporte local no simula desbloqueos",
   async () => {
-    const harness = createHarness();
+    const harness = createHarness({ local: true });
 
     harness.api.setTransport("local");
 
