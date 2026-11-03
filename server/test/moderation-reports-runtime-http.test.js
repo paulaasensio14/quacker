@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -74,7 +79,8 @@ function getAvailablePort() {
 function startTestServer({
   dbPath,
   sessionStorePath,
-  port
+  port,
+  mailboxEnv
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -92,7 +98,8 @@ function startTestServer({
           PORT: String(port),
           QUACKER_DB_PATH: dbPath,
           QUACKER_SESSION_STORE_PATH:
-            sessionStorePath
+            sessionStorePath,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -311,46 +318,31 @@ function requestJson(
   );
 }
 
-function sessionCookie(response) {
-  const setCookie =
-    response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(setCookie) &&
-      setCookie.length > 0,
-    "debe recibirse una cookie de sesión"
-  );
-
-  return setCookie[0]
-    .split(";")[0];
-}
 
 const DATE = "2026-10-21T09:00:00.000Z";
 
 async function registerReportUser(
   baseUrl,
+  mailbox,
   handle,
   {
     publicProfile = true,
     reviews = false
   } = {}
 ) {
-  const response = await requestJson(
-    `${baseUrl}/api/auth/register`,
-    {
-      method: "POST",
-      body: {
-        email: `${handle}@example.test`,
-        password: "runtime-pass-123",
-        name: handle,
-        language: "es"
-      }
-    }
-  );
+  const account = await registerVerifiedUser({
+    baseUrl,
+    mailbox,
+    email: `${handle}@example.test`,
+    password: "runtime-pass-123",
+    name: handle,
+    language: "es"
+  });
 
-  assert.equal(response.statusCode, 200);
-  const cookie = sessionCookie(response);
-  const userId = response.json?.user?.id;
+  const cookie = account.cookie;
+  const userId = account.user.id;
+
+  assert.ok(cookie);
   assert.ok(userId);
 
   const update = await requestJson(
@@ -435,27 +427,34 @@ test(
     const url = `${baseUrl}/api/user/reports`;
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       const alice = await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_alice"
       );
 
       const bob = await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_bob",
         { reviews: true }
       );
 
       await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_hidden",
         { publicProfile: false }
       );
@@ -690,11 +689,20 @@ test(
         false
       );
     } finally {
-      await stopTestServer(child);
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -714,21 +722,27 @@ test(
     const url = `${baseUrl}/api/user/reports`;
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       const reporter = await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_limit_a"
       );
 
       const author = await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_limit_b",
         { reviews: true }
       );
@@ -786,11 +800,20 @@ test(
         "el sexto reporte rechazado no debe guardarse"
       );
     } finally {
-      await stopTestServer(child);
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -811,16 +834,21 @@ test(
     const url = `${baseUrl}/api/user/reports`;
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       const reporter = await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_try_limit"
       );
 
@@ -886,11 +914,20 @@ test(
         "la autenticación sigue siendo obligatoria"
       );
     } finally {
-      await stopTestServer(child);
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -910,6 +947,7 @@ test(
     const reportUrl = `${baseUrl}/api/user/reports`;
 
     let child = null;
+    let mailbox = null;
 
     const reviewBody = (username, externalId) => ({
       username,
@@ -923,25 +961,31 @@ test(
     });
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       const alice = await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_view_a"
       );
 
       const bob = await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_view_b",
         { reviews: true }
       );
 
       const charlie = await registerReportUser(
         baseUrl,
+        mailbox,
         "reports_view_c"
       );
 
@@ -1126,12 +1170,20 @@ test(
       );
 
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -1150,21 +1202,27 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       const alice = await registerReportUser(
         baseUrl,
+        mailbox,
         "evidence_alice"
       );
 
       const bob = await registerReportUser(
         baseUrl,
+        mailbox,
         "evidence_bob",
         { reviews: true }
       );
@@ -1274,11 +1332,20 @@ test(
       assert.equal(publicProfile.text.includes("FALSIFICADA"), false);
 
     } finally {
-      await stopTestServer(child);
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );

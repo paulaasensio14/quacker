@@ -101,13 +101,13 @@ test(
   "las cuentas nuevas empiezan con opinions vacío",
   () => {
     const registerStart = serverSource.indexOf(
-      'app.post("/api/auth/register"'
+      'function _createRegisteredUser(db, {'
     );
 
     assert.notEqual(
       registerStart,
       -1,
-      "no se encontró POST /api/auth/register"
+      "no se encontró la función _createRegisteredUser"
     );
 
     const registerBlock = serverSource.slice(
@@ -116,6 +116,34 @@ test(
         "\napp.",
         registerStart + 20
       )
+    );
+
+    const confirmStart = serverSource.indexOf(
+      '"/api/auth/email-verification/confirm"'
+    );
+
+    assert.notEqual(confirmStart, -1);
+
+    const confirmEnd = serverSource.indexOf(
+      "\napp.",
+      confirmStart + 20
+    );
+
+    assert.notEqual(confirmEnd, -1);
+
+    const confirmBlock = serverSource.slice(
+      confirmStart,
+      confirmEnd
+    );
+
+    assert.match(
+      confirmBlock,
+      /commitVerifiedRegistration\(\{/
+    );
+
+    assert.match(
+      confirmBlock,
+      /createUser:\s*\(db,\s*registration\)\s*=>\s*_createRegisteredUser\(db,\s*registration\)/
     );
 
     assert.match(

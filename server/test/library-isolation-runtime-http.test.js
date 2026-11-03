@@ -9,6 +9,11 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -29,7 +34,11 @@ function availablePort() {
   });
 }
 
-async function startServer(port, directory) {
+async function startServer(
+  port,
+  directory,
+  mailboxEnv
+) {
   const child = spawn(process.execPath, [SERVER_PATH], {
     cwd: path.dirname(SERVER_PATH),
     env: {
@@ -39,9 +48,7 @@ async function startServer(port, directory) {
       QUACKER_DB_PATH: path.join(directory, "db.json"),
       QUACKER_SESSION_STORE_PATH:
         path.join(directory, "sessions"),
-      SMTP_HOST: "",
-      SMTP_USER: "",
-      SMTP_PASS: ""
+      ...mailboxEnv
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -150,17 +157,6 @@ function requestJson(url, {
   });
 }
 
-function getSessionCookie(response) {
-  const cookies = response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(cookies) && cookies.length > 0,
-    "El registro debe crear una sesión"
-  );
-
-  return cookies[0].split(";")[0];
-}
-
 test(
   "HTTP real: bibliotecas aisladas entre usuarios",
   { timeout: 30000 },
@@ -170,33 +166,37 @@ test(
     );
 
     let child;
+    let mailbox;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       const port = await availablePort();
       const baseUrl = `http://127.0.0.1:${port}`;
 
-      child = await startServer(port, directory);
+      child = await startServer(
+        port,
+        directory,
+        mailbox.env
+      );
 
       const request = (endpoint, options = {}) =>
         requestJson(`${baseUrl}${endpoint}`, options);
 
       const register = async (email, name) => {
-        const response = await request(
-          "/api/auth/register",
-          {
-            method: "POST",
-            body: {
-              email,
-              name,
-              password: "Library-Isolation-123!",
-              language: "es"
-            }
-          }
-        );
+        const account = await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email,
+          name,
+          password: "Library-Isolation-123!",
+          language: "es"
+        });
 
-        assert.equal(response.status, 200);
+        assert.ok(account.user.id);
+        assert.ok(account.cookie);
 
-        return getSessionCookie(response);
+        return account.cookie;
       };
 
       const cookieA = await register(
@@ -324,16 +324,39 @@ test(
       assert.equal(finalRead.status, 404);
 
     } finally {
-      if (child && child.exitCode === null) {
-        const exited = once(child, "exit");
-        child.kill("SIGTERM");
-        await exited;
-      }
+      try {
+        if (
+          child &&
+          child.exitCode === null &&
+          child.signalCode === null
+        ) {
+          const exited = once(child, "exit");
+          child.kill("SIGTERM");
 
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+          const graceful = await Promise.race([
+            exited.then(() => true),
+            new Promise(resolve =>
+              setTimeout(() => resolve(false), 2000)
+            )
+          ]);
+
+          if (!graceful) {
+            child.kill("SIGKILL");
+            await exited;
+          }
+        }
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );

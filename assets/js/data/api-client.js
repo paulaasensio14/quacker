@@ -1436,6 +1436,22 @@ if (externalSignal?.aborted) {
     };
   }
 
+  async function confirmEmailVerification(token) {
+    if (!_isHttp()) {
+      const error = new Error(
+        "email_verification_requires_http"
+      );
+      error.error = "email_verification_requires_http";
+      throw error;
+    }
+
+    return _httpJson(
+      "POST",
+      "/auth/email-verification/confirm",
+      { token }
+    );
+  }
+
   async function requestPasswordReset(email) {
     if (_isHttp()) {
       return _httpJson(
@@ -8979,6 +8995,7 @@ if (externalSignal?.aborted) {
   return {
     login,
     register,
+    confirmEmailVerification,
     requestPasswordReset,
     confirmPasswordReset,
     logout,

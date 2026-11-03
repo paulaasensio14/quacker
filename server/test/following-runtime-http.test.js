@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -74,7 +79,8 @@ function getAvailablePort() {
 function startTestServer({
   dbPath,
   sessionStorePath,
-  port
+  port,
+  mailboxEnv
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -92,7 +98,8 @@ function startTestServer({
           PORT: String(port),
           QUACKER_DB_PATH: dbPath,
           QUACKER_SESSION_STORE_PATH:
-            sessionStorePath
+            sessionStorePath,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -311,24 +318,10 @@ function requestJson(
   );
 }
 
-function sessionCookie(response) {
-  const setCookie =
-    response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(setCookie) &&
-      setCookie.length > 0,
-    "debe recibirse una cookie de sesión"
-  );
-
-  return setCookie[0]
-    .split(";")[0];
-}
-
 test(
   "seguir y dejar de seguir respeta autenticación, privacidad y persistencia",
   {
-    timeout: 20000
+    timeout: 90000
   },
   async () => {
     const directory =
@@ -362,48 +355,39 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const followerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "week13-follower@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Week 13 Follower",
-              language: "es"
-            }
-          }
-        );
+      const followerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "week13-follower@example.test",
+        password: "runtime-pass-123",
+        name: "Week 13 Follower",
+        language: "es"
+      });
 
-      assert.equal(
-        followerRegistration.statusCode,
-        200
-      );
+      assert.ok(followerRegistration.user?.id);
 
-      const followerCookie =
-        sessionCookie(
-          followerRegistration
-        );
+      const followerCookie = followerRegistration.cookie;
+      assert.ok(followerCookie);
 
       const followerUserId =
-        followerRegistration.json
-          ?.user?.id;
+        followerRegistration.user
+          ?.id;
 
       assert.ok(followerUserId);
 
@@ -426,36 +410,23 @@ test(
         200
       );
 
-      const targetRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "week13-target@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Week 13 Target",
-              language: "es"
-            }
-          }
-        );
+      const targetRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "week13-target@example.test",
+        password: "runtime-pass-123",
+        name: "Week 13 Target",
+        language: "es"
+      });
 
-      assert.equal(
-        targetRegistration.statusCode,
-        200
-      );
+      assert.ok(targetRegistration.user?.id);
 
-      const targetCookie =
-        sessionCookie(
-          targetRegistration
-        );
+      const targetCookie = targetRegistration.cookie;
+      assert.ok(targetCookie);
 
       const targetUserId =
-        targetRegistration.json
-          ?.user?.id;
+        targetRegistration.user
+          ?.id;
 
       assert.ok(targetUserId);
 
@@ -652,32 +623,19 @@ test(
         "cannot_follow_self"
       );
 
-      const privateRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "week13-private@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Week 13 Private",
-              language: "es"
-            }
-          }
-        );
+      const privateRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "week13-private@example.test",
+        password: "runtime-pass-123",
+        name: "Week 13 Private",
+        language: "es"
+      });
 
-      assert.equal(
-        privateRegistration.statusCode,
-        200
-      );
+      assert.ok(privateRegistration.user?.id);
 
-      const privateCookie =
-        sessionCookie(
-          privateRegistration
-        );
+      const privateCookie = privateRegistration.cookie;
+      assert.ok(privateCookie);
 
       const privateProfileUpdate =
         await requestJson(
@@ -805,17 +763,25 @@ test(
       );
 
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -823,7 +789,7 @@ test(
 test(
   "un perfil followers recibe una solicitud sin crear following todavía",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -857,83 +823,61 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const followerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "week13-requester@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Week 13 Requester",
-              language: "es"
-            }
-          }
-        );
+      const followerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "week13-requester@example.test",
+        password: "runtime-pass-123",
+        name: "Week 13 Requester",
+        language: "es"
+      });
 
-      assert.equal(
-        followerRegistration.statusCode,
-        200
-      );
+      assert.ok(followerRegistration.user?.id);
 
-      const followerCookie =
-        sessionCookie(
-          followerRegistration
-        );
+      const followerCookie = followerRegistration.cookie;
+      assert.ok(followerCookie);
 
       const followerUserId =
-        followerRegistration.json
-          ?.user?.id;
+        followerRegistration.user
+          ?.id;
 
       assert.ok(
         followerUserId
       );
 
-      const targetRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "week13-followers-target@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Week 13 Followers Target",
-              language: "es"
-            }
-          }
-        );
+      const targetRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "week13-followers-target@example.test",
+        password: "runtime-pass-123",
+        name: "Week 13 Followers Target",
+        language: "es"
+      });
 
-      assert.equal(
-        targetRegistration.statusCode,
-        200
-      );
+      assert.ok(targetRegistration.user?.id);
 
-      const targetCookie =
-        sessionCookie(
-          targetRegistration
-        );
+      const targetCookie = targetRegistration.cookie;
+      assert.ok(targetCookie);
 
       const targetUserId =
-        targetRegistration.json
-          ?.user?.id;
+        targetRegistration.user
+          ?.id;
 
       assert.ok(
         targetUserId
@@ -1026,17 +970,25 @@ test(
         "la solicitud debe persistir en el usuario destinatario"
       );
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1044,7 +996,7 @@ test(
 test(
   "un perfil friends recibe una sola solicitud pendiente",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -1078,83 +1030,61 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const requesterRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-friends-requester@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Friends Requester",
-              language: "es"
-            }
-          }
-        );
+      const requesterRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-friends-requester@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Friends Requester",
+        language: "es"
+      });
 
-      assert.equal(
-        requesterRegistration.statusCode,
-        200
-      );
+      assert.ok(requesterRegistration.user?.id);
 
-      const requesterCookie =
-        sessionCookie(
-          requesterRegistration
-        );
+      const requesterCookie = requesterRegistration.cookie;
+      assert.ok(requesterCookie);
 
       const requesterUserId =
-        requesterRegistration.json
-          ?.user?.id;
+        requesterRegistration.user
+          ?.id;
 
       assert.ok(
         requesterUserId
       );
 
-      const targetRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-friends-target@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Friends Target",
-              language: "es"
-            }
-          }
-        );
+      const targetRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-friends-target@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Friends Target",
+        language: "es"
+      });
 
-      assert.equal(
-        targetRegistration.statusCode,
-        200
-      );
+      assert.ok(targetRegistration.user?.id);
 
-      const targetCookie =
-        sessionCookie(
-          targetRegistration
-        );
+      const targetCookie = targetRegistration.cookie;
+      assert.ok(targetCookie);
 
       const targetUserId =
-        targetRegistration.json
-          ?.user?.id;
+        targetRegistration.user
+          ?.id;
 
       assert.ok(
         targetUserId
@@ -1266,17 +1196,25 @@ test(
         "la solicitud pendiente no debe duplicarse"
       );
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1284,7 +1222,7 @@ test(
 test(
   "aceptar una solicitud elimina el pendiente y crea following en el solicitante",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -1318,48 +1256,39 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const requesterRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-accept-requester@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Accept Requester",
-              language: "es"
-            }
-          }
-        );
+      const requesterRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-accept-requester@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Accept Requester",
+        language: "es"
+      });
 
-      assert.equal(
-        requesterRegistration.statusCode,
-        200
-      );
+      assert.ok(requesterRegistration.user?.id);
 
-      const requesterCookie =
-        sessionCookie(
-          requesterRegistration
-        );
+      const requesterCookie = requesterRegistration.cookie;
+      assert.ok(requesterCookie);
 
       const requesterUserId =
-        requesterRegistration.json
-          ?.user?.id;
+        requesterRegistration.user
+          ?.id;
 
       assert.ok(
         requesterUserId
@@ -1384,36 +1313,23 @@ test(
         200
       );
 
-      const targetRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-accept-target@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Accept Target",
-              language: "es"
-            }
-          }
-        );
+      const targetRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-accept-target@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Accept Target",
+        language: "es"
+      });
 
-      assert.equal(
-        targetRegistration.statusCode,
-        200
-      );
+      assert.ok(targetRegistration.user?.id);
 
-      const targetCookie =
-        sessionCookie(
-          targetRegistration
-        );
+      const targetCookie = targetRegistration.cookie;
+      assert.ok(targetCookie);
 
       const targetUserId =
-        targetRegistration.json
-          ?.user?.id;
+        targetRegistration.user
+          ?.id;
 
       assert.ok(
         targetUserId
@@ -1563,17 +1479,25 @@ test(
         "bell"
       );
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1581,7 +1505,7 @@ test(
 test(
   "rechazar una solicitud elimina el pendiente sin crear following",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -1615,48 +1539,39 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const requesterRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-reject-requester@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Reject Requester",
-              language: "es"
-            }
-          }
-        );
+      const requesterRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-reject-requester@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Reject Requester",
+        language: "es"
+      });
 
-      assert.equal(
-        requesterRegistration.statusCode,
-        200
-      );
+      assert.ok(requesterRegistration.user?.id);
 
-      const requesterCookie =
-        sessionCookie(
-          requesterRegistration
-        );
+      const requesterCookie = requesterRegistration.cookie;
+      assert.ok(requesterCookie);
 
       const requesterUserId =
-        requesterRegistration.json
-          ?.user?.id;
+        requesterRegistration.user
+          ?.id;
 
       assert.ok(
         requesterUserId
@@ -1681,36 +1596,23 @@ test(
         200
       );
 
-      const targetRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-reject-target@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Reject Target",
-              language: "es"
-            }
-          }
-        );
+      const targetRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-reject-target@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Reject Target",
+        language: "es"
+      });
 
-      assert.equal(
-        targetRegistration.statusCode,
-        200
-      );
+      assert.ok(targetRegistration.user?.id);
 
-      const targetCookie =
-        sessionCookie(
-          targetRegistration
-        );
+      const targetCookie = targetRegistration.cookie;
+      assert.ok(targetCookie);
 
       const targetUserId =
-        targetRegistration.json
-          ?.user?.id;
+        targetRegistration.user
+          ?.id;
 
       assert.ok(
         targetUserId
@@ -1816,17 +1718,25 @@ test(
         "rechazar no debe crear una relación following"
       );
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1834,7 +1744,7 @@ test(
 test(
   "seguir directamente tras pasar a public elimina una solicitud pendiente anterior",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -1868,48 +1778,39 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const requesterRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-public-transition-requester@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Public Transition Requester",
-              language: "es"
-            }
-          }
-        );
+      const requesterRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-public-transition-requester@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Public Transition Requester",
+        language: "es"
+      });
 
-      assert.equal(
-        requesterRegistration.statusCode,
-        200
-      );
+      assert.ok(requesterRegistration.user?.id);
 
-      const requesterCookie =
-        sessionCookie(
-          requesterRegistration
-        );
+      const requesterCookie = requesterRegistration.cookie;
+      assert.ok(requesterCookie);
 
       const requesterUserId =
-        requesterRegistration.json
-          ?.user?.id;
+        requesterRegistration.user
+          ?.id;
 
       assert.ok(
         requesterUserId
@@ -1934,36 +1835,23 @@ test(
         200
       );
 
-      const targetRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-public-transition-target@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Public Transition Target",
-              language: "es"
-            }
-          }
-        );
+      const targetRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-public-transition-target@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Public Transition Target",
+        language: "es"
+      });
 
-      assert.equal(
-        targetRegistration.statusCode,
-        200
-      );
+      assert.ok(targetRegistration.user?.id);
 
-      const targetCookie =
-        sessionCookie(
-          targetRegistration
-        );
+      const targetCookie = targetRegistration.cookie;
+      assert.ok(targetCookie);
 
       const targetUserId =
-        targetRegistration.json
-          ?.user?.id;
+        targetRegistration.user
+          ?.id;
 
       assert.ok(
         targetUserId
@@ -2081,17 +1969,25 @@ test(
         "el follow directo debe limpiar la solicitud pendiente antigua"
       );
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -2099,7 +1995,7 @@ test(
 test(
   "listar solicitudes recibidas expone solo identidad pública segura",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -2133,44 +2029,35 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const requesterRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-inbox-requester@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Inbox Requester",
-              language: "es"
-            }
-          }
-        );
+      const requesterRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-inbox-requester@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Inbox Requester",
+        language: "es"
+      });
 
-      assert.equal(
-        requesterRegistration.statusCode,
-        200
-      );
+      assert.ok(requesterRegistration.user?.id);
 
-      const requesterCookie =
-        sessionCookie(
-          requesterRegistration
-        );
+      const requesterCookie = requesterRegistration.cookie;
+      assert.ok(requesterCookie);
 
       const requesterProfile =
         await requestJson(
@@ -2191,32 +2078,19 @@ test(
         200
       );
 
-      const targetRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w13-inbox-target@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W13 Inbox Target",
-              language: "es"
-            }
-          }
-        );
+      const targetRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w13-inbox-target@example.test",
+        password: "runtime-pass-123",
+        name: "W13 Inbox Target",
+        language: "es"
+      });
 
-      assert.equal(
-        targetRegistration.statusCode,
-        200
-      );
+      assert.ok(targetRegistration.user?.id);
 
-      const targetCookie =
-        sessionCookie(
-          targetRegistration
-        );
+      const targetCookie = targetRegistration.cookie;
+      assert.ok(targetCookie);
 
       const targetProfile =
         await requestJson(
@@ -2332,23 +2206,32 @@ test(
         "string"
       );
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
 
 async function registerSocialGraphUser(
   baseUrl,
+  mailbox,
   {
     email,
     name,
@@ -2356,22 +2239,18 @@ async function registerSocialGraphUser(
     profileVisibility = "public"
   }
 ) {
-  const registration = await requestJson(
-    `${baseUrl}/api/auth/register`,
-    {
-      method: "POST",
-      body: {
-        email,
-        password: "runtime-pass-123",
-        name,
-        language: "es"
-      }
-    }
-  );
+  const account = await registerVerifiedUser({
+    baseUrl,
+    mailbox,
+    email,
+    password: "runtime-pass-123",
+    name,
+    language: "es"
+  });
 
-  assert.equal(registration.statusCode, 200);
-
-  const cookie = sessionCookie(registration);
+  const cookie = account.cookie;
+  assert.ok(cookie);
+  assert.ok(account.user?.id);
 
   const profileUpdate = await requestJson(
     `${baseUrl}/api/user`,
@@ -2401,14 +2280,14 @@ async function registerSocialGraphUser(
 
   return {
     cookie,
-    userId: registration.json?.user?.id
+    userId: account.user?.id
   };
 }
 
 test(
   "los listados públicos derivan seguidores y siguiendo sin exponer perfiles ocultos",
   {
-    timeout: 20000
+    timeout: 90000
   },
   async () => {
     const directory =
@@ -2442,13 +2321,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -2457,6 +2340,7 @@ test(
       const target =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-target@example.test",
@@ -2470,6 +2354,7 @@ test(
       const visibleFollower =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-follower@example.test",
@@ -2483,6 +2368,7 @@ test(
       const visibleFollowing =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-following@example.test",
@@ -2496,6 +2382,7 @@ test(
       const hiddenRelation =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-hidden@example.test",
@@ -2653,15 +2540,23 @@ test(
         ]
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -2669,7 +2564,7 @@ test(
 test(
   "el grafo de un perfil followers solo se expone tras aceptar el seguimiento",
   {
-    timeout: 20000
+    timeout: 90000
   },
   async () => {
     const directory =
@@ -2703,13 +2598,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -2718,6 +2617,7 @@ test(
       const target =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-restricted@example.test",
@@ -2733,6 +2633,7 @@ test(
       const viewer =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-viewer@example.test",
@@ -2857,15 +2758,23 @@ test(
         200
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -2873,7 +2782,7 @@ test(
 test(
   "el grafo de un perfil friends exige seguimiento mutuo",
   {
-    timeout: 20000
+    timeout: 90000
   },
   async () => {
     const directory =
@@ -2907,13 +2816,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -2922,6 +2835,7 @@ test(
       const target =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-friends@example.test",
@@ -2937,6 +2851,7 @@ test(
       const viewer =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-friend-viewer@example.test",
@@ -3071,15 +2986,23 @@ test(
         ]
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -3087,7 +3010,7 @@ test(
 test(
   "un perfil hidden y uno inexistente no exponen su grafo social",
   {
-    timeout: 20000
+    timeout: 90000
   },
   async () => {
     const directory =
@@ -3121,13 +3044,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -3136,6 +3063,7 @@ test(
       const hidden =
         await registerSocialGraphUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-graph-hidden-target@example.test",
@@ -3216,15 +3144,23 @@ test(
         404
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -3232,38 +3168,25 @@ test(
 
 async function registerPublicRateLimitUser(
   baseUrl,
+  mailbox,
   {
     email,
     name,
     handle
   }
 ) {
-  const registration =
-    await requestJson(
-      `${baseUrl}/api/auth/register`,
-      {
-        method: "POST",
-        body: {
-          email,
-          password:
-            "runtime-pass-123",
-          name,
-          language: "es"
-        }
-      }
-    );
+  const account = await registerVerifiedUser({
+    baseUrl,
+    mailbox,
+    email,
+    password: "runtime-pass-123",
+    name,
+    language: "es"
+  });
 
-  assert.equal(
-    registration.statusCode,
-    200
-  );
-
-  const cookie =
-    sessionCookie(registration);
-
-  const userId =
-    registration.json?.user?.id;
-
+  const cookie = account.cookie;
+  const userId = account.user?.id;
+  assert.ok(cookie);
   assert.ok(userId);
 
   const profileUpdate =
@@ -3310,7 +3233,7 @@ async function registerPublicRateLimitUser(
 test(
   "limita follows válidos por usuario sin cobrar intentos inválidos",
   {
-    timeout: 30000
+    timeout: 120000
   },
   async () => {
     const directory =
@@ -3344,13 +3267,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -3359,6 +3286,7 @@ test(
       const follower =
         await registerPublicRateLimitUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-rate-follow-sender@example.test",
@@ -3372,6 +3300,7 @@ test(
       const target =
         await registerPublicRateLimitUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-rate-follow-target@example.test",
@@ -3518,17 +3447,25 @@ test(
         "el intento bloqueado no debe crear una notificación extra"
       );
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );

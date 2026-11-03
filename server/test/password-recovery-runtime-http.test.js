@@ -13,6 +13,11 @@ import {
   storePasswordResetChallenge
 } from "../lib/password-recovery.js";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const serverPath = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -34,7 +39,7 @@ function availablePort() {
   });
 }
 
-async function startServer(port, directory) {
+async function startServer(port, directory, mailboxEnv) {
   const child = spawn(process.execPath, [serverPath], {
     cwd: path.dirname(serverPath),
     env: {
@@ -44,9 +49,7 @@ async function startServer(port, directory) {
       QUACKER_DB_PATH: path.join(directory, "db.json"),
       QUACKER_SESSION_STORE_PATH:
         path.join(directory, "sessions"),
-      SMTP_HOST: "",
-      SMTP_USER: "",
-      SMTP_PASS: ""
+      ...mailboxEnv
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -96,13 +99,16 @@ test(
     );
 
     let child;
+    let mailbox;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       const port = await availablePort();
       const baseUrl = `http://127.0.0.1:${port}`;
       const dbPath = path.join(directory, "db.json");
 
-      child = await startServer(port, directory);
+      child = await startServer(port, directory, mailbox.env);
 
       const post = (endpoint, body, cookie = "") =>
         fetch(`${baseUrl}${endpoint}`, {
@@ -119,23 +125,18 @@ test(
       const oldPassword = "Old-Runtime-Password-123!";
       const newPassword = "New-Runtime-Password-456!";
 
-      const registration = await post(
-        "/api/auth/register",
-        {
-          email,
-          password: oldPassword,
-          name: "Recovery Runtime",
-          language: "es"
-        }
-      );
+      const verifiedAccount = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email,
+        password: oldPassword,
+        name: "Recovery Runtime",
+        language: "es"
+      });
 
-      assert.equal(registration.status, 200);
+      const sessionCookie = verifiedAccount.cookie;
 
-      const sessionCookie =
-        registration.headers
-          .get("set-cookie")
-          ?.split(";")[0];
-
+      assert.ok(verifiedAccount.user.id);
       assert.ok(sessionCookie);
 
       const readMe = () =>
@@ -362,6 +363,10 @@ test(
         const exited = once(child, "exit");
         child.kill("SIGTERM");
         await exited;
+      }
+
+      if (mailbox) {
+        await mailbox.close();
       }
 
       fs.rmSync(directory, {

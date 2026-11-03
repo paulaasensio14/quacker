@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -75,7 +80,8 @@ function startTestServer({
   dbPath,
   sessionStorePath,
   port,
-  moderatorUserIds = ""
+  moderatorUserIds = "",
+  mailboxEnv
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -95,7 +101,8 @@ function startTestServer({
           QUACKER_SESSION_STORE_PATH:
             sessionStorePath,
           QUACKER_MODERATOR_USER_IDS:
-            moderatorUserIds
+            moderatorUserIds,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -314,46 +321,31 @@ function requestJson(
   );
 }
 
-function sessionCookie(response) {
-  const setCookie =
-    response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(setCookie) &&
-      setCookie.length > 0,
-    "debe recibirse una cookie de sesión"
-  );
-
-  return setCookie[0]
-    .split(";")[0];
-}
 
 const DATE = "2026-10-21T09:00:00.000Z";
 
 async function registerReportUser(
   baseUrl,
+  mailbox,
   handle,
   {
     publicProfile = true,
     reviews = false
   } = {}
 ) {
-  const response = await requestJson(
-    `${baseUrl}/api/auth/register`,
-    {
-      method: "POST",
-      body: {
-        email: `${handle}@example.test`,
-        password: "runtime-pass-123",
-        name: handle,
-        language: "es"
-      }
-    }
-  );
+  const account = await registerVerifiedUser({
+    baseUrl,
+    mailbox,
+    email: `${handle}@example.test`,
+    password: "runtime-pass-123",
+    name: handle,
+    language: "es"
+  });
 
-  assert.equal(response.statusCode, 200);
-  const cookie = sessionCookie(response);
-  const userId = response.json?.user?.id;
+  const cookie = account.cookie;
+  const userId = account.user.id;
+
+  assert.ok(cookie);
   assert.ok(userId);
 
   const update = await requestJson(
@@ -434,6 +426,8 @@ test(
 
     writeTestDb(dbPath, { users: {} });
 
+    let mailbox = null;
+
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
 
@@ -446,8 +440,10 @@ test(
     let child = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
       // 1. Servidor aislado: aún no hay moderadores.
       child = await startTestServer({
+          mailboxEnv: mailbox.env,
         dbPath,
         sessionStorePath,
         port,
@@ -456,17 +452,20 @@ test(
 
       const reporter = await registerReportUser(
         baseUrl,
+        mailbox,
         "qa_reporter"
       );
 
       const author = await registerReportUser(
         baseUrl,
+        mailbox,
         "qa_author",
         { reviews: true }
       );
 
       const moderator = await registerReportUser(
         baseUrl,
+        mailbox,
         "qa_moderator"
       );
 
@@ -685,6 +684,7 @@ test(
       child = null;
 
       child = await startTestServer({
+          mailboxEnv: mailbox.env,
         dbPath,
         sessionStorePath,
         port,
@@ -915,12 +915,20 @@ test(
         db.users[author.userId].opinions
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );

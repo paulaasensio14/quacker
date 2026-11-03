@@ -9,6 +9,11 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -28,7 +33,12 @@ async function availablePort() {
   });
 }
 
-function startServer({ port, dbPath, sessionsPath }) {
+function startServer({
+  port,
+  dbPath,
+  sessionsPath,
+  mailboxEnv
+}) {
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
@@ -40,7 +50,8 @@ function startServer({ port, dbPath, sessionsPath }) {
           NODE_ENV: "test",
           PORT: String(port),
           QUACKER_DB_PATH: dbPath,
-          QUACKER_SESSION_STORE_PATH: sessionsPath
+          QUACKER_SESSION_STORE_PATH: sessionsPath,
+          ...mailboxEnv
         },
         stdio: ["ignore", "pipe", "pipe"]
       }
@@ -181,12 +192,6 @@ function requestJson(
   });
 }
 
-function sessionCookie(response) {
-  const value = response.headers["set-cookie"];
-  assert.ok(Array.isArray(value) && value.length);
-  return value[0].split(";")[0];
-}
-
 test(
   "QA-010 HTTP: autenticación, privacidad, bloqueos y rate limit",
   { timeout: 45000 },
@@ -209,24 +214,22 @@ test(
     const searchUrl = `${baseUrl}/api/community/users`;
 
     let child = null;
+    let mailbox = null;
 
     async function register(handle, name, isPublic) {
-      const response = await requestJson(
-        `${baseUrl}/api/auth/register`,
-        {
-          method: "POST",
-          body: {
-            email: `${handle}@example.test`,
-            password: "community-test-pass-123",
-            name,
-            language: "es"
-          }
-        }
-      );
+      const account = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: `${handle}@example.test`,
+        password: "community-test-pass-123",
+        name,
+        language: "es"
+      });
 
-      assert.equal(response.status, 200);
+      const cookie = account.cookie;
 
-      const cookie = sessionCookie(response);
+      assert.ok(account.user.id);
+      assert.ok(cookie);
 
       const update = await requestJson(
         `${baseUrl}/api/user`,
@@ -256,10 +259,13 @@ test(
     }
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startServer({
         port,
         dbPath,
-        sessionsPath
+        sessionsPath,
+        mailboxEnv: mailbox.env
       });
 
       // La API debe rechazar visitantes anónimos.
@@ -406,11 +412,20 @@ test(
         3
       );
     } finally {
-      await stopServer(child);
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );

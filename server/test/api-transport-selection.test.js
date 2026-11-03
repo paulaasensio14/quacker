@@ -511,3 +511,71 @@ test("un servidor estático local conserva el modo demo", () => {
     "local"
   );
 });
+
+test("la confirmación de correo envía el token en el cuerpo HTTP", async () => {
+  const h = createHarness({
+    hostname: "quacker.es",
+    port: "",
+    protocol: "https:"
+  });
+
+  assert.equal(
+    typeof h.api.confirmEmailVerification,
+    "function"
+  );
+
+  await assert.rejects(
+    h.api.confirmEmailVerification("token-de-prueba"),
+    (error) =>
+      error?.status === 401 &&
+      error?.error === "unauthenticated"
+  );
+
+  assert.equal(h.requests.length, 1);
+
+  const request = h.requests[0];
+
+  assert.equal(
+    request.url,
+    "/api/auth/email-verification/confirm"
+  );
+
+  assert.equal(request.options.method, "POST");
+
+  assert.equal(
+    request.options.credentials,
+    "include"
+  );
+
+  assert.deepEqual(
+    JSON.parse(request.options.body),
+    { token: "token-de-prueba" }
+  );
+
+  assert.equal(
+    request.url.includes("token-de-prueba"),
+    false
+  );
+});
+
+test("el modo local no simula la verificación de correo", async () => {
+  const h = createHarness({
+    hostname: "127.0.0.1",
+    port: "5500",
+    protocol: "http:"
+  });
+
+  assert.equal(
+    h.api.getTransportInfo().transport,
+    "local"
+  );
+
+  await assert.rejects(
+    h.api.confirmEmailVerification("token-de-prueba"),
+    (error) =>
+      error?.error ===
+      "email_verification_requires_http"
+  );
+
+  assert.equal(h.requests.length, 0);
+});

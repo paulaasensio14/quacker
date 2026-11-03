@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -74,7 +79,8 @@ function getAvailablePort() {
 function startTestServer({
   dbPath,
   sessionStorePath,
-  port
+  port,
+  mailboxEnv
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -92,7 +98,8 @@ function startTestServer({
           PORT: String(port),
           QUACKER_DB_PATH: dbPath,
           QUACKER_SESSION_STORE_PATH:
-            sessionStorePath
+            sessionStorePath,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -311,23 +318,10 @@ function requestJson(
   );
 }
 
-function sessionCookie(response) {
-  const setCookie =
-    response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(setCookie) &&
-      setCookie.length > 0,
-    "debe recibirse una cookie de sesión"
-  );
-
-  return setCookie[0]
-    .split(";")[0];
-}
 
 test(
   "bloquear y desbloquear usuarios funciona por HTTP y persiste",
-  { timeout: 20000 },
+  { timeout: 60000 },
   async () => {
     const directory = createTemporaryDirectory();
     const dbPath = path.join(directory, "db.json");
@@ -342,24 +336,21 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     async function register(email, name, handle) {
-      const response = await requestJson(
-        `${baseUrl}/api/auth/register`,
-        {
-          method: "POST",
-          body: {
-            email,
-            password: "runtime-pass-123",
-            name,
-            language: "es"
-          }
-        }
-      );
+      const account = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email,
+        password: "runtime-pass-123",
+        name,
+        language: "es"
+      });
 
-      assert.equal(response.statusCode, 200);
-      const cookie = sessionCookie(response);
-      const userId = response.json?.user?.id;
+      const cookie = account.cookie;
+      assert.ok(cookie);
+      const userId = account.user.id;
       assert.ok(userId);
 
       const update = await requestJson(
@@ -387,10 +378,13 @@ test(
     }
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       const alice = await register(
@@ -737,11 +731,20 @@ test(
         "desbloquear no debe restaurar el seguimiento"
       );
     } finally {
-      await stopTestServer(child);
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -749,7 +752,7 @@ test(
 
 test(
   "limita por HTTP bloquear y desbloquear sin alterar datos",
-  { timeout: 20000 },
+  { timeout: 60000 },
   async () => {
     const directory = createTemporaryDirectory();
     const dbPath = path.join(directory, "db.json");
@@ -764,24 +767,21 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     async function register(handle) {
-      const response = await requestJson(
-        `${baseUrl}/api/auth/register`,
-        {
-          method: "POST",
-          body: {
-            email: `${handle}@example.test`,
-            password: "runtime-pass-123",
-            name: handle,
-            language: "es"
-          }
-        }
-      );
+      const account = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: `${handle}@example.test`,
+        password: "runtime-pass-123",
+        name: handle,
+        language: "es"
+      });
 
-      assert.equal(response.statusCode, 200);
-
-      const cookie = sessionCookie(response);
+      const cookie = account.cookie;
+      assert.ok(cookie);
+      assert.ok(account.user.id);
 
       const update = await requestJson(
         `${baseUrl}/api/user`,
@@ -797,10 +797,13 @@ test(
     }
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       const alice = await register("limit_alice");
@@ -907,11 +910,20 @@ test(
 
       assert.equal(otherUser.statusCode, 201);
     } finally {
-      await stopTestServer(child);
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );

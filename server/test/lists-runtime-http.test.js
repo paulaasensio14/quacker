@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -73,7 +78,8 @@ function getAvailablePort() {
 function startTestServer({
   dbPath,
   sessionStorePath,
-  port
+  port,
+  mailboxEnv = {}
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -91,7 +97,8 @@ function startTestServer({
           PORT: String(port),
           QUACKER_DB_PATH: dbPath,
           QUACKER_SESSION_STORE_PATH:
-            sessionStorePath
+            sessionStorePath,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -312,7 +319,7 @@ function requestJson(
 test(
   "GET /api/lists migra metadatos colaborativos de una lista antigua",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -340,49 +347,40 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-lists-legacy@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Lists Legacy",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-lists-legacy@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Lists Legacy",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
       const userId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
       assert.ok(userId);
 
-      const cookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const cookie = registration.cookie;
+      assert.ok(cookie);
 
       const db =
         JSON.parse(
@@ -442,15 +440,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -459,7 +465,7 @@ test(
 test(
   "POST /api/lists crea la lista con propietario y colaboradores vacíos",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -487,49 +493,40 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-lists-create@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Lists Create",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-lists-create@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Lists Create",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
       const userId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
       assert.ok(userId);
 
-      const cookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const cookie = registration.cookie;
+      assert.ok(cookie);
 
       const created =
         await requestJson(
@@ -597,15 +594,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -614,7 +619,7 @@ test(
 test(
   "PUT /api/lists preserva metadatos colaborativos protegidos",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -642,49 +647,40 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-lists-put@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Lists Put",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-lists-put@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Lists Put",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
       const userId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
       assert.ok(userId);
 
-      const cookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const cookie = registration.cookie;
+      assert.ok(cookie);
 
       const db =
         JSON.parse(
@@ -930,15 +926,23 @@ test(
         ]
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -947,7 +951,7 @@ test(
 test(
   "el propietario puede invitar por username y el destinatario ve la invitación pendiente",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -981,80 +985,58 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const inviteeRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-invitee@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Invitee",
-              language: "es"
-            }
-          }
-        );
+      const inviteeRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-invitee@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Invitee",
+        language: "es"
+      });
 
-      assert.equal(
-        inviteeRegistration.statusCode,
-        200
-      );
+      assert.ok(inviteeRegistration.user?.id);
 
-      const inviteeCookie =
-        inviteeRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const inviteeCookie = inviteeRegistration.cookie;
+      assert.ok(inviteeCookie);
 
       const inviteeUserId =
-        inviteeRegistration.json?.user?.id;
+        inviteeRegistration.user?.id;
 
       const inviteeUsername =
-        inviteeRegistration.json?.user
+        inviteeRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -1168,7 +1150,7 @@ test(
         pending.json?.invites?.[0]
           ?.owner?.username,
         String(
-          ownerRegistration.json?.user
+          ownerRegistration.user
             ?.handle || ""
         ).replace(
           /^@/,
@@ -1193,15 +1175,23 @@ test(
         ]
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1209,7 +1199,7 @@ test(
 
 test(
   "un bloqueo impide enviar nuevas invitaciones colaborativas",
-  { timeout: 20000 },
+  { timeout: 60000 },
   async () => {
     const directory = createTemporaryDirectory();
     const dbPath = path.join(directory, "db.json");
@@ -1224,35 +1214,37 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       async function register(email, name) {
-        const response = await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email,
-              password: "runtime-pass-123",
-              name,
-              language: "es"
-            }
-          }
-        );
+        const account = await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email,
+          password: "runtime-pass-123",
+          name,
+          language: "es"
+        });
 
-        assert.equal(response.statusCode, 200);
+        const cookie = account.cookie;
+        const userId = account.user?.id;
+        const username = account.user?.handle;
 
-        return {
-          cookie: response.headers["set-cookie"][0].split(";")[0],
-          userId: response.json?.user?.id,
-          username: response.json?.user?.handle
-        };
+        assert.ok(cookie);
+        assert.ok(userId);
+        assert.ok(username);
+
+        return { cookie, userId, username };
       }
 
       const alice = await register(
@@ -1347,18 +1339,27 @@ test(
         "no deben modificarse los colaboradores"
       );
     } finally {
-      await stopTestServer(child);
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
 
 test(
   "un enlace colaborativo no permite eludir un bloqueo",
-  { timeout: 20000 },
+  { timeout: 60000 },
   async () => {
     const directory = createTemporaryDirectory();
     const dbPath = path.join(directory, "db.json");
@@ -1373,35 +1374,31 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       async function register(email, name) {
-        const response = await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email,
-              password: "runtime-pass-123",
-              name,
-              language: "es"
-            }
-          }
-        );
+        const account = await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email,
+          password: "runtime-pass-123",
+          name,
+          language: "es"
+        });
 
-        assert.equal(response.statusCode, 200);
-
-        const cookie =
-          response.headers["set-cookie"][0].split(";")[0];
-
-        const userId = response.json?.user?.id;
-        const username = response.json?.user?.handle;
+        const cookie = account.cookie;
+        const userId = account.user?.id;
+        const username = account.user?.handle;
 
         assert.ok(cookie);
         assert.ok(userId);
@@ -1534,19 +1531,27 @@ test(
         "el intento rechazado no debe modificar el enlace"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
 
 test(
   "una invitación pendiente no puede aceptarse después de un bloqueo",
-  { timeout: 20000 },
+  { timeout: 60000 },
   async () => {
     const directory = createTemporaryDirectory();
     const dbPath = path.join(directory, "db.json");
@@ -1561,36 +1566,33 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       async function register(email, name) {
-        const response = await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email,
-              password: "runtime-pass-123",
-              name,
-              language: "es"
-            }
-          }
-        );
+        const account = await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email,
+          password: "runtime-pass-123",
+          name,
+          language: "es"
+        });
 
-        assert.equal(response.statusCode, 200);
+        const cookie = account.cookie;
+        const userId = account.user?.id;
+        const username = account.user?.handle;
 
-        const cookie =
-          response.headers["set-cookie"][0].split(";")[0];
-
-        const userId = response.json?.user?.id;
-        const username = response.json?.user?.handle;
-
+        assert.ok(cookie);
         assert.ok(userId);
         assert.ok(username);
 
@@ -1737,12 +1739,20 @@ test(
       );
 
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -1750,7 +1760,7 @@ test(
 test(
   "el destinatario puede aceptar una invitación y pasa a ser colaborador",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -1784,80 +1794,58 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-accept-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Accept Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-accept-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Accept Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const inviteeRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-accept-invitee@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Accept Invitee",
-              language: "es"
-            }
-          }
-        );
+      const inviteeRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-accept-invitee@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Accept Invitee",
+        language: "es"
+      });
 
-      assert.equal(
-        inviteeRegistration.statusCode,
-        200
-      );
+      assert.ok(inviteeRegistration.user?.id);
 
-      const inviteeCookie =
-        inviteeRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const inviteeCookie = inviteeRegistration.cookie;
+      assert.ok(inviteeCookie);
 
       const inviteeUserId =
-        inviteeRegistration.json?.user?.id;
+        inviteeRegistration.user?.id;
 
       const inviteeUsername =
-        inviteeRegistration.json?.user
+        inviteeRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -1993,15 +1981,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -2010,7 +2006,7 @@ test(
 test(
   "el destinatario puede rechazar una invitación sin convertirse en colaborador",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -2044,80 +2040,58 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-reject-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Reject Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-reject-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Reject Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const inviteeRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-reject-invitee@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Reject Invitee",
-              language: "es"
-            }
-          }
-        );
+      const inviteeRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-reject-invitee@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Reject Invitee",
+        language: "es"
+      });
 
-      assert.equal(
-        inviteeRegistration.statusCode,
-        200
-      );
+      assert.ok(inviteeRegistration.user?.id);
 
-      const inviteeCookie =
-        inviteeRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const inviteeCookie = inviteeRegistration.cookie;
+      assert.ok(inviteeCookie);
 
       const inviteeUserId =
-        inviteeRegistration.json?.user?.id;
+        inviteeRegistration.user?.id;
 
       const inviteeUsername =
-        inviteeRegistration.json?.user
+        inviteeRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -2251,15 +2225,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -2268,7 +2250,7 @@ test(
 test(
   "deshacer el borrado de una lista colaborativa restaura metadatos protegidos desde el servidor",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -2302,47 +2284,38 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-undo-collab@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Undo Collab",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-undo-collab@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Undo Collab",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
       const userId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
-      const cookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const cookie = registration.cookie;
+      assert.ok(cookie);
 
       assert.ok(userId);
 
@@ -2499,15 +2472,23 @@ test(
         ]
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -2516,7 +2497,7 @@ test(
 test(
   "una invitación no puede aceptarse mientras la lista deja de ser colaborativa",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -2550,83 +2531,61 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-inactive-invite-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Inactive Invite Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-inactive-invite-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Inactive Invite Owner",
+        language: "es"
+      });
 
-      const inviteeRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-inactive-invitee@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Inactive Invitee",
-              language: "es"
-            }
-          }
-        );
+      const inviteeRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-inactive-invitee@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Inactive Invitee",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      assert.equal(
-        inviteeRegistration.statusCode,
-        200
-      );
+      assert.ok(inviteeRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
       const inviteeUserId =
-        inviteeRegistration.json?.user?.id;
+        inviteeRegistration.user?.id;
 
       assert.ok(ownerUserId);
       assert.ok(inviteeUserId);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
-      const inviteeCookie =
-        inviteeRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const inviteeCookie = inviteeRegistration.cookie;
+      assert.ok(inviteeCookie);
 
       const inviteeUsername =
-        inviteeRegistration.json?.user
+        inviteeRegistration.user
           ?.handle;
 
       assert.ok(inviteeUsername);
@@ -2830,15 +2789,23 @@ test(
         "list_not_collaborative"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -2847,7 +2814,7 @@ test(
 test(
   "el propietario puede generar un enlace colaborativo y solo se persiste su hash",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -2881,47 +2848,38 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Owner",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
-      const ownerCookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = registration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
       assert.ok(ownerUserId);
 
@@ -3034,15 +2992,23 @@ test(
         false
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -3051,7 +3017,7 @@ test(
 test(
   "regenerar el enlace colaborativo sustituye el challenge anterior",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -3085,47 +3051,38 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-regenerate@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Regenerate",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-regenerate@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Regenerate",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
-      const ownerCookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = registration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
       assert.ok(ownerUserId);
 
@@ -3271,15 +3228,23 @@ test(
         false
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -3288,7 +3253,7 @@ test(
 test(
   "el propietario puede revocar el enlace colaborativo",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -3322,47 +3287,38 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-revoke@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Revoke",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-revoke@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Revoke",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
-      const ownerCookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = registration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
       assert.ok(ownerUserId);
 
@@ -3468,15 +3424,23 @@ test(
           )
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -3485,7 +3449,7 @@ test(
 test(
   "un usuario autenticado puede unirse como colaborador mediante un enlace válido",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -3519,77 +3483,55 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-accept-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Accept Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-accept-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Accept Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const inviteeRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-accept-user@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Accept User",
-              language: "es"
-            }
-          }
-        );
+      const inviteeRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-accept-user@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Accept User",
+        language: "es"
+      });
 
-      assert.equal(
-        inviteeRegistration.statusCode,
-        200
-      );
+      assert.ok(inviteeRegistration.user?.id);
 
-      const inviteeCookie =
-        inviteeRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const inviteeCookie = inviteeRegistration.cookie;
+      assert.ok(inviteeCookie);
 
       const inviteeUserId =
-        inviteeRegistration.json?.user?.id;
+        inviteeRegistration.user?.id;
 
       assert.ok(ownerUserId);
       assert.ok(inviteeUserId);
@@ -3701,15 +3643,23 @@ test(
         ]
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -3718,7 +3668,7 @@ test(
 test(
   "un enlace regenerado o revocado deja de permitir unirse a la lista",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -3752,71 +3702,49 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-invalid-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Invalid Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-invalid-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Invalid Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
-      const inviteeRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-invalid-user@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Invalid User",
-              language: "es"
-            }
-          }
-        );
+      const inviteeRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-invalid-user@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Invalid User",
+        language: "es"
+      });
 
-      assert.equal(
-        inviteeRegistration.statusCode,
-        200
-      );
+      assert.ok(inviteeRegistration.user?.id);
 
-      const inviteeCookie =
-        inviteeRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const inviteeCookie = inviteeRegistration.cookie;
+      assert.ok(inviteeCookie);
 
       const created =
         await requestJson(
@@ -3956,15 +3884,23 @@ test(
         "invite_not_found"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -3973,7 +3909,7 @@ test(
 test(
   "el propietario y un colaborador existente no pueden aceptar de nuevo el enlace",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -4007,71 +3943,49 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-identity-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Identity Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-identity-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Identity Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
-      const inviteeRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-identity-user@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Identity User",
-              language: "es"
-            }
-          }
-        );
+      const inviteeRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-identity-user@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Identity User",
+        language: "es"
+      });
 
-      assert.equal(
-        inviteeRegistration.statusCode,
-        200
-      );
+      assert.ok(inviteeRegistration.user?.id);
 
-      const inviteeCookie =
-        inviteeRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const inviteeCookie = inviteeRegistration.cookie;
+      assert.ok(inviteeCookie);
 
       const created =
         await requestJson(
@@ -4191,15 +4105,23 @@ test(
         "already_collaborator"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -4208,7 +4130,7 @@ test(
 test(
   "el enlace queda inactivo fuera de modo colaborativo y vuelve a funcionar al reactivarlo",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -4242,71 +4164,49 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-visibility-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Visibility Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-visibility-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Visibility Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
-      const inviteeRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-visibility-user@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Visibility User",
-              language: "es"
-            }
-          }
-        );
+      const inviteeRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-visibility-user@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Visibility User",
+        language: "es"
+      });
 
-      assert.equal(
-        inviteeRegistration.statusCode,
-        200
-      );
+      assert.ok(inviteeRegistration.user?.id);
 
-      const inviteeCookie =
-        inviteeRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const inviteeCookie = inviteeRegistration.cookie;
+      assert.ok(inviteeCookie);
 
       const created =
         await requestJson(
@@ -4443,15 +4343,23 @@ test(
         listId
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -4460,7 +4368,7 @@ test(
 test(
   "deshacer el borrado restaura también el challenge privado del enlace colaborativo",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -4494,47 +4402,38 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-link-undo@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Link Undo",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-link-undo@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Link Undo",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
-      const cookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const cookie = registration.cookie;
+      assert.ok(cookie);
 
       const userId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
       assert.ok(userId);
 
@@ -4684,15 +4583,23 @@ test(
         undefined
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -4701,7 +4608,7 @@ test(
 test(
   "un colaborador puede abandonar una lista colaborativa",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -4735,80 +4642,58 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-leave-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Leave Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-leave-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Leave Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-leave-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Leave Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-leave-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Leave Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       const collaboratorUserId =
-        collaboratorRegistration.json?.user?.id;
+        collaboratorRegistration.user?.id;
 
       const collaboratorUsername =
-        collaboratorRegistration.json?.user
+        collaboratorRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -4931,15 +4816,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -4948,7 +4841,7 @@ test(
 test(
   "el propietario puede expulsar a un colaborador de su lista",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -4982,80 +4875,58 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-kick-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Kick Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-kick-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Kick Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-kick-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Kick Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-kick-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Kick Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       const collaboratorUserId =
-        collaboratorRegistration.json?.user?.id;
+        collaboratorRegistration.user?.id;
 
       const collaboratorUsername =
-        collaboratorRegistration.json?.user
+        collaboratorRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -5183,15 +5054,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -5200,7 +5079,7 @@ test(
 test(
   "los permisos de miembros se aplican también ante llamadas directas a la API",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -5234,13 +5113,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -5250,35 +5133,23 @@ test(
         email,
         name
       }) => {
-        const response =
-          await requestJson(
-            `${baseUrl}/api/auth/register`,
-            {
-              method: "POST",
-              body: {
-                email,
-                password:
-                  "runtime-pass-123",
-                name,
-                language: "es"
-              }
-            }
-          );
+        const account = await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email,
+          password: "runtime-pass-123",
+          name,
+          language: "es"
+        });
 
-        assert.equal(
-          response.statusCode,
-          200
-        );
+        assert.ok(account.cookie);
+        assert.ok(account.user?.id);
+        assert.ok(account.user?.handle);
 
         return {
-          cookie:
-            response.headers[
-              "set-cookie"
-            ][0].split(";")[0],
-          userId:
-            response.json?.user?.id,
-          username:
-            response.json?.user?.handle
+          cookie: account.cookie,
+          userId: account.user?.id,
+          username: account.user?.handle
         };
       };
 
@@ -5478,15 +5349,23 @@ test(
         owner.userId
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -5495,7 +5374,7 @@ test(
 test(
   "GET /api/lists incluye listas compartidas y PUT no las materializa en el bucket del colaborador",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -5529,80 +5408,58 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-shared-read-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Shared Read Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-shared-read-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Shared Read Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-shared-read-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Shared Read Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-shared-read-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Shared Read Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       const collaboratorUserId =
-        collaboratorRegistration.json?.user?.id;
+        collaboratorRegistration.user?.id;
 
       const collaboratorUsername =
-        collaboratorRegistration.json?.user
+        collaboratorRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -5821,15 +5678,23 @@ test(
         0
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -5838,7 +5703,7 @@ test(
 test(
   "un colaborador puede añadir desde su Library un item canónico a la lista del propietario",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -5872,80 +5737,58 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-content-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Content Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-content-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Content Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-content-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Content Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-content-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Content Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       const collaboratorUserId =
-        collaboratorRegistration.json?.user?.id;
+        collaboratorRegistration.user?.id;
 
       const collaboratorUsername =
-        collaboratorRegistration.json?.user
+        collaboratorRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -6164,15 +6007,23 @@ test(
         listItem
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -6181,7 +6032,7 @@ test(
 test(
   "una lista colaborativa evita duplicados por identidad canónica aunque los IDs locales sean distintos",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -6215,80 +6066,58 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-canonical-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Canonical Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-canonical-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Canonical Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-canonical-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Canonical Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-canonical-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Canonical Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       const collaboratorUserId =
-        collaboratorRegistration.json?.user?.id;
+        collaboratorRegistration.user?.id;
 
       const collaboratorUsername =
-        collaboratorRegistration.json?.user
+        collaboratorRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -6525,15 +6354,23 @@ test(
         1
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -6542,7 +6379,7 @@ test(
 test(
   "PUT /api/lists preserva la identidad canónica y snapshot de los items",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -6576,47 +6413,38 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-put-canonical@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Put Canonical",
-              language: "es"
-            }
-          }
-        );
+      const registration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-put-canonical@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Put Canonical",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      assert.ok(registration.user?.id);
 
       const userId =
-        registration.json?.user?.id;
+        registration.user?.id;
 
-      const cookie =
-        registration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const cookie = registration.cookie;
+      assert.ok(cookie);
 
       assert.ok(userId);
 
@@ -6710,15 +6538,23 @@ test(
         item
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -6727,7 +6563,7 @@ test(
 test(
   "un colaborador puede eliminar por identidad canónica un item añadido por el propietario",
   {
-    timeout: 15000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -6761,77 +6597,55 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-remove-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Remove Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-remove-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Remove Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-remove-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Remove Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-remove-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Remove Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       const collaboratorUsername =
-        collaboratorRegistration.json?.user
+        collaboratorRegistration.user
           ?.handle;
 
       assert.ok(ownerUserId);
@@ -7054,22 +6868,30 @@ test(
         1
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
 
 test(
   "el propietario puede expulsar a un colaborador bloqueado",
-  { timeout: 30000 },
+  { timeout: 60000 },
   async () => {
     const directory = createTemporaryDirectory();
     const dbPath = path.join(directory, "db.json");
@@ -7084,35 +6906,31 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       async function register(email, name) {
-        const response = await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email,
-              password: "runtime-pass-123",
-              name,
-              language: "es"
-            }
-          }
-        );
+        const account = await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email,
+          password: "runtime-pass-123",
+          name,
+          language: "es"
+        });
 
-        assert.equal(response.statusCode, 200);
-
-        const cookie =
-          response.headers["set-cookie"][0].split(";")[0];
-
-        const userId = response.json?.user?.id;
-        const username = response.json?.user?.handle;
+        const cookie = account.cookie;
+        const userId = account.user?.id;
+        const username = account.user?.handle;
 
         assert.ok(cookie);
         assert.ok(userId);
@@ -7260,19 +7078,25 @@ test(
         "Alice debe conservar acceso a su lista"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) await mailbox.close();
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
 
 test(
   "un colaborador bloqueado pierde acceso sin borrar su membresía",
-  { timeout: 30000 },
+  { timeout: 60000 },
   async () => {
     const directory = createTemporaryDirectory();
     const dbPath = path.join(directory, "db.json");
@@ -7287,38 +7111,37 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       async function register(email, name) {
-        const response = await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email,
-              password: "runtime-pass-123",
-              name,
-              language: "es"
-            }
-          }
-        );
+        const account = await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email,
+          password: "runtime-pass-123",
+          name,
+          language: "es"
+        });
 
-        assert.equal(response.statusCode, 200);
+        const cookie = account.cookie;
+        const userId = account.user?.id;
+        const username = account.user?.handle;
 
-        const cookie =
-          response.headers["set-cookie"][0].split(";")[0];
+        assert.ok(cookie);
+        assert.ok(userId);
+        assert.ok(username);
 
-        return {
-          cookie,
-          userId: response.json?.user?.id,
-          username: response.json?.user?.handle
-        };
+        return { cookie, userId, username };
       }
 
       const alice = await register(
@@ -7515,12 +7338,18 @@ test(
         "Bob debe poder abandonar la lista durante el bloqueo"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) await mailbox.close();
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -7528,7 +7357,7 @@ test(
 test(
   "outsiders y ex-colaboradores no pueden mutar items de una lista colaborativa",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -7562,13 +7391,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -7579,35 +7412,23 @@ test(
           email,
           name
         }) => {
-          const response =
-            await requestJson(
-              `${baseUrl}/api/auth/register`,
-              {
-                method: "POST",
-                body: {
-                  email,
-                  password:
-                    "runtime-pass-123",
-                  name,
-                  language: "es"
-                }
-              }
-            );
+          const account = await registerVerifiedUser({
+            baseUrl,
+            mailbox,
+            email,
+            password: "runtime-pass-123",
+            name,
+            language: "es"
+          });
 
-          assert.equal(
-            response.statusCode,
-            200
-          );
+          assert.ok(account.cookie);
+          assert.ok(account.user?.id);
+          assert.ok(account.user?.handle);
 
           return {
-            cookie:
-              response.headers[
-                "set-cookie"
-              ][0].split(";")[0],
-            userId:
-              response.json?.user?.id,
-            username:
-              response.json?.user?.handle
+            cookie: account.cookie,
+            userId: account.user?.id,
+            username: account.user?.handle
           };
         };
 
@@ -7880,22 +7701,25 @@ test(
         );
       }
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) await mailbox.close();
+        } finally {
+          fs.rmSync(
+            directory,
+            { recursive: true, force: true }
+          );
         }
-      );
+      }
     }
   }
 );
 
 test(
   "un colaborador bloqueado no puede operar sobre votaciones",
-  { timeout: 30000 },
+  { timeout: 60000 },
   async () => {
     const directory = createTemporaryDirectory();
     const dbPath = path.join(directory, "db.json");
@@ -7910,35 +7734,31 @@ test(
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
         dbPath,
         sessionStorePath,
-        port
+        port,
+        mailboxEnv: mailbox.env
       });
 
       async function register(email, name) {
-        const response = await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email,
-              password: "runtime-pass-123",
-              name,
-              language: "es"
-            }
-          }
-        );
+        const account = await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email,
+          password: "runtime-pass-123",
+          name,
+          language: "es"
+        });
 
-        assert.equal(response.statusCode, 200);
-
-        const cookie =
-          response.headers["set-cookie"][0].split(";")[0];
-
-        const userId = response.json?.user?.id;
-        const username = response.json?.user?.handle;
+        const cookie = account.cookie;
+        const userId = account.user?.id;
+        const username = account.user?.handle;
 
         assert.ok(cookie);
         assert.ok(userId);
@@ -8175,12 +7995,18 @@ test(
         "Alice debe conservar acceso a su votación"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) await mailbox.close();
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -8188,7 +8014,7 @@ test(
 test(
   "un colaborador puede crear una votación sobre items de la lista del propietario",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -8222,73 +8048,53 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-poll-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Poll Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-poll-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Poll Owner",
+        language: "es"
+      });
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-poll-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Poll Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-poll-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Poll Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
       const collaboratorUserId =
         collaboratorRegistration
-          .json?.user?.id;
+          .user?.id;
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       assert.ok(ownerUserId);
       assert.ok(collaboratorUserId);
@@ -8440,15 +8246,23 @@ test(
         0
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -8456,7 +8270,7 @@ test(
 test(
   "un colaborador puede votar y cambiar su voto en una votación del propietario",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -8490,73 +8304,53 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-vote-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Vote Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-vote-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Vote Owner",
+        language: "es"
+      });
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-vote-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Vote Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-vote-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Vote Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
       const collaboratorUserId =
         collaboratorRegistration
-          .json?.user?.id;
+          .user?.id;
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       assert.ok(ownerUserId);
       assert.ok(collaboratorUserId);
@@ -8745,15 +8539,23 @@ test(
         0
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -8761,7 +8563,7 @@ test(
 test(
   "el creador colaborador puede cerrar manualmente su votación y persistir el ganador",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -8795,73 +8597,53 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-close-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Close Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-close-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Close Owner",
+        language: "es"
+      });
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-close-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Close Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-close-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Close Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
       const collaboratorUserId =
         collaboratorRegistration
-          .json?.user?.id;
+          .user?.id;
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       assert.ok(ownerUserId);
       assert.ok(collaboratorUserId);
@@ -9031,15 +8813,23 @@ test(
         0
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -9047,7 +8837,7 @@ test(
 test(
   "un colaborador no puede cerrar la votación creada por otro usuario",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -9081,13 +8871,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -9098,33 +8892,21 @@ test(
           email,
           name
         }) => {
-          const response =
-            await requestJson(
-              `${baseUrl}/api/auth/register`,
-              {
-                method: "POST",
-                body: {
-                  email,
-                  password:
-                    "runtime-pass-123",
-                  name,
-                  language: "es"
-                }
-              }
-            );
+          const account = await registerVerifiedUser({
+            baseUrl,
+            mailbox,
+            email,
+            password: "runtime-pass-123",
+            name,
+            language: "es"
+          });
 
-          assert.equal(
-            response.statusCode,
-            200
-          );
+          assert.ok(account.cookie);
+          assert.ok(account.user?.id);
 
           return {
-            userId:
-              response.json?.user?.id,
-            cookie:
-              response.headers[
-                "set-cookie"
-              ][0].split(";")[0]
+            userId: account.user?.id,
+            cookie: account.cookie
           };
         };
 
@@ -9290,15 +9072,23 @@ test(
         ""
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -9306,7 +9096,7 @@ test(
 test(
   "GET /api/lists finaliza y persiste una votación colaborativa cuyo plazo ha vencido",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -9340,73 +9130,53 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-auto-close-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Auto Close Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-auto-close-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Auto Close Owner",
+        language: "es"
+      });
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-auto-close-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Auto Close Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-auto-close-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Auto Close Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
       const collaboratorUserId =
         collaboratorRegistration
-          .json?.user?.id;
+          .user?.id;
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       assert.ok(ownerUserId);
       assert.ok(collaboratorUserId);
@@ -9592,15 +9362,23 @@ test(
         0
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -9608,7 +9386,7 @@ test(
 test(
   "no se puede votar en una votación cerrada",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -9642,73 +9420,53 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-closed-vote-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Closed Vote Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-closed-vote-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Closed Vote Owner",
+        language: "es"
+      });
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-closed-vote-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Closed Vote Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-closed-vote-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Closed Vote Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
       const collaboratorUserId =
         collaboratorRegistration
-          .json?.user?.id;
+          .user?.id;
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       assert.ok(ownerUserId);
       assert.ok(collaboratorUserId);
@@ -9850,15 +9608,23 @@ test(
         ]
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -9866,7 +9632,7 @@ test(
 test(
   "el propietario puede cerrar una votación creada por un colaborador",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -9900,73 +9666,53 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-owner-close-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Owner Close Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-owner-close-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Owner Close Owner",
+        language: "es"
+      });
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-owner-close-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Owner Close Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-owner-close-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Owner Close Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
       const collaboratorUserId =
         collaboratorRegistration
-          .json?.user?.id;
+          .user?.id;
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       assert.ok(ownerUserId);
       assert.ok(collaboratorUserId);
@@ -10112,15 +9858,23 @@ test(
         "tmdb::pelicula::123"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -10128,7 +9882,7 @@ test(
 test(
   "un colaborador puede consultar el recuento de una votación de la lista",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -10162,73 +9916,53 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-results-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Results Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-results-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Results Owner",
+        language: "es"
+      });
 
-      const collaboratorRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-results-collaborator@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Results Collaborator",
-              language: "es"
-            }
-          }
-        );
+      const collaboratorRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-results-collaborator@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Results Collaborator",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
-      assert.equal(
-        collaboratorRegistration.statusCode,
-        200
-      );
+      assert.ok(collaboratorRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
       const collaboratorUserId =
         collaboratorRegistration
-          .json?.user?.id;
+          .user?.id;
 
-      const collaboratorCookie =
-        collaboratorRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const collaboratorCookie = collaboratorRegistration.cookie;
+      assert.ok(collaboratorCookie);
 
       assert.ok(ownerUserId);
       assert.ok(collaboratorUserId);
@@ -10402,15 +10136,23 @@ test(
         false
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -10418,7 +10160,7 @@ test(
 test(
   "el propietario no puede crear votaciones en listas privadas o públicas",
   {
-    timeout: 30000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -10452,47 +10194,38 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const ownerRegistration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "w14-poll-non-collab-owner@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "W14 Poll Non Collab Owner",
-              language: "es"
-            }
-          }
-        );
+      const ownerRegistration = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "w14-poll-non-collab-owner@example.test",
+        password: "runtime-pass-123",
+        name: "W14 Poll Non Collab Owner",
+        language: "es"
+      });
 
-      assert.equal(
-        ownerRegistration.statusCode,
-        200
-      );
+      assert.ok(ownerRegistration.user?.id);
 
       const ownerUserId =
-        ownerRegistration.json?.user?.id;
+        ownerRegistration.user?.id;
 
-      const ownerCookie =
-        ownerRegistration.headers[
-          "set-cookie"
-        ][0].split(";")[0];
+      const ownerCookie = ownerRegistration.cookie;
+      assert.ok(ownerCookie);
 
       assert.ok(ownerUserId);
 
@@ -10622,15 +10355,23 @@ test(
         ]
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );

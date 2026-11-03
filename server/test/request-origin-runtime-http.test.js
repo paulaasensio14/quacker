@@ -9,6 +9,10 @@ import http from "node:http";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import {
+  createVerificationMailbox
+} from "./helpers/verified-registration.js";
+
 const serverPath = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -60,7 +64,7 @@ function availablePort() {
   });
 }
 
-async function startServer(port, directory) {
+async function startServer(port, directory, mailboxEnv) {
   const child = spawn(process.execPath, [serverPath], {
     cwd: path.dirname(serverPath),
     env: {
@@ -69,7 +73,8 @@ async function startServer(port, directory) {
       PORT: String(port),
       QUACKER_DB_PATH: path.join(directory, "db.json"),
       QUACKER_SESSION_STORE_PATH:
-        path.join(directory, "sessions")
+        path.join(directory, "sessions"),
+      ...mailboxEnv
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -114,19 +119,25 @@ async function startServer(port, directory) {
 
 test(
   "HTTP real: valida el origen antes de ejecutar escrituras",
-  { timeout: 30000 },
+  { timeout: 60000 },
   async () => {
     const directory = fs.mkdtempSync(
       path.join(os.tmpdir(), "quacker-origin-http-")
     );
 
     let child;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
       const port = await availablePort();
       const baseUrl = `http://127.0.0.1:${port}`;
 
-      child = await startServer(port, directory);
+      child = await startServer(
+        port,
+        directory,
+        mailbox.env
+      );
 
       const health = await fetch(
         `${baseUrl}/api/health`
@@ -264,16 +275,76 @@ test(
 
       assert.equal(
         registration.status,
+        202,
+        "el registro autorizado debe quedar pendiente"
+      );
+
+      assert.equal(
+        registration.headers.get("set-cookie"),
+        null,
+        "el registro pendiente no debe generar sesión"
+      );
+
+      const registrationBody =
+        await registration.json();
+
+      assert.equal(registrationBody.ok, true);
+      assert.equal(
+        registrationBody.verificationRequired,
+        true
+      );
+      assert.equal(registrationBody.token, undefined);
+      assert.equal(registrationBody.user, undefined);
+
+      const token = await mailbox.tokenFor(
+        "csrf-runtime@example.test"
+      );
+
+      const confirmation = await fetch(
+        `${baseUrl}/api/auth/email-verification/confirm`,
+        {
+          method: "POST",
+          headers: {
+            Origin: baseUrl,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ token })
+        }
+      );
+
+      assert.equal(
+        confirmation.status,
         200,
-        "el registro autorizado debe funcionar"
+        "el origen autorizado debe permitir confirmar el email"
+      );
+
+      const login = await fetch(
+        `${baseUrl}/api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            Origin: baseUrl,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: "csrf-runtime@example.test",
+            password: "Runtime-CSRF-123!"
+          })
+        }
+      );
+
+      assert.equal(
+        login.status,
+        200,
+        "el usuario verificado debe poder iniciar sesión"
       );
 
       const setCookie =
-        registration.headers.get("set-cookie");
+        login.headers.get("set-cookie");
 
       assert.ok(
         setCookie,
-        "el registro debe generar una sesión"
+        "el login debe generar una cookie de sesión"
       );
 
       const sessionCookie =
@@ -370,16 +441,28 @@ test(
       );
 
     } finally {
-      if (child && child.exitCode === null) {
-        const exited = once(child, "exit");
-        child.kill("SIGTERM");
-        await exited;
+      try {
+        if (
+          child &&
+          child.exitCode === null &&
+          child.signalCode === null
+        ) {
+          const exited = once(child, "exit");
+          child.kill("SIGTERM");
+          await exited;
+        }
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
       }
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
     }
   }
 );

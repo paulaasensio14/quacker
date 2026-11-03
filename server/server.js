@@ -41,9 +41,16 @@ import {
 import nodemailer from "nodemailer";
 import { ENV } from "./config/env.js";
 import {
+  commitVerifiedRegistration
+} from "./lib/email-verification-commit.js";
+import {
+  createPendingRegistration
+} from "./lib/email-verification.js";
+import {
   buildContactEmail,
   buildWelcomeEmail,
-  buildPasswordResetEmail
+  buildPasswordResetEmail,
+  buildEmailVerificationEmail
 } from "./lib/email-messages.js";
 
 import {
@@ -610,6 +617,44 @@ async function _sendWelcomeEmail({ name, email, language }) {
   const mail = buildWelcomeEmail({
     name: _normalizeContactName(name),
     language
+  });
+
+  await transporter.sendMail({
+    from: {
+      name: "Quacker",
+      address: ENV.SMTP_USER
+    },
+    to: email,
+    replyTo: ENV.CONTACT_TO || ENV.SMTP_USER,
+    subject: mail.subject,
+    text: mail.text,
+    html: mail.html
+  });
+}
+
+async function _sendEmailVerificationEmail({
+  name,
+  email,
+  language,
+  token
+}) {
+  if (
+    typeof token !== "string" ||
+    !/^[A-Za-z0-9_-]{43}$/.test(token)
+  ) {
+    throw new TypeError("invalid_email_verification_token");
+  }
+
+  const transporter = _getMailTransporter();
+
+  const verificationUrl =
+    `https://quacker.es/?verify_token=${encodeURIComponent(token)}`;
+
+  const mail = buildEmailVerificationEmail({
+    name: _normalizeContactName(name),
+    language,
+    verificationUrl,
+    expiryHours: 24
   });
 
   await transporter.sendMail({
@@ -1947,6 +1992,104 @@ app.post("/api/contact", async (req, res) => {
 });
 
 // ===== AUTH =====
+function _createRegisteredUser(db, {
+  email: normalizedEmail,
+  name: normalizedName,
+  language: safeLanguage,
+  passwordSalt: salt,
+  passwordHash: hash
+}) {
+  const userId = _uid();
+
+  db.users[userId] = {
+    profile: {
+      id: userId,
+      email: normalizedEmail,
+      name: normalizedName,
+      handle: createUniqueAccountHandle(
+        db.users,
+        normalizedEmail
+      ),
+      language: safeLanguage,
+      theme: "light"
+    },
+    privacy: normalizeProfilePrivacy(),
+    auth: {
+      passwordSalt: salt,
+      passwordHash: hash,
+      authVersion: 1
+    },
+    library: [],
+    lists: [],
+    activities: [],
+    consumptionHistory: [],
+    opinions: [],
+    favorites: normalizeFavorites(),
+    following: normalizeFollowing(),
+    blockedUserIds: normalizeBlockedUserIds(),
+    followRequests: normalizeFollowRequests(),
+    recommendations: normalizeRecommendations(),
+    notifications: [],
+    explore: {
+      dismissed: []
+    },
+    ui: {
+      explore: _normalizeExploreUiState(),
+      library: _normalizeLibraryUiState(),
+      lists: _normalizeListsUiState(),
+      whatsNew: normalizeWhatsNewUiState()
+    }
+  };
+
+  return userId;
+}
+
+app.post(
+  "/api/auth/email-verification/confirm",
+  _asyncHandler(async (req, res) => {
+    const token = req.body?.token;
+
+    // No registrar tokens ni incluirlos en la respuesta.
+    if (
+      typeof token !== "string" ||
+      !/^[A-Za-z0-9_-]{43}$/.test(token)
+    ) {
+      return res.status(400).json({
+        error: "invalid_or_expired_verification_token"
+      });
+    }
+
+    let result;
+
+    try {
+      result = commitVerifiedRegistration({
+        readDb: _readDb,
+        writeDb: _writeDb,
+        token,
+        createUser: (db, registration) =>
+          _createRegisteredUser(db, registration)
+      });
+    } catch (error) {
+      console.error("[Auth] verification persistence failed", {
+        code: error?.code || "verification_commit_failed"
+      });
+
+      return res.status(500).json({
+        error: "verification_save_failed"
+      });
+    }
+
+    if (!result.ok) {
+      return res.status(400).json({
+        error: "invalid_or_expired_verification_token"
+      });
+    }
+
+    // El usuario debe iniciar sesión después de confirmar.
+    return res.json({ ok: true });
+  })
+);
+
 app.post("/api/auth/register", _asyncHandler(async (req, res) => {
   const { email, password, name, language } = req.body || {};
   const safeLanguage = language === "en" ? "en" : "es";
@@ -1990,114 +2133,108 @@ app.post("/api/auth/register", _asyncHandler(async (req, res) => {
     });
   }
 
-  const userId = _uid();
   const { salt, hash } = _hashPassword(validatedPassword);
 
-  db.users[userId] = {
-    profile: {
-      id: userId,
-      email: normalizedEmail,
-      name: normalizedName,
-      handle: createUniqueAccountHandle(
-        db.users,
-        normalizedEmail
-      ),
-      language: safeLanguage,
-      theme: "light"
-    },
-    privacy: normalizeProfilePrivacy(),
-    auth: {
-      passwordSalt: salt,
-      passwordHash: hash,
-      authVersion: 1
-    },
-    library: [],
-    lists: [],
-    activities: [],
-    consumptionHistory: [],
-    opinions: [],
-    favorites: normalizeFavorites(),
-    following: normalizeFollowing(),
-    blockedUserIds: normalizeBlockedUserIds(),
-    followRequests: normalizeFollowRequests(),
-    recommendations: normalizeRecommendations(),
-    notifications: [],
-    explore: {
-      dismissed: []
-    },
-    ui: {
-      explore: _normalizeExploreUiState(),
-      library: _normalizeLibraryUiState(),
-      lists: _normalizeListsUiState(),
-      whatsNew: normalizeWhatsNewUiState()
-    }
-  };
-
+  // La cuenta y la sesión solo se crean al verificar el correo.
+  // Comprobar SMTP antes de guardar ninguna solicitud.
   try {
-    await regenerateAuthenticatedSession(
-      req,
-      userId,
-      db.users[userId].auth.authVersion
-    );
+    _getMailTransporter();
   } catch (error) {
-    console.error(
-      "[Auth] registration session failed",
-      {
-        code: error?.code || ""
-      }
-    );
+    console.error("[Auth] verification mail unavailable", {
+      code: error?.code || "mail_not_configured"
+    });
 
-    return res.status(500).json({
-      error: "session_save_failed"
+    return res.status(503).json({
+      error: "verification_email_unavailable"
     });
   }
 
-  try {
-    _writeDb(db);
-  } catch (error) {
-    console.error(
-      "[Auth] registration persistence failed",
-      {
-        code: error?.code || ""
-      }
-    );
+  let pending;
 
-    try {
-      await destroyRequestSession(req);
-    } catch (cleanupError) {
-      console.error(
-        "[Auth] registration session cleanup failed",
-        {
-          code: cleanupError?.code || ""
-        }
-      );
+  try {
+    pending = createPendingRegistration({
+      db,
+      email: normalizedEmail,
+      name: normalizedName,
+      language: safeLanguage,
+      passwordSalt: salt,
+      passwordHash: hash
+    });
+  } catch (error) {
+    if (error?.code === "email_in_use") {
+      return res.status(409).json({ error: "email_in_use" });
     }
 
-    res.clearCookie(
-      SESSION_COOKIE_NAME,
-      sessionClearCookieOptions
-    );
+    if (error?.code === "verification_pending") {
+      return res.status(409).json({
+        error: "verification_pending"
+      });
+    }
+
+    console.error("[Auth] pending registration rejected", {
+      code: error?.code || "invalid_pending_registration"
+    });
 
     return res.status(500).json({
       error: "registration_save_failed"
     });
   }
 
-  res.json({
-    user: db.users[userId].profile
-  });
-
-  void _sendWelcomeEmail({
-    name: normalizedName,
-    email: normalizedEmail,
-    language: safeLanguage
-  }).catch((error) => {
-    console.error("[Auth] welcome email delivery failed", {
-      code: error?.code || "",
-      command: error?.command || "",
-      responseCode: error?.responseCode || null,
-      missingConfig: error?.missingConfig || []
+  try {
+    _writeDb(db);
+  } catch (error) {
+    console.error("[Auth] pending registration persistence failed", {
+      code: error?.code || "registration_save_failed"
     });
+
+    return res.status(500).json({
+      error: "registration_save_failed"
+    });
+  }
+
+  try {
+    await _sendEmailVerificationEmail({
+      name: normalizedName,
+      email: normalizedEmail,
+      language: safeLanguage,
+      token: pending.token
+    });
+  } catch (error) {
+    console.error("[Auth] verification mail delivery failed", {
+      code: error?.code || "verification_delivery_failed",
+      command: error?.command || "",
+      responseCode: error?.responseCode || null
+    });
+
+    // Eliminar solo la solicitud de esta petición.
+    // No modificar usuarios ni otras solicitudes pendientes.
+    try {
+      const currentDb = _readDb();
+
+      if (
+        currentDb.pendingRegistrations &&
+        Object.hasOwn(
+          currentDb.pendingRegistrations,
+          pending.requestId
+        )
+      ) {
+        delete currentDb.pendingRegistrations[pending.requestId];
+        _writeDb(currentDb);
+      }
+    } catch (cleanupError) {
+      console.error("[Auth] pending registration cleanup failed", {
+        code: cleanupError?.code || "registration_cleanup_failed"
+      });
+    }
+
+    return res.status(503).json({
+      error: "verification_email_unavailable"
+    });
+  }
+
+  return res.status(202).json({
+    ok: true,
+    verificationRequired: true
   });
 }));
 

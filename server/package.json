@@ -22,5 +22,8 @@
   },
   "overrides": {
     "qs": "6.16.1"
+  },
+  "devDependencies": {
+    "smtp-server": "3.21.3"
   }
 }
