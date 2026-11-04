@@ -232,6 +232,7 @@ export function commitVerifiedRegistration({
 
   return {
     ok: true,
-    userId
+    userId,
+    email: registrationBefore.email
   };
 }

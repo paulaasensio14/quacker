@@ -238,7 +238,14 @@ export async function registerVerifiedUser({
     }`
   );
 
-  assert.deepEqual(confirmationBody, { ok: true });
+  assert.equal(confirmationBody.ok, true);
+  assert.equal(
+    confirmationBody.email,
+    email.trim().toLowerCase(),
+    "La confirmacion debe devolver el correo verificado"
+  );
+  assert.equal(confirmationBody.user, undefined);
+  assert.equal(confirmationBody.token, undefined);
 
   assert.equal(
     confirmation.headers.get("set-cookie"),

@@ -93,6 +93,7 @@ test("activa la cuenta y consume el token en una escritura", () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.userId, "u_verified_test");
+  assert.equal(result.email, "test@example.com");
   assert.equal(f.getWrites(), 1);
 
   assert.equal(

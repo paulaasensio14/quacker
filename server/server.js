@@ -2086,7 +2086,10 @@ app.post(
     }
 
     // El usuario debe iniciar sesión después de confirmar.
-    return res.json({ ok: true });
+    return res.json({
+      ok: true,
+      email: result.email
+    });
   })
 );
 

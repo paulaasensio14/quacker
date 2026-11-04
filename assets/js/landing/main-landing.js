@@ -1750,9 +1750,23 @@
             );
           }
 
-          await window.ApiClient.confirmEmailVerification(
-            emailVerificationToken
-          );
+          const confirmation =
+            await window.ApiClient.confirmEmailVerification(
+              emailVerificationToken
+            );
+
+          if (confirmation?.ok !== true) {
+            throw new Error(
+              'email_verification_unexpected_response'
+            );
+          }
+
+          if (
+            typeof confirmation.email === 'string' &&
+            emailInput
+          ) {
+            emailInput.value = confirmation.email;
+          }
 
           emailVerificationNotice = 'success';
         } catch (error) {

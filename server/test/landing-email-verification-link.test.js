@@ -68,7 +68,8 @@ const initializationCode = source
 async function simulateVerification({
   token = "A".repeat(43),
   resetToken = "",
-  errorCode = null
+  errorCode = null,
+  confirmedEmail = "verified@example.test"
 } = {}) {
   const receivedTokens = [];
   const openedModes = [];
@@ -78,6 +79,7 @@ async function simulateVerification({
     passwordResetToken: resetToken,
     emailVerificationToken: token,
     emailVerificationNotice: null,
+    emailInput: { value: "" },
 
     openAuth(mode) {
       openedModes.push(mode);
@@ -102,7 +104,10 @@ async function simulateVerification({
             throw error;
           }
 
-          return { ok: true };
+          return {
+            ok: true,
+            email: confirmedEmail
+          };
         }
       }
     }
@@ -121,6 +126,7 @@ async function simulateVerification({
     openedModes,
     selectedModes,
     notice: context.emailVerificationNotice,
+    emailValue: context.emailInput.value,
     tokenRemaining: context.emailVerificationToken
   };
 }
@@ -263,4 +269,25 @@ test("mantiene el flujo de recuperacion", () => {
     source,
     /ApiClient\.confirmPasswordReset/
   );
+});
+
+test("rellena el correo despues de verificarlo", async () => {
+  const result = await simulateVerification({
+    confirmedEmail: "confirmada@example.test"
+  });
+
+  assert.equal(result.notice, "success");
+  assert.equal(
+    result.emailValue,
+    "confirmada@example.test"
+  );
+});
+
+test("no rellena el correo cuando falla la verificacion", async () => {
+  const result = await simulateVerification({
+    errorCode: "verification_save_failed"
+  });
+
+  assert.equal(result.notice, "error");
+  assert.equal(result.emailValue, "");
 });

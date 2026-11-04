@@ -170,6 +170,8 @@ test(
       const confirmationBody = await confirmation.json();
 
       assert.equal(confirmationBody.ok, true);
+      assert.equal(confirmationBody.email, email);
+      assert.equal(confirmationBody.user, undefined);
 
       // Confirmar no debe iniciar sesión automáticamente.
       assert.equal(
