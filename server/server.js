@@ -2085,6 +2085,19 @@ app.post(
       });
     }
 
+    // La cuenta ya está guardada y el token consumido.
+    // Un fallo de correo no puede desactivar la cuenta.
+    void _sendWelcomeEmail({
+      name: result.name,
+      email: result.email,
+      language: result.language
+    }).catch((error) => {
+      console.error("[Auth] welcome email delivery failed", {
+        code: error?.code || "welcome_email_delivery_failed",
+        responseCode: error?.responseCode || null
+      });
+    });
+
     // El usuario debe iniciar sesión después de confirmar.
     return res.json({
       ok: true,

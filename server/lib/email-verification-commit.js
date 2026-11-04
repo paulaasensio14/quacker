@@ -233,6 +233,11 @@ export function commitVerifiedRegistration({
   return {
     ok: true,
     userId,
-    email: registrationBefore.email
+    email: registrationBefore.email,
+    name: registrationBefore.name,
+    language:
+      registrationBefore.language === "en"
+        ? "en"
+        : "es"
   };
 }
