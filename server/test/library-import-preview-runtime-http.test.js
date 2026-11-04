@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -75,7 +80,8 @@ function getAvailablePort() {
 function startTestServer({
   dbPath,
   sessionStorePath,
-  port
+  port,
+  mailboxEnv
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -93,7 +99,8 @@ function startTestServer({
           PORT: String(port),
           QUACKER_DB_PATH: dbPath,
           QUACKER_SESSION_STORE_PATH:
-            sessionStorePath
+            sessionStorePath,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -311,24 +318,11 @@ function requestJson(
   );
 }
 
-function sessionCookie(response) {
-  const setCookie =
-    response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(setCookie) &&
-      setCookie.length > 0,
-    "debe recibirse una cookie de sesión"
-  );
-
-  return setCookie[0]
-    .split(";")[0];
-}
 
 test(
   "POST /api/library/import/preview exige sesión y devuelve el preview sin persistir",
   {
-    timeout: 20000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -362,13 +356,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -396,33 +394,17 @@ test(
         401
       );
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "library-import-preview@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Library Import Preview",
-              language:
-                "es"
-            }
-          }
-        );
+      const account = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "library-import-preview@example.test",
+        password: "runtime-pass-123",
+        name: "Library Import Preview",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
-
-      const cookie =
-        sessionCookie(
-          registration
-        );
+      const cookie = account.cookie;
+      assert.ok(cookie);
 
       const preview =
         await requestJson(
@@ -486,15 +468,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -502,7 +492,7 @@ test(
 test(
   "POST /api/library/import/confirm importa matches resueltos sin duplicar",
   {
-    timeout: 20000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -536,13 +526,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -651,33 +645,17 @@ test(
         401
       );
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "library-import-confirm@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Library Import Confirm",
-              language:
-                "es"
-            }
-          }
-        );
+      const account = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "library-import-confirm@example.test",
+        password: "runtime-pass-123",
+        name: "Library Import Confirm",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
-
-      const cookie =
-        sessionCookie(
-          registration
-        );
+      const cookie = account.cookie;
+      assert.ok(cookie);
 
       const confirmed =
         await requestJson(
@@ -813,15 +791,23 @@ test(
         2
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -829,7 +815,7 @@ test(
 test(
   "POST /api/library/import/confirm no confía en matched si la identidad canónica es inválida",
   {
-    timeout: 20000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -863,45 +849,33 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "library-import-tampered@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Library Import Tampered",
-              language:
-                "es"
-            }
-          }
-        );
+      const account = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "library-import-tampered@example.test",
+        password: "runtime-pass-123",
+        name: "Library Import Tampered",
+        language: "es"
+      });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
-
-      const cookie =
-        sessionCookie(
-          registration
-        );
+      const cookie = account.cookie;
+      assert.ok(cookie);
 
       const tamperedRows = [
         {
@@ -981,15 +955,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );

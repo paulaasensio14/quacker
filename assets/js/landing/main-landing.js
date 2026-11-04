@@ -78,6 +78,18 @@
         auth_subtitle_login: 'Access your personal library',
         auth_title_register: 'Create your account',
         auth_subtitle_register: 'Start tracking what you watch, read and play.',
+        auth_registration_pending_title: 'Check your email',
+        auth_email_verification_checking_title: 'Verifying your email',
+        auth_email_verification_checking_message: 'Checking your verification link...',
+        auth_email_verification_success_title: 'Email verified',
+        auth_email_verification_success_message: 'Your account is ready. You can now sign in.',
+        auth_email_verification_invalid_title: 'Invalid or expired link',
+        auth_email_verification_invalid_message: 'This link is invalid or has expired. Please register again if necessary.',
+        auth_email_verification_error_title: 'Verification unavailable',
+        auth_email_verification_error_message: 'We could not verify your email. Please try the link again later.',
+        auth_registration_pending_message: 'We have sent you a verification link. Confirm your email before signing in.',
+        error_verification_pending: 'A verification email is already pending. Check your inbox.',
+        error_verification_unavailable: 'We could not send the verification email. Please try again later.',
         tab_login: 'Sign In',
         tab_register: 'Sign Up',
         auth_name_label: 'Name',
@@ -194,6 +206,18 @@
         auth_subtitle_login: 'Accede a tu biblioteca personal',
         auth_title_register: 'Crea tu cuenta',
         auth_subtitle_register: 'Empieza a trackear lo que ves, lees y juegas.',
+        auth_registration_pending_title: 'Revisa tu correo',
+        auth_email_verification_checking_title: 'Verificando tu correo',
+        auth_email_verification_checking_message: 'Estamos comprobando tu enlace de verificación...',
+        auth_email_verification_success_title: 'Correo verificado',
+        auth_email_verification_success_message: 'Tu cuenta está preparada. Ya puedes iniciar sesión.',
+        auth_email_verification_invalid_title: 'Enlace inválido o caducado',
+        auth_email_verification_invalid_message: 'Este enlace no es válido o ha caducado. Si es necesario, vuelve a registrarte.',
+        auth_email_verification_error_title: 'No se pudo verificar el correo',
+        auth_email_verification_error_message: 'No hemos podido verificar tu correo. Vuelve a abrir el enlace más tarde.',
+        auth_registration_pending_message: 'Te hemos enviado un enlace de verificación. Confirma tu correo antes de iniciar sesión.',
+        error_verification_pending: 'Ya tienes un correo de verificación pendiente. Revisa tu bandeja de entrada.',
+        error_verification_unavailable: 'No hemos podido enviar el correo de verificación. Inténtalo más tarde.',
         tab_login: 'Iniciar sesión',
         tab_register: 'Registrarse',
         auth_name_label: 'Nombre',
@@ -607,6 +631,37 @@
     const submitSpinner = document.getElementById('authSubmitSpinner');
 
     let __authSubmitting = false;
+    let emailVerificationNotice = null;
+
+
+    function captureEmailVerificationTokenFromQuery() {
+      const params = new URLSearchParams(
+        String(window.location.search || '').replace(/^\?/, '')
+      );
+
+      if (!params.has('verify_token')) {
+        return null;
+      }
+
+      const tokens = params.getAll('verify_token');
+      params.delete('verify_token');
+
+      const remaining = params.toString();
+      const cleanUrl =
+        `${window.location.pathname}` +
+        `${remaining ? '?' + remaining : ''}` +
+        `${window.location.hash || ''}`;
+
+      window.history.replaceState(
+        null,
+        document.title,
+        cleanUrl
+      );
+
+      return tokens.length === 1
+        ? String(tokens[0] || '').trim()
+        : '';
+    }
 
     function capturePasswordResetTokenFromHash() {
       const hash =
@@ -637,6 +692,9 @@
 
       return token;
     }
+
+    let emailVerificationToken =
+      captureEmailVerificationTokenFromQuery();
 
     let passwordResetToken =
       capturePasswordResetTokenFromHash();
@@ -818,6 +876,7 @@
 
 
     let mode = 'login';
+    let registrationPendingNotice = false;
 
     function openAuth(initialMode = 'login') {
       __authLastFocusEl = document.activeElement;
@@ -850,6 +909,35 @@
       }, 0);
     }
 
+    function applyPendingRegistrationResult(registration, email) {
+      if (
+        registration?.ok !== true ||
+        registration?.verificationRequired !== true
+      ) {
+        return false;
+      }
+
+      emailVerificationNotice = null;
+      registrationPendingNotice = true;
+
+      if (passwordInput) passwordInput.value = '';
+      if (nameInput) nameInput.value = '';
+
+      subtitleEl?.setAttribute('role', 'status');
+      subtitleEl?.setAttribute('aria-live', 'polite');
+
+      setMode('login');
+
+      if (emailInput) emailInput.value = email;
+
+      setSubmitLoading(false);
+      updateSubmitEnabled();
+
+      emailInput?.focus();
+
+      return true;
+    }
+
     function closeAuth({ restoreFocus = true } = {}) {
       authOverlay.classList.remove('is-open');
       authOverlay.setAttribute('aria-hidden', 'true');
@@ -862,6 +950,10 @@
       if (mode === 'reset') {
         passwordResetToken = '';
       }
+
+      registrationPendingNotice = false;
+      subtitleEl?.removeAttribute('role');
+      subtitleEl?.removeAttribute('aria-live');
 
       form.reset();
       setMode('login');
@@ -951,6 +1043,12 @@
       mode = allowedModes.includes(newMode)
         ? newMode
         : 'login';
+
+      if (mode !== 'login') {
+        registrationPendingNotice = false;
+        subtitleEl?.removeAttribute('role');
+        subtitleEl?.removeAttribute('aria-live');
+      }
 
       const dict = translations[currentLang];
 
@@ -1066,11 +1164,19 @@
       );
 
       if (isLogin) {
-        titleEl.innerHTML =
-          dict.auth_title_login;
+        titleEl.textContent =
+          emailVerificationNotice
+            ? dict[`auth_email_verification_${emailVerificationNotice}_title`]
+            : registrationPendingNotice
+              ? dict.auth_registration_pending_title
+              : dict.auth_title_login;
 
-        subtitleEl.innerHTML =
-          dict.auth_subtitle_login;
+        subtitleEl.textContent =
+          emailVerificationNotice
+            ? dict[`auth_email_verification_${emailVerificationNotice}_message`]
+            : registrationPendingNotice
+              ? dict.auth_registration_pending_message
+              : dict.auth_subtitle_login;
 
         submitText.innerHTML =
           dict.auth_btn_login;
@@ -1424,12 +1530,29 @@
             password
           );
         } else {
-          await ApiClient.register(
+          const registration = await ApiClient.register(
             email,
             password,
             name,
             currentLang
           );
+
+          if (
+            applyPendingRegistrationResult(
+              registration,
+              email
+            )
+          ) {
+            return;
+          }
+
+          // En HTTP no aceptar un registro inesperado
+          // como si hubiese creado una sesion.
+          if (
+            ApiClient.getTransportInfo().transport === 'http'
+          ) {
+            throw new Error('invalid_registration_response');
+          }
         }
 
         try {
@@ -1531,7 +1654,11 @@
             invalid_password:
               dict.error_password_length,
             missing_fields:
-              dict.error_required
+              dict.error_required,
+            verification_pending:
+              dict.error_verification_pending,
+            verification_email_unavailable:
+              dict.error_verification_unavailable
           };
 
           msg =
@@ -1596,4 +1723,64 @@
 
     if (passwordResetToken) {
       openAuth('reset');
+    } else if (emailVerificationToken !== null) {
+      openAuth('login');
+
+      emailVerificationNotice = 'checking';
+      setMode('login');
+
+      subtitleEl?.setAttribute('role', 'status');
+      subtitleEl?.setAttribute('aria-live', 'polite');
+
+      void (async () => {
+        try {
+          if (
+            !/^[A-Za-z0-9_-]{43}$/.test(emailVerificationToken)
+          ) {
+            emailVerificationNotice = 'invalid';
+            return;
+          }
+
+          if (
+            typeof window.ApiClient
+              ?.confirmEmailVerification !== 'function'
+          ) {
+            throw new Error(
+              'email_verification_client_unavailable'
+            );
+          }
+
+          const confirmation =
+            await window.ApiClient.confirmEmailVerification(
+              emailVerificationToken
+            );
+
+          if (confirmation?.ok !== true) {
+            throw new Error(
+              'email_verification_unexpected_response'
+            );
+          }
+
+          if (
+            typeof confirmation.email === 'string' &&
+            emailInput
+          ) {
+            emailInput.value = confirmation.email;
+          }
+
+          emailVerificationNotice = 'success';
+        } catch (error) {
+          const code = String(
+            error?.error || error?.message || ''
+          );
+
+          emailVerificationNotice =
+            code === 'invalid_or_expired_verification_token'
+              ? 'invalid'
+              : 'error';
+        } finally {
+          emailVerificationToken = null;
+          setMode('login');
+        }
+      })();
     }

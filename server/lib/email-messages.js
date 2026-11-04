@@ -31,6 +31,95 @@ function details(items) {
   ).join("");
 }
 
+export function buildEmailVerificationEmail({
+  name = "",
+  language = "es",
+  verificationUrl,
+  expiryHours = 24
+} = {}) {
+  const url = new URL(String(verificationUrl || ""));
+
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "quacker.es" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.pathname !== "/" ||
+    url.hash !== "" ||
+    url.searchParams.size !== 1 ||
+    url.searchParams.getAll("verify_token").length !== 1 ||
+    !url.searchParams.get("verify_token")
+  ) {
+    throw new TypeError("invalid_email_verification_url");
+  }
+
+  if (
+    !Number.isInteger(expiryHours) ||
+    expiryHours < 1 ||
+    expiryHours > 24
+  ) {
+    throw new TypeError("invalid_email_verification_expiry");
+  }
+
+  const en = language === "en";
+  const who = String(name || "").trim();
+
+  const copy = en ? {
+    subject: "Verify your Quacker email address",
+    eyebrow: "EMAIL VERIFICATION",
+    title: "One last step!",
+    greeting: who ? `Hi ${who},` : "Hi,",
+    intro: "Thanks for signing up for Quacker. Confirm your email address to activate your account.",
+    button: "Verify my email",
+    expiry: `This link expires in ${expiryHours} hours.`,
+    ignore: "If you did not create this account, you can safely ignore this message.",
+    footer: "Your entertainment, all in one place."
+  } : {
+    subject: "Verifica tu correo electrónico de Quacker",
+    eyebrow: "VERIFICACIÓN DEL CORREO",
+    title: "¡Solo queda un paso!",
+    greeting: who ? `Hola ${who},` : "Hola,",
+    intro: "Gracias por registrarte en Quacker. Confirma tu dirección de correo electrónico para activar tu cuenta.",
+    button: "Verificar mi correo",
+    expiry: `Este enlace caduca en ${expiryHours} horas.`,
+    ignore: "Si no has creado esta cuenta, puedes ignorar este mensaje.",
+    footer: "Todo lo que disfrutas, en un mismo lugar."
+  };
+
+  const safeUrl = url.href;
+
+  const content =
+    paragraph(copy.greeting, "font-weight:700;color:#0d3340;") +
+    paragraph(copy.intro) +
+    renderEmailButton({
+      label: copy.button,
+      url: safeUrl
+    }) +
+    renderEmailPanel(
+      `<strong>${esc(copy.expiry)}</strong>`
+    ) +
+    paragraph(copy.ignore, "font-size:13px;");
+
+  return {
+    subject: copy.subject,
+    text: [
+      copy.greeting,
+      copy.intro,
+      `${copy.button}: ${safeUrl}`,
+      copy.expiry,
+      copy.ignore
+    ].join("\n\n"),
+    html: renderEmailLayout({
+      language,
+      eyebrow: copy.eyebrow,
+      title: copy.title,
+      content,
+      footer: copy.footer
+    })
+  };
+}
+
 export function buildWelcomeEmail({
   name = "",
   language = "es"

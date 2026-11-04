@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -74,7 +79,8 @@ function getAvailablePort() {
 function startTestServer({
   dbPath,
   sessionStorePath,
-  port
+  port,
+  mailboxEnv
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -92,7 +98,8 @@ function startTestServer({
           PORT: String(port),
           QUACKER_DB_PATH: dbPath,
           QUACKER_SESSION_STORE_PATH:
-            sessionStorePath
+            sessionStorePath,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -311,55 +318,29 @@ function requestJson(
   );
 }
 
-function sessionCookie(response) {
-  const setCookie =
-    response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(setCookie) &&
-      setCookie.length > 0,
-    "debe recibirse una cookie de sesión"
-  );
-
-  return setCookie[0]
-    .split(";")[0];
-}
 
 async function registerUser(
   baseUrl,
+  mailbox,
   {
     email,
     name,
     handle
   }
 ) {
-  const registration =
-    await requestJson(
-      `${baseUrl}/api/auth/register`,
-      {
-        method: "POST",
-        body: {
-          email,
-          password:
-            "runtime-pass-123",
-          name,
-          language: "es"
-        }
-      }
-    );
+  const account = await registerVerifiedUser({
+    baseUrl,
+    mailbox,
+    email,
+    password: "runtime-pass-123",
+    name,
+    language: "es"
+  });
 
-  assert.equal(
-    registration.statusCode,
-    200
-  );
+  const cookie = account.cookie;
+  const userId = account.user.id;
 
-  const cookie =
-    sessionCookie(registration);
-
-  const userId =
-    registration.json
-      ?.user?.id;
-
+  assert.ok(cookie);
   assert.ok(userId);
 
   const profileUpdate =
@@ -405,7 +386,7 @@ async function registerUser(
 test(
   "un amigo puede recomendar contenido y la recomendación se persiste en el receptor",
   {
-    timeout: 20000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -439,13 +420,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -454,6 +439,7 @@ test(
       const sender =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "week13-recommendation-sender@example.test",
@@ -467,6 +453,7 @@ test(
       const receiver =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "week13-recommendation-receiver@example.test",
@@ -1552,15 +1539,23 @@ test(
           )
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1568,7 +1563,7 @@ test(
 test(
   "un usuario que no es amigo no puede recomendar contenido",
   {
-    timeout: 20000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -1602,13 +1597,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -1616,6 +1615,7 @@ test(
       const sender =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "week13-rec-stranger-sender@example.test",
@@ -1629,6 +1629,7 @@ test(
       const receiver =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "week13-rec-stranger-receiver@example.test",
@@ -1686,15 +1687,23 @@ test(
         []
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1702,7 +1711,7 @@ test(
 test(
   "el mismo amigo no puede recomendar dos veces el mismo contenido pendiente",
   {
-    timeout: 20000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -1736,13 +1745,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -1751,6 +1764,7 @@ test(
       const sender =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "week13-rec-duplicate-sender@example.test",
@@ -1764,6 +1778,7 @@ test(
       const receiver =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "week13-rec-duplicate-receiver@example.test",
@@ -1875,15 +1890,23 @@ test(
         1
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1891,7 +1914,7 @@ test(
 test(
   "un usuario no puede recomendarse contenido a sí mismo",
   {
-    timeout: 20000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -1925,13 +1948,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -1940,6 +1967,7 @@ test(
       const user =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "week13-rec-self@example.test",
@@ -1982,15 +2010,23 @@ test(
         "cannot_recommend_self"
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -1998,7 +2034,7 @@ test(
 test(
   "POST /api/library crea un contenido pendiente de empezar y no duplica la misma identidad",
   {
-    timeout: 20000
+    timeout: 60000
   },
   async () => {
     const directory =
@@ -2032,13 +2068,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -2047,6 +2087,7 @@ test(
       const user =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "week13-library-baseline@example.test",
@@ -2147,15 +2188,23 @@ test(
         1
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
@@ -2164,7 +2213,7 @@ test(
 test(
   "limita recomendaciones válidas por usuario sin cobrar duplicados",
   {
-    timeout: 30000
+    timeout: 90000
   },
   async () => {
     const directory =
@@ -2198,13 +2247,17 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
@@ -2213,6 +2266,7 @@ test(
       const sender =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-rate-rec-sender@example.test",
@@ -2226,6 +2280,7 @@ test(
       const receiver =
         await registerUser(
           baseUrl,
+          mailbox,
           {
             email:
               "w13-rate-rec-receiver@example.test",
@@ -2458,17 +2513,25 @@ test(
         "el intento bloqueado no debe crear notificación"
       );
     } finally {
-      await stopTestServer(
-        child
-      );
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(
+          child
+        );
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );

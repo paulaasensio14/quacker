@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -75,7 +80,8 @@ function startTestServer({
   dbPath,
   sessionStorePath,
   port,
-  moderatorUserIds = ""
+  moderatorUserIds = "",
+  mailboxEnv
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -95,7 +101,8 @@ function startTestServer({
           QUACKER_SESSION_STORE_PATH:
             sessionStorePath,
           QUACKER_MODERATOR_USER_IDS:
-            moderatorUserIds
+            moderatorUserIds,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -314,19 +321,6 @@ function requestJson(
   );
 }
 
-function sessionCookie(response) {
-  const setCookie =
-    response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(setCookie) &&
-      setCookie.length > 0,
-    "debe recibirse una cookie de sesión"
-  );
-
-  return setCookie[0]
-    .split(";")[0];
-}
 
 test(
   "moderación HTTP: sin permisos, acceso denegado y moderador autorizado",
@@ -348,26 +342,24 @@ test(
     const accessUrl = `${baseUrl}/api/moderation/access`;
 
     let child = null;
+    let mailbox = null;
 
     async function register(handle) {
-      const response = await requestJson(
-        `${baseUrl}/api/auth/register`,
-        {
-          method: "POST",
-          body: {
-            email: `${handle}@example.test`,
-            password: "runtime-pass-123",
-            name: handle,
-            language: "es"
-          }
-        }
-      );
+      const account = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: `${handle}@example.test`,
+        password: "runtime-pass-123",
+        name: handle,
+        language: "es"
+      });
 
-      assert.equal(response.statusCode, 200);
+      assert.ok(account.cookie);
+      assert.ok(account.user.id);
 
       return {
-        cookie: sessionCookie(response),
-        userId: response.json?.user?.id
+        cookie: account.cookie,
+        userId: account.user.id
       };
     }
 
@@ -378,7 +370,10 @@ test(
     }
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
+        mailboxEnv: mailbox.env,
         dbPath,
         sessionStorePath,
         port,
@@ -523,6 +518,7 @@ test(
       child = null;
 
       child = await startTestServer({
+        mailboxEnv: mailbox.env,
         dbPath,
         sessionStorePath,
         port,
@@ -621,12 +617,20 @@ test(
       );
 
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );
@@ -650,26 +654,24 @@ test(
     const baseUrl = `http://127.0.0.1:${port}`;
 
     let child = null;
+    let mailbox = null;
 
     async function register(handle) {
-      const response = await requestJson(
-        `${baseUrl}/api/auth/register`,
-        {
-          method: "POST",
-          body: {
-            email: `${handle}@example.test`,
-            password: "runtime-pass-123",
-            name: handle,
-            language: "es"
-          }
-        }
-      );
+      const account = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: `${handle}@example.test`,
+        password: "runtime-pass-123",
+        name: handle,
+        language: "es"
+      });
 
-      assert.equal(response.statusCode, 200);
+      assert.ok(account.cookie);
+      assert.ok(account.user.id);
 
       return {
-        userId: response.json.user.id,
-        cookie: sessionCookie(response)
+        cookie: account.cookie,
+        userId: account.user.id
       };
     }
 
@@ -695,7 +697,10 @@ test(
     }
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child = await startTestServer({
+        mailboxEnv: mailbox.env,
         dbPath,
         sessionStorePath,
         port,
@@ -806,6 +811,7 @@ test(
       child = null;
 
       child = await startTestServer({
+        mailboxEnv: mailbox.env,
         dbPath,
         sessionStorePath,
         port,
@@ -958,12 +964,20 @@ test(
       assert.deepEqual(pending.json.reports, []);
 
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
+      }
     }
   }
 );

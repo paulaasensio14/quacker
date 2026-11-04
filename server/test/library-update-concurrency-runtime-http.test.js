@@ -15,6 +15,11 @@ import {
   fileURLToPath
 } from "node:url";
 
+import {
+  createVerificationMailbox,
+  registerVerifiedUser
+} from "./helpers/verified-registration.js";
+
 const SERVER_PATH = fileURLToPath(
   new URL("../server.js", import.meta.url)
 );
@@ -73,7 +78,8 @@ function getAvailablePort() {
 function startTestServer({
   dbPath,
   sessionStorePath,
-  port
+  port,
+  mailboxEnv
 }) {
   return new Promise((resolve, reject) => {
     let stdout = "";
@@ -91,7 +97,8 @@ function startTestServer({
           PORT: String(port),
           QUACKER_DB_PATH: dbPath,
           QUACKER_SESSION_STORE_PATH:
-            sessionStorePath
+            sessionStorePath,
+          ...mailboxEnv
         },
         stdio: [
           "ignore",
@@ -310,19 +317,6 @@ function requestJson(
   );
 }
 
-function sessionCookie(response) {
-  const setCookie =
-    response.headers["set-cookie"];
-
-  assert.ok(
-    Array.isArray(setCookie) &&
-      setCookie.length > 0,
-    "debe recibirse una cookie de sesión"
-  );
-
-  return setCookie[0]
-    .split(";")[0];
-}
 
 test(
   "PATCH /api/library/:id rechaza una versión obsoleta sin sobrescribir datos",
@@ -361,44 +355,39 @@ test(
       await getAvailablePort();
 
     let child = null;
+    let mailbox = null;
 
     try {
+      mailbox = await createVerificationMailbox(directory);
+
       child =
         await startTestServer({
           dbPath,
           sessionStorePath,
-          port
+          port,
+          mailboxEnv: mailbox.env
         });
 
       const baseUrl =
         `http://127.0.0.1:${port}`;
 
-      const registration =
-        await requestJson(
-          `${baseUrl}/api/auth/register`,
-          {
-            method: "POST",
-            body: {
-              email:
-                "library-concurrency@example.test",
-              password:
-                "runtime-pass-123",
-              name:
-                "Library Concurrency",
-              language: "es"
-            }
-          }
-        );
+      const verifiedAccount =
+        await registerVerifiedUser({
+          baseUrl,
+          mailbox,
+          email:
+            "library-concurrency@example.test",
+          password:
+            "runtime-pass-123",
+          name:
+            "Library Concurrency",
+          language: "es"
+        });
 
-      assert.equal(
-        registration.statusCode,
-        200
-      );
+      const cookie = verifiedAccount.cookie;
 
-      const cookie =
-        sessionCookie(
-          registration
-        );
+      assert.ok(verifiedAccount.user.id);
+      assert.ok(cookie);
 
       const creation =
         await requestJson(
@@ -501,15 +490,23 @@ test(
         originalUpdatedAt
       );
     } finally {
-      await stopTestServer(child);
-
-      fs.rmSync(
-        directory,
-        {
-          recursive: true,
-          force: true
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
         }
-      );
+      }
     }
   }
 );
