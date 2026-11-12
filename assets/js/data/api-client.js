@@ -3235,6 +3235,87 @@ if (externalSignal?.aborted) {
       .filter(Boolean);
   }
 
+
+  // Identidades de integrantes autorizados de una lista.
+  // No utilizar como buscador publico de personas.
+  async function getListMembers(listId) {
+    const safeListId = _normalizeDataId(listId);
+
+    if (!safeListId) {
+      throw _makeApiError("list_not_found", 404);
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError("unsupported_transport", 501);
+    }
+
+    const response = await _httpJson(
+      "GET",
+      `/lists/${encodeURIComponent(safeListId)}/members`
+    );
+
+    function normalizeMember(value) {
+      if (
+        !value ||
+        typeof value !== "object" ||
+        Array.isArray(value)
+      ) {
+        return null;
+      }
+
+      const userId = _normalizeDataId(value.userId);
+      const username = String(value.username || "")
+        .trim()
+        .replace(/^@/, "")
+        .toLowerCase();
+
+      if (
+        !userId ||
+        !/^[a-z0-9_]{2,20}$/.test(username)
+      ) {
+        return null;
+      }
+
+      return {
+        userId,
+        username,
+        name: String(value.name || "").trim()
+      };
+    }
+
+    const owner = normalizeMember(response?.owner);
+
+    if (
+      _normalizeDataId(response?.listId) !== safeListId ||
+      !owner ||
+      !Array.isArray(response?.collaborators) ||
+      (
+        response?.invited !== undefined &&
+        !Array.isArray(response.invited)
+      )
+    ) {
+      throw _makeApiError(
+        "invalid_list_members_response",
+        502
+      );
+    }
+
+    const collaborators = response.collaborators
+      .map(normalizeMember)
+      .filter(Boolean);
+
+    const invited = Array.isArray(response.invited)
+      ? response.invited.map(normalizeMember).filter(Boolean)
+      : null;
+
+    return {
+      listId: safeListId,
+      owner,
+      collaborators,
+      ...(invited !== null ? { invited } : {})
+    };
+  }
+
   async function getListInvites() {
     if (!_isHttp()) return [];
 
@@ -3315,6 +3396,101 @@ if (externalSignal?.aborted) {
     });
 
     return res;
+  }
+
+
+  async function inviteListMember(listId, username) {
+    const safeListId = _normalizeDataId(listId);
+    const safeUsername = String(username || "")
+      .trim()
+      .replace(/^@/, "")
+      .toLowerCase();
+
+    if (!safeListId) {
+      throw _makeApiError("list_not_found", 404);
+    }
+
+    if (!/^[a-z0-9_]{2,20}$/.test(safeUsername)) {
+      throw _makeApiError("invalid_username", 400);
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError("unsupported_transport", 501);
+    }
+
+    const result = await _httpJson(
+      "POST",
+      `/lists/${encodeURIComponent(safeListId)}/invites/${encodeURIComponent(safeUsername)}`
+    );
+
+    _invalidateListsCache();
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "invite_member",
+      listId: safeListId
+    });
+
+    return result;
+  }
+
+  async function removeListMember(listId, userId) {
+    const safeListId = _normalizeDataId(listId);
+    const safeUserId = _normalizeDataId(userId);
+
+    if (!safeListId) {
+      throw _makeApiError("list_not_found", 404);
+    }
+
+    if (!safeUserId) {
+      throw _makeApiError("missing_member_id", 400);
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError("unsupported_transport", 501);
+    }
+
+    const result = await _httpJson(
+      "DELETE",
+      `/lists/${encodeURIComponent(safeListId)}/members/${encodeURIComponent(safeUserId)}`
+    );
+
+    _invalidateListsCache();
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "remove_member",
+      listId: safeListId
+    });
+
+    return result;
+  }
+
+  async function leaveCollaborativeList(listId) {
+    const safeListId = _normalizeDataId(listId);
+
+    if (!safeListId) {
+      throw _makeApiError("list_not_found", 404);
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError("unsupported_transport", 501);
+    }
+
+    const result = await _httpJson(
+      "DELETE",
+      `/lists/${encodeURIComponent(safeListId)}/members/me`
+    );
+
+    _invalidateListsCache();
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "leave_list",
+      listId: safeListId
+    });
+
+    return result;
   }
 
   async function acceptFollowRequest(username) {
@@ -9020,8 +9196,12 @@ if (externalSignal?.aborted) {
     unblockUser,
     getFollowRequests,
     getListInvites,
+    getListMembers,
     acceptListInvite,
     rejectListInvite,
+    inviteListMember,
+    removeListMember,
+    leaveCollaborativeList,
     acceptFollowRequest,
     rejectFollowRequest,
     getRecommendations,

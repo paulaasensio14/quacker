@@ -553,6 +553,7 @@ const ListsModule = (() => {
           closeListDetail();
         } else {
           _renderActiveListDetailHeader(activeList);
+          renderListCollaboration(activeList);
           await renderActiveListPolls();
           await renderActiveListItems();
         }
@@ -745,6 +746,559 @@ const ListsModule = (() => {
     .join("");
   }
 
+
+  function _activeListForCollaboration() {
+    const listId = _normalizeId(activeListId);
+    return allLists.find(
+      (entry) => _normalizeId(entry?.id) === listId
+    ) || null;
+  }
+
+  function _setListCollaborationFeedback(message = "", isError = false) {
+    const element = _getEl("listCollaborationFeedback");
+    if (!element) return;
+
+    element.textContent = message;
+    element.setAttribute("role", isError ? "alert" : "status");
+  }
+
+  let collaborationIdentityRequestVersion = 0;
+
+  function renderListCollaboration(list, identities = null) {
+    const requestVersion = ++collaborationIdentityRequestVersion;
+    const panel = _getEl("listCollaborationPanel");
+    const ownerControls = _getEl("listCollaborationOwner");
+    const leaveButton = _getEl("btnLeaveCollaborativeList");
+    const membersList = _getEl("listMembersList");
+
+    if (!panel || !membersList) return;
+
+    const ownerId = _normalizeId(list?.ownerUserId);
+    const isOwner =
+      !!currentUserId && ownerId === currentUserId;
+
+    const collaborators = Array.isArray(list?.collaborators)
+      ? list.collaborators.map(_normalizeId).filter(Boolean)
+      : [];
+
+    const isMember =
+      !!currentUserId && collaborators.includes(currentUserId);
+
+    const canAccess = list?.visibility === "collab" &&
+      (isOwner || isMember);
+
+    panel.hidden = !canAccess;
+
+    if (ownerControls) ownerControls.hidden = !isOwner;
+    if (leaveButton) leaveButton.hidden = !isMember;
+
+    membersList.replaceChildren();
+
+    if (!canAccess) {
+      _setListCollaborationFeedback();
+      return;
+    }
+
+    function appendPerson(label, memberId = "", canRemove = false) {
+      const item = document.createElement("li");
+      const text = document.createElement("span");
+
+      text.textContent = label;
+      item.appendChild(text);
+
+      if (canRemove) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn-secondary";
+        button.dataset.action = "remove-list-member";
+        button.dataset.memberId = memberId;
+        button.textContent = t("lists_collab_remove");
+        button.setAttribute(
+          "aria-label",
+          `${t("lists_collab_remove")}: ${label}`
+        );
+        item.appendChild(button);
+      }
+
+      membersList.appendChild(item);
+    }
+
+    function shortId(value) {
+      const id = _normalizeId(value);
+
+      const people = [
+        identities?.owner,
+        ...(Array.isArray(identities?.collaborators)
+          ? identities.collaborators
+          : []),
+        ...(isOwner && Array.isArray(identities?.invited)
+          ? identities.invited
+          : [])
+      ];
+
+      const person = people.find(
+        entry => _normalizeId(entry?.userId) === id
+      );
+
+      const username = String(person?.username || "")
+        .trim()
+        .replace(/^@/, "")
+        .toLowerCase();
+
+      if (!/^[a-z0-9_]{2,20}$/.test(username)) {
+        return t("lists_poll_loading");
+      }
+
+      const name = String(person.name || "").trim();
+
+      return name
+        ? `${name} (@${username})`
+        : `@${username}`;
+    }
+
+    appendPerson(
+      `${t("lists_collab_owner")} · ${shortId(ownerId)}`
+    );
+
+    collaborators.forEach((memberId, index) => {
+      appendPerson(
+        `${t("lists_collab_title")} ${index + 1} · ${shortId(memberId)}`,
+        memberId,
+        isOwner
+      );
+    });
+
+    if (isOwner) {
+      const pending = Array.isArray(list?.invitedUserIds)
+        ? list.invitedUserIds
+        : [];
+
+      pending.forEach((memberId) => {
+        appendPerson(
+          `${t("lists_collab_pending")} · ${shortId(memberId)}`
+        );
+      });
+    }
+
+    if (collaborators.length === 0) {
+      appendPerson(t("lists_collab_members_empty"));
+    }
+
+    if (
+      identities ||
+      !list?.id ||
+      ApiClient.getTransportInfo().transport !== "http"
+    ) {
+      return;
+    }
+
+    const requestedListId = _normalizeId(list.id);
+
+    ApiClient.getListMembers(requestedListId)
+      .then(result => {
+        if (
+          requestVersion !== collaborationIdentityRequestVersion ||
+          _normalizeId(activeListId) !== requestedListId ||
+          _getEl("listDetail")?.hidden ||
+          panel.hidden
+        ) {
+          return;
+        }
+
+        if (
+          _normalizeId(result?.listId) !== requestedListId ||
+          _normalizeId(result?.owner?.userId) !== ownerId
+        ) {
+          return;
+        }
+
+        renderListCollaboration(list, result);
+      })
+      .catch(error => {
+        if (
+          requestVersion !== collaborationIdentityRequestVersion
+        ) {
+          return;
+        }
+
+        console.error(
+          "ListsModule: participant identities unavailable",
+          error
+        );
+
+        _setListCollaborationFeedback(
+          t("lists_collab_action_error"),
+          true
+        );
+      });
+
+  }
+
+
+  let memberSearchTimer = null;
+  let memberSearchController = null;
+  let memberSearchVersion = 0;
+  let memberSuggestionIndex = -1;
+
+  function closeListMemberSuggestions() {
+    memberSearchVersion += 1;
+
+    clearTimeout(memberSearchTimer);
+    memberSearchTimer = null;
+
+    if (memberSearchController) {
+      memberSearchController.abort();
+      memberSearchController = null;
+    }
+
+    memberSuggestionIndex = -1;
+
+    const input = _getEl("listMemberUsername");
+    const results = _getEl("listMemberSuggestions");
+
+    if (results) {
+      results.replaceChildren();
+      results.hidden = true;
+    }
+
+    input?.setAttribute("aria-expanded", "false");
+    input?.removeAttribute("aria-activedescendant");
+  }
+
+  function selectListMemberSuggestion(option) {
+    const username = String(
+      option?.dataset?.username || ""
+    ).trim().toLowerCase();
+
+    if (!/^[a-z0-9_]{2,20}$/.test(username)) return;
+
+    closeListMemberSuggestions();
+
+    const input = _getEl("listMemberUsername");
+
+    if (input) {
+      input.value = `@${username}`;
+      input.focus();
+    }
+  }
+
+  function moveListMemberSuggestion(direction) {
+    const results = _getEl("listMemberSuggestions");
+    const input = _getEl("listMemberUsername");
+
+    if (!results || results.hidden || !input) return;
+
+    const options = Array.from(
+      results.querySelectorAll('[role="option"]')
+    );
+
+    if (!options.length) return;
+
+    memberSuggestionIndex =
+      memberSuggestionIndex === -1
+        ? direction > 0 ? 0 : options.length - 1
+        : (
+            memberSuggestionIndex + direction +
+            options.length
+          ) % options.length;
+
+    options.forEach((option, index) => {
+      option.setAttribute(
+        "aria-selected",
+        index === memberSuggestionIndex ? "true" : "false"
+      );
+    });
+
+    const selected = options[memberSuggestionIndex];
+
+    input.setAttribute(
+      "aria-activedescendant",
+      selected.id
+    );
+
+    selected.scrollIntoView({ block: "nearest" });
+  }
+
+  async function searchListMemberSuggestions(query) {
+    const input = _getEl("listMemberUsername");
+    const results = _getEl("listMemberSuggestions");
+    const list = _activeListForCollaboration();
+
+    if (!input || !results || !list) return;
+
+    if (
+      list.visibility !== "collab" ||
+      _normalizeId(list.ownerUserId) !== currentUserId ||
+      ApiClient.getTransportInfo().transport !== "http"
+    ) {
+      return;
+    }
+
+    const version = memberSearchVersion;
+    const listId = _normalizeId(list.id);
+    const controller = new AbortController();
+
+    memberSearchController = controller;
+
+    try {
+      const users = await ApiClient.getCommunityUsers(
+        query,
+        { signal: controller.signal }
+      );
+
+      if (
+        version !== memberSearchVersion ||
+        _normalizeId(activeListId) !== listId ||
+        _getEl("listDetail")?.hidden ||
+        _getEl("listCollaborationPanel")?.hidden ||
+        input.value.trim() !== query
+      ) {
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      let count = 0;
+
+      for (const user of users) {
+        const username = String(user?.username || "")
+          .trim()
+          .replace(/^@/, "")
+          .toLowerCase();
+
+        if (!/^[a-z0-9_]{2,20}$/.test(username)) {
+          continue;
+        }
+
+        const option = document.createElement("li");
+
+        option.id = `list-member-option-${count}`;
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", "false");
+        option.dataset.username = username;
+
+        const name = document.createElement("span");
+        name.className = "suggestion-name";
+        name.textContent =
+          String(user.name || "").trim() || `@${username}`;
+
+        const handle = document.createElement("span");
+        handle.className = "suggestion-handle";
+        handle.textContent = `@${username}`;
+
+        option.append(name, handle);
+        fragment.appendChild(option);
+        count += 1;
+      }
+
+      results.replaceChildren(fragment);
+      results.hidden = count === 0;
+
+      memberSuggestionIndex = -1;
+
+      input.setAttribute(
+        "aria-expanded",
+        count > 0 ? "true" : "false"
+      );
+
+      input.removeAttribute("aria-activedescendant");
+
+    } catch (error) {
+      if (
+        error?.name !== "AbortError" &&
+        version === memberSearchVersion
+      ) {
+        closeListMemberSuggestions();
+        console.error(
+          "ListsModule: suggestions unavailable",
+          error
+        );
+      }
+    } finally {
+      if (memberSearchController === controller) {
+        memberSearchController = null;
+      }
+    }
+  }
+
+  async function inviteActiveListMember() {
+    const list = _activeListForCollaboration();
+    const listId = _normalizeId(list?.id);
+
+    if (
+      !listId ||
+      list?.visibility !== "collab" ||
+      _normalizeId(list.ownerUserId) !== currentUserId
+    ) return;
+
+    const input = _getEl("listMemberUsername");
+    const button = _getEl("btnInviteListMember");
+
+    if (!input || !button || button.disabled) return;
+
+    const username = String(input.value || "")
+      .trim()
+      .replace(/^@/, "")
+      .toLowerCase();
+
+    if (!/^[a-z0-9_]{2,20}$/.test(username)) {
+      _setListCollaborationFeedback(
+        t("lists_collab_invite_error"),
+        true
+      );
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = t("lists_collab_loading");
+    _setListCollaborationFeedback();
+
+    try {
+      const result = await ApiClient.inviteListMember(
+        listId,
+        username
+      );
+
+      if (!result?.invited) {
+        throw new Error("invite_not_confirmed");
+      }
+
+      input.value = "";
+      await load();
+
+      if (activeListId === listId) {
+        _setListCollaborationFeedback(
+          t("lists_collab_invite_success")
+        );
+      }
+    } catch (error) {
+      console.error(
+        "ListsModule: invitation failed",
+        error
+      );
+
+      const code = String(error?.error || "");
+
+      const key = code === "invite_exists"
+        ? "lists_collab_invite_exists"
+        : code === "already_collaborator"
+          ? "lists_collab_member_exists"
+          : code === "not_found"
+            ? "lists_collab_member_not_found"
+            : "lists_collab_invite_error";
+
+      _setListCollaborationFeedback(t(key), true);
+    } finally {
+      button.disabled = false;
+      button.textContent = t("lists_collab_invite");
+    }
+  }
+
+  async function removeActiveListMember(button) {
+    const list = _activeListForCollaboration();
+    const listId = _normalizeId(list?.id);
+    const memberId = _normalizeId(button?.dataset?.memberId);
+
+    if (
+      !button ||
+      button.disabled ||
+      !listId ||
+      list?.visibility !== "collab" ||
+      _normalizeId(list.ownerUserId) !== currentUserId ||
+      !Array.isArray(list.collaborators) ||
+      !list.collaborators.includes(memberId)
+    ) return;
+
+    if (!window.confirm(t("lists_collab_remove_confirm"))) {
+      return;
+    }
+
+    button.disabled = true;
+    _setListCollaborationFeedback();
+
+    try {
+      const result = await ApiClient.removeListMember(
+        listId,
+        memberId
+      );
+
+      if (!result?.removed) {
+        throw new Error("remove_not_confirmed");
+      }
+
+      await load();
+
+      if (activeListId === listId) {
+        _setListCollaborationFeedback(
+          t("lists_collab_remove_success")
+        );
+      }
+    } catch (error) {
+      console.error(
+        "ListsModule: remove member failed",
+        error
+      );
+
+      _setListCollaborationFeedback(
+        t("lists_collab_action_error"),
+        true
+      );
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function leaveActiveCollaborativeList() {
+    const list = _activeListForCollaboration();
+    const listId = _normalizeId(list?.id);
+    const leaveButton = _getEl("btnLeaveCollaborativeList");
+
+    if (
+      !listId ||
+      !leaveButton ||
+      leaveButton.disabled ||
+      list?.visibility !== "collab" ||
+      _normalizeId(list.ownerUserId) === currentUserId ||
+      !Array.isArray(list.collaborators) ||
+      !list.collaborators.includes(currentUserId)
+    ) return;
+
+    if (!window.confirm(t("lists_collab_leave_confirm"))) {
+      return;
+    }
+
+    leaveButton.disabled = true;
+    _setListCollaborationFeedback();
+
+    try {
+      const result = await ApiClient.leaveCollaborativeList(listId);
+
+      if (!result?.left) {
+        throw new Error("leave_not_confirmed");
+      }
+
+      closeListDetail();
+      await load();
+
+      window.toast?.({
+        title: t("lists_collab_leave_success"),
+        type: "success",
+        duration: 2600
+      });
+    } catch (error) {
+      console.error(
+        "ListsModule: leave collaboration failed",
+        error
+      );
+
+      _setListCollaborationFeedback(
+        t("lists_collab_action_error"),
+        true
+      );
+    } finally {
+      leaveButton.disabled = false;
+    }
+  }
+
   function _renderActiveListDetailHeader(list) {
     if (!list) return;
 
@@ -764,6 +1318,7 @@ const ListsModule = (() => {
   }
 
   async function openListDetail(listId) {
+    closeListMemberSuggestions();
     const normalizedListId = _normalizeId(listId);
     if (!normalizedListId) return;
 
@@ -781,6 +1336,7 @@ const ListsModule = (() => {
     _setListsOverviewControlsHidden(true);
 
     _renderActiveListDetailHeader(list);
+    renderListCollaboration(list);
     _syncListDetailFiltersUI();
 
     const showing2 = _getEl("listDetailShowing");
@@ -791,6 +1347,8 @@ const ListsModule = (() => {
   }
 
   function closeListDetail() {
+    closeListMemberSuggestions();
+    collaborationIdentityRequestVersion += 1;
     activeListId = null;
 
     const detail = _getEl("listDetail");
@@ -1744,8 +2302,8 @@ const ListsModule = (() => {
 
       const visibilitySelect = document.getElementById("lm_visibility");
       if (visibilitySelect) {
-        visibilitySelect.value = "private";
-        visibilitySelect.disabled = true;
+        visibilitySelect.value = list.visibility || "private";
+        visibilitySelect.disabled = false;
       }
 
     } else {
@@ -1762,7 +2320,7 @@ const ListsModule = (() => {
       const visibilitySelect = document.getElementById("lm_visibility");
       if (visibilitySelect) {
         visibilitySelect.value = "private";
-        visibilitySelect.disabled = true;
+        visibilitySelect.disabled = false;
       }
     }
 
@@ -1808,7 +2366,8 @@ const ListsModule = (() => {
     const nameInput = document.getElementById("lm_name");
     const name = (nameInput?.value || "").replace(/\s+/g, " ").trim();
     const description = (document.getElementById("lm_desc")?.value || "").trim();
-    const visibility = "private";
+    const visibility =
+      document.getElementById("lm_visibility")?.value || "private";
 
     if (nameInput && nameInput.value !== name) {
       nameInput.value = name;
@@ -2264,6 +2823,7 @@ const ListsModule = (() => {
         const activeList = allLists.find((l) => _normalizeId(l.id) === normalizedActiveListId);
         if (activeList) {
           _renderActiveListDetailHeader(activeList);
+          renderListCollaboration(activeList);
           await renderActiveListPolls();
           await renderActiveListItems();
         }
@@ -2367,6 +2927,123 @@ const ListsModule = (() => {
 
       });
     }
+
+
+    document.getElementById("btnInviteListMember")?.addEventListener(
+      "click",
+      () => {
+        inviteActiveListMember().catch(console.error);
+      }
+    );
+
+    const memberInput = _getEl("listMemberUsername");
+
+    memberInput?.addEventListener("input", () => {
+      closeListMemberSuggestions();
+
+      const query = memberInput.value.trim();
+
+      if (
+        query.replace(/^@/, "").length < 2 ||
+        query.length > 80
+      ) {
+        return;
+      }
+
+      memberSearchTimer = setTimeout(() => {
+        searchListMemberSuggestions(query).catch(console.error);
+      }, 350);
+    });
+
+    memberInput?.addEventListener("keydown", (event) => {
+      const results = _getEl("listMemberSuggestions");
+      const options = results && !results.hidden
+        ? Array.from(results.querySelectorAll('[role="option"]'))
+        : [];
+
+      if (
+        event.key === "ArrowDown" ||
+        event.key === "ArrowUp"
+      ) {
+        if (!options.length) return;
+
+        event.preventDefault();
+
+        moveListMemberSuggestion(
+          event.key === "ArrowDown" ? 1 : -1
+        );
+        return;
+      }
+
+      if (event.key === "Escape") {
+        if (!options.length) return;
+
+        event.preventDefault();
+        closeListMemberSuggestions();
+        return;
+      }
+
+      if (event.key !== "Enter") return;
+
+      event.preventDefault();
+
+      if (options.length) {
+        selectListMemberSuggestion(
+          options[
+            memberSuggestionIndex >= 0
+              ? memberSuggestionIndex
+              : 0
+          ]
+        );
+        return;
+      }
+
+      closeListMemberSuggestions();
+      inviteActiveListMember().catch(console.error);
+    });
+
+    _getEl("listMemberSuggestions")?.addEventListener(
+      "click",
+      event => {
+        const option = event.target?.closest?.(
+          '[role="option"][data-username]'
+        );
+
+        if (option) {
+          selectListMemberSuggestion(option);
+        }
+      }
+    );
+
+    document.addEventListener("pointerdown", event => {
+      if (
+        !event.target?.closest?.(
+          ".list-collaboration-search"
+        )
+      ) {
+        closeListMemberSuggestions();
+      }
+    });
+
+    document.getElementById("listMembersList")?.addEventListener(
+      "click",
+      (event) => {
+        const button = event.target?.closest?.(
+          '[data-action="remove-list-member"]'
+        );
+
+        if (!button) return;
+
+        removeActiveListMember(button).catch(console.error);
+      }
+    );
+
+    document.getElementById("btnLeaveCollaborativeList")?.addEventListener(
+      "click",
+      () => {
+        leaveActiveCollaborativeList().catch(console.error);
+      }
+    );
 
     document.getElementById("btnCreateListPoll")?.addEventListener("click", openListPollModal);
 

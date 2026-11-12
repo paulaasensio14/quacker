@@ -5941,6 +5941,105 @@ function _resolveCollaborativeListForUser(
   return null;
 }
 
+
+// Identidades de participantes: solo para miembros autorizados.
+// No usar esta ruta para descubrir perfiles ajenos.
+app.get(
+  "/api/lists/:id/members",
+  _requireAuth,
+  (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    const db = _readDb();
+    const viewerUserId = String(
+      req.session.userId || ""
+    ).trim();
+
+    const listId = String(
+      req.params.id || ""
+    ).trim();
+
+    const resolved = _resolveCollaborativeListForUser(
+      db,
+      viewerUserId,
+      listId
+    );
+
+    if (
+      !resolved ||
+      resolved.list?.visibility !== "collab" ||
+      !["owner", "collaborator"].includes(resolved.role)
+    ) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    // Solo identidad mínima: nunca email ni datos privados.
+    const getMemberIdentity = (userId) => {
+      const safeUserId = String(userId || "").trim();
+      const profile = db.users?.[safeUserId]?.profile;
+
+      if (!safeUserId || !profile) {
+        return null;
+      }
+
+      const identity = normalizePublicIdentity(profile);
+
+      if (!identity.username) {
+        return null;
+      }
+
+      return {
+        userId: safeUserId,
+        name: identity.name,
+        username: identity.username
+      };
+    };
+
+    const list = resolved.list;
+
+    const owner = getMemberIdentity(
+      list.ownerUserId
+    );
+
+    if (!owner) {
+      return res.status(404).json({
+        error: "not_found"
+      });
+    }
+
+    const collaborators = (
+      Array.isArray(list.collaborators)
+        ? list.collaborators
+        : []
+    )
+      .map(getMemberIdentity)
+      .filter(Boolean);
+
+    // Los pendientes son privados de la propietaria.
+    const pendingForOwner =
+      resolved.role === "owner"
+        ? {
+            invited: (
+              Array.isArray(list.invitedUserIds)
+                ? list.invitedUserIds
+                : []
+            )
+              .map(getMemberIdentity)
+              .filter(Boolean)
+          }
+        : {};
+
+    return res.json({
+      listId: list.id,
+      owner,
+      collaborators,
+      ...pendingForOwner
+    });
+  }
+);
+
 app.get("/api/lists", _requireAuth, (req, res) => {
   const db = _readDb();
 

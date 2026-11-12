@@ -12131,6 +12131,162 @@ body.dark-theme .profile-privacy-row input[type="checkbox"]:checked {
   }
 }
 
+
+/* LIST DETAIL: COLLABORATORS */
+.list-collaboration-panel {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 3px solid var(--border-strong);
+  border-radius: 24px;
+  background: var(--bg-card);
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+.list-collaboration-panel[hidden],
+#listCollaborationOwner[hidden],
+#btnLeaveCollaborativeList[hidden],
+.list-collaboration-panel button[hidden] {
+  display: none !important;
+}
+
+.list-collaboration-panel h3,
+.list-collaboration-panel h4 {
+  margin: 0 0 6px;
+}
+
+.list-collaboration-panel p {
+  margin: 0;
+}
+
+.list-collaboration-panel label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.list-collaboration-invite {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.list-collaboration-invite input {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 2px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: inherit;
+}
+
+
+/* Sugerencias del buscador de colaboradores */
+.list-collaboration-search {
+  position: relative;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.list-collaboration-search input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.list-collaboration-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 6px 0 0;
+  padding: 6px;
+  list-style: none;
+  border: 2px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: inherit;
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+.list-collaboration-suggestions[hidden] {
+  display: none !important;
+}
+
+.list-collaboration-suggestions [role="option"] {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.list-collaboration-suggestions [role="option"]:hover,
+.list-collaboration-suggestions [role="option"][aria-selected="true"] {
+  background: var(--bg-yellow);
+}
+
+.list-collaboration-suggestions .suggestion-name {
+  display: block;
+  font-weight: 700;
+}
+
+.list-collaboration-suggestions .suggestion-handle {
+  display: block;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+@media (max-width: 720px) {
+  .list-collaboration-search {
+    width: 100%;
+    flex-basis: auto;
+  }
+}
+
+.list-collaboration-members {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list-collaboration-members li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 2px solid var(--border-soft);
+  border-radius: 14px;
+}
+
+.list-collaboration-feedback {
+  font-weight: 600;
+}
+
+.list-collaboration-feedback:empty {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .list-collaboration-invite {
+    flex-direction: column;
+  }
+
+  .list-collaboration-invite input,
+  .list-collaboration-invite button {
+    width: 100%;
+    flex-basis: auto;
+  }
+}
+
 /* ===== Importación de biblioteca: preview largo ===== */
 #importLibraryModal .modal-card {
   max-height: calc(100vh - 32px);
