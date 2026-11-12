@@ -101,7 +101,11 @@ const NotificationsUI = (() => {
     `;
   }
 
-  async function renderNotifications() {
+  let __notifPanelInteractionVersion = 0;
+
+  async function renderNotifications({ background = false } = {}) {
+    const startedAtInteractionVersion =
+      __notifPanelInteractionVersion;
     const errorStateEl = document.getElementById("notifErrorState");
     const emptyStateEl = document.getElementById("notifEmptyState");
 
@@ -115,6 +119,18 @@ const NotificationsUI = (() => {
           ApiClient.getListInvites()
         ]);
     } catch (error) {
+      // No reemplazar un panel abierto por un error antiguo.
+      if (
+        background &&
+        (
+          panel?.classList.contains("is-open") ||
+          __notifPanelInteractionVersion !==
+            startedAtInteractionVersion
+        )
+      ) {
+        return;
+      }
+
       console.error("NotificationsUI.render error", error);
 
       notifListEl.innerHTML = "";
@@ -128,6 +144,19 @@ const NotificationsUI = (() => {
         markAllBtn.textContent = window.I18n.t("notif_mark_all");
       }
 
+      return;
+    }
+
+    // Una respuesta iniciada antes de abrir el panel
+    // no debe reemplazar sus botones ni su contenido.
+    if (
+      background &&
+      (
+        panel?.classList.contains("is-open") ||
+        __notifPanelInteractionVersion !==
+          startedAtInteractionVersion
+      )
+    ) {
       return;
     }
 
@@ -905,8 +934,60 @@ const NotificationsUI = (() => {
     });
   }
 
+
+  // Actualizar notificaciones entre sesiones sin recargar.
+  // Solo en HTTP y mientras la pestaña este activa.
+  if (!document.documentElement.dataset.notifsAutoRefreshBound) {
+    document.documentElement.dataset.notifsAutoRefreshBound = "1";
+
+    let __notifPollInFlight = false;
+
+    async function refreshNotificationsInBackground() {
+      if (__notifPollInFlight) return;
+      if (document.hidden) return;
+
+      if (
+        ApiClient.getTransportInfo().transport !== "http"
+      ) return;
+
+      // No sustituir botones mientras se aceptan o rechazan
+      // invitaciones en el panel abierto.
+      if (panel?.classList.contains("is-open")) return;
+
+      __notifPollInFlight = true;
+
+      try {
+        await renderNotifications({ background: true });
+      } catch (error) {
+        console.error(
+          "NotificationsUI: automatic refresh failed",
+          error
+        );
+      } finally {
+        __notifPollInFlight = false;
+      }
+    }
+
+    setInterval(() => {
+      refreshNotificationsInBackground().catch(console.error);
+    }, 15000);
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        refreshNotificationsInBackground().catch(console.error);
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      refreshNotificationsInBackground().catch(console.error);
+    });
+  }
+
   function openPanel() {
     if (!panel) return;
+
+    // Invalidar las consultas de fondo anteriores.
+    __notifPanelInteractionVersion += 1;
 
     // Al abrir: reiniciamos freeze para aplicar el orden correcto en este panel
     __frozenOrderIds = null;

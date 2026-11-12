@@ -1198,6 +1198,83 @@
             </div>
           </div>
 
+          <!-- COLABORADORES: oculto hasta comprobar permisos -->
+          <section
+            id="listCollaborationPanel"
+            class="list-collaboration-panel"
+            aria-labelledby="listCollaborationTitle"
+            hidden
+          >
+            <header>
+              <h3 id="listCollaborationTitle"
+                  data-i18n="lists_collab_title">Colaboradores</h3>
+              <p data-i18n="lists_collab_subtitle">
+                Comparte esta lista con otras personas.
+              </p>
+            </header>
+
+            <div id="listCollaborationOwner" hidden>
+              <label id="listMemberUsernameLabel"
+                     for="listMemberUsername"
+                     data-i18n="lists_collab_username_label">
+                Nombre de usuario
+              </label>
+              <div class="list-collaboration-invite">
+                <div class="list-collaboration-search">
+                  <input
+                    id="listMemberUsername"
+                    type="text"
+                    maxlength="21"
+                    autocomplete="off"
+                    placeholder="@usuario"
+                    data-i18n-placeholder="lists_collab_username_placeholder"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-haspopup="listbox"
+                    aria-controls="listMemberSuggestions"
+                    aria-expanded="false"
+                  />
+                  <ul
+                    id="listMemberSuggestions"
+                    class="list-collaboration-suggestions"
+                    role="listbox"
+                    aria-labelledby="listMemberUsernameLabel"
+                    hidden
+                  ></ul>
+                </div>
+                <button
+                  type="button"
+                  class="btn-primary"
+                  id="btnInviteListMember"
+                  data-i18n="lists_collab_invite"
+                >Invitar</button>
+              </div>
+            </div>
+
+            <div>
+              <h4 data-i18n="lists_collab_members_title">
+                Participantes
+              </h4>
+              <ul id="listMembersList"
+                  class="list-collaboration-members"></ul>
+            </div>
+
+            <button
+              type="button"
+              class="btn-secondary"
+              id="btnLeaveCollaborativeList"
+              data-i18n="lists_collab_leave"
+              hidden
+            >Abandonar lista</button>
+
+            <p
+              id="listCollaborationFeedback"
+              class="list-collaboration-feedback"
+              role="status"
+              aria-live="polite"
+            ></p>
+          </section>
+
           <section
             id="listDetailPolls"
             class="list-detail-polls"
