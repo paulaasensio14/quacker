@@ -12189,6 +12189,33 @@ body.dark-theme :is(.list-poll-option-label, .list-poll-modal-option):focus-with
   outline-offset: 2px;
 }
 
+/* QK-184: foco visible en modo claro */
+
+body:not(.dark-theme) #listPollModal .modal-field input:not([type="checkbox"]):focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+body:not(.dark-theme) #listPollModal #lpm_multiple:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+body:not(.dark-theme) #listPollModal .list-poll-modal-option:focus-within {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+body:not(.dark-theme) #listPollModal .modal-actions button:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+body:not(.dark-theme) #listPollModal .modal-close:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
 /* LIST DETAIL: COLLABORATORS */
 .list-collaboration-panel {
   display: grid;
