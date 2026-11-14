@@ -11970,6 +11970,9 @@ body.dark-theme .profile-privacy-row input[type="checkbox"]:checked {
 .list-poll-options {
   display: grid;
   gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .list-poll-option-label {
@@ -12131,6 +12134,60 @@ body.dark-theme .profile-privacy-row input[type="checkbox"]:checked {
   }
 }
 
+
+
+/* QK-184: contraste de votaciones */
+#listPollModal .modal-field label[for="lpm_multiple"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#listPollModal #lpm_multiple {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  accent-color: var(--bg-yellow);
+}
+
+body.dark-theme #listPollModal .modal-field input:not([type="checkbox"]) {
+  background: #081523;
+  color: var(--text-main);
+  border-color: var(--border-soft);
+  color-scheme: dark;
+}
+
+body.dark-theme #listPollModal .modal-field input:not([type="checkbox"])::placeholder {
+  color: #cbd5e1;
+  opacity: 1;
+}
+
+body.dark-theme #listPollModal .modal-field input:not([type="checkbox"]):focus-visible {
+  outline: 3px solid var(--bg-yellow);
+  outline-offset: 2px;
+}
+
+body.dark-theme #listPollModal #lpm_multiple {
+  background: transparent;
+  color-scheme: dark;
+}
+
+body.dark-theme #listPollModal .modal-close {
+  background: #f9fafb;
+  color: #111827;
+}
+
+body.dark-theme :is(.list-poll-option-label, .list-poll-modal-option):has(input:checked) {
+  background: #18344b;
+  color: var(--text-main);
+  border-color: var(--bg-yellow);
+}
+
+body.dark-theme :is(.list-poll-option-label, .list-poll-modal-option):focus-within {
+  outline: 3px solid var(--bg-yellow);
+  outline-offset: 2px;
+}
 
 /* LIST DETAIL: COLLABORATORS */
 .list-collaboration-panel {
