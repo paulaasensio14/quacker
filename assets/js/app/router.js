@@ -196,6 +196,34 @@ const Router = (() => {
     views[id].classList.add("is-active");
     currentView = id;
 
+    // Sincronizar el menu tambien cuando la navegacion
+    // procede de una accion automatica.
+    // Las vistas secundarias mantienen su seccion principal.
+    const navView =
+      id === "detail" ? "explore" :
+      id === "community-profile" ? "community" :
+      id === "opinions" ? "profile" :
+      id;
+
+    const navItems = Array.from(
+      document.querySelectorAll(".nav-item-btn[data-view]")
+    );
+
+    // No deseleccionar el menu si la vista no tiene
+    // un boton correspondiente.
+    if (
+      navItems.some(
+        (button) => button.dataset.view === navView
+      )
+    ) {
+      navItems.forEach((button) => {
+        button.classList.toggle(
+          "is-active",
+          button.dataset.view === navView
+        );
+      });
+    }
+
     try {
       const persistedView =
         id === "detail"

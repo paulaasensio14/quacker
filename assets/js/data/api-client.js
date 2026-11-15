@@ -3399,6 +3399,100 @@ if (externalSignal?.aborted) {
   }
 
 
+
+  // Generar un enlace para una lista colaborativa.
+  async function createListLinkInvite(listId) {
+    const safeListId =
+      _normalizeDataId(listId);
+
+    if (!safeListId) {
+      throw _makeApiError(
+        "list_not_found",
+        404
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    return _httpJson(
+      "POST",
+      `/lists/${encodeURIComponent(safeListId)}/link-invite`
+    );
+  }
+
+
+  // Revocar el enlace vigente de una lista.
+  async function revokeListLinkInvite(listId) {
+    const safeListId =
+      _normalizeDataId(listId);
+
+    if (!safeListId) {
+      throw _makeApiError(
+        "list_not_found",
+        404
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    return _httpJson(
+      "DELETE",
+      `/lists/${encodeURIComponent(safeListId)}/link-invite`
+    );
+  }
+
+
+  // Aceptar expresamente un enlace recibido.
+  async function acceptListLinkInvite(token) {
+    const safeToken =
+      String(token || "").trim();
+
+    if (!safeToken) {
+      throw _makeApiError(
+        "missing_token",
+        400
+      );
+    }
+
+    if (!_isHttp()) {
+      throw _makeApiError(
+        "unsupported_transport",
+        501
+      );
+    }
+
+    const result = await _httpJson(
+      "POST",
+      "/user/list-invites/link/accept",
+      {
+        token: safeToken
+      }
+    );
+
+    _invalidateListsCache();
+
+    _emitDataChanged({
+      kind: "lists",
+      action: "accept_link_invite",
+      listId: _normalizeDataId(
+        result?.list?.id
+      )
+    });
+
+    return result;
+  }
+
+
   async function inviteListMember(listId, username) {
     const safeListId = _normalizeDataId(listId);
     const safeUsername = String(username || "")
@@ -9200,6 +9294,9 @@ if (externalSignal?.aborted) {
     acceptListInvite,
     rejectListInvite,
     inviteListMember,
+    createListLinkInvite,
+    revokeListLinkInvite,
+    acceptListLinkInvite,
     removeListMember,
     leaveCollaborativeList,
     acceptFollowRequest,

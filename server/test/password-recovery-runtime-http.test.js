@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { once } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -88,6 +87,64 @@ async function startServer(port, directory, mailboxEnv) {
   throw new Error(
     `Servidor temporal no disponible: ${errors}`
   );
+}
+
+function waitForProcessExit(child, timeoutMs) {
+  return new Promise((resolve) => {
+    if (
+      child.exitCode !== null ||
+      child.signalCode !== null
+    ) {
+      resolve(true);
+      return;
+    }
+
+    const onExit = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+
+    const timer = setTimeout(() => {
+      child.removeListener("exit", onExit);
+      resolve(false);
+    }, timeoutMs);
+
+    child.once("exit", onExit);
+  });
+}
+
+async function stopTemporaryServer(child) {
+  if (
+    !child ||
+    child.exitCode !== null ||
+    child.signalCode !== null
+  ) {
+    return;
+  }
+
+  const gracefulExit = waitForProcessExit(
+    child,
+    1500
+  );
+
+  child.kill("SIGTERM");
+
+  if (await gracefulExit) {
+    return;
+  }
+
+  const forcedExit = waitForProcessExit(
+    child,
+    1500
+  );
+
+  child.kill("SIGKILL");
+
+  if (!(await forcedExit)) {
+    throw new Error(
+      "El servidor HTTP temporal no finalizó tras SIGKILL."
+    );
+  }
 }
 
 test(
@@ -359,20 +416,20 @@ test(
       );
 
     } finally {
-      if (child && child.exitCode === null) {
-        const exited = once(child, "exit");
-        child.kill("SIGTERM");
-        await exited;
+      try {
+        await stopTemporaryServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(directory, {
+            recursive: true,
+            force: true
+          });
+        }
       }
-
-      if (mailbox) {
-        await mailbox.close();
-      }
-
-      fs.rmSync(directory, {
-        recursive: true,
-        force: true
-      });
     }
   }
 );

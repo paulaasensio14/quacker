@@ -10375,3 +10375,463 @@ test(
     }
   }
 );
+
+
+test(
+  "QK-184-SEC-06 HTTP: invitaciones respetan privacidad social",
+  { timeout: 120000 },
+  async (t) => {
+    const directory = createTemporaryDirectory();
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath =
+      path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    let child = null;
+    let mailbox = null;
+
+    try {
+      mailbox = await createVerificationMailbox(directory);
+
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port,
+        mailboxEnv: mailbox.env
+      });
+
+      const owner = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "privacy-list-owner@example.test",
+        password: "runtime-pass-123",
+        name: "Privacy List Owner",
+        language: "es"
+      });
+
+      const invitee = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "privacy-list-invitee@example.test",
+        password: "runtime-pass-123",
+        name: "Privacy List Invitee",
+        language: "es"
+      });
+
+      const ownerId = owner.user?.id;
+      const targetId = invitee.user?.id;
+
+      const username = String(
+        invitee.user?.handle || ""
+      ).replace(/^@/, "");
+
+      assert.ok(owner.cookie);
+      assert.ok(invitee.cookie);
+      assert.ok(ownerId);
+      assert.ok(targetId);
+      assert.ok(username);
+
+      const scenarios = [
+        {
+          name: "publico sin relacion",
+          visibility: "public",
+          allowed: true
+        },
+        {
+          name: "followers sin seguimiento",
+          visibility: "followers",
+          allowed: false
+        },
+        {
+          name: "followers solicitud pendiente",
+          visibility: "followers",
+          pending: true,
+          allowed: false
+        },
+        {
+          name: "followers seguimiento aceptado",
+          visibility: "followers",
+          follows: true,
+          allowed: true
+        },
+        {
+          name: "friends seguimiento unilateral",
+          visibility: "friends",
+          follows: true,
+          allowed: false
+        },
+        {
+          name: "friends seguimiento mutuo",
+          visibility: "friends",
+          follows: true,
+          followsBack: true,
+          allowed: true
+        },
+        {
+          name: "hidden incluso entre amigos",
+          visibility: "hidden",
+          follows: true,
+          followsBack: true,
+          allowed: false
+        },
+        {
+          name: "publico con bloqueo",
+          visibility: "public",
+          blocked: true,
+          allowed: false
+        }
+      ];
+
+      for (const scenario of scenarios) {
+        await t.test(
+          `QK-184-SEC-06 HTTP: ${scenario.name}`,
+          async () => {
+            const created = await requestJson(
+              `${baseUrl}/api/lists`,
+              {
+                method: "POST",
+                cookie: owner.cookie,
+                body: {
+                  name: `QA ${scenario.name}`,
+                  description: "",
+                  visibility: "collab"
+                }
+              }
+            );
+
+            assert.equal(created.statusCode, 201);
+
+            const listId = created.json?.id;
+            assert.ok(listId);
+
+            // Solo se modifica la base TEMPORAL de test.
+            const db = JSON.parse(
+              fs.readFileSync(dbPath, "utf8")
+            );
+
+            const ownerBucket = db.users[ownerId];
+            const targetBucket = db.users[targetId];
+
+            assert.ok(ownerBucket);
+            assert.ok(targetBucket);
+
+            ownerBucket.following =
+              scenario.follows ? [targetId] : [];
+
+            targetBucket.following =
+              scenario.followsBack ? [ownerId] : [];
+
+            targetBucket.followRequests =
+              scenario.pending ? [ownerId] : [];
+
+            ownerBucket.blockedUserIds =
+              scenario.blocked ? [targetId] : [];
+
+            targetBucket.blockedUserIds = [];
+
+            targetBucket.privacy = {
+              ...(targetBucket.privacy || {}),
+              profileVisibility: scenario.visibility,
+              profile: scenario.visibility === "public"
+            };
+
+            fs.writeFileSync(
+              dbPath,
+              JSON.stringify(db, null, 2),
+              "utf8"
+            );
+
+            const response = await requestJson(
+              `${baseUrl}/api/lists/${encodeURIComponent(listId)}/invites/${encodeURIComponent(username)}`,
+              {
+                method: "POST",
+                cookie: owner.cookie
+              }
+            );
+
+            const expectedStatus =
+              scenario.allowed ? 201 : 404;
+
+            assert.equal(
+              response.statusCode,
+              expectedStatus,
+              `POLITICA_HTTP_DENEGACION: ${scenario.name}`
+            );
+
+            const persisted = JSON.parse(
+              fs.readFileSync(dbPath, "utf8")
+            );
+
+            const list =
+              persisted.users[ownerId].lists.find(
+                candidate => candidate.id === listId
+              );
+
+            assert.ok(list);
+
+            assert.deepEqual(
+              list.invitedUserIds,
+              scenario.allowed ? [targetId] : [],
+              `POLITICA_HTTP_PERSISTENCIA: ${scenario.name}`
+            );
+          }
+        );
+      }
+    } finally {
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
+        }
+      }
+    }
+  }
+);
+
+
+test(
+  "QK-184-SEC-06 EXPIRY HTTP: enlaces respetan caducidad",
+  { timeout: 120000 },
+  async (t) => {
+    const directory = createTemporaryDirectory();
+
+    const dbPath = path.join(directory, "db.json");
+    const sessionStorePath =
+      path.join(directory, "sessions");
+
+    fs.writeFileSync(
+      dbPath,
+      JSON.stringify({ users: {} }, null, 2),
+      "utf8"
+    );
+
+    const port = await getAvailablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    let child = null;
+    let mailbox = null;
+
+    try {
+      mailbox = await createVerificationMailbox(directory);
+
+      child = await startTestServer({
+        dbPath,
+        sessionStorePath,
+        port,
+        mailboxEnv: mailbox.env
+      });
+
+      const owner = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "expiry-owner@example.test",
+        password: "runtime-pass-123",
+        name: "Expiry Owner",
+        language: "es"
+      });
+
+      const invitee = await registerVerifiedUser({
+        baseUrl,
+        mailbox,
+        email: "expiry-invitee@example.test",
+        password: "runtime-pass-123",
+        name: "Expiry Invitee",
+        language: "es"
+      });
+
+      const ownerId = owner.user?.id;
+      const inviteeId = invitee.user?.id;
+
+      assert.ok(ownerId);
+      assert.ok(inviteeId);
+      assert.ok(owner.cookie);
+      assert.ok(invitee.cookie);
+
+      const scenarios = [
+        {
+          name: "vigente seis dias",
+          offsetMs: -6 * DAY_MS,
+          expected: 200
+        },
+        {
+          name: "caducado ocho dias",
+          offsetMs: -8 * DAY_MS,
+          expected: 404
+        },
+        {
+          name: "fecha futura",
+          offsetMs: DAY_MS,
+          expected: 404
+        },
+        {
+          name: "fecha ausente",
+          removeDate: true,
+          expected: 404
+        }
+      ];
+
+      for (const scenario of scenarios) {
+        await t.test(
+          `QK-184-SEC-06 EXPIRY HTTP: ${scenario.name}`,
+          async () => {
+            const created = await requestJson(
+              `${baseUrl}/api/lists`,
+              {
+                method: "POST",
+                cookie: owner.cookie,
+                body: {
+                  name: `Enlace ${scenario.name}`,
+                  description: "",
+                  visibility: "collab"
+                }
+              }
+            );
+
+            assert.equal(created.statusCode, 201);
+
+            const listId = created.json?.id;
+            assert.ok(listId);
+
+            const generated = await requestJson(
+              `${baseUrl}/api/lists/${encodeURIComponent(listId)}/link-invite`,
+              {
+                method: "POST",
+                cookie: owner.cookie
+              }
+            );
+
+            assert.equal(generated.statusCode, 201);
+
+            const inviteUrl = String(
+              generated.json?.invite?.url || ""
+            );
+
+            assert.match(
+              inviteUrl,
+              /^https:\/\/quacker\.es\/#list-invite=[A-Za-z0-9_-]+$/
+            );
+
+            const token = decodeURIComponent(
+              inviteUrl.split("#list-invite=")[1] || ""
+            );
+
+            assert.ok(token);
+
+            // Se modifica exclusivamente la base
+            // de datos temporal de esta prueba.
+            const db = JSON.parse(
+              fs.readFileSync(dbPath, "utf8")
+            );
+
+            const challenge =
+              db.users[ownerId]
+                ?.collaborativeListLinkInvites
+                ?.[listId];
+
+            assert.ok(challenge);
+            assert.ok(challenge.tokenHash);
+
+            if (scenario.removeDate) {
+              delete challenge.issuedAt;
+            } else {
+              challenge.issuedAt =
+                Date.now() + scenario.offsetMs;
+            }
+
+            fs.writeFileSync(
+              dbPath,
+              JSON.stringify(db, null, 2),
+              "utf8"
+            );
+
+            const accepted = await requestJson(
+              `${baseUrl}/api/user/list-invites/link/accept`,
+              {
+                method: "POST",
+                cookie: invitee.cookie,
+                body: { token }
+              }
+            );
+
+            assert.equal(
+              accepted.statusCode,
+              scenario.expected,
+              `POLITICA_CADUCIDAD_HTTP: ${scenario.name}`
+            );
+
+            if (scenario.expected === 404) {
+              assert.equal(
+                accepted.json?.error,
+                "invite_not_found"
+              );
+            } else {
+              assert.equal(
+                accepted.json?.accepted,
+                true
+              );
+            }
+
+            const persisted = JSON.parse(
+              fs.readFileSync(dbPath, "utf8")
+            );
+
+            const list =
+              persisted.users[ownerId]
+                .lists.find(
+                  candidate => candidate.id === listId
+                );
+
+            assert.ok(list);
+
+            assert.deepEqual(
+              list.collaborators,
+              scenario.expected === 200
+                ? [inviteeId]
+                : [],
+              `POLITICA_CADUCIDAD_PERSISTENCIA: ${scenario.name}`
+            );
+          }
+        );
+      }
+    } finally {
+      try {
+        await stopTestServer(child);
+      } finally {
+        try {
+          if (mailbox) {
+            await mailbox.close();
+          }
+        } finally {
+          fs.rmSync(
+            directory,
+            {
+              recursive: true,
+              force: true
+            }
+          );
+        }
+      }
+    }
+  }
+);

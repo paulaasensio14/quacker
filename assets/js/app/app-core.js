@@ -86,6 +86,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 2) Iniciar módulos después
   try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }
   try { window.ListsModule?.init?.(); } catch (e) { console.error("ListsModule.init error", e); }
+  // Mostrar una invitacion pendiente solo despues
+  // de verificar la sesion autenticada.
+  try {
+    window.addEventListener("hashchange", () => {
+      try {
+        window.ListLinkInvitePrompt?.init?.();
+      } catch (error) {
+        console.error(
+          "ListLinkInvitePrompt.hashchange error",
+          error
+        );
+      }
+    });
+
+    window.ListLinkInvitePrompt?.init?.();
+  } catch (error) {
+    console.error(
+      "ListLinkInvitePrompt.init error",
+      error
+    );
+  }
   try { window.ProfileModule?.init?.(); } catch (e) { console.error("ProfileModule.init error", e); }
   try { window.DetailModule?.init?.(); } catch (e) { console.error("DetailModule.init error", e); }
   try { window.ExploreModule?.init?.(); } catch (e) { console.error("ExploreModule.init error", e); }
