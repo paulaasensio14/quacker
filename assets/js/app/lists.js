@@ -764,6 +764,305 @@ const ListsModule = (() => {
 
   let collaborationIdentityRequestVersion = 0;
 
+  // El token nunca se guarda en almacenamiento persistente.
+  let listLinkInviteRequestVersion = 0;
+  let listLinkInviteUrl = "";
+  let listLinkInviteBusy = false;
+
+  function _setListLinkInviteFeedback(
+    message = "",
+    isError = false
+  ) {
+    const element = _getEl("listLinkInviteFeedback");
+    if (!element) return;
+
+    element.textContent = message;
+    element.setAttribute(
+      "role",
+      isError ? "alert" : "status"
+    );
+  }
+
+  function _syncListLinkInviteUI() {
+    const result = _getEl("listLinkInviteResult");
+    const input = _getEl("listLinkInviteUrl");
+    const create = _getEl("btnCreateListLinkInvite");
+    const copy = _getEl("btnCopyListLinkInvite");
+    const revoke = _getEl("btnRevokeListLinkInvite");
+
+    if (result) {
+      result.hidden = !listLinkInviteUrl;
+    }
+
+    if (input) {
+      input.value = listLinkInviteUrl;
+    }
+
+    if (create) {
+      create.disabled = listLinkInviteBusy;
+      create.textContent = listLinkInviteBusy
+        ? t("lists_collab_loading")
+        : t("lists_collab_link_create");
+    }
+
+    if (copy) {
+      copy.disabled =
+        listLinkInviteBusy || !listLinkInviteUrl;
+    }
+
+    if (revoke) {
+      revoke.disabled =
+        listLinkInviteBusy || !listLinkInviteUrl;
+    }
+  }
+
+  function resetListLinkInviteUI() {
+    // Invalida cualquier respuesta asincrona pendiente.
+    listLinkInviteRequestVersion += 1;
+    listLinkInviteUrl = "";
+    listLinkInviteBusy = false;
+
+    _syncListLinkInviteUI();
+    _setListLinkInviteFeedback();
+  }
+
+  function _canManageListLinkInvite(listId) {
+    const list = _activeListForCollaboration();
+    const detail = _getEl("listDetail");
+    const panel = _getEl("listCollaborationPanel");
+    const ownerControls = _getEl("listCollaborationOwner");
+
+    return !!(
+      listId &&
+      currentUserId &&
+      _normalizeId(activeListId) === listId &&
+      list?.visibility === "collab" &&
+      _normalizeId(list?.ownerUserId) === currentUserId &&
+      detail &&
+      !detail.hidden &&
+      panel &&
+      !panel.hidden &&
+      ownerControls &&
+      !ownerControls.hidden
+    );
+  }
+
+  function _isCurrentListLinkInviteRequest(
+    listId,
+    version
+  ) {
+    return (
+      version === listLinkInviteRequestVersion &&
+      _canManageListLinkInvite(listId)
+    );
+  }
+
+  async function createActiveListLinkInvite() {
+    const listId = _normalizeId(activeListId);
+
+    if (
+      listLinkInviteBusy ||
+      !_canManageListLinkInvite(listId)
+    ) {
+      return;
+    }
+
+    const version = ++listLinkInviteRequestVersion;
+
+    listLinkInviteBusy = true;
+    _syncListLinkInviteUI();
+    _setListLinkInviteFeedback();
+
+    try {
+      const result =
+        await ApiClient.createListLinkInvite(listId);
+
+      if (
+        !_isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        return;
+      }
+
+      const url = String(
+        result?.invite?.url || ""
+      ).trim();
+
+      // Aceptar unicamente la URL emitida por Quacker.
+      if (
+        !/^https:\/\/quacker\.es\/#list-invite=[A-Za-z0-9_-]{43}$/.test(url)
+      ) {
+        throw new Error(
+          "invalid_link_invite_response"
+        );
+      }
+
+      listLinkInviteUrl = url;
+      _syncListLinkInviteUI();
+
+      _setListLinkInviteFeedback(
+        t("lists_collab_link_created")
+      );
+    } catch (error) {
+      if (
+        _isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        _setListLinkInviteFeedback(
+          t("lists_collab_link_error"),
+          true
+        );
+      }
+    } finally {
+      if (
+        _isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        listLinkInviteBusy = false;
+        _syncListLinkInviteUI();
+      }
+    }
+  }
+
+  async function copyActiveListLinkInvite() {
+    const listId = _normalizeId(activeListId);
+    const url = listLinkInviteUrl;
+
+    if (
+      listLinkInviteBusy ||
+      !url ||
+      !_canManageListLinkInvite(listId)
+    ) {
+      return;
+    }
+
+    const version = ++listLinkInviteRequestVersion;
+
+    listLinkInviteBusy = true;
+    _syncListLinkInviteUI();
+
+    try {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.clipboard?.writeText
+      ) {
+        throw new Error("clipboard_unavailable");
+      }
+
+      await navigator.clipboard.writeText(url);
+
+      if (
+        !_isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        return;
+      }
+
+      _setListLinkInviteFeedback(
+        t("lists_collab_link_copied")
+      );
+    } catch (error) {
+      if (
+        _isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        const input = _getEl("listLinkInviteUrl");
+
+        input?.focus();
+        input?.select();
+
+        _setListLinkInviteFeedback(
+          t("lists_collab_link_copy_error"),
+          true
+        );
+      }
+    } finally {
+      if (
+        _isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        listLinkInviteBusy = false;
+        _syncListLinkInviteUI();
+      }
+    }
+  }
+
+  async function revokeActiveListLinkInvite() {
+    const listId = _normalizeId(activeListId);
+
+    if (
+      listLinkInviteBusy ||
+      !listLinkInviteUrl ||
+      !_canManageListLinkInvite(listId)
+    ) {
+      return;
+    }
+
+    const version = ++listLinkInviteRequestVersion;
+
+    listLinkInviteBusy = true;
+    _syncListLinkInviteUI();
+    _setListLinkInviteFeedback();
+
+    try {
+      const result =
+        await ApiClient.revokeListLinkInvite(listId);
+
+      if (
+        !_isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        return;
+      }
+
+      if (result?.revoked !== true) {
+        throw new Error("link_revoke_not_confirmed");
+      }
+
+      resetListLinkInviteUI();
+
+      _setListLinkInviteFeedback(
+        t("lists_collab_link_revoked")
+      );
+    } catch (error) {
+      if (
+        _isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        _setListLinkInviteFeedback(
+          t("lists_collab_link_error"),
+          true
+        );
+      }
+    } finally {
+      if (
+        _isCurrentListLinkInviteRequest(
+          listId,
+          version
+        )
+      ) {
+        listLinkInviteBusy = false;
+        _syncListLinkInviteUI();
+      }
+    }
+  }
+
   function renderListCollaboration(list, identities = null) {
     const requestVersion = ++collaborationIdentityRequestVersion;
     const panel = _getEl("listCollaborationPanel");
@@ -786,6 +1085,10 @@ const ListsModule = (() => {
 
     const canAccess = list?.visibility === "collab" &&
       (isOwner || isMember);
+
+    if (!canAccess || !isOwner) {
+      resetListLinkInviteUI();
+    }
 
     panel.hidden = !canAccess;
 
@@ -1322,6 +1625,10 @@ const ListsModule = (() => {
     const normalizedListId = _normalizeId(listId);
     if (!normalizedListId) return;
 
+    if (_normalizeId(activeListId) !== normalizedListId) {
+      resetListLinkInviteUI();
+    }
+
     activeListId = normalizedListId;
 
     const list = allLists.find(l => _normalizeId(l.id) === activeListId);
@@ -1349,6 +1656,7 @@ const ListsModule = (() => {
   function closeListDetail() {
     closeListMemberSuggestions();
     collaborationIdentityRequestVersion += 1;
+    resetListLinkInviteUI();
     activeListId = null;
 
     const detail = _getEl("listDetail");
@@ -2928,6 +3236,27 @@ const ListsModule = (() => {
       });
     }
 
+
+    _getEl("btnCreateListLinkInvite")?.addEventListener(
+      "click",
+      () => {
+        createActiveListLinkInvite().catch(console.error);
+      }
+    );
+
+    _getEl("btnCopyListLinkInvite")?.addEventListener(
+      "click",
+      () => {
+        copyActiveListLinkInvite().catch(console.error);
+      }
+    );
+
+    _getEl("btnRevokeListLinkInvite")?.addEventListener(
+      "click",
+      () => {
+        revokeActiveListLinkInvite().catch(console.error);
+      }
+    );
 
     document.getElementById("btnInviteListMember")?.addEventListener(
       "click",

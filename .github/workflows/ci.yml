@@ -15,7 +15,7 @@ jobs:
   test:
     name: Tests y auditoría
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     defaults:
       run:
@@ -36,7 +36,7 @@ jobs:
         run: npm ci
 
       - name: Ejecutar tests
-        run: npm test
+        run: npm test -- --test-concurrency=1
 
       - name: Auditoría de seguridad
         run: npm audit

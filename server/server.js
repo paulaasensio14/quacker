@@ -150,8 +150,13 @@ import {
 
 import {
   createCollaborativeListInviteToken,
+  isCollaborativeListInviteExpired,
   verifyCollaborativeListInviteToken
 } from "./lib/collaborative-list-link-invites.js";
+
+import {
+  canInviteToCollaborativeList
+} from "./lib/list-invite-privacy-policy.js";
 
 import {
   castCollaborativeListPollVote,
@@ -6393,12 +6398,11 @@ app.post(
     }
 
     if (
-      areUsersBlocked(
-        ownerUserId,
-        ownerBucket.blockedUserIds,
-        target.userId,
-        target.bucket.blockedUserIds
-      )
+      !canInviteToCollaborativeList({
+        users: db.users,
+        inviterUserId: ownerUserId,
+        targetUserId: target.userId
+      })
     ) {
       return res.status(404).json({
         error: "not_found"
@@ -6510,6 +6514,14 @@ app.post(
             token,
             tokenHash:
               challenge?.tokenHash
+          })
+        ) {
+          continue;
+        }
+
+        if (
+          isCollaborativeListInviteExpired({
+            issuedAt: challenge?.issuedAt
           })
         ) {
           continue;

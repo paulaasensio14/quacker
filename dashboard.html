@@ -1249,6 +1249,80 @@
                   data-i18n="lists_collab_invite"
                 >Invitar</button>
               </div>
+
+              <section
+                id="listLinkInviteOwner"
+                class="list-link-invite"
+                aria-labelledby="listLinkInviteTitle"
+              >
+                <h4
+                  id="listLinkInviteTitle"
+                  data-i18n="lists_collab_link_title"
+                >Invitar mediante enlace</h4>
+
+                <p
+                  data-i18n="lists_collab_link_description"
+                >
+                  Comparte un enlace con personas de confianza,
+                  incluso si tienen un perfil oculto.
+                </p>
+
+                <p
+                  data-i18n="lists_collab_link_expiry"
+                >
+                  Caduca a los siete días.
+                </p>
+
+                <button
+                  type="button"
+                  class="btn-primary"
+                  id="btnCreateListLinkInvite"
+                  data-i18n="lists_collab_link_create"
+                >Generar enlace</button>
+
+                <div
+                  id="listLinkInviteResult"
+                  class="list-link-invite-result"
+                  hidden
+                >
+                  <label
+                    for="listLinkInviteUrl"
+                    data-i18n="lists_collab_link_url_label"
+                  >Enlace de invitación</label>
+
+                  <input
+                    id="listLinkInviteUrl"
+                    type="url"
+                    readonly
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+
+                  <div class="list-link-invite-actions">
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      id="btnCopyListLinkInvite"
+                      data-i18n="lists_collab_link_copy"
+                      disabled
+                    >Copiar enlace</button>
+
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      id="btnRevokeListLinkInvite"
+                      data-i18n="lists_collab_link_revoke"
+                      disabled
+                    >Revocar enlace</button>
+                  </div>
+                </div>
+
+                <p
+                  id="listLinkInviteFeedback"
+                  role="status"
+                  aria-live="polite"
+                ></p>
+              </section>
             </div>
 
             <div>
@@ -2853,12 +2927,77 @@
     </div>
   </div>
 
+  <!-- CONFIRMAR INVITACION POR ENLACE -->
+  <div
+    class="modal-overlay"
+    id="listLinkInviteAcceptModal"
+    aria-hidden="true"
+  >
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="listLinkInviteAcceptTitle"
+      aria-describedby="listLinkInviteAcceptDescription"
+    >
+      <div class="modal-header">
+        <h3
+          id="listLinkInviteAcceptTitle"
+          data-i18n="lists_collab_link_accept_title"
+        >Invitación a una lista</h3>
+
+        <button
+          type="button"
+          class="modal-close"
+          id="btnCloseListLinkInvite"
+          aria-label="Cerrar"
+          data-i18n-aria-label="common_close"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p
+          id="listLinkInviteAcceptDescription"
+          data-i18n="lists_collab_link_accept_description"
+        >
+          Has recibido una invitación para colaborar en una
+          lista de Quacker. Solo te unirás si la aceptas.
+        </p>
+
+        <p
+          id="listLinkInviteAcceptFeedback"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-secondary"
+          id="btnDeclineListLinkInvite"
+          data-i18n="lists_collab_link_accept_decline"
+        >Descartar invitación</button>
+
+        <button
+          type="button"
+          class="btn-primary"
+          id="btnAcceptListLinkInvite"
+          data-i18n="lists_collab_link_accept_confirm"
+        >Aceptar invitación</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
 
   <script src="assets/js/data/mock-data.js"></script>
   <script src="assets/js/data/monthly-challenges.js"></script>
   <script src="assets/js/data/api-client.js"></script>
+  <script src="assets/js/app/list-link-invite-entry.js"></script>
   <script src="assets/js/data/item-identity.js"></script>
 
   <script src="assets/js/app/dashboard-bootstrap.js"></script>
@@ -2880,6 +3019,7 @@
   <script src="assets/js/app/report-submission.js"></script>
   <script src="assets/js/app/community-report.js"></script>
   <script src="assets/js/app/community-profile.js"></script>
+  <script src="assets/js/app/list-link-invite-prompt.js"></script>
   <script src="assets/js/app/app-core.js"></script>
 
   <script src="assets/js/app/library.js"></script>

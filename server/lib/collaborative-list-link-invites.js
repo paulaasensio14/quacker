@@ -152,3 +152,54 @@ export function verifyCollaborativeListInviteToken({
     computedBuffer
   );
 }
+
+
+/**
+ * Duracion maxima de un enlace de invitacion:
+ * siete dias exactos.
+ */
+export const COLLABORATIVE_LIST_INVITE_TTL_MS =
+  7 * 24 * 60 * 60 * 1000;
+
+
+/**
+ * Comprueba la caducidad de una invitacion.
+ *
+ * Devuelve true cuando:
+ * - falta la fecha de creacion;
+ * - la fecha es invalida;
+ * - la fecha esta en el futuro;
+ * - han transcurrido siete dias.
+ *
+ * Es una funcion pura: no modifica datos,
+ * enlaces, usuarios ni sesiones.
+ */
+export function isCollaborativeListInviteExpired({
+  issuedAt,
+  now = Date.now()
+} = {}) {
+  if (
+    typeof issuedAt !== "number" ||
+    !Number.isSafeInteger(issuedAt) ||
+    issuedAt <= 0
+  ) {
+    return true;
+  }
+
+  if (
+    typeof now !== "number" ||
+    !Number.isSafeInteger(now) ||
+    now <= 0
+  ) {
+    return true;
+  }
+
+  if (issuedAt > now) {
+    return true;
+  }
+
+  return (
+    now - issuedAt >=
+    COLLABORATIVE_LIST_INVITE_TTL_MS
+  );
+}
