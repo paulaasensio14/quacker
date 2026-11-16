@@ -17,6 +17,7 @@ const ListsModule = (() => {
   let listsViewMode = "cards"; // "cards" | "list"
 
   let activeListId = null;
+  let activeDetailTab = "content";
   let __returnToAddToListItemId = null;
 
   // Filtros del detalle de lista
@@ -32,6 +33,63 @@ const ListsModule = (() => {
   function _setHidden(el, hidden) {
     if (!el) return;
     el.hidden = !!hidden;
+  }
+
+  // Navegacion visual por pestanas.
+  function activateListDetailTab(nextTab = "content") {
+    const tablist = _getEl("listDetailTabs");
+    const detail = _getEl("listDetail");
+    const list = _activeListForCollaboration();
+
+    const collaborative = !!(
+      list?.visibility === "collab" &&
+      detail &&
+      !detail.hidden
+    );
+
+    const names = {
+      content: "Content",
+      polls: "Polls",
+      people: "People"
+    };
+
+    const selected =
+      collaborative &&
+      Object.prototype.hasOwnProperty.call(names, nextTab)
+        ? nextTab
+        : "content";
+
+    const previous = activeDetailTab;
+    activeDetailTab = selected;
+
+    if (tablist) {
+      tablist.hidden = !collaborative;
+    }
+
+    for (const [key, suffix] of Object.entries(names)) {
+      const button = _getEl(`listDetailTab${suffix}`);
+      const pane = _getEl(`listDetailPane${suffix}`);
+      const active = key === selected;
+
+      if (button) {
+        button.setAttribute(
+          "aria-selected",
+          active ? "true" : "false"
+        );
+        button.tabIndex = active ? 0 : -1;
+        button.classList.toggle("is-active", active);
+      }
+
+      if (pane) {
+        pane.hidden = !active;
+      }
+    }
+
+    if (previous === "people" && selected !== "people") {
+      closeListMemberSuggestions();
+    }
+
+    return selected;
   }
 
   function _itemsCount(list) {
@@ -554,6 +612,7 @@ const ListsModule = (() => {
         } else {
           _renderActiveListDetailHeader(activeList);
           renderListCollaboration(activeList);
+          activateListDetailTab(activeDetailTab);
           await renderActiveListPolls();
           await renderActiveListItems();
         }
@@ -1102,32 +1161,8 @@ const ListsModule = (() => {
       return;
     }
 
-    function appendPerson(label, memberId = "", canRemove = false) {
-      const item = document.createElement("li");
-      const text = document.createElement("span");
-
-      text.textContent = label;
-      item.appendChild(text);
-
-      if (canRemove) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "btn-secondary";
-        button.dataset.action = "remove-list-member";
-        button.dataset.memberId = memberId;
-        button.textContent = t("lists_collab_remove");
-        button.setAttribute(
-          "aria-label",
-          `${t("lists_collab_remove")}: ${label}`
-        );
-        item.appendChild(button);
-      }
-
-      membersList.appendChild(item);
-    }
-
-    function shortId(value) {
-      const id = _normalizeId(value);
+    function resolveMemberIdentity(memberId) {
+      const id = _normalizeId(memberId);
 
       const people = [
         identities?.owner,
@@ -1148,27 +1183,135 @@ const ListsModule = (() => {
         .replace(/^@/, "")
         .toLowerCase();
 
+      // Nunca mostrar identificadores internos.
       if (!/^[a-z0-9_]{2,20}$/.test(username)) {
-        return t("lists_poll_loading");
+        return {
+          name: t("lists_poll_loading"),
+          handle: "",
+          loading: true
+        };
       }
 
-      const name = String(person.name || "").trim();
+      const displayName =
+        String(person?.name || "").trim();
 
-      return name
-        ? `${name} (@${username})`
-        : `@${username}`;
+      return {
+        name: displayName || `@${username}`,
+        handle: displayName ? `@${username}` : "",
+        loading: false
+      };
     }
 
-    appendPerson(
-      `${t("lists_collab_owner")} · ${shortId(ownerId)}`
-    );
+    function appendPerson(memberId, options = {}) {
+      const {
+        owner = false,
+        pending = false,
+        canRemove = false
+      } = options;
 
-    collaborators.forEach((memberId, index) => {
-      appendPerson(
-        `${t("lists_collab_title")} ${index + 1} · ${shortId(memberId)}`,
-        memberId,
-        isOwner
-      );
+      const person = resolveMemberIdentity(memberId);
+
+      const item = document.createElement("li");
+      item.className = "list-member-row";
+
+      const avatar = document.createElement("span");
+      avatar.className = owner
+        ? "list-member-avatar list-member-crown"
+        : "list-member-avatar";
+
+      if (owner) {
+        // SVG estatico y seguro: sin datos de usuario.
+        avatar.innerHTML = `
+          <svg viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false">
+            <path d="M2 8l4 4 6-7 6 7 4-4-2 11H4L2 8Z"/>
+            <path d="M4 19h16"/>
+          </svg>
+        `;
+        avatar.setAttribute("role", "img");
+        avatar.setAttribute(
+          "aria-label",
+          t("lists_collab_owner")
+        );
+      } else {
+        // Icono neutro, sin iniciales personales.
+        avatar.innerHTML = `
+          <svg viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false">
+            <circle cx="12" cy="8" r="5"/>
+            <path d="M20 21a8 8 0 0 0-16 0"/>
+          </svg>
+        `;
+        avatar.setAttribute("aria-hidden", "true");
+      }
+
+      const identity = document.createElement("span");
+      identity.className = "list-member-identity";
+
+      const name = document.createElement("strong");
+      name.className = "list-member-display-name";
+      name.textContent = person.name;
+
+      identity.appendChild(name);
+
+      if (person.handle) {
+        const handle = document.createElement("span");
+        handle.className = "list-member-handle";
+        handle.textContent = person.handle;
+        identity.appendChild(handle);
+      }
+
+      if (pending) {
+        const status = document.createElement("span");
+        status.className = "list-member-pending";
+        status.textContent = t("lists_collab_pending");
+        identity.appendChild(status);
+      }
+
+      item.appendChild(avatar);
+      item.appendChild(identity);
+
+      if (canRemove) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn-secondary list-member-remove";
+        button.dataset.action = "remove-list-member";
+        button.dataset.memberId = memberId;
+        button.textContent = t("lists_collab_remove");
+
+        const accessibleName = person.handle
+          ? `${person.name} ${person.handle}`
+          : person.name;
+
+        button.setAttribute(
+          "aria-label",
+          `${t("lists_collab_remove")}: ${accessibleName}`
+        );
+
+        item.appendChild(button);
+      }
+
+      membersList.appendChild(item);
+    }
+
+    appendPerson(ownerId, { owner: true });
+
+    collaborators.forEach(memberId => {
+      appendPerson(memberId, {
+        canRemove: isOwner
+      });
     });
 
     if (isOwner) {
@@ -1176,15 +1319,16 @@ const ListsModule = (() => {
         ? list.invitedUserIds
         : [];
 
-      pending.forEach((memberId) => {
-        appendPerson(
-          `${t("lists_collab_pending")} · ${shortId(memberId)}`
-        );
+      pending.forEach(memberId => {
+        appendPerson(memberId, { pending: true });
       });
     }
 
     if (collaborators.length === 0) {
-      appendPerson(t("lists_collab_members_empty"));
+      const empty = document.createElement("li");
+      empty.className = "list-member-empty";
+      empty.textContent = t("lists_collab_members_empty");
+      membersList.appendChild(empty);
     }
 
     if (
@@ -1625,7 +1769,11 @@ const ListsModule = (() => {
     const normalizedListId = _normalizeId(listId);
     if (!normalizedListId) return;
 
-    if (_normalizeId(activeListId) !== normalizedListId) {
+    const openingNewDetail =
+      _normalizeId(activeListId) !== normalizedListId ||
+      !!_getEl("listDetail")?.hidden;
+
+    if (openingNewDetail) {
       resetListLinkInviteUI();
     }
 
@@ -1644,6 +1792,13 @@ const ListsModule = (() => {
 
     _renderActiveListDetailHeader(list);
     renderListCollaboration(list);
+
+    if (openingNewDetail) {
+      activateListDetailTab("content");
+    } else {
+      activateListDetailTab(activeDetailTab);
+    }
+
     _syncListDetailFiltersUI();
 
     const showing2 = _getEl("listDetailShowing");
@@ -1658,6 +1813,7 @@ const ListsModule = (() => {
     collaborationIdentityRequestVersion += 1;
     resetListLinkInviteUI();
     activeListId = null;
+    activateListDetailTab("content");
 
     const detail = _getEl("listDetail");
     const grid = _getEl("listsGrid");
@@ -1895,6 +2051,7 @@ const ListsModule = (() => {
                 ${optionsMarkup}
               </ul>
 
+              <div class="list-poll-actions">
               ${
                 closed
                   ? ""
@@ -1909,6 +2066,15 @@ const ListsModule = (() => {
                     </button>
                   `
               }
+
+              <button
+                type="button"
+                class="btn-secondary list-poll-results-button"
+                data-action="show-poll-results"
+                data-poll-id="${pollId}"
+              >
+                ${t("lists_poll_show_results")}
+              </button>
 
               ${
                 canClosePoll
@@ -1925,14 +2091,7 @@ const ListsModule = (() => {
                   : ""
               }
 
-              <button
-                type="button"
-                class="btn-secondary list-poll-results-button"
-                data-action="show-poll-results"
-                data-poll-id="${pollId}"
-              >
-                ${t("lists_poll_show_results")}
-              </button>
+              </div>
 
               <div
                 class="list-poll-results"
@@ -3132,6 +3291,7 @@ const ListsModule = (() => {
         if (activeList) {
           _renderActiveListDetailHeader(activeList);
           renderListCollaboration(activeList);
+          activateListDetailTab(activeDetailTab);
           await renderActiveListPolls();
           await renderActiveListItems();
         }
@@ -3431,6 +3591,67 @@ const ListsModule = (() => {
         loadListPollResults(pollId)
           .catch(console.error);
       }
+    });
+
+    // Pestañas: clic, flechas, Inicio y Fin.
+    const listDetailTabs = _getEl("listDetailTabs");
+
+    listDetailTabs?.addEventListener("click", (event) => {
+      if (listDetailTabs.hidden) return;
+
+      const button = event.target?.closest?.(
+        '[role="tab"][data-list-detail-tab]'
+      );
+
+      if (!button || !listDetailTabs.contains(button)) {
+        return;
+      }
+
+      activateListDetailTab(button.dataset.listDetailTab);
+    });
+
+    listDetailTabs?.addEventListener("keydown", (event) => {
+      if (listDetailTabs.hidden) return;
+
+      if (![
+        "ArrowLeft",
+        "ArrowRight",
+        "Home",
+        "End"
+      ].includes(event.key)) return;
+
+      const buttons = Array.from(
+        listDetailTabs.querySelectorAll(
+          '[role="tab"][data-list-detail-tab]'
+        )
+      );
+
+      const current = buttons.indexOf(event.target);
+
+      if (current < 0 || !buttons.length) return;
+
+      event.preventDefault();
+
+      let next = current;
+
+      if (event.key === "Home") {
+        next = 0;
+      } else if (event.key === "End") {
+        next = buttons.length - 1;
+      } else if (event.key === "ArrowRight") {
+        next = (current + 1) % buttons.length;
+      } else if (event.key === "ArrowLeft") {
+        next = (current - 1 + buttons.length)
+          % buttons.length;
+      }
+
+      const destination = buttons[next];
+
+      activateListDetailTab(
+        destination.dataset.listDetailTab
+      );
+
+      destination.focus();
     });
 
     document.getElementById("btnBackToLists")?.addEventListener("click", () => {
