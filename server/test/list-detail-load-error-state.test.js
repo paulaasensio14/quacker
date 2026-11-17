@@ -111,9 +111,86 @@ test(
       /id="listDetailPollsList"/
     );
 
+    // Contenido, Votaciones y Personas tienen paneles
+    // independientes en este orden.
+    const contentStart = dashboard.indexOf(
+      'id="listDetailPaneContent"'
+    );
+
+    const pollsStart = dashboard.indexOf(
+      'id="listDetailPanePolls"'
+    );
+
+    const peopleStart = dashboard.indexOf(
+      'id="listDetailPanePeople"'
+    );
+
+    const modalStart = dashboard.indexOf(
+      'id="confirmDeleteListModal"',
+      peopleStart
+    );
+
+    assert.ok(
+      contentStart >= 0 &&
+      pollsStart > contentStart &&
+      peopleStart > pollsStart &&
+      modalStart > peopleStart,
+      "Orden esperado: Contenido, Votaciones, Personas"
+    );
+
+    const contentMarkup = dashboard.slice(
+      contentStart,
+      pollsStart
+    );
+
+    const pollsMarkup = dashboard.slice(
+      pollsStart,
+      peopleStart
+    );
+
+    const peopleMarkup = dashboard.slice(
+      peopleStart,
+      modalStart
+    );
+
     assert.match(
-      dashboard,
-      /id="listDetailPolls"[\s\S]*?id="listDetailPollsList"[\s\S]*?class="list-detail-items"/
+      contentMarkup,
+      /class="list-detail-items"/
+    );
+
+    assert.match(
+      pollsMarkup,
+      /id="listDetailPolls"/
+    );
+
+    assert.match(
+      pollsMarkup,
+      /id="listDetailPollsList"/
+    );
+
+    assert.match(
+      pollsMarkup,
+      /id="btnCreateListPoll"/
+    );
+
+    assert.match(
+      peopleMarkup,
+      /id="listCollaborationPanel"/
+    );
+
+    assert.match(
+      peopleMarkup,
+      /id="btnLeaveCollaborativeList"/
+    );
+
+    assert.doesNotMatch(
+      contentMarkup,
+      /id="listDetailPolls"/
+    );
+
+    assert.doesNotMatch(
+      pollsMarkup,
+      /id="listCollaborationPanel"/
     );
   }
 );
