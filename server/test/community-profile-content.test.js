@@ -75,7 +75,9 @@ class FakeElement {
     this[name] = String(value);
   }
 
-  focus() {}
+  focus() {
+    this.focused = true;
+  }
 
   click() {
     for (const callback of this.handlers.click || []) {
@@ -113,9 +115,28 @@ function createHarness() {
   const listeners = {};
   const requests = [];
 
+  const favoriteTabs = [
+    ["pelicula", "communityFavoriteTabPelicula"],
+    ["serie", "communityFavoriteTabSerie"],
+    ["game", "communityFavoriteTabGame"],
+    ["book", "communityFavoriteTabBook"]
+  ].map(([type, id]) => {
+    const tab = new FakeElement("button");
+    tab.id = id;
+    tab.dataset.communityFavoriteTab = type;
+    return tab;
+  });
+
   const document = {
     querySelector(selector) {
       return elements[selector] || null;
+    },
+
+    querySelectorAll(selector) {
+      return selector ===
+        "[data-community-favorite-tab]"
+          ? favoriteTabs
+          : [];
     },
 
     createElement(tag) {
@@ -186,6 +207,7 @@ function createHarness() {
     module,
     elements,
     requests,
+    favoriteTabs,
 
     async tick() {
       await new Promise(
@@ -511,6 +533,341 @@ test(
       hasUnsafeImage(favorites),
       false,
       "No se permiten URLs ejecutables en imágenes"
+    );
+  }
+);
+
+
+function favoritesForTabs() {
+  const entries = [
+    ["pelicula", "Película de prueba"],
+    ["serie", "Serie de prueba"],
+    ["game", "Juego de prueba"],
+    ["book", "Libro de prueba"]
+  ];
+
+  return Object.fromEntries(
+    entries.map(([type, title]) => [
+      type,
+      [{
+        itemSnapshot: {
+          title,
+          cover: ""
+        }
+      }]
+    ])
+  );
+}
+
+async function loadFavoritesHarness() {
+  const h = createHarness();
+  const data = publicData();
+
+  data.favorites = favoritesForTabs();
+
+  h.module.open("alba");
+  h.requests[0].resolve(data);
+
+  await h.tick();
+
+  return h;
+}
+
+function favoritesText(h) {
+  return allText(
+    h.elements[
+      "#communityProfileFavoritesContent"
+    ]
+  );
+}
+
+function pressFavoriteKey(tab, key) {
+  const handler = tab.handlers.keydown?.[0];
+
+  assert.equal(
+    typeof handler,
+    "function",
+    "Falta manejador de teclado"
+  );
+
+  let prevented = false;
+
+  handler({
+    currentTarget: tab,
+    key,
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  assert.equal(
+    prevented,
+    true,
+    `Debe gestionar ${key}`
+  );
+}
+
+test(
+  "QK-929-BEH: Películas aparece inicialmente",
+  async () => {
+    const h = await loadFavoritesHarness();
+
+    assert.match(
+      favoritesText(h),
+      /Película de prueba/
+    );
+
+    assert.doesNotMatch(
+      favoritesText(h),
+      /Serie de prueba/
+    );
+
+    assert.equal(
+      h.favoriteTabs[0]["aria-selected"],
+      "true"
+    );
+
+    assert.equal(
+      h.favoriteTabs[1]["aria-selected"],
+      "false"
+    );
+
+    assert.equal(
+      h.elements[
+        "#communityProfileFavoritesContent"
+      ]["aria-labelledby"],
+      "communityFavoriteTabPelicula"
+    );
+  }
+);
+
+test(
+  "QK-929-BEH: cambiar categoría cambia las portadas",
+  async () => {
+    const h = await loadFavoritesHarness();
+
+    const examples = [
+      ["serie", "Serie de prueba"],
+      ["game", "Juego de prueba"],
+      ["book", "Libro de prueba"],
+      ["pelicula", "Película de prueba"]
+    ];
+
+    for (const [type, title] of examples) {
+      const tab = h.favoriteTabs.find(
+        (candidate) =>
+          candidate.dataset.communityFavoriteTab ===
+          type
+      );
+
+      tab.click();
+
+      assert.ok(
+        favoritesText(h).includes(title),
+        `${type} debe mostrar sus favoritos`
+      );
+
+      assert.equal(
+        tab["aria-selected"],
+        "true"
+      );
+    }
+
+    assert.equal(
+      h.requests.length,
+      1,
+      "Cambiar pestaña no debe consultar otra vez la API"
+    );
+  }
+);
+
+test(
+  "QK-929-BEH: flechas navegan y conservan foco",
+  async () => {
+    const h = await loadFavoritesHarness();
+
+    pressFavoriteKey(
+      h.favoriteTabs[0],
+      "ArrowRight"
+    );
+
+    assert.match(
+      favoritesText(h),
+      /Serie de prueba/
+    );
+
+    assert.equal(
+      h.favoriteTabs[1].focused,
+      true
+    );
+
+    pressFavoriteKey(
+      h.favoriteTabs[1],
+      "ArrowRight"
+    );
+
+    assert.match(
+      favoritesText(h),
+      /Juego de prueba/
+    );
+
+    pressFavoriteKey(
+      h.favoriteTabs[2],
+      "ArrowRight"
+    );
+
+    assert.match(
+      favoritesText(h),
+      /Libro de prueba/
+    );
+
+    pressFavoriteKey(
+      h.favoriteTabs[3],
+      "ArrowRight"
+    );
+
+    assert.match(
+      favoritesText(h),
+      /Película de prueba/
+    );
+
+    pressFavoriteKey(
+      h.favoriteTabs[0],
+      "ArrowLeft"
+    );
+
+    assert.match(
+      favoritesText(h),
+      /Libro de prueba/
+    );
+  }
+);
+
+test(
+  "QK-929-BEH: Inicio y Fin seleccionan extremos",
+  async () => {
+    const h = await loadFavoritesHarness();
+
+    pressFavoriteKey(
+      h.favoriteTabs[0],
+      "End"
+    );
+
+    assert.match(
+      favoritesText(h),
+      /Libro de prueba/
+    );
+
+    pressFavoriteKey(
+      h.favoriteTabs[3],
+      "Home"
+    );
+
+    assert.match(
+      favoritesText(h),
+      /Película de prueba/
+    );
+  }
+);
+
+test(
+  "QK-929-BEH: otro perfil restablece categoría",
+  async () => {
+    const h = await loadFavoritesHarness();
+
+    h.favoriteTabs[1].click();
+
+    assert.match(
+      favoritesText(h),
+      /Serie de prueba/
+    );
+
+    h.module.open("carlos");
+
+    h.requests[1].resolve(
+      publicData("carlos")
+    );
+
+    await h.tick();
+
+    assert.match(
+      favoritesText(h),
+      /Película favorita/
+    );
+
+    assert.doesNotMatch(
+      favoritesText(h),
+      /Serie de prueba/
+    );
+
+    assert.equal(
+      h.favoriteTabs[0]["aria-selected"],
+      "true"
+    );
+  }
+);
+
+test(
+  "QK-929-BEH: perfil restringido no filtra favoritos",
+  async () => {
+    const h = await loadFavoritesHarness();
+
+    h.favoriteTabs[1].click();
+
+    h.module.open("carlos");
+
+    const restricted = publicData("carlos");
+
+    restricted.viewer.access = "restricted";
+    delete restricted.profile.bio;
+
+    h.requests[1].resolve(restricted);
+
+    await h.tick();
+
+    const section = h.elements[
+      "#communityProfileFavorites"
+    ];
+
+    const host = h.elements[
+      "#communityProfileFavoritesContent"
+    ];
+
+    assert.equal(section.hidden, true);
+    assert.equal(host.children.length, 0);
+
+    h.favoriteTabs[2].click();
+
+    assert.equal(host.children.length, 0);
+  }
+);
+
+test(
+  "QK-929-BEH: limita portadas a cuatro",
+  async () => {
+    const h = createHarness();
+    const data = publicData();
+
+    data.favorites.pelicula =
+      Array.from({ length: 6 }, (_, index) => ({
+        itemSnapshot: {
+          title: `Favorito ${index + 1}`,
+          cover: ""
+        }
+      }));
+
+    h.module.open("alba");
+    h.requests[0].resolve(data);
+
+    await h.tick();
+
+    const host = h.elements[
+      "#communityProfileFavoritesContent"
+    ];
+
+    assert.equal(
+      host.children[0].children.length,
+      4
     );
   }
 );

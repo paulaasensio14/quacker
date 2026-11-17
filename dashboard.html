@@ -1806,8 +1806,54 @@
               >Favoritos</h3>
 
               <div
+                class="community-profile-favorites-tabs"
+                role="tablist"
+                aria-labelledby="communityProfileFavoritesTitle"
+              >
+                <button type="button"
+                  id="communityFavoriteTabPelicula"
+                  class="community-profile-favorites-tab is-active"
+                  role="tab"
+                  data-community-favorite-tab="pelicula"
+                  data-i18n="profile_favorites_movies"
+                  aria-controls="communityProfileFavoritesContent"
+                  aria-selected="true"
+                  tabindex="0">Películas</button>
+                <button type="button"
+                  id="communityFavoriteTabSerie"
+                  class="community-profile-favorites-tab"
+                  role="tab"
+                  data-community-favorite-tab="serie"
+                  data-i18n="profile_favorites_series"
+                  aria-controls="communityProfileFavoritesContent"
+                  aria-selected="false"
+                  tabindex="-1">Series</button>
+                <button type="button"
+                  id="communityFavoriteTabGame"
+                  class="community-profile-favorites-tab"
+                  role="tab"
+                  data-community-favorite-tab="game"
+                  data-i18n="profile_favorites_games"
+                  aria-controls="communityProfileFavoritesContent"
+                  aria-selected="false"
+                  tabindex="-1">Juegos</button>
+                <button type="button"
+                  id="communityFavoriteTabBook"
+                  class="community-profile-favorites-tab"
+                  role="tab"
+                  data-community-favorite-tab="book"
+                  data-i18n="profile_favorites_books"
+                  aria-controls="communityProfileFavoritesContent"
+                  aria-selected="false"
+                  tabindex="-1">Libros</button>
+              </div>
+
+              <div
                 id="communityProfileFavoritesContent"
-                class="community-profile-content-grid"
+                class="community-profile-favorites-panel"
+                role="tabpanel"
+                aria-labelledby="communityFavoriteTabPelicula"
+                tabindex="0"
               ></div>
             </section>
 

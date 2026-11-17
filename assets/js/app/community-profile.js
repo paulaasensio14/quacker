@@ -18,6 +18,9 @@ const CommunityProfileModule = (() => {
   let currentViewerState = "";
   let currentViewerAccess = "";
 
+  let activeFavoriteType = "pelicula";
+  let publicFavoriteData = null;
+
   const $ = (selector) =>
     document.querySelector(selector);
 
@@ -105,6 +108,9 @@ const CommunityProfileModule = (() => {
     currentViewerState = "";
     currentViewerAccess = "";
 
+    activeFavoriteType = "pelicula";
+    publicFavoriteData = null;
+
     for (const name of [
       "Favorites", "Stats", "Lists",
       "Reviews", "Activity"
@@ -163,83 +169,205 @@ const CommunityProfileModule = (() => {
       : 0;
   }
 
-  function renderFavorites(favorites, host) {
-    let count = 0;
+  function getFavoriteTabs() {
+    return Array.from(
+      document.querySelectorAll?.(
+        "[data-community-favorite-tab]"
+      ) || []
+    );
+  }
 
-    for (const [type, key, fallback] of CONTENT_TYPES) {
-      const items = Array.isArray(favorites[type])
-        ? favorites[type]
-        : [];
+  function syncFavoriteTabs() {
+    const host =
+      $("#communityProfileFavoritesContent");
 
-      if (!items.length) continue;
+    for (const tab of getFavoriteTabs()) {
+      const active =
+        tab.dataset.communityFavoriteTab ===
+        activeFavoriteType;
 
-      const group = addNode(
-        host, "div", "community-profile-group"
+      tab.setAttribute(
+        "aria-selected",
+        String(active)
       );
 
-      addNode(
-        group, "h4", "",
-        t(key, fallback)
+      tab.setAttribute(
+        "tabindex",
+        active ? "0" : "-1"
       );
 
-      const grid = addNode(
-        group, "div", "community-profile-tiles"
+      tab.classList?.toggle?.(
+        "is-active",
+        active
       );
 
-      for (const item of items) {
-        const card = addNode(
-          grid, "article", "community-profile-tile"
+      if (active && host) {
+        host.setAttribute?.(
+          "aria-labelledby",
+          tab.id
         );
-
-        const snapshot =
-          item?.itemSnapshot &&
-          typeof item.itemSnapshot === "object"
-            ? item.itemSnapshot
-            : {};
-
-        const title = String(
-          snapshot.title || ""
-        ).trim();
-
-        const cover = safeCover(snapshot.cover);
-
-        if (cover) {
-          const image = addNode(
-            card, "img", "community-profile-cover"
-          );
-
-          image.src = cover;
-          image.alt = title
-            ? `${t("community_profile_cover", "Portada de")} ${title}`
-            : "";
-          image.loading = "lazy";
-
-          image.addEventListener(
-            "error",
-            () => { image.hidden = true; },
-            { once: true }
-          );
-        }
-
-        addNode(
-          card, "p", "",
-          title ||
-            t("community_profile_untitled", "Sin título")
-        );
-
-        count += 1;
       }
     }
+  }
 
-    if (!count) {
+  function renderFavorites(favorites, host) {
+    publicFavoriteData = favorites;
+    host.replaceChildren();
+
+    syncFavoriteTabs();
+
+    const items = Array.isArray(
+      favorites?.[activeFavoriteType]
+    )
+      ? favorites[activeFavoriteType].slice(0, 4)
+      : [];
+
+    if (!items.length) {
       addNode(
-        host, "p", "community-profile-empty",
+        host,
+        "p",
+        "community-profile-empty",
         t(
           "community_profile_empty_favorites",
           "Aún no hay favoritos."
         )
       );
+      return;
     }
+
+    const grid = addNode(
+      host,
+      "div",
+      "community-profile-favorites-tiles"
+    );
+
+    for (const item of items) {
+      const card = addNode(
+        grid,
+        "article",
+        "community-profile-favorite-card"
+      );
+
+      const snapshot =
+        item?.itemSnapshot &&
+        typeof item.itemSnapshot === "object"
+          ? item.itemSnapshot
+          : {};
+
+      const title = String(
+        snapshot.title || ""
+      ).trim();
+
+      const cover = safeCover(snapshot.cover);
+
+      const frame = addNode(
+        card,
+        "div",
+        "community-profile-favorite-cover-frame"
+      );
+
+      if (cover) {
+        const image = addNode(
+          frame,
+          "img",
+          "community-profile-favorite-cover"
+        );
+
+        image.src = cover;
+        image.alt = title
+          ? `${t(
+              "community_profile_cover",
+              "Portada de"
+            )} ${title}`
+          : "";
+
+        image.loading = "lazy";
+
+        image.addEventListener(
+          "error",
+          () => { image.hidden = true; },
+          { once: true }
+        );
+      }
+
+      addNode(
+        card,
+        "p",
+        "community-profile-favorite-title",
+        title ||
+          t(
+            "community_profile_untitled",
+            "Sin título"
+          )
+      );
+    }
+  }
+
+  function selectFavoriteType(type, focus = false) {
+    const supported = CONTENT_TYPES.some(
+      ([candidate]) => candidate === type
+    );
+
+    if (!supported || !publicFavoriteData) {
+      return;
+    }
+
+    const host =
+      $("#communityProfileFavoritesContent");
+
+    if (!host) return;
+
+    activeFavoriteType = type;
+
+    renderFavorites(publicFavoriteData, host);
+
+    if (focus) {
+      const active = getFavoriteTabs().find(
+        (tab) =>
+          tab.dataset.communityFavoriteTab ===
+          type
+      );
+
+      active?.focus?.();
+    }
+  }
+
+  function handleFavoriteTabKeydown(event) {
+    const tabs = getFavoriteTabs();
+
+    const index = tabs.indexOf(
+      event.currentTarget
+    );
+
+    if (index < 0) return;
+
+    let next = index;
+
+    switch (event.key) {
+      case "ArrowRight":
+        next = (index + 1) % tabs.length;
+        break;
+      case "ArrowLeft":
+        next =
+          (index - 1 + tabs.length) %
+          tabs.length;
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = tabs.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+
+    const type =
+      tabs[next]?.dataset.communityFavoriteTab;
+
+    selectFavoriteType(type, true);
   }
 
   function renderStats(stats, host) {
@@ -1204,6 +1332,19 @@ const CommunityProfileModule = (() => {
     window.CommunityReportUI?.init?.();
 
     backButton.addEventListener("click", back);
+
+    for (const tab of getFavoriteTabs()) {
+      tab.addEventListener("click", () => {
+        selectFavoriteType(
+          tab.dataset.communityFavoriteTab
+        );
+      });
+
+      tab.addEventListener(
+        "keydown",
+        handleFavoriteTabKeydown
+      );
+    }
 
     $("#communityProfileFollowAction")?.addEventListener(
       "click",
