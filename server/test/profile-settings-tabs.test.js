@@ -13,15 +13,14 @@ const tabs = read("../../assets/js/app/profile-tabs.js");
 const profile = read("../../assets/js/app/profile.js");
 const i18n = read("../../assets/js/app/i18n.js");
 
-test("Mi perfil tiene exactamente tres pestañas", () => {
+test("Mi perfil tiene exactamente dos pestañas", () => {
   const matches = [
     ...html.matchAll(/data-profile-tab="([^"]+)"/g)
   ].map(match => match[1]);
 
   assert.deepEqual(matches, [
     "perfil",
-    "privacidad",
-    "ajustes"
+    "privacidad"
   ]);
 });
 
@@ -29,7 +28,6 @@ test("las pestañas tienen traducciones ES/EN", () => {
   for (const key of [
     "profile_tabs_profile",
     "profile_privacy_title",
-    "profile_tabs_settings",
     "profile_tabs_navigation"
   ]) {
     assert.match(html, new RegExp(`data-i18n(?:-aria-label)?="${key}"`));
@@ -45,36 +43,38 @@ test("los paneles existentes se distribuyen entre las pestañas", () => {
     "profilePrivacyCard",
     "profileBlockedUsersCard",
     "profileFollowRequestsCard",
-    "profileRecommendationsCard",
     "profileFavoritesCard",
     "profileOpinionsCard"
   ]) {
     assert.match(
       html,
-      new RegExp(`id="${id}"[^>]*data-profile-panel="(perfil|privacidad|ajustes)"`)
+      new RegExp(`id="${id}"[^>]*data-profile-panel="(perfil|privacidad)"`)
     );
   }
 });
 
-test("el idioma y el botón de Ajustes pertenecen al formulario original", () => {
-  assert.match(
-    html,
-    /id="profileLanguage"[^>]*form="profileForm"/
+test("el formulario conserva el idioma oculto y el guardado original", () => {
+  const form = html.match(
+    /<form id="profileForm">([\s\S]*?)<\/form>/
   );
 
+  assert.ok(form);
+
   assert.match(
-    html,
-    /id="profileSettingsSaveBtn"[\s\S]*?form="profileForm"/
+    form[1],
+    /<input[^>]*type="hidden"[^>]*id="profileLanguage"[^>]*name="language"/
   );
 
   assert.match(html, /id="profileSaveBtn"/);
+  assert.doesNotMatch(html, /id="profileSettingsSaveBtn"/);
 });
 
-test("ambos botones comparten el estado de guardado", () => {
+test("el boton de perfil controla el estado de guardado", () => {
   assert.match(profile, /profileSavePending/);
-  assert.match(profile, /profileSettingsSaveBtn/);
+  assert.match(profile, /profileSaveBtn/);
   assert.match(profile, /updateSaveButtonState\(\)/);
   assert.match(profile, /if \(profileSavePending\) return/);
+  assert.doesNotMatch(profile, /profileSettingsSaveBtn/);
 });
 
 test("los errores de validación activan la pestaña Perfil", () => {
@@ -125,25 +125,24 @@ test("la vista pública del perfil no recibe las nuevas pestañas", () => {
 });
 
 
-test("el idioma guardado se sincroniza después de actualizar la cuenta", () => {
-  const updatePosition = profile.indexOf(
-    "const updated = await ApiClient.updateUser(payload);"
+test("guardar el perfil conserva el idioma de cuenta sin cambiar el idioma visual", () => {
+  assert.match(
+    profile,
+    /language:\s*data\.language/
   );
-
-  const languagePosition = profile.indexOf(
-    "const savedLanguage = updated?.language;"
-  );
-
-  const syncPosition = profile.indexOf(
-    "window.I18n?.setLang?.(savedLanguage);"
-  );
-
-  assert.ok(updatePosition >= 0);
-  assert.ok(languagePosition > updatePosition);
-  assert.ok(syncPosition > languagePosition);
 
   assert.match(
     profile,
-    /window\.I18n\?\.getLang\?\.\(\) !== savedLanguage/
+    /ApiClient\.updateUser\(payload\)/
+  );
+
+  assert.match(
+    profile,
+    /language:\s*updated\.language\s*\|\|\s*"es"/
+  );
+
+  assert.doesNotMatch(
+    profile,
+    /window\.I18n\?\.setLang\?\.\(savedLanguage\)/
   );
 });

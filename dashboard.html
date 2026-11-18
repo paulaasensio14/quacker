@@ -307,9 +307,6 @@
         <button class="profile-menu-item" data-profile-action="profile">
           <span data-i18n="nav_profile">Mi perfil</span>
         </button>
-        <button class="profile-menu-item" data-profile-action="settings">
-          <span data-i18n="profile_menu_settings">Ajustes</span>
-        </button>
 
         <button class="profile-menu-item" data-profile-action="whats-new" hidden>
           <span data-i18n="profile_menu_whats_new">Qué hay de nuevo</span>
@@ -1937,7 +1934,6 @@
         >
           <button type="button" data-profile-tab="perfil" aria-pressed="true" data-i18n="profile_tabs_profile">Perfil</button>
           <button type="button" data-profile-tab="privacidad" aria-pressed="false" data-i18n="profile_privacy_title">Privacidad</button>
-          <button type="button" data-profile-tab="ajustes" aria-pressed="false" data-i18n="profile_tabs_settings">Ajustes</button>
         </nav>
         <div class="profile-layout" data-active-profile-tab="perfil">
           <div class="profile-card" data-profile-panel="perfil">
@@ -2002,6 +1998,8 @@
                   placeholder="Cuenta algo sobre ti..."
                 ></textarea>
               </div>
+
+              <input type="hidden" id="profileLanguage" name="language" value="es">
 
               <div id="profileFormErrors" class="profile-form-errors is-initially-hidden" role="alert" aria-live="polite" tabindex="-1"></div>
 
@@ -2221,68 +2219,6 @@
             <div
               id="profileFollowRequestsList"
               class="profile-follow-requests-list"
-            ></div>
-          </div>
-
-          <div
-            class="profile-card profile-language-card"
-            id="profileLanguageCard"
-            data-profile-panel="ajustes"
-          >
-            <h3 class="profile-title" data-i18n="profile_language_label">
-              Idioma preferido
-            </h3>
-
-            <div class="profile-form-group">
-              <label for="profileLanguage" data-i18n="profile_language_label">
-                Idioma preferido
-              </label>
-              <select id="profileLanguage" name="language" form="profileForm">
-                <option value="es" data-i18n="profile_language_es">Español</option>
-                <option value="en" data-i18n="profile_language_en">English</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              class="btn-primary"
-              id="profileSettingsSaveBtn"
-              form="profileForm"
-              disabled
-              data-i18n="profile_save"
-            >
-              Guardar cambios
-            </button>
-          </div>
-
-          <div class="profile-card profile-recommendations-card" id="profileRecommendationsCard" data-profile-panel="ajustes">
-            <h3
-              class="profile-title"
-              data-i18n="profile_recommendations_title"
-            >
-              Recomendaciones
-            </h3>
-
-            <p
-              class="profile-meta"
-              data-i18n="profile_recommendations_description"
-            >
-              Contenido que tus amigos han recomendado para ti.
-            </p>
-
-            <div
-              id="profileRecommendationsStatus"
-              class="profile-meta"
-              role="status"
-              aria-live="polite"
-              data-i18n="profile_recommendations_loading"
-            >
-              Cargando recomendaciones...
-            </div>
-
-            <div
-              id="profileRecommendationsList"
-              class="profile-recommendations-list"
             ></div>
           </div>
 

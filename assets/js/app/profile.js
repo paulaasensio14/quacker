@@ -919,10 +919,7 @@ const ProfileModule = (() => {
   let profileSavePending = false;
 
   function updateSaveButtonState() {
-    const buttons = [
-      $("#profileSaveBtn"),
-      $("#profileSettingsSaveBtn")
-    ].filter(Boolean);
+    const buttons = [$("#profileSaveBtn")].filter(Boolean);
 
     const current = getFormData();
     current.handle = normalizeHandle(current.handle);
@@ -2058,6 +2055,8 @@ const ProfileModule = (() => {
   }
 
   async function loadRecommendations() {
+    if (!$("#profileRecommendationsList")) return;
+
     const status =
       $("#profileRecommendationsStatus");
 
@@ -2280,10 +2279,7 @@ const ProfileModule = (() => {
       if (profileSavePending) return;
 
       profileSavePending = true;
-      const saveButtons = [
-        $("#profileSaveBtn"),
-        $("#profileSettingsSaveBtn")
-      ].filter(Boolean);
+      const saveButtons = [$("#profileSaveBtn")].filter(Boolean);
 
       for (const button of saveButtons) {
         button.disabled = true;
@@ -2302,15 +2298,6 @@ const ProfileModule = (() => {
 
         const updated = await ApiClient.updateUser(payload);
         updateHeaderUI(updated);
-
-        // Aplicar el idioma solo después de guardar correctamente.
-        const savedLanguage = updated?.language;
-        if (
-          (savedLanguage === "es" || savedLanguage === "en") &&
-          window.I18n?.getLang?.() !== savedLanguage
-        ) {
-          window.I18n?.setLang?.(savedLanguage);
-        }
 
         // actualizamos “estado inicial” tras guardar
         pendingAvatarDataUrl = null;

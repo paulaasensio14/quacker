@@ -4,7 +4,7 @@
   const layout = view?.querySelector(".profile-layout");
   const buttons = [...(view?.querySelectorAll("[data-profile-tab]") || [])];
 
-  if (!layout || buttons.length !== 3) return;
+  if (!layout || buttons.length !== 2) return;
 
   function activate(tab) {
     layout.dataset.activeProfileTab = tab;
