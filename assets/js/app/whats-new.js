@@ -41,8 +41,8 @@
 
     if (version) {
       version.textContent =
-        state.currentVersion
-          ? `v${state.currentVersion}`
+        state.release?.version
+          ? `v${state.release.version}`
           : "";
     }
 

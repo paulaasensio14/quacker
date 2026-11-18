@@ -236,6 +236,7 @@ import {
 } from "./lib/security-headers.js";
 
 import {
+  getWhatsNewDisplayState,
   getWhatsNewReleaseContent,
   normalizeWhatsNewUiState,
   resolveWhatsNewRelease
@@ -5598,25 +5599,15 @@ app.get("/api/user/ui/whats-new", _requireAuth, (req, res) => {
     req.session.userId
   );
 
-  const release =
-    getWhatsNewReleaseContent(
-      APP_VERSION,
-      bucket.profile?.language
-    );
-
   const state =
-    resolveWhatsNewRelease({
+    getWhatsNewDisplayState({
       currentVersion: APP_VERSION,
       lastSeenVersion:
         bucket.ui.whatsNew.lastSeenVersion,
-      availableVersions:
-        release ? [APP_VERSION] : []
+      language: bucket.profile?.language
     });
 
-  res.json({
-    ...state,
-    release
-  });
+  res.json(state);
 });
 
 app.patch("/api/user/ui/whats-new", _requireAuth, (req, res) => {
