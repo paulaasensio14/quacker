@@ -13764,8 +13764,7 @@ body.dark-theme .community-profile-blocked {
 }
 
 #view-profile .profile-layout[data-active-profile-tab="perfil"] > [data-profile-panel="perfil"]:not([hidden]),
-#view-profile .profile-layout[data-active-profile-tab="privacidad"] > [data-profile-panel="privacidad"]:not([hidden]),
-#view-profile .profile-layout[data-active-profile-tab="ajustes"] > [data-profile-panel="ajustes"]:not([hidden]) {
+#view-profile .profile-layout[data-active-profile-tab="privacidad"] > [data-profile-panel="privacidad"]:not([hidden]) {
   display: block !important;
 }
 

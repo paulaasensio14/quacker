@@ -362,12 +362,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           break;
         }
 
-        case "settings": {
-          const profileBtn = document.querySelector('.nav-item-btn[data-view="profile"]');
-          if (profileBtn) profileBtn.click();
-          break;
-        }
-
         case "whats-new": {
           window.WhatsNewModule?.open?.();
           break;

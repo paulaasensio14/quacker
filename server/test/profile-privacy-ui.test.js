@@ -173,21 +173,17 @@ test("Mi perfil incluye una bandeja de solicitudes de seguimiento", () => {
 });
 
 
-test("Mi perfil incluye una bandeja de recomendaciones", () => {
-  assert.match(
-    dashboardSource,
-    /id=["']profileRecommendationsCard["']/
-  );
-
-  assert.match(
-    dashboardSource,
-    /id=["']profileRecommendationsStatus["']/
-  );
-
-  assert.match(
-    dashboardSource,
-    /id=["']profileRecommendationsList["']/
-  );
+test("las recomendaciones no aparecen en Mi perfil", () => {
+  for (const id of [
+    "profileRecommendationsCard",
+    "profileRecommendationsStatus",
+    "profileRecommendationsList"
+  ]) {
+    assert.doesNotMatch(
+      dashboardSource,
+      new RegExp(`id=["']${id}["']`)
+    );
+  }
 });
 
 test("el módulo de perfil carga y guarda la privacidad con su API dedicada", () => {
@@ -389,7 +385,7 @@ test("la bandeja de solicitudes tiene estilos propios y responsive", () => {
   );
 });
 
-test("la bandeja de recomendaciones está traducida en ES y EN", () => {
+test("las traducciones de recomendaciones siguen disponibles", () => {
   const keys = [
     "profile_recommendations_title",
     "profile_recommendations_description",
@@ -411,23 +407,13 @@ test("la bandeja de recomendaciones está traducida en ES y EN", () => {
     assert.equal(
       matches.length,
       2,
-      `${key} debe existir en ES y EN`
+      `${key} debe conservarse en ES y EN`
     );
   }
 
-  assert.match(
+  assert.doesNotMatch(
     dashboardSource,
-    /data-i18n=["']profile_recommendations_title["']/
-  );
-
-  assert.match(
-    dashboardSource,
-    /data-i18n=["']profile_recommendations_description["']/
-  );
-
-  assert.match(
-    dashboardSource,
-    /data-i18n=["']profile_recommendations_loading["']/
+    /data-i18n=["']profile_recommendations_(title|description|loading)["']/
   );
 });
 
