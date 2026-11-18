@@ -3293,10 +3293,6 @@ body.dark-theme #view-home .home-backlog {
   background: var(--bg-yellow);
 }
 
-#view-lists .pill-filter[data-filter="public"],
-#view-lists .pill-filter[data-filter="collab"] {
-  display: none;
-}
 
 .view-toggle {
   display: inline-flex;
