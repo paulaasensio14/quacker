@@ -164,31 +164,21 @@ test(
 );
 
 test(
-  "Qué hay de nuevo controla también el acceso de Mi perfil",
+  "Qué hay de nuevo conserva el acceso manual del desplegable",
   () => {
     assert.match(
       moduleSource,
-      /document\.getElementById\(\s*["']profileWhatsNewCard["']\s*\)/
+      /menuItem\.hidden\s*=\s*!available/
+    );
+
+    assert.doesNotMatch(
+      moduleSource,
+      /profileWhatsNewCard|profileWhatsNewBtn|profileCard|profileButton/
     );
 
     assert.match(
-      moduleSource,
-      /document\.getElementById\(\s*["']profileWhatsNewBtn["']\s*\)/
-    );
-
-    assert.match(
-      moduleSource,
-      /profileCard\.hidden\s*=\s*!available/
-    );
-
-    assert.match(
-      moduleSource,
-      /profileButton\.addEventListener\(\s*["']click["']/
-    );
-
-    assert.match(
-      moduleSource,
-      /profileButton[\s\S]*?open\(\)/
+      appCoreSource,
+      /case\s+["']whats-new["']/
     );
   }
 );

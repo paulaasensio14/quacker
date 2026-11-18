@@ -8,8 +8,6 @@
       menuItem: document.querySelector(
         '.profile-menu-item[data-profile-action="whats-new"]'
       ),
-      profileCard: document.getElementById("profileWhatsNewCard"),
-      profileButton: document.getElementById("profileWhatsNewBtn"),
       version: document.getElementById("whatsNewVersion"),
       releaseTitle: document.getElementById("whatsNewReleaseTitle"),
       items: document.getElementById("whatsNewItems")
@@ -19,7 +17,6 @@
   function render(state) {
     const {
       menuItem,
-      profileCard,
       version,
       releaseTitle,
       items
@@ -31,10 +28,6 @@
 
     if (menuItem) {
       menuItem.hidden = !available;
-    }
-
-    if (profileCard) {
-      profileCard.hidden = !available;
     }
 
     if (!available) return false;
@@ -94,24 +87,10 @@
       closeOnBackdrop: true
     });
 
-    const {
-      menuItem,
-      profileCard,
-      profileButton
-    } = getElements();
+    const { menuItem } = getElements();
 
     if (menuItem) {
       menuItem.hidden = true;
-    }
-
-    if (profileCard) {
-      profileCard.hidden = true;
-    }
-
-    if (profileButton) {
-      profileButton.addEventListener("click", () => {
-        open();
-      });
     }
 
     try {
@@ -126,10 +105,6 @@
 
       if (menuItem) {
         menuItem.hidden = !available;
-      }
-
-      if (profileCard) {
-        profileCard.hidden = !available;
       }
 
       if (!available) return;
@@ -172,9 +147,6 @@
         menuItem.hidden = true;
       }
 
-      if (profileCard) {
-        profileCard.hidden = true;
-      }
     }
   }
 
@@ -185,10 +157,7 @@
 
       currentState = state;
 
-      const {
-        menuItem,
-        profileCard
-      } = getElements();
+      const { menuItem } = getElements();
 
       const available =
         state?.available === true &&
@@ -196,10 +165,6 @@
 
       if (menuItem) {
         menuItem.hidden = !available;
-      }
-
-      if (profileCard) {
-        profileCard.hidden = !available;
       }
 
       if (available) {

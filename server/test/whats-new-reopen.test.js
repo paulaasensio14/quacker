@@ -52,8 +52,6 @@ function createHarness(initialState) {
 
   const ids = [
     "whatsNewModal",
-    "profileWhatsNewCard",
-    "profileWhatsNewBtn",
     "whatsNewVersion",
     "whatsNewReleaseTitle",
     "whatsNewItems"
@@ -154,7 +152,7 @@ const release = {
 };
 
 test(
-  "primera visita abre novedades y mantiene ambos accesos",
+  "primera visita abre novedades y mantiene el acceso del menu",
   async () => {
     const h = createHarness({
       currentVersion: "1.1.0",
@@ -169,19 +167,10 @@ test(
     assert.equal(h.marks, 1);
 
     assert.equal(h.menu.hidden, false);
-    assert.equal(
-      h.elements.profileWhatsNewCard.hidden,
-      false
-    );
 
     assert.match(
       html,
       /data-profile-action="whats-new"/
-    );
-
-    assert.match(
-      html,
-      /id="profileWhatsNewBtn"/
     );
 
     assert.match(
@@ -223,9 +212,7 @@ test(
 
     h.close();
 
-    h.elements.profileWhatsNewBtn.click();
-
-    await new Promise(resolve => setImmediate(resolve));
+    await h.module.open();
 
     assert.equal(h.opens.length, 3);
     assert.equal(h.marks, 1);
@@ -247,10 +234,6 @@ test(
     assert.equal(h.opens.length, 0);
     assert.equal(h.marks, 0);
     assert.equal(h.menu.hidden, false);
-    assert.equal(
-      h.elements.profileWhatsNewCard.hidden,
-      false
-    );
 
     await h.module.open();
 
@@ -275,9 +258,5 @@ test(
     assert.equal(h.opens.length, 0);
     assert.equal(h.marks, 0);
     assert.equal(h.menu.hidden, true);
-    assert.equal(
-      h.elements.profileWhatsNewCard.hidden,
-      true
-    );
   }
 );

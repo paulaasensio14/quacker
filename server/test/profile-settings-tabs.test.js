@@ -47,8 +47,7 @@ test("los paneles existentes se distribuyen entre las pestañas", () => {
     "profileFollowRequestsCard",
     "profileRecommendationsCard",
     "profileFavoritesCard",
-    "profileOpinionsCard",
-    "profileWhatsNewCard"
+    "profileOpinionsCard"
   ]) {
     assert.match(
       html,
