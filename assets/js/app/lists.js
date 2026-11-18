@@ -2120,6 +2120,8 @@ const ListsModule = (() => {
       empty.classList.remove("is-initially-hidden");
       empty.textContent = t("lists_detail_empty");
       if (hint) hint.textContent = "";
+      const showing = _getEl("listDetailShowing");
+      if (showing) showing.textContent = "";
       return;
     }
 
@@ -2134,6 +2136,8 @@ const ListsModule = (() => {
       empty.classList.remove("is-initially-hidden");
       empty.textContent = t("lists_detail_empty");
       if (hint) hint.textContent = "";
+      const showing = _getEl("listDetailShowing");
+      if (showing) showing.textContent = "";
       return;
     }
 
@@ -2370,6 +2374,7 @@ const ListsModule = (() => {
 
         listRef.itemsCount = listRef.items.length;
         listRef.updatedAt = new Date().toISOString();
+        _renderActiveListDetailHeader(listRef);
       }
 
       // Repintamos el detalle para reflejar el cambio al instante
@@ -2416,6 +2421,7 @@ const ListsModule = (() => {
 
               listRef.itemsCount = listRef.items.length;
               listRef.updatedAt = new Date().toISOString();
+              _renderActiveListDetailHeader(listRef);
             }
 
             await renderActiveListItems();
