@@ -649,6 +649,15 @@ main.app-main {
   }
 
   .profile-chip {
+    display: inline-flex;
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .profile-chip #profileChipName,
+  .profile-chip > svg {
     display: none;
   }
 
@@ -4225,16 +4234,6 @@ body.dark-theme #view-home .home-backlog {
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.profile-whats-new-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.profile-whats-new-card > .btn-secondary {
-  align-self: flex-start;
 }
 
 .profile-opinions-metrics {

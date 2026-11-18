@@ -105,97 +105,16 @@ test(
 );
 
 test(
-  "Mi perfil ofrece un acceso a Qué hay de nuevo cuando existe una release",
+  "Ajustes no duplica el acceso a las novedades",
   () => {
-    const profileStart =
-      dashboardSource.indexOf('id="view-profile"');
-
-    assert.notEqual(
-      profileStart,
-      -1,
-      "debe existir la vista de perfil"
-    );
-
-    const profileBlock =
-      dashboardSource.slice(profileStart);
-
-    assert.match(
-      profileBlock,
-      /id="profileWhatsNewCard"[^>]*hidden/
+    assert.doesNotMatch(
+      dashboardSource,
+      /id="profileWhatsNewCard"|id="profileWhatsNewBtn"/
     );
 
     assert.match(
-      profileBlock,
-      /id="profileWhatsNewBtn"/
-    );
-
-    assert.match(
-      profileBlock,
-      /data-i18n="profile_whats_new_title"/
-    );
-
-    assert.match(
-      profileBlock,
-      /data-i18n="profile_whats_new_description"/
-    );
-
-    assert.match(
-      profileBlock,
-      /data-i18n="profile_whats_new_cta"/
-    );
-  }
-);
-
-test(
-  "las etiquetas del acceso de perfil a Qué hay de nuevo existen en español e inglés",
-  () => {
-    for (const key of [
-      "profile_whats_new_title",
-      "profile_whats_new_description",
-      "profile_whats_new_cta"
-    ]) {
-      const matches =
-        i18nSource.match(
-          new RegExp(
-            `${key}:\\s*"[^"]+"`,
-            "g"
-          )
-        ) || [];
-
-      assert.ok(
-        matches.length >= 2,
-        `debe existir ${key} en ES y EN`
-      );
-    }
-  }
-);
-
-test(
-  "la tarjeta Qué hay de nuevo mantiene un espaciado vertical legible",
-  () => {
-    const cssSource = fs.readFileSync(
-      new URL("../../assets/css/dashboard.css", import.meta.url),
-      "utf8"
-    );
-
-    const cardMatch = cssSource.match(
-      /\.profile-whats-new-card\s*\{([\s\S]*?)\}/
-    );
-
-    assert.ok(
-      cardMatch,
-      "debe existir un bloque CSS específico para profile-whats-new-card"
-    );
-
-    const cardBlock = cardMatch[1];
-
-    assert.match(cardBlock, /display:\s*flex/);
-    assert.match(cardBlock, /flex-direction:\s*column/);
-    assert.match(cardBlock, /gap:\s*14px/);
-
-    assert.match(
-      cssSource,
-      /\.profile-whats-new-card\s*>\s*\.btn-secondary\s*\{[\s\S]*?align-self:\s*flex-start/
+      dashboardSource,
+      /data-profile-action="whats-new"/
     );
   }
 );
