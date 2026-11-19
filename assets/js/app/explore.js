@@ -54,6 +54,8 @@ const ExploreModule = (() => {
   const __detailSeasonCache = new Map();
   const __detailEpisodeActivityCache = new Map();
   let __detailEpisodeWatchBusy = false;
+  let __listOriginContext = null;
+  const __listPickerRequestSeq = { drawer: 0, detail: 0 };
   const __detailRelatedDrag = {
     pointerId: null,
     startX: 0,
@@ -61,6 +63,68 @@ const ExploreModule = (() => {
     moved: false,
     suppressClickUntil: 0
   };
+
+  function _listOriginId() {
+    return _normalizeId(__listOriginContext?.id);
+  }
+
+  function _renderListOriginContext() {
+    const notice = document.getElementById("exploreListOriginNotice");
+    const nameEl = document.getElementById("exploreListOriginName");
+    const cancel = document.getElementById("exploreListOriginCancel");
+
+    if (notice) {
+      notice.hidden = !__listOriginContext;
+    }
+
+    if (nameEl) {
+      nameEl.textContent = __listOriginContext?.name ||
+        window.I18n?.t?.("explore_list_origin_unnamed") ||
+        "";
+    }
+
+    if (cancel) {
+      const label = window.I18n?.t?.("explore_list_origin_cancel") ||
+        "Cancelar selección de lista";
+
+      cancel.setAttribute("aria-label", label);
+      cancel.title = label;
+    }
+  }
+
+  function _clearListOriginContext() {
+    const oldId = _listOriginId();
+
+    __listOriginContext = null;
+    _renderListOriginContext();
+
+    for (const scope of ["drawer", "detail"]) {
+      if (!_isExploreListPickerOpen(scope)) continue;
+
+      const { select } = _getExploreListPickerRefs(scope);
+
+      if (select && oldId && select.value === oldId) {
+        select.value = "";
+        _syncExploreListConfirmState(scope);
+      }
+    }
+  }
+
+  document.addEventListener("quacker:lists-add-mode", (event) => {
+    const id = _normalizeId(event?.detail?.listId);
+
+    if (!id || id.length > 128) {
+      _clearListOriginContext();
+      return;
+    }
+
+    const name = String(event?.detail?.listName || "")
+      .trim()
+      .slice(0, 120);
+
+    __listOriginContext = { id, name };
+    _renderListOriginContext();
+  });
 
   function _renderDrawerAddCtaLabel() {
     const btn = document.getElementById("exploreDrawerAddLibrary");
@@ -3308,7 +3372,7 @@ const ExploreModule = (() => {
       return;
     }
 
-    await _openExploreListPicker(null, "drawer");
+    await _openExploreListPicker(_listOriginId(), "drawer");
   }
 
   async function _handleContentDetailAddToListClick() {
@@ -3320,23 +3384,40 @@ const ExploreModule = (() => {
       return;
     }
 
-    await _openExploreListPicker(null, "detail");
+    await _openExploreListPicker(_listOriginId(), "detail");
   }
 
-  async function _populateExploreListPicker(preselectedListId = null, scope = "drawer") {
+  async function _populateExploreListPicker(preselectedListId = null, scope = "drawer", { preserveSelection = false } = {}) {
     const { select, confirmBtn } = _getExploreListPickerRefs(scope);
     if (!select) return;
+    const requestSeq = ++__listPickerRequestSeq[scope];
     const normalizedPreselectedListId = _normalizeId(preselectedListId);
 
     let lists = [];
+    let listLookupFailed = false;
+
     try {
       lists = await ApiClient.getLists();
     } catch (e) {
       console.error("Explore: no se pudieron cargar las listas", e);
       lists = [];
+      listLookupFailed = true;
+    }
+
+    // Descartar respuestas antiguas o de selectores cerrados.
+    if (
+      requestSeq !== __listPickerRequestSeq[scope] ||
+      !_isExploreListPickerOpen(scope)
+    ) {
+      return;
     }
 
     const safeLists = Array.isArray(lists) ? lists : [];
+
+    // Leer la eleccion actual tras la espera asincrona.
+    const previousSelection = preserveSelection
+      ? _normalizeId(select.value)
+      : "";
 
     select.innerHTML = "";
 
@@ -3370,8 +3451,27 @@ const ExploreModule = (() => {
       select.appendChild(emptyOption);
     }
 
-    if (normalizedPreselectedListId && hasLists) {
-      select.value = normalizedPreselectedListId;
+    if (preserveSelection && previousSelection) {
+      const isAvailable = safeLists.some(
+        (list) => _normalizeId(list?.id) === previousSelection
+      );
+
+      if (isAvailable) {
+        select.value = previousSelection;
+      }
+    } else if (
+      normalizedPreselectedListId &&
+      normalizedPreselectedListId === _listOriginId()
+    ) {
+      const isAvailable = safeLists.some(
+        (list) => _normalizeId(list?.id) === normalizedPreselectedListId
+      );
+
+      if (isAvailable) {
+        select.value = normalizedPreselectedListId;
+      } else if (!listLookupFailed) {
+        _clearListOriginContext();
+      }
     }
 
     select.disabled = !hasLists;
@@ -3409,10 +3509,16 @@ const ExploreModule = (() => {
       console.error("Explore: no se pudo preparar el picker de listas", e);
     }
 
+    if (!_isExploreListPickerOpen(scope)) return;
+
     _syncExploreListConfirmState(scope);
     _syncExploreListPickerVisibility(scope);
 
-    requestAnimationFrame(() => select?.focus?.());
+    requestAnimationFrame(() => {
+      if (_isExploreListPickerOpen(scope)) {
+        select?.focus?.();
+      }
+    });
   }
 
   function _closeExploreListPicker(scope = "drawer") {
@@ -3540,6 +3646,13 @@ const ExploreModule = (() => {
       }
 
       _closeExploreListPicker(scope);
+
+      if (
+        _listOriginId() &&
+        _listOriginId() !== normalizedListId
+      ) {
+        _clearListOriginContext();
+      }
 
       if (feedbackMessage) {
         if (scope === "detail") {
@@ -4751,6 +4864,11 @@ const ExploreModule = (() => {
     if (bind._bound) return;
     bind._bound = true;
 
+    document.getElementById("exploreListOriginCancel")
+      ?.addEventListener("click", () => {
+        _clearListOriginContext();
+      });
+
     document.addEventListener(
       "error",
       (event) => {
@@ -5295,7 +5413,14 @@ const ExploreModule = (() => {
         init._viewChangeBound = true;
 
         document.addEventListener("quacker:view-change", (e) => {
-          if (e.detail?.viewId !== "explore") return;
+          const viewId = e.detail?.viewId;
+
+          if (viewId !== "explore" && viewId !== "detail") {
+            _clearListOriginContext();
+            return;
+          }
+
+          if (viewId !== "explore") return;
 
           const global = $("#globalSearch");
           searchTerm = String(global?.value || "").trim();
@@ -5331,6 +5456,7 @@ const ExploreModule = (() => {
   }
 
   document.addEventListener("quacker:lang-change", () => {
+    _renderListOriginContext();
     _render();
 
     const activeItem = _getActiveExploreItem();
@@ -5340,7 +5466,11 @@ const ExploreModule = (() => {
       _syncExploreDrawerDetailFeedback();
 
       if (_isExploreListPickerOpen("drawer")) {
-        void _populateExploreListPicker(null, "drawer");
+        void _populateExploreListPicker(
+          _listOriginId(),
+          "drawer",
+          { preserveSelection: true }
+        );
       }
     }
 
@@ -5355,7 +5485,11 @@ const ExploreModule = (() => {
       void window.DetailModule?.hydrate?.(detailItem);
 
       if (_isExploreListPickerOpen("detail")) {
-        void _populateExploreListPicker(null, "detail");
+        void _populateExploreListPicker(
+          _listOriginId(),
+          "detail",
+          { preserveSelection: true }
+        );
       }
     }
   });
