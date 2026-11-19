@@ -7204,6 +7204,14 @@ body.dark-theme #view-explore .explore-toolbar-right .library-sort .library-sort
 }
 
 /* ===== Explore: modo "Añadir a lista" ===== */
+.explore-mode-chip[hidden] {
+  display: none;
+}
+
+#exploreListOriginNotice {
+  margin-bottom: 14px;
+}
+
 .explore-mode-chip{
   display: inline-flex;
   align-items: center;
