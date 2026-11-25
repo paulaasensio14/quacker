@@ -45,6 +45,24 @@ const ProfileModule = (() => {
   let favoritePickerAbortController = null;
   let favoritePickerSearchTimer = null;
 
+  function safeFavoriteCover(value) {
+    const src =
+      typeof value === "string"
+        ? value.trim()
+        : "";
+
+    if (
+      src.startsWith("/assets/") ||
+      src.startsWith("assets/") ||
+      /^https:\/\//i.test(src) ||
+      /^data:image\/(?:jpeg|png|webp|gif);/i.test(src)
+    ) {
+      return src;
+    }
+
+    return "";
+  }
+
   function renderFavoriteSlots(
     type,
     favorites = []
@@ -82,14 +100,57 @@ const ProfileModule = (() => {
       slot.append(positionEl);
 
       if (favorite) {
-        const titleEl = document.createElement("strong");
+        const snapshot =
+          favorite?.itemSnapshot &&
+          typeof favorite.itemSnapshot === "object"
+            ? favorite.itemSnapshot
+            : {};
+
+        const title =
+          String(snapshot.title || "").trim() ||
+          t("profile_favorites_unknown_title");
+
+        const cover =
+          safeFavoriteCover(snapshot.cover);
+
+        const frame =
+          document.createElement("div");
+
+        frame.className =
+          "profile-favorite-cover-frame";
+
+        if (cover) {
+          const image =
+            document.createElement("img");
+
+          image.className =
+            "profile-favorite-cover";
+
+          image.src = cover;
+          image.alt =
+            `${t("community_profile_cover")} ${title}`;
+          image.loading = "lazy";
+
+          image.addEventListener(
+            "error",
+            () => {
+              image.hidden = true;
+            },
+            { once: true }
+          );
+
+          frame.append(image);
+        }
+
+        slot.append(frame);
+
+        const titleEl =
+          document.createElement("strong");
+
         titleEl.className =
           "profile-favorite-slot-title";
-        titleEl.textContent =
-          String(
-            favorite?.itemSnapshot?.title || ""
-          ).trim() ||
-          t("profile_favorites_unknown_title");
+
+        titleEl.textContent = title;
 
         slot.append(titleEl);
 
