@@ -1,0 +1,79 @@
+/*
+ * QUACKER DESIGN SYSTEM — DS-01
+ *
+ * Paleta oficial aprobada.
+ * No cambiar estos colores sin revision.
+ *
+ * Los tokens --q-* no sustituyen todavia
+ * las variables CSS anteriores.
+ */
+
+:root {
+  /* Superficies y texto — modo claro */
+  --q-bg: #F6F4EF;
+  --q-surface: #FFFFFF;
+  --q-surface-2: #F1EEE7;
+  --q-border: #E2DDD2;
+  --q-text: #17181C;
+  --q-text-2: #565A63;
+  --q-text-3: #868A93;
+
+  /* Marca y estados — modo claro */
+  --q-brand: #FFC928;
+  --q-success: #17804A;
+  --q-danger: #C8362A;
+  --q-warning: #9A5B00;
+  --q-info: #2449C7;
+
+  /* Formatos — modo claro */
+  --q-series: #6D4AE8;
+  --q-movie: #D9472F;
+  --q-book: #0B8574;
+  --q-game: #2A62D8;
+}
+
+body.dark-theme {
+  /* Superficies y texto — modo oscuro */
+  --q-bg: #0F1115;
+  --q-surface: #171A20;
+  --q-surface-2: #1E222A;
+  --q-border: #2A2F39;
+  --q-text: #F3F0E8;
+  --q-text-2: #AAB0BB;
+  --q-text-3: #7C839F;
+
+  /* Marca y estados — modo oscuro */
+  --q-brand: #FFC928;
+  --q-success: #43C982;
+  --q-danger: #FF7A6B;
+  --q-warning: #F2B84B;
+  --q-info: #8FB0FF;
+
+  /* Formatos — modo oscuro */
+  --q-series: #A88BFF;
+  --q-movie: #FF8A73;
+  --q-book: #3DD1BC;
+  --q-game: #7EA8FF;
+}
+
+/* Perfil publico: respeta el tema del dispositivo. */
+@media (prefers-color-scheme: dark) {
+  body.quacker-theme-system {
+    --q-bg: #0F1115;
+    --q-surface: #171A20;
+    --q-surface-2: #1E222A;
+    --q-border: #2A2F39;
+    --q-text: #F3F0E8;
+    --q-text-2: #AAB0BB;
+    --q-text-3: #7C839F;
+    --q-brand: #FFC928;
+    --q-success: #43C982;
+    --q-danger: #FF7A6B;
+    --q-warning: #F2B84B;
+    --q-info: #8FB0FF;
+    --q-series: #A88BFF;
+    --q-movie: #FF8A73;
+    --q-book: #3DD1BC;
+    --q-game: #7EA8FF;
+  }
+}

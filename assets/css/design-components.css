@@ -1,0 +1,372 @@
+/*
+ * QUACKER DESIGN SYSTEM — DS-01
+ *
+ * Navegacion, busqueda, botones y tarjetas.
+ * Exclusivamente tokens oficiales.
+ * Sin cambios de estructura ni funcionalidad.
+ */
+
+/* Navegacion */
+
+.nav-item-btn {
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+.nav-item-btn:hover:not(.is-active) {
+  background-color: var(--q-surface-2);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+.nav-item-btn.is-active {
+  background-color: var(--q-brand);
+  color: var(--q-text);
+  border-color: var(--q-brand);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .nav-item-btn {
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .nav-item-btn.is-active {
+  background-color: var(--q-brand);
+  color: var(--q-bg);
+  border-color: var(--q-brand);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .nav-item-btn:hover:not(.is-active) {
+  background-color: var(--q-surface-2);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+/* Busqueda */
+
+.search-input {
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+.search-input::placeholder {
+  color: var(--q-text-2);
+}
+
+body.dark-theme .search-input {
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .search-input::placeholder {
+  color: var(--q-text-2);
+}
+
+body.dark-theme .search-icon {
+  color: var(--q-text-2);
+}
+
+/* Botones principales y secundarios */
+
+.btn-primary {
+  background-color: var(--q-brand);
+  color: var(--q-text);
+  border: 1px solid var(--q-brand);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .btn-primary {
+  background-color: var(--q-brand);
+  color: var(--q-bg);
+  border: 1px solid var(--q-brand);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+.btn-secondary {
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .btn-secondary {
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .profile-card .btn-secondary {
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+/* Tarjetas compartidas */
+
+.metric-card {
+  background-color: var(--q-surface);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+.content-card {
+  background-color: var(--q-surface);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+.list-card {
+  background-color: var(--q-surface);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+.profile-card {
+  background-color: var(--q-surface);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .metric-card,
+body.dark-theme .content-card,
+body.dark-theme .list-card {
+  background-color: var(--q-surface);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .profile-card {
+  background-color: var(--q-surface);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+.metric-card:hover {
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+/* DS-01 — BANNER Y FAVORITOS */
+
+/* Banner de bienvenida */
+
+.welcome-banner {
+  background: var(--q-brand);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+body.dark-theme .welcome-banner {
+  background: var(--q-brand);
+  color: var(--q-bg);
+  border-color: var(--q-border);
+  box-shadow: 0 2px 0 var(--q-border);
+}
+
+.welcome-banner .welcome-subtitle {
+  color: var(--q-text);
+}
+
+body.dark-theme .welcome-banner .welcome-subtitle {
+  color: var(--q-bg);
+}
+
+.welcome-badge {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+}
+
+.welcome-chip {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+}
+
+.welcome-duck {
+  background: var(--q-surface);
+  border: 1px solid var(--q-border);
+}
+
+#homeBannerAvatar {
+  background: var(--q-surface);
+  border: 1px solid var(--q-border);
+  box-shadow: none;
+}
+
+/* Grupos y tarjetas de Favoritos */
+
+.profile-favorites-group {
+  background: var(--q-surface-2);
+  border: 1px solid var(--q-border);
+}
+
+.profile-favorite-slot {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+.profile-favorite-slot--empty {
+  background: var(--q-surface);
+  border-style: dashed;
+  box-shadow: none;
+  color: var(--q-text-2);
+}
+
+.profile-favorite-cover-frame {
+  background: var(--q-surface-2);
+}
+
+.profile-favorite-slot-title {
+  color: var(--q-text);
+}
+
+.profile-favorite-slot-empty,
+.profile-favorites-status {
+  color: var(--q-text-2);
+}
+
+.profile-favorite-slot-position {
+  background: var(--q-brand);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+}
+
+body.dark-theme .profile-favorites-group {
+  background: var(--q-surface-2);
+  border-color: var(--q-border);
+}
+
+body.dark-theme .profile-favorite-slot {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+body.dark-theme .profile-favorite-slot--empty {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  box-shadow: none;
+}
+
+body.dark-theme .profile-favorite-cover-frame {
+  background: var(--q-surface-2);
+}
+
+body.dark-theme .profile-favorite-slot-position {
+  color: var(--q-bg);
+}
+
+/* Acciones de Favoritos */
+
+.profile-favorite-action {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+.profile-favorite-pick {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+.profile-favorite-action:hover,
+.profile-favorite-pick:hover {
+  background: var(--q-surface-2);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+.profile-favorite-action--remove:hover {
+  color: var(--q-danger);
+}
+
+body.dark-theme .profile-favorite-action {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+body.dark-theme .profile-favorite-pick {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+body.dark-theme .profile-favorite-action:hover,
+body.dark-theme .profile-favorite-pick:hover {
+  background: var(--q-surface-2);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+body.dark-theme .profile-favorite-action--remove:hover {
+  background: var(--q-surface-2);
+  color: var(--q-danger);
+}
+
+/* Selector de Favoritos */
+
+.favorite-picker-search input {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+.favorite-picker-result {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+.favorite-picker-result:hover {
+  background: var(--q-surface-2);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+.favorite-picker-status,
+.favorite-picker-result-source,
+.favorite-picker-empty {
+  color: var(--q-text-2);
+}
+
+body.dark-theme .favorite-picker-search input {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+body.dark-theme .favorite-picker-result {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+body.dark-theme .favorite-picker-result:hover {
+  background: var(--q-surface-2);
+  box-shadow: 0 1px 0 var(--q-border);
+}
+
+body.dark-theme .favorite-picker-empty {
+  border-color: var(--q-border);
+}

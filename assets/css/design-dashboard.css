@@ -1,0 +1,36 @@
+/*
+ * QUACKER DESIGN SYSTEM — DS-01
+ *
+ * Primera fase: estructura del dashboard.
+ * Utiliza exclusivamente los tokens oficiales.
+ *
+ * No modifica tarjetas, botones, formularios
+ * ni la logica de cambio de tema.
+ */
+
+body {
+  background-color: var(--q-bg);
+  color: var(--q-text);
+}
+
+aside.sidebar {
+  background-color: var(--q-surface);
+  border-right: 1px solid var(--q-border);
+  color: var(--q-text);
+}
+
+header.topbar {
+  background-color: var(--q-surface);
+  border-bottom: 1px solid var(--q-border);
+  color: var(--q-text);
+}
+
+/*
+ * La hoja dashboard.css contiene una regla
+ * especifica para la barra superior oscura.
+ * Esta regla mantiene la prioridad correcta.
+ */
+body.dark-theme .topbar {
+  background-color: var(--q-surface);
+  border-bottom-color: var(--q-border);
+}
