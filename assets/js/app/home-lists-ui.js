@@ -1461,7 +1461,7 @@ async function renderHomeDashboard() {
       const disabled = pct >= 100 ? "disabled" : "";
       const completedClass = pct >= 100 ? " cw-card--completed" : "";
       const platformHtml = item.platform
-        ? `<span class="cw-platform-pill">${item.platform}</span>`
+        ? `<span class="cw-platform-pill">${_escapeHomeAttribute(item.platform)}</span>`
         : "";
       const footerLabel = pct >= 100 ? window.I18n.t("home_continue_completed") : `${pct}%`;
       const isCompleted = pct >= 100;
@@ -1477,22 +1477,22 @@ async function renderHomeDashboard() {
         : "";
 
       return `
-      <article class="cw-card${completedClass}" data-id="${itemId}">
+      <article class="cw-card${completedClass}" data-id="${_escapeHomeAttribute(itemId)}">
         <div class="cw-cover">
           ${coverHtml}
-          <span class="cw-cover-type-badge" role="img" aria-label="${typeIconLabel}" title="${typeIconLabel}">
+          <span class="cw-cover-type-badge" role="img" aria-label="${_escapeHomeAttribute(typeIconLabel)}" title="${_escapeHomeAttribute(typeIconLabel)}">
             ${typeIconSvg}
           </span>
         </div>
         <div class="cw-body">
           <div class="cw-title-row">
             <div class="cw-title-with-icon">
-              <div class="cw-title">${item.title}</div>
+              <div class="cw-title">${_escapeHomeAttribute(item.title)}</div>
             </div>
             ${platformHtml}
           </div>
-          <div class="cw-meta">${formatMetaLine(item)}</div>
-          <div class="cw-progress-label">${item.progressLabel}</div>
+          <div class="cw-meta">${_escapeHomeAttribute(formatMetaLine(item))}</div>
+          <div class="cw-progress-label">${_escapeHomeAttribute(item.progressLabel)}</div>
           <div class="cw-progress-bar">
             <progress
               class="cw-progress-fill"
@@ -1503,7 +1503,7 @@ async function renderHomeDashboard() {
           </div>
           <div class="cw-footer-row">
             <span>${footerLabel}</span>
-            <button class="cw-tick-btn" data-id="${itemId}" ${disabled}>
+            <button class="cw-tick-btn" data-id="${_escapeHomeAttribute(itemId)}" ${disabled}>
               ${buttonInnerHtml}
             </button>
           </div>

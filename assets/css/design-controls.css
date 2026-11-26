@@ -399,6 +399,18 @@ body.dark-theme #view-lists .pill-filter.active {
   border-color: var(--q-filter-selected-bg);
 }
 
+/* DS-06: contraste del contador del filtro seleccionado. */
+body.dark-theme #view-lists .pill-filter.active .count {
+  background: var(--q-filter-selected-text);
+  color: var(--q-filter-selected-bg);
+}
+
+/* DS-06: contraste del contador seleccionado en tema claro. */
+body:not(.dark-theme) #view-lists .pill-filter.active .count {
+  background: var(--q-filter-selected-text);
+  color: var(--q-filter-selected-bg);
+}
+
 :is(.pill-filter, .pill-filter-sm) .count {
   border-radius: 999px;
   padding: 0 var(--q-space-1);

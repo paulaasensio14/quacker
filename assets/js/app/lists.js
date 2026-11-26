@@ -735,17 +735,17 @@ const ListsModule = (() => {
 
     container.innerHTML = visibleLists
       .map((list) => {
-        const name = _safeText(list.name) || t("lists_untitled");
-        const desc = _safeText(list.description);
+        const name = _safeAttr(list.name) || _safeAttr(t("lists_untitled"));
+        const desc = _safeAttr(list.description);
         const count = _itemsCount(list);
-        const vis = _visibilityLabel(list.visibility);
+        const vis = _safeAttr(_visibilityLabel(list.visibility));
         const cover = _renderListCover(list, count);
         const canManageList =
           _normalizeId(list?.ownerUserId) === currentUserId;
 
         return `
 
-          <article class="list-card" data-id="${_safeText(list.id)}">
+          <article class="list-card" data-id="${_safeAttr(list.id)}">
             ${cover}
 
             <div class="list-card-header">
@@ -760,7 +760,7 @@ const ListsModule = (() => {
                 type="button"
                 class="list-edit-btn"
                 data-action="edit-list"
-                data-id="${_safeText(list.id)}"
+                data-id="${_safeAttr(list.id)}"
                 aria-label="${t("lists_edit")}"
                 title="${t("lists_edit")}"
               >
@@ -775,7 +775,7 @@ const ListsModule = (() => {
                 type="button"
                 class="list-delete-btn"
                 data-action="delete-list"
-                data-id="${_safeText(list.id)}"
+                data-id="${_safeAttr(list.id)}"
                 data-name="${name.replace(/"/g, "&quot;")}"
                 aria-label="${t("lists_delete")}"
                 title="${t("lists_delete")}"
@@ -2227,7 +2227,7 @@ const ListsModule = (() => {
       const coverMarkup = cover
         ? `<img class="list-item-cover-image" src="${cover}" alt="" loading="lazy" decoding="async">`
         : "";
-      const title = _safeText(it.title) || t("lists_item_untitled");
+      const title = _safeAttr(it.title) || _safeAttr(t("lists_item_untitled"));
       const type = _typeLabel(it.type);
       const rawProgress = Number(it.progress ?? 0);
       const progressValue = Number.isFinite(rawProgress)
@@ -2244,7 +2244,7 @@ const ListsModule = (() => {
         _safeAttr(it?.externalId);
 
       return `
-        <article class="list-item-card" data-item-id="${_safeText(it.id)}">
+        <article class="list-item-card" data-item-id="${_safeAttr(it.id)}">
           <div class="list-item-cover">
             ${coverMarkup}
             <span class="list-item-type-badge" aria-label="${type}" title="${type}">

@@ -530,6 +530,30 @@ const ExploreModule = (() => {
     };
   }
 
+
+  // DS-06.1: informacion visible bajo la portada.
+  // Conserva el articulo interactivo y escapa datos externos.
+  function _renderExploreCardCaption(item, vm) {
+    const release = _safeText(
+      item?.releaseDate
+    ).trim();
+
+    const year =
+      /^(\d{4})(?:$|[-/])/.exec(release)?.[1] || "";
+
+    const metadata = [
+      vm.typeLabel,
+      year
+    ].filter(Boolean).join(" · ");
+
+    return `
+      <div class="explore-card-caption">
+        <span class="explore-card-caption-title">${_escapeHtml(vm.title)}</span>
+        <span class="explore-card-caption-meta">${_escapeHtml(metadata)}</span>
+      </div>
+    `;
+  }
+
   function _getFeaturedVisible() {
     const featuredSeen = new Set();
 
@@ -694,6 +718,7 @@ const ExploreModule = (() => {
           ${vm.typeLabel}
         </span>
       </div>
+      ${_renderExploreCardCaption(item, vm)}
     </article>
     `;
   };
@@ -2859,6 +2884,7 @@ const ExploreModule = (() => {
             <div class="explore-card-overlay">
               <span class="explore-card-type">${vm.typeLabel}</span>
             </div>
+            ${_renderExploreCardCaption(item, vm)}
           </article>
         `;
       })
