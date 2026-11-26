@@ -1,0 +1,955 @@
+/*
+ * QUACKER DESIGN SYSTEM — DS-04
+ *
+ * Botones, filtros, etiquetas e indicadores.
+ * Primera integracion en dashboard.html.
+ *
+ * Reutiliza colores DS-01, tipografia DS-02
+ * y radios/espaciado/elevacion DS-03.
+ *
+ * No controla eventos ni estado de JavaScript.
+ */
+
+/* Definiciones compartidas */
+
+:root {
+  --q-btn-height: 40px;
+  --q-btn-small-height: 32px;
+  --q-btn-large-height: 48px;
+  --q-btn-weight: 600;
+  --q-btn-duration: 150ms;
+  --q-focus-color: var(--q-info);
+
+  --q-filter-selected-bg: var(--q-text);
+  --q-filter-selected-text: var(--q-surface);
+
+  --q-danger-soft-bg:
+    color-mix(in srgb, var(--q-danger) 12%, var(--q-surface));
+
+  --q-series-soft:
+    color-mix(in srgb, var(--q-series) 13%, var(--q-surface));
+  --q-movie-soft:
+    color-mix(in srgb, var(--q-movie) 13%, var(--q-surface));
+  --q-book-soft:
+    color-mix(in srgb, var(--q-book) 13%, var(--q-surface));
+  --q-game-soft:
+    color-mix(in srgb, var(--q-game) 13%, var(--q-surface));
+
+  --q-success-soft:
+    color-mix(in srgb, var(--q-success) 13%, var(--q-surface));
+  --q-warning-soft:
+    color-mix(in srgb, var(--q-warning) 13%, var(--q-surface));
+}
+
+body.dark-theme {
+  --q-filter-selected-bg: var(--q-text);
+  --q-filter-selected-text: var(--q-bg);
+
+  /* Resolver estos colores con la paleta OSCURA. */
+  --q-danger-soft-bg:
+    color-mix(in srgb, var(--q-danger) 12%, var(--q-surface));
+  --q-series-soft:
+    color-mix(in srgb, var(--q-series) 13%, var(--q-surface));
+  --q-movie-soft:
+    color-mix(in srgb, var(--q-movie) 13%, var(--q-surface));
+  --q-book-soft:
+    color-mix(in srgb, var(--q-book) 13%, var(--q-surface));
+  --q-game-soft:
+    color-mix(in srgb, var(--q-game) 13%, var(--q-surface));
+  --q-success-soft:
+    color-mix(in srgb, var(--q-success) 13%, var(--q-surface));
+  --q-warning-soft:
+    color-mix(in srgb, var(--q-warning) 13%, var(--q-surface));
+}
+
+/* Base de botones: clases existentes + nuevas */
+
+:is(
+  .q-btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost,
+  .q-btn-danger-soft,
+  .q-btn-icon
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--q-space-2);
+  min-height: var(--q-btn-height);
+  padding: var(--q-space-2) var(--q-space-4);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  background: var(--q-surface);
+  color: var(--q-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: var(--q-btn-weight);
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--q-btn-duration) ease,
+    color var(--q-btn-duration) ease,
+    border-color var(--q-btn-duration) ease,
+    box-shadow var(--q-btn-duration) ease,
+    transform var(--q-btn-duration) ease;
+}
+
+/* Principal */
+
+.btn-primary,
+.btn-primary:not(.btn-sm),
+body.dark-theme .btn-primary,
+.q-btn--primary {
+  background: var(--q-brand);
+  color: var(--q-bg);
+  border-color: var(--q-brand);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-stamp);
+}
+
+body:not(.dark-theme) .btn-primary,
+body:not(.dark-theme) .btn-primary:not(.btn-sm),
+body:not(.dark-theme) .q-btn--primary {
+  color: var(--q-text);
+}
+
+:is(.btn-primary, .q-btn--primary):hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow: var(--q-elevation-stamp);
+}
+
+/* Secundario */
+
+.btn-secondary,
+body.dark-theme .btn-secondary,
+.q-btn--secondary {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  border-radius: var(--q-radius-control);
+  box-shadow: none;
+}
+
+:is(.btn-secondary, .q-btn--secondary):hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: none;
+}
+
+/*
+ * Compatibilidad con la regla DS-01 del perfil.
+ * La identidad visual sigue definida solo aqui.
+ */
+body.dark-theme .profile-card .btn-secondary {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: none;
+}
+
+body.dark-theme .profile-card .btn-secondary:hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: none;
+}
+
+/* Fantasma */
+
+.btn-ghost,
+.q-btn--ghost {
+  background: transparent;
+  color: var(--q-text);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+:is(.btn-ghost, .q-btn--ghost):hover:not(:disabled) {
+  background: var(--q-surface-2);
+}
+
+/* Peligro */
+
+.btn-danger,
+.q-btn--danger {
+  background: var(--q-danger);
+  color: var(--q-surface);
+  border-color: var(--q-danger);
+  box-shadow: none;
+}
+
+body.dark-theme :is(.btn-danger, .q-btn--danger) {
+  color: var(--q-bg);
+}
+
+:is(.btn-danger, .q-btn--danger):hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+/* Peligro suave */
+
+.q-btn-danger-soft,
+.q-btn--danger-soft {
+  background: var(--q-danger-soft-bg);
+  color: var(--q-danger);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+:is(
+  .q-btn-danger-soft,
+  .q-btn--danger-soft
+):hover:not(:disabled) {
+  background:
+    color-mix(in srgb, var(--q-danger) 19%, var(--q-surface));
+}
+
+/* Tamaños */
+
+:is(.q-btn, .btn-primary, .btn-secondary, .btn-danger).btn-sm,
+.q-btn-sm {
+  min-height: var(--q-btn-small-height);
+  padding: var(--q-space-1) var(--q-space-3);
+  border-radius: var(--q-radius-control);
+  font-size: 0.8125rem;
+}
+
+.q-btn-lg {
+  min-height: var(--q-btn-large-height);
+  padding: var(--q-space-3) var(--q-space-5);
+  font-size: 0.9375rem;
+}
+
+.q-btn-icon {
+  min-width: var(--q-btn-height);
+  min-height: var(--q-btn-height);
+  padding: var(--q-space-2);
+}
+
+.q-btn-icon > svg,
+.q-btn > svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
+}
+
+/* Interacciones */
+
+:is(
+  .q-btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost,
+  .q-btn-danger-soft,
+  .q-btn-icon
+):active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+:is(
+  .q-btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost,
+  .q-btn-danger-soft,
+  .q-btn-icon,
+  .pill-filter,
+  .pill-filter-sm,
+  .q-chip
+):focus-visible {
+  outline: 2px solid var(--q-focus-color);
+  outline-offset: 3px;
+}
+
+:is(
+  .q-btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost,
+  .q-btn-danger-soft,
+  .q-btn-icon,
+  .pill-filter,
+  .pill-filter-sm,
+  .q-chip
+):disabled,
+:is(
+  .q-btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost,
+  .q-btn-danger-soft,
+  .q-btn-icon,
+  .pill-filter,
+  .pill-filter-sm,
+  .q-chip
+)[aria-disabled="true"] {
+  opacity: 0.48;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  filter: none;
+}
+
+/* Cargando: estilos visuales, sin modificar logica */
+
+:is(
+  .q-btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger
+).is-loading,
+:is(
+  .q-btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger
+)[aria-busy="true"] {
+  cursor: progress;
+}
+
+.q-btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: q-btn-spin 700ms linear infinite;
+}
+
+@keyframes q-btn-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Filtros: integracion con clases reales */
+
+.pill-filter,
+.pill-filter-sm,
+.q-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--q-space-2);
+  min-height: var(--q-btn-small-height);
+  padding: var(--q-space-1) var(--q-space-3);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+button.pill-filter,
+button.pill-filter-sm,
+button.q-chip {
+  cursor: pointer;
+}
+
+:is(.pill-filter, .pill-filter-sm, .q-chip):hover:not(:disabled) {
+  background: var(--q-surface-2);
+}
+
+.pill-filter.active,
+.pill-filter-sm.active,
+.q-chip.active,
+.q-chip[aria-pressed="true"] {
+  background: var(--q-filter-selected-bg);
+  color: var(--q-filter-selected-text);
+  border-color: var(--q-filter-selected-bg);
+}
+
+body.dark-theme #view-library
+:is(.pill-filter, .pill-filter-sm) {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+}
+
+body.dark-theme #view-library
+:is(.pill-filter, .pill-filter-sm).active {
+  background: var(--q-filter-selected-bg);
+  color: var(--q-filter-selected-text);
+  border-color: var(--q-filter-selected-bg);
+}
+
+body.dark-theme #view-lists .pill-filter {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+}
+
+body.dark-theme #view-lists .pill-filter.active {
+  background: var(--q-filter-selected-bg);
+  color: var(--q-filter-selected-text);
+  border-color: var(--q-filter-selected-bg);
+}
+
+:is(.pill-filter, .pill-filter-sm) .count {
+  border-radius: 999px;
+  padding: 0 var(--q-space-1);
+  font-size: 0.75rem;
+}
+
+/* Etiquetas */
+
+.q-tag,
+.cw-type-chip,
+.lib-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--q-space-1);
+  min-height: 22px;
+  padding: 2px var(--q-space-2);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-label);
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  box-shadow: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.q-tag--series,
+.cw-type-chip--serie {
+  background: var(--q-series-soft);
+  color: var(--q-series);
+  border-color: transparent;
+}
+
+.q-tag--movie,
+.cw-type-chip--pelicula {
+  background: var(--q-movie-soft);
+  color: var(--q-movie);
+  border-color: transparent;
+}
+
+.q-tag--book,
+.cw-type-chip--book {
+  background: var(--q-book-soft);
+  color: var(--q-book);
+  border-color: transparent;
+}
+
+.q-tag--game,
+.cw-type-chip--game {
+  background: var(--q-game-soft);
+  color: var(--q-game);
+  border-color: transparent;
+}
+
+.q-tag--in-progress,
+.lib-status-badge.is-in_progress {
+  background: var(--q-warning-soft);
+  color: var(--q-warning);
+  border-color: transparent;
+}
+
+.q-tag--completed,
+.lib-status-badge.is-completed {
+  background: var(--q-success-soft);
+  color: var(--q-success);
+  border-color: transparent;
+}
+
+.q-tag--pending,
+.lib-status-badge.is-not_started {
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+}
+
+.q-tag--abandoned {
+  background: var(--q-danger-soft-bg);
+  color: var(--q-danger);
+  border-color: transparent;
+}
+
+body.dark-theme #view-library .lib-status-badge {
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  border-color: var(--q-border);
+}
+
+body.dark-theme #view-library
+.lib-status-badge.is-in_progress {
+  background: var(--q-warning-soft);
+  color: var(--q-warning);
+  border-color: transparent;
+}
+
+body.dark-theme #view-library
+.lib-status-badge.is-completed {
+  background: var(--q-success-soft);
+  color: var(--q-success);
+  border-color: transparent;
+}
+
+body.dark-theme #view-library
+.lib-status-badge.is-not_started {
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  border-color: var(--q-border);
+}
+
+/* Contadores e indicadores */
+
+.notif-badge,
+.q-count-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--q-space-1);
+  border: 1px solid var(--q-surface);
+  border-radius: 999px;
+  background: var(--q-brand);
+  color: var(--q-bg);
+  box-shadow: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+body:not(.dark-theme) :is(.notif-badge, .q-count-badge) {
+  color: var(--q-text);
+}
+
+.q-count-badge {
+  display: inline-flex;
+}
+
+.q-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--q-text-3);
+  flex-shrink: 0;
+}
+
+.q-status-dot--online {
+  background: var(--q-success);
+}
+
+.q-status-dot--unread {
+  background: var(--q-brand);
+}
+
+.q-status-dot--error {
+  background: var(--q-danger);
+}
+
+/* Accesibilidad */
+
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    .q-btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger,
+    .btn-ghost,
+    .q-btn-danger-soft,
+    .q-btn-icon,
+    .pill-filter,
+    .pill-filter-sm,
+    .q-chip
+  ) {
+    transition: none;
+  }
+
+  .q-btn-spinner {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  :is(
+    .q-btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger,
+    .btn-ghost,
+    .q-btn-danger-soft,
+    .q-btn-icon
+  ) {
+    border: 1px solid ButtonText;
+  }
+}
+
+
+/* DS-04 SPECIAL CONTROLS — PASO 1129 */
+/*
+ * Variantes semanticas de controles realmente usados.
+ * Mantener las dimensiones de los layouts existentes.
+ * CSS oficial: colores, forma, bordes y estados.
+ */
+
+/* 1. Biblioteca: accion principal */
+#view-library .lib-primary-btn {
+  background: var(--q-brand);
+  color: var(--q-text);
+  border: 1px solid var(--q-brand);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-stamp);
+}
+
+body.dark-theme #view-library .lib-primary-btn {
+  color: var(--q-bg);
+}
+
+#view-library .lib-primary-btn:hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow: var(--q-elevation-stamp);
+}
+
+/* 2. Biblioteca: completar */
+#view-library .lib-complete-btn,
+#view-library .lib-footer-actions .lib-complete-btn,
+body.dark-theme #view-library .lib-complete-btn,
+body.dark-theme #view-library .lib-footer-actions .lib-complete-btn {
+  background: var(--q-success-soft);
+  color: var(--q-success);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+#view-library .lib-complete-btn:hover:not(:disabled),
+#view-library .lib-footer-actions .lib-complete-btn:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--q-success) 20%,
+    var(--q-surface)
+  );
+  box-shadow: var(--q-elevation-flat);
+}
+
+/* 3. Biblioteca: añadir a una lista */
+#view-library .lib-list-btn,
+#view-library .lib-footer-actions .lib-list-btn,
+body.dark-theme #view-library .lib-list-btn {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+#view-library .lib-list-btn:hover:not(:disabled),
+#view-library .lib-footer-actions .lib-list-btn:hover:not(:disabled),
+body.dark-theme #view-library .lib-list-btn:hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: var(--q-elevation-flat);
+}
+
+#view-library .lib-list-btn.is-added {
+  background: var(--q-success-soft);
+  color: var(--q-success);
+  border-color: var(--q-success);
+}
+
+/* 4. Inicio: retomar contenido */
+.btn-retomar {
+  min-height: 40px;
+  background: var(--q-brand);
+  color: var(--q-text);
+  border: 1px solid var(--q-brand);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-stamp);
+}
+
+body.dark-theme .btn-retomar {
+  color: var(--q-bg);
+}
+
+.btn-retomar:hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow: var(--q-elevation-stamp);
+}
+
+/* 5-7. Votaciones colaborativas */
+/* Mantener grid, anchuras y alturas originales. */
+.list-poll-actions :is(
+  .list-poll-vote-save,
+  .list-poll-results-button,
+  .list-poll-close
+) {
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.list-poll-actions .list-poll-vote-save,
+body.dark-theme .list-poll-actions .list-poll-vote-save {
+  background: var(--q-brand);
+  color: var(--q-text);
+  border-color: var(--q-brand);
+}
+
+body.dark-theme .list-poll-actions .list-poll-vote-save {
+  color: var(--q-bg);
+}
+
+.list-poll-actions .list-poll-vote-save:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--q-brand) 94%,
+    var(--q-surface)
+  );
+}
+
+.list-poll-actions .list-poll-results-button,
+body.dark-theme .list-poll-actions .list-poll-results-button {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+}
+
+.list-poll-actions .list-poll-results-button:hover:not(:disabled),
+body.dark-theme .list-poll-actions .list-poll-results-button:hover:not(:disabled) {
+  background: var(--q-surface-2);
+}
+
+.list-poll-actions .list-poll-close,
+body.dark-theme .list-poll-actions .list-poll-close {
+  background: var(--q-danger-soft-bg);
+  color: var(--q-danger);
+  border-color: var(--q-border);
+}
+
+.list-poll-actions .list-poll-close:hover:not(:disabled),
+body.dark-theme .list-poll-actions .list-poll-close:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--q-danger) 20%,
+    var(--q-surface)
+  );
+}
+
+/* 8. Detalle de contenido: volver */
+.content-detail-back,
+.content-detail-top-actions .btn-secondary,
+body.dark-theme .content-detail-back,
+body.dark-theme .content-detail-top-actions .btn-secondary {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.content-detail-back:hover:not(:disabled),
+.content-detail-top-actions .btn-secondary:hover:not(:disabled),
+body.dark-theme .content-detail-back:hover:not(:disabled),
+body.dark-theme .content-detail-top-actions .btn-secondary:hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: var(--q-elevation-flat);
+}
+
+/* 9-10. Favoritos: mover y seleccionar */
+.profile-favorite-action,
+.profile-favorite-pick,
+body.dark-theme .profile-favorite-action,
+body.dark-theme .profile-favorite-pick {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.profile-favorite-action:hover:not(:disabled),
+.profile-favorite-pick:hover:not(:disabled),
+body.dark-theme .profile-favorite-action:hover:not(:disabled),
+body.dark-theme .profile-favorite-pick:hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.profile-favorite-action--remove:hover:not(:disabled),
+body.dark-theme .profile-favorite-action--remove:hover:not(:disabled) {
+  background: var(--q-danger-soft-bg);
+  color: var(--q-danger);
+}
+
+/* 11. Eliminar: peligro */
+.btn-delete-item {
+  min-height: 40px;
+  background: var(--q-danger);
+  color: var(--q-surface);
+  border: 1px solid var(--q-danger);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+  font-family: var(--q-font-ui);
+}
+
+body.dark-theme .btn-delete-item {
+  color: var(--q-bg);
+}
+
+.btn-delete-item:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: none;
+}
+
+/* 12. Iconos de cabecera */
+.icon-button,
+body.dark-theme .icon-button {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: var(--q-elevation-flat);
+}
+
+/* El chip de perfil conserva su forma especifica. */
+.icon-button:not(.profile-chip) {
+  border-radius: var(--q-radius-control);
+}
+
+.icon-button:hover:not(:disabled),
+body.dark-theme .icon-button:hover:not(:disabled) {
+  background: var(--q-surface-2);
+  box-shadow: var(--q-elevation-flat);
+}
+
+/* 13. Botones compactos de icono */
+.icon-btn,
+body.dark-theme #avatarPickerModal .icon-btn {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.icon-btn:hover:not(:disabled),
+body.dark-theme #avatarPickerModal .icon-btn:hover:not(:disabled) {
+  background: var(--q-surface-2);
+  box-shadow: var(--q-elevation-flat);
+}
+
+/* 14. Cerrar ventanas */
+/* Conservar tamaños propios de cada modal. */
+.modal-close,
+body.dark-theme :is(
+  #listModal,
+  #progressModal,
+  #addLibraryModal,
+  #listPollModal,
+  #whatsNewModal,
+  #communityReportModal
+) .modal-close,
+#communityReportModal .modal-close {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.modal-close:hover:not(:disabled),
+#whatsNewModal .modal-close:hover:not(:disabled),
+body.dark-theme :is(
+  #listModal,
+  #progressModal,
+  #addLibraryModal,
+  #listPollModal,
+  #whatsNewModal,
+  #communityReportModal
+) .modal-close:hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  box-shadow: var(--q-elevation-flat);
+}
+
+/* Accesibilidad: foco comun a variantes especiales. */
+:is(
+  .lib-primary-btn,
+  .lib-complete-btn,
+  .lib-list-btn,
+  .btn-retomar,
+  .list-poll-vote-save,
+  .list-poll-results-button,
+  .list-poll-close,
+  .content-detail-back,
+  .profile-favorite-action,
+  .profile-favorite-pick,
+  .btn-delete-item,
+  .icon-button,
+  .icon-btn,
+  .modal-close
+):focus-visible {
+  outline: 3px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+/* Los elementos deshabilitados no reaccionan al hover. */
+:is(
+  .lib-primary-btn,
+  .lib-complete-btn,
+  .lib-list-btn,
+  .btn-retomar,
+  .list-poll-vote-save,
+  .list-poll-results-button,
+  .list-poll-close,
+  .profile-favorite-action,
+  .profile-favorite-pick,
+  .btn-delete-item
+):disabled {
+  transform: none;
+  filter: none;
+}
+
+/* Respetar las preferencias de movimiento reducido. */
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    .lib-primary-btn,
+    .lib-complete-btn,
+    .lib-list-btn,
+    .btn-retomar,
+    .list-poll-vote-save,
+    .list-poll-results-button,
+    .list-poll-close,
+    .content-detail-back,
+    .profile-favorite-action,
+    .profile-favorite-pick,
+    .btn-delete-item,
+    .icon-button,
+    .icon-btn,
+    .modal-close
+  ) {
+    transition: none;
+  }
+}
+
+
+/* DS-04 WHATS NEW CLOSE — PASO 1135-A */
+/* Uniformar la elevacion del estado normal. */
+#whatsNewModal .modal-close {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: var(--q-elevation-flat);
+}
