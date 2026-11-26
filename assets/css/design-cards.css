@@ -792,3 +792,107 @@ body.dark-theme #view-lists .list-visibility {
     transition: none !important;
   }
 }
+
+
+#view-library .lib-cover .lib-cover-list-btn {
+  position: absolute;
+  top: 4px;
+  left: 10px;
+  width: 33px;
+  height: 33px;
+  min-width: 33px;
+  min-height: 33px;
+  max-width: 33px;
+  max-height: 33px;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--q-border);
+  border-radius: 50%;
+  clip-path: none;
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
+  cursor: pointer;
+  line-height: 1;
+  transform: none;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+  z-index: 2;
+}
+
+#view-library .lib-cover .lib-cover-list-btn svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  pointer-events: none;
+}
+
+#view-library .lib-cover .lib-cover-list-btn.is-added {
+  background: var(--q-brand);
+  color: #17181c;
+  border-color: #17181c;
+}
+
+#view-library .lib-cover .lib-cover-list-btn.is-added svg {
+  fill: currentColor;
+}
+
+body.dark-theme #view-library .lib-cover .lib-cover-list-btn {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
+}
+
+body.dark-theme #view-library .lib-cover .lib-cover-list-btn.is-added {
+  background: var(--q-brand);
+  color: #17181c;
+  border-color: #17181c;
+}
+
+#view-library .lib-cover .lib-cover-list-btn:hover:not(:disabled),
+body.dark-theme #view-library .lib-cover .lib-cover-list-btn:hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  border-color: currentColor;
+  transform: none;
+}
+
+#view-library .lib-cover .lib-cover-list-btn.is-added:hover:not(:disabled),
+body.dark-theme #view-library .lib-cover .lib-cover-list-btn.is-added:hover:not(:disabled) {
+  background: var(--q-brand);
+  color: #17181c;
+  border-color: #17181c;
+  transform: none;
+}
+
+#view-library .lib-cover .lib-cover-list-btn:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 1px;
+}
+
+#view-library .lib-cover .lib-cover-list-btn.is-pulse {
+  animation: none;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #view-library .lib-cover .lib-cover-list-btn,
+  #view-library .lib-cover .lib-cover-list-btn.is-pulse {
+    transition: none;
+    animation: none;
+  }
+}
