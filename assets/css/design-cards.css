@@ -1,0 +1,794 @@
+/*
+ * QUACKER — DS-06.1
+ * Tarjetas de contenido y portadas.
+ *
+ * CSS visual. No modifica las acciones de usuario.
+ * Tokens oficiales DS-01 / DS-03.
+ */
+
+/* Explorar: portada protagonista y datos debajo. */
+
+#view-explore .explore-card--poster {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: auto;
+  aspect-ratio: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--q-radius-card);
+  background: transparent;
+  overflow: visible;
+  box-shadow: none;
+  isolation: isolate;
+}
+
+#view-explore .explore-card--poster .explore-cover {
+  position: relative;
+  inset: auto;
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--q-radius-control);
+  overflow: hidden;
+  background: var(--q-surface-2);
+  border: 1px solid var(--q-border);
+}
+
+#view-explore .explore-card--poster .explore-cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+#view-explore .explore-card--poster .explore-cover-img--game {
+  object-position: center top;
+}
+
+#view-explore .explore-cover.is-fallback {
+  display: grid;
+  place-items: center;
+  background: var(--q-surface-2);
+  color: var(--q-text-3);
+}
+
+#view-explore .explore-cover.is-fallback
+.explore-cover-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  color: var(--q-text-3);
+}
+
+#view-explore .explore-card--poster .explore-card-overlay {
+  position: absolute;
+  inset: 0 0 auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: var(--q-radius-control);
+  pointer-events: none;
+}
+
+#view-explore .explore-card--poster
+.explore-card-type {
+  right: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
+  min-height: 22px;
+  padding: 3px 7px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: var(--q-radius-label);
+  background: rgb(15 17 21 / 82%);
+  color: #fff;
+  font-size: 0.64rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Titulo y metadatos fuera de la portada. */
+
+#view-explore .explore-card-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 2px 2px;
+  color: var(--q-text);
+}
+
+#view-explore .explore-card-caption-title {
+  display: -webkit-box;
+  min-height: 2.65em;
+  max-height: 2.65em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.325;
+  color: var(--q-text);
+}
+
+#view-explore .explore-card-caption-meta {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--q-text-2);
+}
+
+#view-explore .explore-card--poster:hover {
+  transform: translateY(-2px);
+  box-shadow: none;
+}
+
+#view-explore .explore-card--poster:hover
+.explore-cover {
+  box-shadow: var(--q-elevation-card);
+}
+
+#view-explore .explore-card--poster:focus-visible {
+  outline: 3px solid var(--q-brand);
+  outline-offset: 4px;
+  box-shadow: none;
+}
+
+/* Biblioteca: superficie, portada y estados. */
+
+#view-library .lib-card {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--q-surface);
+  color: var(--q-text);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-card);
+  box-shadow: var(--q-elevation-card);
+}
+
+#view-library .lib-card:not(.is-skeleton):hover {
+  box-shadow: var(--q-elevation-card);
+}
+
+#view-library .lib-card:focus-within {
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+#view-library .lib-cover {
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  background: var(--q-surface-2);
+}
+
+#view-library .lib-cover-image {
+  background: var(--q-surface-2);
+  object-position: center;
+}
+
+#view-library .lib-cover-image--game {
+  object-fit: cover;
+  object-position: center top;
+}
+
+#view-library .lib-body {
+  min-width: 0;
+  background: var(--q-surface);
+  color: var(--q-text);
+}
+
+#view-library .lib-title {
+  display: -webkit-box;
+  min-height: 2.6em;
+  max-height: 2.6em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--q-text);
+}
+
+#view-library .lib-progress-text {
+  color: var(--q-text-2);
+}
+
+#view-library .lib-cover-progress {
+  color: var(--q-brand);
+}
+
+#view-library .lib-cover-progress::-webkit-progress-value {
+  background: var(--q-brand);
+}
+
+#view-library .lib-cover-progress::-moz-progress-bar {
+  background: var(--q-brand);
+}
+
+/* Favoritos públicos: mismo lenguaje visual. */
+
+.public-profile-favorite {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-card, 14px);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: var(--q-elevation-card, 0 2px 8px rgb(0 0 0 / 8%));
+}
+
+.public-profile-favorite-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--q-surface-2);
+}
+
+.public-profile-favorite-placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 2 / 3;
+  color: var(--q-text-3);
+  background: var(--q-surface-2);
+  text-align: center;
+}
+
+.public-profile-favorite-body {
+  min-width: 0;
+  padding: 10px 12px 12px;
+}
+
+.public-profile-favorite-title {
+  display: -webkit-box;
+  min-height: 2.7em;
+  max-height: 2.7em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--q-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* Modo oscuro y coherencia de superficies. */
+
+body.dark-theme #view-explore
+.explore-card-caption-title,
+body.dark-theme #view-library .lib-title {
+  color: var(--q-text);
+}
+
+body.dark-theme #view-explore
+.explore-card-caption-meta,
+body.dark-theme #view-library .lib-progress-text {
+  color: var(--q-text-2);
+}
+
+body.dark-theme #view-explore .explore-cover.is-fallback,
+body.dark-theme #view-library .lib-cover {
+  background: var(--q-surface-2);
+}
+
+body.dark-theme .public-profile-favorite {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+}
+
+/* Movil: dos columnas y pies legibles. */
+
+@media (max-width: 640px) {
+  #view-explore .explore-section-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 10px;
+  }
+
+  #view-explore .explore-card-caption {
+    padding-top: 7px;
+  }
+
+  #view-explore .explore-card-caption-title {
+    font-size: 0.8rem;
+  }
+
+  #view-explore .explore-card-caption-meta {
+    font-size: 0.7rem;
+  }
+
+  .public-profile-favorites-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #view-library .lib-card {
+    min-width: 0;
+  }
+}
+
+/* Accesibilidad: reducir animacion. */
+
+@media (prefers-reduced-motion: reduce) {
+  #view-explore .explore-card--poster,
+  #view-explore .explore-card--poster:hover,
+  #view-library .lib-card,
+  #view-library .lib-card:hover {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+
+/* DS-06.2: progreso y listas */
+
+/* Continuar: portada lateral y progreso real. */
+
+#view-home .home-continue-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 12px;
+}
+
+#view-home .cw-card {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 178px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-card);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: var(--q-elevation-card);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+#view-home .cw-card:hover {
+  background: var(--q-surface);
+  transform: translateY(-2px);
+  box-shadow: var(--q-elevation-card);
+}
+
+#view-home .cw-card:focus-within {
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+#view-home .cw-cover {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 178px;
+  overflow: hidden;
+  background: var(--q-surface-2);
+}
+
+#view-home .cw-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#view-home .cw-cover-type-badge {
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--q-border);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: none;
+}
+
+#view-home .cw-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px;
+  gap: 6px;
+  background: var(--q-surface);
+}
+
+#view-home .cw-title-row {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#view-home .cw-title-with-icon {
+  min-width: 0;
+  flex: 1 1 100%;
+}
+
+#view-home .cw-title {
+  display: -webkit-box;
+  min-width: 0;
+  max-height: 2.7em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--q-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+#view-home .cw-meta,
+#view-home .cw-progress-label {
+  min-width: 0;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  color: var(--q-text-2);
+}
+
+#view-home .cw-platform-pill {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-label);
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  box-shadow: none;
+}
+
+#view-home .cw-progress-bar {
+  width: 100%;
+  height: 8px;
+  min-height: 8px;
+  margin-top: 2px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--q-border);
+}
+
+#view-home .cw-progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  color: var(--q-brand);
+}
+
+#view-home .cw-progress-fill::-webkit-progress-bar {
+  background: var(--q-border);
+}
+
+#view-home .cw-progress-fill::-webkit-progress-value {
+  background: var(--q-brand);
+}
+
+#view-home .cw-progress-fill::-moz-progress-bar {
+  background: var(--q-brand);
+}
+
+#view-home .cw-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 6px;
+  margin-top: auto;
+  color: var(--q-text-2);
+  font-size: 0.76rem;
+}
+
+#view-home .cw-tick-btn {
+  max-width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  background: var(--q-brand);
+  color: #17181c;
+  box-shadow: none;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#view-home .cw-tick-btn:focus-visible {
+  outline: 3px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+#view-home .cw-tick-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+}
+
+#view-home .cw-card--completed {
+  opacity: 1;
+}
+
+#view-home .cw-card--completed
+.cw-progress-fill::-webkit-progress-value {
+  background: var(--q-success);
+}
+
+#view-home .cw-card--completed
+.cw-progress-fill::-moz-progress-bar {
+  background: var(--q-success);
+}
+
+/* Listas: mosaicos, títulos y estados. */
+
+#view-lists .list-card {
+  min-width: 0;
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-card);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: var(--q-elevation-card);
+}
+
+#view-lists .list-card-header {
+  min-width: 0;
+  gap: 8px;
+}
+
+#view-lists .list-card-header > h3 {
+  display: -webkit-box;
+  min-width: 0;
+  max-height: 2.7em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--q-text);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+#view-lists .list-meta {
+  display: -webkit-box;
+  min-width: 0;
+  max-height: 2.8em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--q-text-2);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+#view-lists .list-cover {
+  position: relative;
+  height: 156px;
+  margin: 8px 8px 0;
+  overflow: hidden;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  background: var(--q-surface-2);
+}
+
+#view-lists .list-cover-collage {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 2px;
+  background: var(--q-surface-2);
+}
+
+#view-lists .list-cover-collage img {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  object-fit: cover;
+}
+
+#view-lists .list-cover--empty {
+  display: grid;
+  place-items: center;
+  background: var(--q-surface-2);
+}
+
+#view-lists .list-cover-empty-mark {
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  background: var(--q-brand);
+  color: #17181c;
+  box-shadow: none;
+}
+
+#view-lists .cover-count-pill {
+  border: 1px solid var(--q-border);
+  border-radius: 999px;
+  background: var(--q-brand);
+  color: #17181c;
+  box-shadow: none;
+  font-weight: 700;
+}
+
+#view-lists .list-visibility {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 4px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid var(--q-border);
+  border-radius: 999px;
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  box-shadow: none;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+#view-lists .list-edit-btn,
+#view-lists .list-delete-btn {
+  border: 1px solid var(--q-border);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: none;
+}
+
+#view-lists .list-edit-btn:focus-visible,
+#view-lists .list-delete-btn:focus-visible {
+  outline: 3px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+/* Vista en filas: conserva estructura y controles. */
+
+#listsGrid.lists-grid--list .list-card {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  grid-template-areas:
+    "cover header"
+    "cover meta";
+  min-width: 0;
+  min-height: 104px;
+  padding: 12px;
+  column-gap: 16px;
+  row-gap: 6px;
+}
+
+#view-lists #listsGrid.lists-grid--list .list-cover {
+  grid-area: cover;
+  height: 80px;
+  min-height: 80px;
+  margin: 0;
+}
+
+#view-lists #listsGrid.lists-grid--list .list-card-header {
+  grid-area: header;
+}
+
+#view-lists #listsGrid.lists-grid--list .list-meta {
+  grid-area: meta;
+}
+
+/* Tema oscuro: superficies DS-01. */
+
+body.dark-theme #view-home .cw-card {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  color: var(--q-text);
+}
+
+body.dark-theme #view-home .cw-body {
+  background: var(--q-surface);
+}
+
+body.dark-theme #view-home .cw-cover {
+  background: var(--q-surface-2);
+}
+
+body.dark-theme #view-lists .list-card {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  color: var(--q-text);
+}
+
+body.dark-theme #view-lists .list-cover--empty {
+  background: var(--q-surface-2);
+}
+
+body.dark-theme #view-lists .list-visibility {
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  border-color: var(--q-border);
+}
+
+/* Móvil: tarjetas de avance legibles y filas compactas. */
+
+@media (max-width: 640px) {
+  #view-home .home-continue-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #view-home .cw-card {
+    grid-template-columns: 94px minmax(0, 1fr);
+    min-height: 152px;
+  }
+
+  #view-home .cw-cover {
+    min-height: 152px;
+  }
+
+  #view-home .cw-body {
+    padding: 10px;
+    gap: 5px;
+  }
+
+  #view-home .cw-title {
+    font-size: 0.84rem;
+  }
+
+  #view-home .cw-tick-btn {
+    min-height: 32px;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+  }
+
+  #view-lists .list-card-header {
+    flex-wrap: wrap;
+  }
+
+  #view-lists .list-card-header-actions {
+    margin-left: auto;
+  }
+
+  #view-lists #listsGrid.lists-grid--list .list-card {
+    grid-template-columns: 96px minmax(0, 1fr);
+    column-gap: 10px;
+    padding: 10px;
+  }
+
+  #view-lists #listsGrid.lists-grid--list .list-cover {
+    height: 70px;
+    min-height: 70px;
+  }
+}
+
+/* Accesibilidad: movimiento reducido. */
+
+@media (prefers-reduced-motion: reduce) {
+  #view-home .cw-card,
+  #view-home .cw-card:hover,
+  #view-lists .list-card,
+  #view-lists .list-card:hover {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  #view-home .cw-progress-fill::-webkit-progress-value {
+    transition: none !important;
+  }
+}

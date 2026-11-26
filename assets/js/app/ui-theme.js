@@ -10,6 +10,16 @@ const UITheme = (() => {
     // si existe el toggle tipo píldora, marcamos estado visual
     const toggle = document.querySelector("[data-theme-toggle]");
     if (toggle) toggle.classList.toggle("is-dark", isDark);
+
+    // Mantener el texto traducido sincronizado con el tema.
+    const label = document.querySelector(".theme-row [data-i18n]");
+    if (label) {
+      const key = isDark ? "theme_dark" : "theme_light";
+      label.dataset.i18n = key;
+      label.textContent =
+        window.I18n?.t?.(key) ??
+        (isDark ? "Modo oscuro" : "Modo claro");
+    }
   }
 
   async function init() {
