@@ -1,0 +1,1209 @@
+/*
+ * QUACKER DESIGN SYSTEM — DS-05.1
+ * Formularios: campos, etiquetas y estados.
+ *
+ * Reutiliza DS-01 a DS-04.
+ * No cambia eventos, datos ni validaciones.
+ * Los estados visuales deben existir en el DOM.
+ */
+
+/* Dimensiones y variables compartidas */
+
+:root {
+  --q-field-height: 40px;
+  --q-field-height-mobile: 44px;
+  --q-field-radius: var(--q-radius-control, 10px);
+  --q-field-duration: 150ms;
+}
+
+/* Campos reales de las tres paginas */
+
+.form-input,
+.form-textarea,
+.input-wrapper-auth,
+.profile-form-group input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.profile-form-group select,
+.profile-form-group textarea,
+.modal-field input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.modal-field select,
+.modal-field textarea,
+.public-profile-report-form select,
+.public-profile-report-form textarea {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: var(--q-field-height);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-field-radius);
+  background: var(--q-surface);
+  color: var(--q-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  box-shadow: none;
+  transition:
+    border-color var(--q-field-duration) ease,
+    background-color var(--q-field-duration) ease,
+    box-shadow var(--q-field-duration) ease;
+}
+
+/* Campos de una linea */
+
+.form-input,
+.profile-form-group input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.profile-form-group select,
+.modal-field input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.modal-field select,
+.public-profile-report-form select {
+  padding: 8px 12px;
+}
+
+/* Radios oficiales DS-03 en el dashboard */
+
+.profile-form-group input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.profile-form-group select,
+.profile-form-group textarea {
+  border-radius: var(--q-radius-control);
+}
+
+/*
+ * Autenticacion.
+ * El borde pertenece al contenedor, no al input
+ * interior: conserva iconos y boton de contraseña.
+ */
+
+.input-wrapper-auth {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.input-field-auth {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--q-text);
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 10px 0;
+  box-shadow: none;
+}
+
+.input-icon-auth,
+.password-toggle-auth {
+  flex-shrink: 0;
+}
+
+/* Etiquetas visibles */
+
+.form-label,
+.form-label-auth,
+.profile-form-group label,
+.modal-field label,
+.public-profile-report-form label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--q-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* Areas de texto: nunca forzar altura de input */
+
+.form-textarea,
+.profile-form-group textarea,
+.modal-field textarea,
+.public-profile-report-form textarea {
+  min-height: 110px;
+  height: auto;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Placeholder secundario */
+
+.form-input::placeholder,
+.form-textarea::placeholder,
+.input-field-auth::placeholder,
+.profile-form-group input::placeholder,
+.profile-form-group textarea::placeholder,
+.modal-field input::placeholder,
+.modal-field textarea::placeholder,
+.public-profile-report-form textarea::placeholder {
+  color: var(--q-text-3);
+  opacity: 1;
+}
+
+/* Foco: azul informativo, visible con teclado */
+
+.form-input:focus-visible,
+.form-textarea:focus-visible,
+.profile-form-group :is(input, select, textarea):focus-visible,
+.modal-field :is(input, select, textarea):focus-visible,
+.public-profile-report-form :is(select, textarea):focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+  border-color: var(--q-info);
+  box-shadow:
+    0 0 0 3px color-mix(
+      in srgb,
+      var(--q-info) 18%,
+      transparent
+    );
+}
+
+.input-wrapper-auth:focus-within {
+  border-color: var(--q-info);
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 3px color-mix(
+      in srgb,
+      var(--q-info) 18%,
+      transparent
+    );
+}
+
+.input-wrapper-auth .input-field-auth:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Error: solo cuando el estado esta declarado */
+
+.form-input[aria-invalid="true"],
+.form-textarea[aria-invalid="true"],
+.form-input.is-invalid,
+.form-textarea.is-invalid,
+.profile-form-group :is(input, select, textarea)[aria-invalid="true"],
+.modal-field :is(input, select, textarea)[aria-invalid="true"],
+.public-profile-report-form :is(select, textarea)[aria-invalid="true"],
+.input-wrapper-auth.is-invalid,
+.input-wrapper-auth:has(.input-field-auth[aria-invalid="true"]) {
+  border-color: var(--q-danger);
+}
+
+.field-error-auth {
+  color: var(--q-danger);
+}
+
+/* Correcto: unicamente con estado real */
+
+.form-input.is-valid,
+.form-textarea.is-valid,
+.profile-form-group .is-valid,
+.modal-field .is-valid,
+.public-profile-report-form .is-valid,
+.input-wrapper-auth.is-valid,
+.form-input[data-state="success"],
+.form-textarea[data-state="success"] {
+  border-color: var(--q-success);
+}
+
+/* Desactivado y solo lectura */
+
+.form-input:disabled,
+.form-textarea:disabled,
+.input-wrapper-auth:has(.input-field-auth:disabled),
+.profile-form-group :is(input, select, textarea):disabled,
+.modal-field :is(input, select, textarea):disabled,
+.public-profile-report-form :is(select, textarea):disabled,
+.form-input:read-only,
+.profile-form-group input:read-only,
+.modal-field input[readonly] {
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  border-color: var(--q-border);
+  box-shadow: none;
+}
+
+.form-input:disabled,
+.form-textarea:disabled,
+.profile-form-group :is(input, select, textarea):disabled,
+.modal-field :is(input, select, textarea):disabled,
+.public-profile-report-form :is(select, textarea):disabled {
+  cursor: not-allowed;
+}
+
+/* Restablecer colores heredados en landing */
+
+body.dark-theme .form-input,
+body.dark-theme .form-textarea,
+body.dark-theme .input-wrapper-auth {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  color: var(--q-text);
+}
+
+body.dark-theme .input-field-auth,
+body.dark-theme .form-label,
+body.dark-theme .form-label-auth {
+  color: var(--q-text);
+}
+
+/* Modales oscuros con estilos heredados especificos */
+
+body.dark-theme :is(
+  #listModal,
+  #progressModal,
+  #addLibraryModal,
+  #listPollModal
+) .modal-field :is(
+  input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea
+) {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: none;
+}
+
+body.dark-theme :is(
+  #listModal,
+  #progressModal,
+  #addLibraryModal,
+  #listPollModal
+) .modal-field :is(
+  input:not([type="checkbox"]):not([type="hidden"]):not([type="file"]),
+  select,
+  textarea
+):focus-visible {
+  background: var(--q-surface);
+  border-color: var(--q-info);
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 3px color-mix(
+      in srgb,
+      var(--q-info) 18%,
+      transparent
+    );
+}
+
+/* El perfil oscuro tambien utiliza tokens oficiales */
+
+body.dark-theme .profile-form-group label,
+body.dark-theme .profile-form-group :is(input, select, textarea) {
+  color: var(--q-text);
+}
+
+body.dark-theme .profile-form-group :is(input, select, textarea) {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+}
+
+body.dark-theme .profile-form-group :is(
+  input, select, textarea
+):focus-visible {
+  border-color: var(--q-info);
+  box-shadow:
+    0 0 0 3px color-mix(
+      in srgb,
+      var(--q-info) 18%,
+      transparent
+    );
+}
+
+/* Excepciones: archivos y campos ocultos */
+
+input[type="hidden"],
+input[type="file"] {
+  /* Sin alturas ni bordes impuestos por DS-05.1 */
+}
+
+/* Dispositivos tactiles */
+
+@media (max-width: 640px) {
+  :root {
+    --q-field-height: var(--q-field-height-mobile);
+  }
+
+  .input-wrapper-auth {
+    min-height: var(--q-field-height-mobile);
+  }
+}
+
+/* Accesibilidad de movimiento */
+
+@media (prefers-reduced-motion: reduce) {
+  .form-input,
+  .form-textarea,
+  .input-wrapper-auth,
+  .profile-form-group :is(input, select, textarea),
+  .modal-field :is(input, select, textarea),
+  .public-profile-report-form :is(select, textarea) {
+    transition: none;
+  }
+}
+
+/*
+ * DS-05.1 — Correcciones Safari, PASO 1159
+ * Resuelve conflictos de cascada detectados
+ * en la auditoria visual.
+ */
+
+/* A. Estados de landing en modo oscuro */
+
+body.dark-theme .form-input:where(
+  [aria-invalid="true"], .is-invalid
+),
+body.dark-theme .form-textarea:where(
+  [aria-invalid="true"], .is-invalid
+),
+body.dark-theme .input-wrapper-auth.is-invalid,
+body.dark-theme .input-wrapper-auth:has(
+  .input-field-auth[aria-invalid="true"]
+) {
+  border-color: var(--q-danger);
+}
+
+body.dark-theme .form-input:where(
+  .is-valid, [data-state="success"]
+),
+body.dark-theme .form-textarea:where(
+  .is-valid, [data-state="success"]
+),
+body.dark-theme .input-wrapper-auth.is-valid {
+  border-color: var(--q-success);
+}
+
+body.dark-theme .form-input:disabled,
+body.dark-theme .form-textarea:disabled,
+body.dark-theme .input-wrapper-auth:has(
+  .input-field-auth:disabled
+) {
+  background-color: var(--q-surface-2);
+  color: var(--q-text-2);
+  border-color: var(--q-border);
+}
+
+/* B. Perfil: superar especificidad de :not() */
+
+.profile-form-group input:not(
+  [type="hidden"]
+):not([type="file"]):not([type="checkbox"]):not(
+  [type="radio"]
+):is([aria-invalid="true"], .is-invalid),
+.profile-form-group :is(select, textarea):is(
+  [aria-invalid="true"], .is-invalid
+) {
+  border-color: var(--q-danger);
+}
+
+.profile-form-group input:not(
+  [type="hidden"]
+):not([type="file"]):not([type="checkbox"]):not(
+  [type="radio"]
+):is(.is-valid, [data-state="success"]),
+.profile-form-group :is(select, textarea):is(
+  .is-valid, [data-state="success"]
+) {
+  border-color: var(--q-success);
+}
+
+.profile-form-group input:not(
+  [type="hidden"]
+):not([type="file"]):not([type="checkbox"]):not(
+  [type="radio"]
+):disabled,
+.profile-form-group :is(select, textarea):disabled {
+  background-color: var(--q-surface-2);
+  color: var(--q-text-2);
+  border-color: var(--q-border);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* C. Descripcion de listas: sustituir estilo antiguo */
+
+#listModal .modal-field textarea {
+  min-height: 110px;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: none;
+  resize: vertical;
+}
+
+body.dark-theme #listModal .modal-field textarea {
+  min-height: 110px;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  background-color: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: none;
+}
+
+#listModal .modal-field textarea:focus-visible,
+body.dark-theme #listModal .modal-field textarea:focus-visible {
+  border-color: var(--q-info);
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 3px color-mix(
+      in srgb,
+      var(--q-info) 18%,
+      transparent
+    );
+}
+
+/* D. Select nativo de perfil publico */
+
+.public-profile-report-form select {
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  height: var(--q-field-height);
+  min-height: var(--q-field-height);
+  padding: 8px 36px 8px 12px;
+  border-radius: var(--q-field-radius);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent 50%,
+      var(--q-text-2) 50%
+    ),
+    linear-gradient(
+      135deg,
+      var(--q-text-2) 50%,
+      transparent 50%
+    );
+  background-position:
+    calc(100% - 17px) 50%,
+    calc(100% - 12px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.public-profile-report-form select:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+  border-color: var(--q-info);
+}
+
+
+/* DS-05.2 — BUSCADORES SELECTORES Y PRIVACIDAD */
+
+/*
+ * Controles existentes del dashboard.
+ * No aplica al buscador global desactivado.
+ * No añade iconos, eventos ni controles nuevos.
+ */
+
+/* 1. Buscadores independientes */
+
+#view-lists .lists-search input,
+.community-search-input,
+.favorite-picker-search input {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: var(--q-field-height);
+  height: var(--q-field-height);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-field-radius);
+  background: var(--q-surface);
+  color: var(--q-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  box-shadow: none;
+  transition:
+    border-color var(--q-field-duration) ease,
+    box-shadow var(--q-field-duration) ease;
+}
+
+/* El buscador de listas ya tiene icono integrado. */
+#view-lists .lists-search input {
+  width: 100%;
+  padding: 0 12px 0 32px;
+}
+
+/* Busqueda de comunidad y favoritos. */
+.community-search-input,
+.favorite-picker-search input {
+  width: 100%;
+  padding: 0 12px;
+}
+
+#view-lists .lists-search input::placeholder,
+.community-search-input::placeholder,
+.favorite-picker-search input::placeholder {
+  color: var(--q-text-3);
+  opacity: 1;
+}
+
+#view-lists .lists-search input:focus-visible,
+.community-search-input:focus-visible,
+.favorite-picker-search input:focus-visible {
+  border-color: var(--q-info);
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 3px color-mix(
+      in srgb,
+      var(--q-info) 18%,
+      transparent
+    );
+}
+
+/* 2. Busqueda interna de elementos de una lista */
+
+/* La lupa pertenece al contenedor, no al input. */
+.list-items-search {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: var(--q-field-height);
+  height: var(--q-field-height);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-field-radius);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: none;
+}
+
+.list-items-search input,
+#listDetailSearch {
+  box-sizing: border-box;
+  width: min(220px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--q-text);
+  font: inherit;
+  font-size: 0.875rem;
+  box-shadow: none;
+}
+
+.list-items-search input::placeholder {
+  color: var(--q-text-3);
+  opacity: 1;
+}
+
+.list-items-search:focus-within {
+  border-color: var(--q-info);
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 3px color-mix(
+      in srgb,
+      var(--q-info) 18%,
+      transparent
+    );
+}
+
+.list-items-search input:focus-visible {
+  outline: none;
+}
+
+/* 3. Selectores de ordenacion de Explorar y Biblioteca */
+
+.library-sort select,
+#view-library .library-sort select,
+#view-explore .explore-toolbar-right .library-sort select {
+  box-sizing: border-box;
+  min-height: var(--q-field-height);
+  height: var(--q-field-height);
+  border-radius: var(--q-field-radius);
+  color: var(--q-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* Biblioteca: selector completo con su flecha existente. */
+#view-library .library-sort select {
+  border: 1px solid var(--q-border);
+  background: var(--q-surface);
+}
+
+/* Explorar: conserva icono y composicion del contenedor. */
+#view-explore .explore-toolbar-right .library-sort {
+  min-height: var(--q-field-height);
+  border-color: var(--q-border);
+  border-radius: var(--q-field-radius);
+  background: var(--q-surface);
+  box-shadow: none;
+}
+
+#view-explore .explore-toolbar-right .library-sort select {
+  border: 0;
+  padding: 0 4px;
+  background: transparent;
+}
+
+/* 4. Filtros de tipo y estado dentro de listas */
+
+.list-items-controls .select-wrap select {
+  box-sizing: border-box;
+  min-height: var(--q-field-height);
+  height: var(--q-field-height);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control);
+  background: var(--q-surface);
+  color: var(--q-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* Respeta las flechas ya creadas por select-wrap. */
+
+.library-sort select:focus-visible,
+#view-library .library-sort select:focus-visible,
+#view-explore .explore-toolbar-right .library-sort select:focus-visible,
+.list-items-controls .select-wrap select:focus-visible {
+  border-color: var(--q-info);
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 3px color-mix(
+      in srgb,
+      var(--q-info) 18%,
+      transparent
+    );
+}
+
+#view-explore .explore-toolbar-right .library-sort:focus-within {
+  border-color: var(--q-info);
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+/* 5. Selector nativo de visibilidad del perfil */
+
+.profile-privacy-row select {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: var(--q-field-height);
+  height: var(--q-field-height);
+  padding: 0 10px;
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-field-radius);
+  background: var(--q-surface);
+  color: var(--q-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.profile-privacy-row select:focus-visible {
+  border-color: var(--q-info);
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+/* 6. Filas de privacidad y switches ya existentes */
+
+.profile-privacy-row {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  border-radius: var(--q-radius-card, 14px);
+}
+
+.profile-privacy-row small {
+  color: var(--q-text-2);
+}
+
+/*
+ * Los switches son checkbox nativos con thumb CSS.
+ * Mantener ancho 48px y alto 26px.
+ * accent-color no sustituye al estilo appearance:none.
+ */
+.profile-privacy-row input[type="checkbox"] {
+  width: 48px;
+  height: 26px;
+  flex: 0 0 48px;
+  accent-color: var(--q-brand);
+  background: var(--q-surface-2);
+  border-color: var(--q-border);
+}
+
+.profile-privacy-row input[type="checkbox"]::after {
+  border-color: var(--q-border);
+}
+
+.profile-privacy-row input[type="checkbox"]:checked {
+  background: var(--q-brand);
+  border-color: var(--q-brand);
+}
+
+.profile-privacy-row input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 3px;
+}
+
+.profile-privacy-row input[type="checkbox"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.profile-privacy-row select:disabled {
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  cursor: not-allowed;
+}
+
+/* 7. Tema oscuro: superar reglas heredadas */
+
+body.dark-theme #view-lists .lists-search input,
+body.dark-theme .community-search-input,
+body.dark-theme .favorite-picker-search input,
+body.dark-theme .list-items-search,
+body.dark-theme #view-library .library-sort select,
+body.dark-theme #view-explore .explore-toolbar-right .library-sort,
+body.dark-theme .list-items-controls .select-wrap select,
+body.dark-theme .profile-privacy-row select {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  color: var(--q-text);
+  box-shadow: none;
+}
+
+body.dark-theme #view-explore .explore-toolbar-right .library-sort select {
+  color: var(--q-text);
+  background: transparent;
+}
+
+body.dark-theme .list-items-search input {
+  color: var(--q-text);
+  background: transparent;
+}
+
+body.dark-theme .profile-privacy-row {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+}
+
+body.dark-theme .profile-privacy-row input[type="checkbox"] {
+  background: var(--q-surface-2);
+  border-color: var(--q-border);
+}
+
+body.dark-theme .profile-privacy-row input[type="checkbox"]:checked {
+  background: var(--q-brand);
+  border-color: var(--q-brand);
+}
+
+/* 8. Alturas tactiles */
+
+@media (max-width: 640px) {
+  #view-lists .lists-search input,
+  .community-search-input,
+  .favorite-picker-search input,
+  .list-items-search,
+  .library-sort select,
+  #view-library .library-sort select,
+  #view-explore .explore-toolbar-right .library-sort,
+  #view-explore .explore-toolbar-right .library-sort select,
+  .list-items-controls .select-wrap select,
+  .profile-privacy-row select {
+    min-height: var(--q-field-height-mobile);
+    height: var(--q-field-height-mobile);
+  }
+
+  /* Los interruptores conservan su tamaño propio. */
+  .profile-privacy-row input[type="checkbox"] {
+    width: 48px;
+    height: 26px;
+    min-height: 0;
+  }
+}
+
+/* 9. Movimiento reducido */
+
+@media (prefers-reduced-motion: reduce) {
+  #view-lists .lists-search input,
+  .community-search-input,
+  .favorite-picker-search input,
+  .list-items-search,
+  .library-sort select,
+  .list-items-controls .select-wrap select,
+  .profile-privacy-row input[type="checkbox"] {
+    transition: none;
+  }
+}
+
+
+/* DS-05.3 — PESTAÑAS FILTROS Y SEGMENTADOS */
+
+/*
+ * Solo apariencia. Conservar clases activas,
+ * aria-pressed, aria-selected y JavaScript existente.
+ * Tokens oficiales DS-01; formas DS-03 con fallback.
+ */
+
+/* 1. Acceso y registro */
+
+.auth-tabs {
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control, 10px);
+  background: var(--q-surface);
+}
+
+.auth-tab {
+  min-height: var(--q-field-height);
+  border: 0;
+  background: var(--q-surface);
+  color: var(--q-text);
+  font-family: inherit;
+  font-weight: 600;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.auth-tab.active {
+  background: var(--q-brand);
+  color: #17181c;
+}
+
+.auth-tab:hover:not(.active) {
+  background: var(--q-surface-2);
+}
+
+.auth-tab:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: -3px;
+  position: relative;
+  z-index: 1;
+}
+
+body.dark-theme .auth-tab {
+  background: var(--q-surface);
+  color: var(--q-text);
+}
+
+body.dark-theme .auth-tab.active {
+  background: var(--q-brand);
+  color: #17181c;
+}
+
+/* 2. Navegacion Perfil / Privacidad */
+
+#view-profile .profile-settings-tabs button {
+  min-height: var(--q-field-height);
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control, 10px);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+#view-profile .profile-settings-tabs button[aria-pressed="true"] {
+  background: var(--q-brand);
+  border-color: var(--q-brand);
+  color: #17181c;
+}
+
+#view-profile .profile-settings-tabs button:hover:not([aria-pressed="true"]) {
+  background: var(--q-surface-2);
+}
+
+#view-profile .profile-settings-tabs button:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 3px;
+}
+
+body.dark-theme #view-profile .profile-settings-tabs button {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  color: var(--q-text);
+}
+
+body.dark-theme #view-profile .profile-settings-tabs button[aria-pressed="true"] {
+  background: var(--q-brand);
+  border-color: var(--q-brand);
+  color: #17181c;
+}
+
+/* 3. Filtros existentes: Inicio, Explorar y Biblioteca */
+
+/*
+ * DS-04 ya define los tokens del filtro activo.
+ * Se conservan los botones, sus clases y atributos.
+ */
+
+.pill-filter,
+.pill-filter-sm,
+#view-explore .pill-btn {
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control, 10px);
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.pill-filter.active,
+.pill-filter-sm.active,
+#view-explore .pill-btn.active,
+.pill-filter[aria-pressed="true"],
+.pill-filter-sm[aria-pressed="true"] {
+  background: var(--q-filter-selected-bg);
+  border-color: var(--q-filter-selected-bg);
+  color: var(--q-filter-selected-text);
+}
+
+:is(.pill-filter, .pill-filter-sm,
+    #view-explore .pill-btn):hover:not(.active):not(:disabled) {
+  background: var(--q-surface-2);
+}
+
+:is(.pill-filter, .pill-filter-sm,
+    #view-explore .pill-btn):focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 3px;
+}
+
+/* La Biblioteca tiene selectores oscuros heredados. */
+body.dark-theme #view-library .pill-filter,
+body.dark-theme #view-library .pill-filter-sm,
+body.dark-theme #view-lists .pill-filter {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  color: var(--q-text);
+}
+
+body.dark-theme #view-library .pill-filter.active,
+body.dark-theme #view-library .pill-filter-sm.active,
+body.dark-theme #view-lists .pill-filter.active {
+  background: var(--q-filter-selected-bg);
+  border-color: var(--q-filter-selected-bg);
+  color: var(--q-filter-selected-text);
+}
+
+/* 4. Alternancia de vista de listas */
+
+.view-toggle {
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-control, 10px);
+  background: var(--q-surface);
+  box-shadow: none;
+}
+
+.view-toggle button {
+  min-height: 36px;
+  background: transparent;
+  color: var(--q-text);
+}
+
+.view-toggle button.active,
+.view-toggle button[aria-pressed="true"] {
+  background: var(--q-brand);
+  color: #17181c;
+}
+
+.view-toggle button:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: -2px;
+}
+
+/* Superar colores oscuros anteriores. */
+body.dark-theme #view-lists .view-toggle {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  box-shadow: none;
+}
+
+body.dark-theme #view-lists .view-toggle button {
+  color: var(--q-text);
+}
+
+body.dark-theme #view-lists .view-toggle button.active,
+body.dark-theme #view-lists .view-toggle button[aria-pressed="true"] {
+  background: var(--q-brand);
+  color: #17181c;
+}
+
+/* 5. Pestañas del detalle de listas */
+
+#listDetailTabs {
+  border: 1px solid var(--q-border);
+  border-radius: var(--q-radius-card, 14px);
+  background: var(--q-surface);
+  box-shadow: none;
+}
+
+.list-detail-tab {
+  border: 1px solid transparent;
+  border-radius: var(--q-radius-control, 10px);
+  background: transparent;
+  color: var(--q-text);
+  box-shadow: none;
+}
+
+.list-detail-tab:hover:not([aria-selected="true"]) {
+  background: var(--q-surface-2);
+}
+
+.list-detail-tab.is-active,
+.list-detail-tab[aria-selected="true"] {
+  background: var(--q-brand);
+  color: #17181c;
+  border-color: var(--q-brand);
+  box-shadow: none;
+}
+
+.list-detail-tab:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+body.dark-theme #listDetailTabs {
+  background: var(--q-surface);
+  border-color: var(--q-border);
+  box-shadow: none;
+}
+
+body.dark-theme .list-detail-tab:not(.is-active) {
+  color: var(--q-text);
+}
+
+body.dark-theme .list-detail-tab.is-active,
+body.dark-theme .list-detail-tab[aria-selected="true"] {
+  background: var(--q-brand);
+  color: #17181c;
+  border-color: var(--q-brand);
+}
+
+body.dark-theme .list-detail-tab:focus-visible {
+  outline-color: var(--q-info);
+}
+
+/* 6. Favoritos en Comunidad */
+
+/*
+ * Mantener forma superior redondeada y union visual
+ * con el panel correspondiente.
+ */
+
+.community-profile-favorites-tab {
+  border-color: var(--q-border);
+  border-radius:
+    var(--q-radius-control, 10px)
+    var(--q-radius-control, 10px) 0 0;
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  box-shadow: none;
+}
+
+.community-profile-favorites-tab.is-active,
+.community-profile-favorites-tab[aria-selected="true"] {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  box-shadow: inset 0 3px 0 var(--q-brand);
+}
+
+.community-profile-favorites-tab:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: -3px;
+}
+
+body.dark-theme .community-profile-favorites-tab {
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  border-color: var(--q-border);
+}
+
+body.dark-theme .community-profile-favorites-tab.is-active,
+body.dark-theme .community-profile-favorites-tab[aria-selected="true"] {
+  background: var(--q-surface);
+  color: var(--q-text);
+  box-shadow: inset 0 3px 0 var(--q-brand);
+}
+
+/* 7. Favoritos de perfil publico */
+
+.public-profile-favorites-tab {
+  border-color: var(--q-border);
+  border-radius:
+    var(--q-radius-control, 10px)
+    var(--q-radius-control, 10px) 0 0;
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+  box-shadow: none;
+}
+
+.public-profile-favorites-tab.is-active,
+.public-profile-favorites-tab[aria-selected="true"] {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+  border-bottom-color: var(--q-surface);
+  box-shadow: inset 0 3px 0 var(--q-brand);
+}
+
+.public-profile-favorites-tab:hover:not([aria-selected="true"]) {
+  color: var(--q-text);
+}
+
+.public-profile-favorites-tab:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 2px;
+}
+
+/* 8. Tema oscuro en contenedores */
+
+body.dark-theme .auth-tabs,
+body.dark-theme .view-toggle,
+body.dark-theme #listDetailTabs {
+  border-color: var(--q-border);
+}
+
+/* 9. Adaptacion a pantallas tactiles */
+
+@media (max-width: 640px) {
+  .auth-tab,
+  #view-profile .profile-settings-tabs button,
+  .pill-filter,
+  .pill-filter-sm,
+  #view-explore .pill-btn,
+  .view-toggle button {
+    min-height: var(--q-field-height-mobile);
+  }
+
+  /* Mantener las pestañas de listas y favoritos
+     accesibles incluso cuando hay desplazamiento. */
+  .list-detail-tab,
+  .community-profile-favorites-tab,
+  .public-profile-favorites-tab {
+    min-height: 44px;
+  }
+}
+
+/* 10. Respetar movimiento reducido */
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-tab,
+  #view-profile .profile-settings-tabs button,
+  .pill-filter,
+  .pill-filter-sm,
+  #view-explore .pill-btn,
+  .view-toggle button,
+  .list-detail-tab,
+  .community-profile-favorites-tab,
+  .public-profile-favorites-tab {
+    transition: none;
+  }
+}
