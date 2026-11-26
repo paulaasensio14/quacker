@@ -1,0 +1,156 @@
+/*
+ * QUACKER DS-03
+ * Piloto: iconos, espaciado y forma.
+ *
+ * No modifica colores oficiales.
+ * No modifica tipografia DS-02.
+ * No altera SVG ni JavaScript.
+ */
+
+:root {
+  /* Escala de espaciado */
+  --q-space-1: 4px;
+  --q-space-2: 8px;
+  --q-space-3: 12px;
+  --q-space-4: 16px;
+  --q-space-5: 20px;
+  --q-space-6: 24px;
+  --q-space-8: 32px;
+  --q-space-12: 48px;
+
+  /* Radios */
+  --q-radius-label: 6px;
+  --q-radius-control: 10px;
+  --q-radius-card: 14px;
+  --q-radius-overlay: 20px;
+
+  /* Elevacion */
+  --q-elevation-flat: none;
+  --q-elevation-card:
+    0 2px 8px rgb(0 0 0 / 8%);
+  --q-elevation-overlay:
+    0 8px 24px rgb(0 0 0 / 14%);
+  --q-elevation-stamp:
+    4px 4px 0 var(--q-text);
+}
+
+body.dark-theme {
+  --q-elevation-card:
+    0 2px 8px rgb(0 0 0 / 24%);
+  --q-elevation-overlay:
+    0 8px 24px rgb(0 0 0 / 40%);
+  --q-elevation-stamp:
+    4px 4px 0 var(--q-bg);
+}
+
+/* Iconos del shell: viewBox original 24 x 24 */
+
+.nav-item-btn > svg,
+.sidebar-toggle > svg,
+.search-icon > svg,
+.search-clear > svg,
+.icon-button:not(.profile-chip) > svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Navegacion */
+
+.sidebar:not(.collapsed) .nav-item-btn {
+  padding: var(--q-space-2) var(--q-space-3);
+  gap: var(--q-space-3);
+}
+
+.nav-item-btn,
+body.dark-theme .nav-item-btn {
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.nav-item-btn:hover:not(.is-active),
+body.dark-theme .nav-item-btn:hover:not(.is-active),
+.nav-item-btn.is-active,
+body.dark-theme .nav-item-btn.is-active {
+  box-shadow: var(--q-elevation-flat);
+}
+
+nav.sidebar-nav {
+  margin-top: var(--q-space-3);
+}
+
+/* Controles */
+
+.sidebar-toggle,
+body.dark-theme .sidebar-toggle {
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.sidebar-toggle:hover,
+body.dark-theme .sidebar-toggle:hover {
+  box-shadow: var(--q-elevation-flat);
+}
+
+.search-input,
+body.dark-theme .search-input {
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+.icon-button:not(.profile-chip),
+body.dark-theme .icon-button:not(.profile-chip) {
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-flat);
+}
+
+/* Tarjetas y bienvenida */
+
+.metric-card,
+.content-card,
+.list-card,
+.profile-card,
+.welcome-banner,
+body.dark-theme .metric-card,
+body.dark-theme .content-card,
+body.dark-theme .list-card,
+body.dark-theme .profile-card,
+body.dark-theme .welcome-banner {
+  border-radius: var(--q-radius-card);
+  box-shadow: var(--q-elevation-card);
+}
+
+.metric-card:hover {
+  box-shadow: var(--q-elevation-card);
+}
+
+.metric-card {
+  gap: var(--q-space-3);
+  padding: var(--q-space-2) var(--q-space-3);
+}
+
+.welcome-banner {
+  gap: var(--q-space-4);
+  padding: var(--q-space-4) var(--q-space-6);
+}
+
+/* Botones de accion principal */
+
+.btn-primary:not(.btn-sm),
+body.dark-theme .btn-primary:not(.btn-sm) {
+  border-radius: var(--q-radius-control);
+  box-shadow: var(--q-elevation-stamp);
+}
+
+/* Menus y modales */
+
+.modal-card,
+.notif-panel,
+body.dark-theme .modal-card,
+body.dark-theme .notif-panel {
+  border-radius: var(--q-radius-overlay);
+  box-shadow: var(--q-elevation-overlay);
+}
