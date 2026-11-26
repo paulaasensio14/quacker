@@ -1,0 +1,202 @@
+/* DS-02: sistema tipografico Quacker */
+
+:root {
+  --q-font-ui: "Inter", system-ui, sans-serif;
+  --q-font-display: "Inter", system-ui, sans-serif;
+  --q-font-code: "JetBrains Mono", monospace;
+
+  --q-type-display: 58px;
+  --q-type-h1: 30px;
+  --q-type-h2: 22px;
+  --q-type-h3: 17px;
+  --q-type-body: 14px;
+  --q-type-secondary: 13px;
+  --q-type-label: 11.5px;
+  --q-type-number: 22px;
+}
+
+/* Base de interfaz: Inter */
+
+body {
+  font-family: var(--q-font-ui);
+  font-size: var(--q-type-body);
+  font-weight: 400;
+  line-height: 1.45;
+  font-optical-sizing: auto;
+}
+
+button,
+input,
+select,
+textarea,
+.btn-delete-item {
+  font-family: var(--q-font-ui);
+}
+
+/* Titulares: Inter con eje optico Display */
+
+h1,
+h2,
+h3,
+.hero-title,
+.topbar-title,
+.welcome-text h2 {
+  font-family: var(--q-font-display);
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 32;
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  font-size: var(--q-type-h1);
+  line-height: 34px;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: var(--q-type-h2);
+  line-height: 26px;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: var(--q-type-h3);
+  line-height: 22px;
+  font-weight: 700;
+}
+
+/* Landing: titular de exhibicion */
+
+.hero-title {
+  font-size: clamp(34px, 5vw, 58px);
+  line-height: 1.035;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.section-title {
+  font-family: var(--q-font-display);
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 32;
+  font-size: var(--q-type-h2);
+  line-height: 26px;
+  font-weight: 700;
+}
+
+/* Dashboard */
+
+.topbar-title {
+  font-size: var(--q-type-h3);
+  line-height: 22px;
+  font-weight: 700;
+}
+
+.welcome-text h2 {
+  font-size: var(--q-type-h1);
+  line-height: 34px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.home-panel-header h3,
+.lists-title-block h2 {
+  font-family: var(--q-font-display);
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 32;
+  font-size: var(--q-type-h3);
+  line-height: 22px;
+  font-weight: 700;
+}
+
+.topbar-subtitle,
+.welcome-subtitle {
+  font-size: var(--q-type-secondary);
+  line-height: 18px;
+  font-weight: 400;
+}
+
+.nav-section-title,
+.public-profile-kicker {
+  font-size: var(--q-type-label);
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.nav-item-btn,
+.nav-link,
+.btn-signin,
+.profile-favorite-pick,
+.btn-delete-item {
+  font-weight: 600;
+}
+
+/* Cifras y progreso */
+
+.metric-value,
+.public-profile-stat-value {
+  font-family: var(--q-font-display);
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 32;
+  font-size: var(--q-type-number);
+  line-height: 26px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+table,
+.stat-value,
+.profile-stat-value,
+.public-profile-social-stat strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Perfil publico */
+
+.public-profile-identity h1 {
+  font-size: var(--q-type-h1);
+  line-height: 34px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.public-profile-bio {
+  font-size: var(--q-type-body);
+  line-height: 1.65;
+}
+
+/* Referencias tecnicas */
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--q-font-code);
+}
+
+/* Fredoka se reserva a la marca */
+
+.brand-text,
+.brand-name,
+.public-profile-brand span {
+  font-family: "Fredoka", sans-serif;
+}
+
+/* Tipografia responsive */
+
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: clamp(32px, 8vw, 42px);
+    line-height: 1.08;
+  }
+
+  .welcome-text h2 {
+    font-size: clamp(22px, 5.5vw, 30px);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .public-profile-identity h1 {
+    font-size: clamp(24px, 6vw, 30px);
+    line-height: 1.15;
+  }
+}
