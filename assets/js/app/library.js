@@ -2092,6 +2092,17 @@ const LibraryUI = (() => {
               aria-label="${safeListAriaLabel}"
               title="${safeListLabel}"
             >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M6 4h12a1 1 0 0 1 1 1v16l-7-5-7 5V5a1 1 0 0 1 1-1Z"></path>
+              </svg>
               <span class="lib-list-label sr-only">${safeListLabel}</span>
             </button>
 
