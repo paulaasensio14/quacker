@@ -4,6 +4,7 @@ const ModerationModule = (() => {
   let authorized = false;
   let requestVersion = 0;
   let decisionBusy = false;
+  let decisionConfirmBusy = false;
 
   const t = (key, params) =>
     window.I18n?.t?.(key, params) || key;
@@ -237,7 +238,12 @@ const ModerationModule = (() => {
     feedback.setAttribute("aria-live", "polite");
 
     async function submitDecision(action) {
-      if (!authorized || decisionBusy) {
+      if (
+        !authorized ||
+        decisionBusy ||
+        decisionConfirmBusy ||
+        !["resolve", "dismiss"].includes(action)
+      ) {
         return false;
       }
 
@@ -255,10 +261,68 @@ const ModerationModule = (() => {
           ? "moderation_confirm_resolve"
           : "moderation_confirm_dismiss";
 
-      // Sin confirmación disponible, no ejecutar.
+      const confirmationVersion = requestVersion;
+
+      const actionButton =
+        action === "resolve" ? resolve : dismiss;
+
+      const list =
+        document.getElementById("moderationReportsList");
+
+      const view =
+        document.getElementById("view-moderation");
+
       if (
-        typeof window.confirm !== "function" ||
-        !window.confirm(t(confirmationKey))
+        !list?.contains(card) ||
+        !view ||
+        view.hidden ||
+        !view.classList.contains("is-active") ||
+        actionButton.disabled
+      ) {
+        return false;
+      }
+
+      let confirmed = false;
+
+      decisionConfirmBusy = true;
+
+      try {
+        const label = t(
+          action === "resolve"
+            ? "moderation_resolve"
+            : "moderation_dismiss"
+        );
+
+        confirmed = await window.UIConfirm?.ask?.({
+          title: label,
+          message: t(confirmationKey),
+          confirmLabel: label,
+          cancelLabel: t("common_cancel"),
+          closeLabel: t("common_close"),
+          tone: action === "resolve" ? "normal" : "danger"
+        });
+      } catch (_) {
+        return false;
+      } finally {
+        decisionConfirmBusy = false;
+      }
+
+      if (confirmed !== true) return false;
+
+      // Revalidar la autorizacion, denuncia y notas.
+      // Una actualizacion de la bandeja invalida la decision.
+
+      if (
+        !authorized ||
+        decisionBusy ||
+        confirmationVersion !== requestVersion ||
+        document.getElementById("moderationReportsList") !== list ||
+        document.getElementById("view-moderation") !== view ||
+        view.hidden ||
+        !view.classList.contains("is-active") ||
+        !list.contains(card) ||
+        actionButton.disabled ||
+        String(notesInput.value || "").trim() !== notes
       ) {
         return false;
       }

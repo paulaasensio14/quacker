@@ -54,6 +54,7 @@ const ExploreModule = (() => {
   const __detailSeasonCache = new Map();
   const __detailEpisodeActivityCache = new Map();
   let __detailEpisodeWatchBusy = false;
+  let __detailSeasonConfirmBusy = false;
   let __listOriginContext = null;
   const __listPickerRequestSeq = { drawer: 0, detail: 0 };
   const __detailRelatedDrag = {
@@ -1593,7 +1594,10 @@ const ExploreModule = (() => {
     watched,
     wholeSeason = false
   } = {}) {
-    if (__detailEpisodeWatchBusy) return;
+    if (
+      __detailEpisodeWatchBusy ||
+      __detailSeasonConfirmBusy
+    ) return;
 
     const activeItem = _getActiveDetailItem();
     const itemId = _normalizeId(activeItem?.__libraryItemId);
@@ -1622,7 +1626,50 @@ const ExploreModule = (() => {
         .t(confirmationKey)
         .replace("{season}", String(season));
 
-      if (!window.confirm(message)) return;
+      const expectedEid = _normalizeId(activeItem.eid);
+      const expectedUpdatedAt = activeItem.updatedAt;
+
+      const actionLabel = window.I18n.t(
+        watched
+          ? "explore_detail_season_mark_watched"
+          : "explore_detail_season_unmark_watched"
+      );
+
+      let confirmed = false;
+
+      __detailSeasonConfirmBusy = true;
+
+      try {
+        confirmed = await window.UIConfirm?.ask?.({
+          title: actionLabel,
+          message,
+          confirmLabel: actionLabel,
+          cancelLabel: window.I18n.t("common_cancel"),
+          closeLabel: window.I18n.t("common_close"),
+          tone: watched ? "normal" : "danger"
+        });
+      } catch (_) {
+        // Sin confirmacion valida no se ejecuta la accion.
+        return;
+      } finally {
+        __detailSeasonConfirmBusy = false;
+      }
+
+      if (confirmed !== true) return;
+
+      // El dialogo es asincrono: volver a validar la ficha.
+      const current = _getActiveDetailItem();
+
+      if (
+        __detailEpisodeWatchBusy ||
+        !_isDetailViewActive() ||
+        _normalizeId(current?.__libraryItemId) !== itemId ||
+        _normalizeId(current?.eid) !== expectedEid ||
+        _norm(current?.type) !== "serie" ||
+        current?.updatedAt !== expectedUpdatedAt
+      ) {
+        return;
+      }
     }
 
     __detailEpisodeWatchBusy = true;
@@ -2590,6 +2637,10 @@ const ExploreModule = (() => {
 
     if (toggleBtnEl) {
       toggleBtnEl.hidden = !hasMoreCast;
+      toggleBtnEl.setAttribute(
+        "aria-expanded",
+        String(hasMoreCast && __detailCastExpanded)
+      );
       toggleBtnEl.textContent = __detailCastExpanded
         ? window.I18n.t("explore_detail_cast_show_less")
         : window.I18n.t("explore_detail_cast_show_more");
@@ -3686,6 +3737,7 @@ const ExploreModule = (() => {
             title: window.I18n.t("nav_detail"),
             message: feedbackMessage,
             type: feedbackType,
+            icon: feedbackType === "success" ? "list" : null,
             duration: 2400
           });
         } else if (drawerNotePersistent) {

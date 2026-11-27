@@ -1592,6 +1592,8 @@ const ProfileModule = (() => {
 
     if (!list) return;
 
+    let unblockConfirmBusy = false;
+
     list.addEventListener(
       "click",
       async (event) => {
@@ -1602,7 +1604,8 @@ const ProfileModule = (() => {
         if (
           !button ||
           !list.contains(button) ||
-          button.disabled
+          button.disabled ||
+          unblockConfirmBusy
         ) {
           return;
         }
@@ -1613,11 +1616,42 @@ const ProfileModule = (() => {
 
         if (!username) return;
 
-        const confirmed = window.confirm(
-          t("profile_blocks_confirm", { username })
-        );
+        const confirmationLoadVersion = blockedUsersLoadVersion;
+        let confirmed = false;
 
-        if (!confirmed) return;
+        unblockConfirmBusy = true;
+
+        try {
+          const label = t("profile_blocks_unblock");
+
+          confirmed = await window.UIConfirm?.ask?.({
+            title: label,
+            message: t("profile_blocks_confirm", { username }),
+            confirmLabel: label,
+            cancelLabel: t("common_cancel"),
+            closeLabel: t("common_close"),
+            tone: "normal"
+          });
+        } catch (_) {
+          return;
+        } finally {
+          unblockConfirmBusy = false;
+        }
+
+        if (confirmed !== true) return;
+
+        if (
+          confirmationLoadVersion !== blockedUsersLoadVersion ||
+          $("#profileBlockedUsersList") !== list ||
+          !list.contains(button) ||
+          button.disabled ||
+          String(button.dataset.username || "").trim() !== username ||
+          !$("#view-profile")?.classList.contains("is-active") ||
+          $("#view-profile .profile-layout")
+            ?.dataset.activeProfileTab !== "privacidad"
+        ) {
+          return;
+        }
 
         const status =
           $("#profileBlockedUsersStatus");

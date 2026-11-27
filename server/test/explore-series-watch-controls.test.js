@@ -86,8 +86,42 @@ test(
 test(
   "QA-02-002 UI: temporada requiere confirmación",
   () => {
-    assert.match(
-      source,
+    const handler = getSection(
+      "async function _setContentDetailSeriesWatchState(",
+      "async function _toggleContentDetailSeason("
+    );
+
+    const confirmation = handler.indexOf(
+      "confirmed = await window.UIConfirm?.ask?.("
+    );
+
+    const explicitAcceptance = handler.indexOf(
+      "if (confirmed !== true) return;"
+    );
+
+    const apiMutation = handler.indexOf(
+      "ApiClient.setSeriesSeasonWatched("
+    );
+
+    assert.ok(
+      confirmation >= 0,
+      "La temporada debe solicitar confirmacion mediante UIConfirm"
+    );
+
+    assert.ok(
+      explicitAcceptance > confirmation,
+      "Solo una aceptacion explicita debe autorizar la operacion"
+    );
+
+    assert.ok(
+      apiMutation > explicitAcceptance,
+      "La confirmacion debe preceder a la modificacion"
+    );
+
+    assert.match(handler, /if \(wholeSeason\)/);
+
+    assert.doesNotMatch(
+      handler,
       /window\.confirm\s*\(/
     );
 

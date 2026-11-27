@@ -813,12 +813,21 @@ const ListsModule = (() => {
     ) || null;
   }
 
-  function _setListCollaborationFeedback(message = "", isError = false) {
+  function _setListCollaborationFeedback(
+    message = "",
+    isError = false,
+    tone = null
+  ) {
     const element = _getEl("listCollaborationFeedback");
     if (!element) return;
 
-    element.textContent = message;
+    const feedbackTone = isError
+      ? (tone === "warning" ? "warning" : "error")
+      : (tone === "success" ? "success" : "info");
+
+    element.setAttribute("data-feedback-tone", feedbackTone);
     element.setAttribute("role", isError ? "alert" : "status");
+    element.textContent = message;
   }
 
   let collaborationIdentityRequestVersion = 0;
@@ -1590,7 +1599,8 @@ const ListsModule = (() => {
     if (!/^[a-z0-9_]{2,20}$/.test(username)) {
       _setListCollaborationFeedback(
         t("lists_collab_invite_error"),
-        true
+        true,
+        "warning"
       );
       return;
     }
@@ -1614,7 +1624,9 @@ const ListsModule = (() => {
 
       if (activeListId === listId) {
         _setListCollaborationFeedback(
-          t("lists_collab_invite_success")
+          t("lists_collab_invite_success"),
+          false,
+          "success"
         );
       }
     } catch (error) {
@@ -1640,6 +1652,53 @@ const ListsModule = (() => {
     }
   }
 
+  let listCollaborationConfirmBusy = false;
+
+  async function _confirmCollaborationAction(action) {
+    if (listCollaborationConfirmBusy) return false;
+
+    listCollaborationConfirmBusy = true;
+
+    try {
+      const label = t("lists_collab_" + action);
+
+      return (await window.UIConfirm?.ask?.({
+        title: label,
+        message: t("lists_collab_" + action + "_confirm"),
+        confirmLabel: label,
+        cancelLabel: t("common_cancel"),
+        closeLabel: t("common_close"),
+        tone: "danger"
+      })) === true;
+    } catch (_) {
+      return false;
+    } finally {
+      listCollaborationConfirmBusy = false;
+    }
+  }
+
+  function _isCollaborationConfirmationCurrent(
+    listId,
+    userId,
+    button
+  ) {
+    const view = _getEl("view-lists");
+    const detail = _getEl("listDetail");
+
+    return Boolean(
+      userId &&
+      currentUserId === userId &&
+      _normalizeId(activeListId) === listId &&
+      activeDetailTab === "people" &&
+      view?.classList.contains("is-active") &&
+      detail &&
+      !detail.hidden &&
+      button?.isConnected &&
+      !button.disabled &&
+      !button.hidden
+    );
+  }
+
   async function removeActiveListMember(button) {
     const list = _activeListForCollaboration();
     const listId = _normalizeId(list?.id);
@@ -1655,7 +1714,27 @@ const ListsModule = (() => {
       !list.collaborators.includes(memberId)
     ) return;
 
-    if (!window.confirm(t("lists_collab_remove_confirm"))) {
+    const expectedUserId = currentUserId;
+
+    if (!await _confirmCollaborationAction("remove")) {
+      return;
+    }
+
+    const current = _activeListForCollaboration();
+
+    if (
+      !_isCollaborationConfirmationCurrent(
+        listId,
+        expectedUserId,
+        button
+      ) ||
+      _normalizeId(current?.id) !== listId ||
+      _normalizeId(button.dataset.memberId) !== memberId ||
+      current?.visibility !== "collab" ||
+      _normalizeId(current.ownerUserId) !== expectedUserId ||
+      !Array.isArray(current.collaborators) ||
+      !current.collaborators.includes(memberId)
+    ) {
       return;
     }
 
@@ -1676,7 +1755,9 @@ const ListsModule = (() => {
 
       if (activeListId === listId) {
         _setListCollaborationFeedback(
-          t("lists_collab_remove_success")
+          t("lists_collab_remove_success"),
+          false,
+          "success"
         );
       }
     } catch (error) {
@@ -1709,7 +1790,27 @@ const ListsModule = (() => {
       !list.collaborators.includes(currentUserId)
     ) return;
 
-    if (!window.confirm(t("lists_collab_leave_confirm"))) {
+    const expectedUserId = currentUserId;
+
+    if (!await _confirmCollaborationAction("leave")) {
+      return;
+    }
+
+    const current = _activeListForCollaboration();
+
+    if (
+      !_isCollaborationConfirmationCurrent(
+        listId,
+        expectedUserId,
+        leaveButton
+      ) ||
+      _getEl("btnLeaveCollaborativeList") !== leaveButton ||
+      _normalizeId(current?.id) !== listId ||
+      current?.visibility !== "collab" ||
+      _normalizeId(current.ownerUserId) === expectedUserId ||
+      !Array.isArray(current.collaborators) ||
+      !current.collaborators.includes(expectedUserId)
+    ) {
       return;
     }
 
@@ -3217,12 +3318,15 @@ const ListsModule = (() => {
   }
 
 
-  function openConfirmDeleteListModal() {
+  function openConfirmDeleteListModal(trigger = null) {
     const modal = document.getElementById("confirmDeleteListModal");
     if (!modal) return;
 
     _showConfirmDeleteErrors("");
-    window.UIModal?.open(modal, { initialFocusSelector: "#confirmDeleteList" });
+    window.UIModal?.open(modal, {
+      initialFocusSelector: "#cancelDeleteList",
+      lastFocusEl: trigger
+    });
   }
 
   function closeConfirmDeleteListModal() {
@@ -3254,8 +3358,15 @@ const ListsModule = (() => {
 
     window.UIModal?.bind("confirmDeleteListModal", {
       closeSelectors: ["#closeConfirmDeleteList", "#cancelDeleteList"],
-      initialFocusSelector: "#confirmDeleteList",
-      closeOnBackdrop: true
+      initialFocusSelector: "#cancelDeleteList",
+      closeOnBackdrop: true,
+      canDismiss: () =>
+        document.getElementById("confirmDeleteList")
+          ?.dataset.busy !== "1",
+      onDismiss: () => {
+        pendingDeleteListId = null;
+        _showConfirmDeleteErrors("");
+      }
     });
 
     const search = document.getElementById("listsSearch");
@@ -3377,6 +3488,19 @@ const ListsModule = (() => {
           const name = String(delBtn.dataset.name || "").trim();
           if (!id) return;
 
+          const modal = document.getElementById(
+            "confirmDeleteListModal"
+          );
+
+          if (
+            !modal ||
+            modal.classList.contains("is-open") ||
+            document.getElementById("confirmDeleteList")
+              ?.dataset.busy === "1"
+          ) {
+            return;
+          }
+
           pendingDeleteListId = id;
 
           const text = document.getElementById("confirmDeleteListText");
@@ -3386,7 +3510,7 @@ const ListsModule = (() => {
               : t("modal_delete_list_text");
           }
 
-          openConfirmDeleteListModal();
+          openConfirmDeleteListModal(delBtn);
 
           return;
         }
@@ -3763,7 +3887,17 @@ const ListsModule = (() => {
     // Confirmar eliminar (CON toast y deshacer)
     document.getElementById("confirmDeleteList")?.addEventListener("click", async () => {
       const targetListId = _normalizeId(pendingDeleteListId);
-      if (!targetListId) return;
+      const modal = document.getElementById("confirmDeleteListModal");
+
+      if (
+        !targetListId ||
+        !modal ||
+        !modal.classList.contains("is-open")
+      ) {
+        return;
+      }
+
+      const modalCard = modal.querySelector(".modal-card");
 
       const btn = document.getElementById("confirmDeleteList");
       const cancelBtn = document.getElementById("cancelDeleteList");
@@ -3783,6 +3917,12 @@ const ListsModule = (() => {
 
       if (cancelBtn) cancelBtn.disabled = true;
       if (closeBtn) closeBtn.disabled = true;
+
+      modalCard?.setAttribute("aria-busy", "true");
+      modalCard?.setAttribute("tabindex", "-1");
+      modalCard?.focus();
+
+      _showConfirmDeleteErrors("");
 
       // Snapshot para poder deshacer.
       lastDeletedListSnapshot = {
@@ -3876,6 +4016,12 @@ const ListsModule = (() => {
         }
         if (cancelBtn) cancelBtn.disabled = false;
         if (closeBtn) closeBtn.disabled = false;
+
+        modalCard?.removeAttribute("aria-busy");
+
+        if (modal.classList.contains("is-open")) {
+          cancelBtn?.focus();
+        }
       }
     });
 

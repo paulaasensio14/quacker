@@ -141,8 +141,15 @@ function createHarness() {
     }
   };
 
+  let activeViewId = null;
+
+  elements["#view-community-profile"].classList.contains =
+    name => name === "is-active" &&
+      activeViewId === "community-profile";
+
   const Router = {
     showView(viewId) {
+      activeViewId = viewId;
       navigation.push(viewId);
 
       for (const callback of (
@@ -201,9 +208,19 @@ function createHarness() {
   };
 
   const window = {
-    confirm() {
-      confirmCount += 1;
-      return confirmResult;
+    UIConfirm: {
+      async ask(options) {
+        confirmCount += 1;
+
+        assert.equal(options.tone, "danger");
+        assert.ok(options.title);
+        assert.ok(options.message);
+        assert.ok(options.confirmLabel);
+        assert.ok(options.cancelLabel);
+        assert.ok(options.closeLabel);
+
+        return confirmResult;
+      }
     },
     I18n: {
       t(key) {
@@ -669,6 +686,14 @@ test("QA-012 bloqueo funcional: confirmar solo envía una petición", async () =
   const operation = h.blockButton.click()[0];
   h.blockButton.click();
 
+  assert.equal(h.blockRequests.length, 0);
+  assert.equal(h.confirmationCount(), 1);
+
+  await h.tick();
+
+  h.blockButton.click();
+
+  assert.equal(h.confirmationCount(), 1);
   assert.equal(h.blockRequests.length, 1);
   assert.equal(h.blockRequests[0].username, "alba");
   assert.equal(h.blockButton.disabled, true);
@@ -683,6 +708,14 @@ test("QA-012 bloqueo funcional: éxito oculta el perfil", async () => {
   await h.load("alba", "following");
 
   const operation = h.blockButton.click()[0];
+
+  assert.equal(h.blockRequests.length, 0);
+
+  await h.tick();
+
+  assert.equal(h.confirmationCount(), 1);
+  assert.equal(h.blockRequests.length, 1);
+
   h.blockRequests[0].resolve({ blocked: true, username: "alba" });
   await operation;
 
@@ -698,6 +731,11 @@ test("QA-012 bloqueo funcional: error conserva el perfil", async () => {
   await h.load("alba");
 
   const operation = h.blockButton.click()[0];
+
+  await h.tick();
+
+  assert.equal(h.blockRequests.length, 1);
+
   h.blockRequests[0].reject(Object.assign(new Error("limit"), { status: 429 }));
   await operation;
 
@@ -712,6 +750,12 @@ test("QA-012 bloqueo funcional: respuesta antigua no altera otro perfil", async 
   await h.load("alba");
 
   const operation = h.blockButton.click()[0];
+
+  await h.tick();
+
+  assert.equal(h.blockRequests.length, 1);
+  assert.equal(h.blockRequests[0].username, "alba");
+
   h.module.open("carlos");
   h.profileRequests[1].resolve(profileData("carlos"));
   await h.tick();

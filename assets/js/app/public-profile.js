@@ -1305,6 +1305,8 @@
   }
 
 
+  let blockConfirmBusy = false;
+
   async function performBlockAction() {
     const button =
       $("#publicProfileBlockAction");
@@ -1318,7 +1320,8 @@
     if (
       !button ||
       button.disabled ||
-      button.hidden
+      button.hidden ||
+      blockConfirmBusy
     ) {
       return;
     }
@@ -1326,19 +1329,57 @@
     const username = getUsernameFromPath();
     if (!username) return;
 
-    const confirmed = window.confirm(
-      blockT(
-        "public_block_confirm",
-        `¿Quieres bloquear a @${username}?\n\n` +
-          "Se eliminarán los seguimientos y " +
-          "solicitudes pendientes entre ambos. " +
-          "Podrás desbloquearlo después, pero " +
-          "no se restaurarán esas relaciones.",
-        { username }
-      )
+    const confirmationState = followButton?.dataset.socialState;
+
+    const message = blockT(
+      "public_block_confirm",
+      `¿Quieres bloquear a @${username}?\n\n` +
+        "Se eliminarán los seguimientos y " +
+        "solicitudes pendientes entre ambos. " +
+        "Podrás desbloquearlo después, pero " +
+        "no se restaurarán esas relaciones.",
+      { username }
     );
 
-    if (!confirmed) return;
+    let confirmed = false;
+
+    blockConfirmBusy = true;
+
+    try {
+      const label = blockT(
+        "public_block_button",
+        "Bloquear usuario"
+      );
+
+      confirmed = await window.UIConfirm?.ask?.({
+        title: label,
+        message,
+        confirmLabel: label,
+        cancelLabel: blockT("common_cancel", "Cancelar"),
+        closeLabel: blockT("common_close", "Cerrar"),
+        tone: "danger"
+      });
+    } catch (_) {
+      return;
+    } finally {
+      blockConfirmBusy = false;
+    }
+
+    if (confirmed !== true) return;
+
+    if (
+      getUsernameFromPath() !== username ||
+      $("#publicProfileBlockAction") !== button ||
+      $("#publicProfileSocialAction") !== followButton ||
+      button.disabled ||
+      button.hidden ||
+      $("#publicProfileSocial")?.hidden !== false ||
+      followButton?.dataset.socialState !== confirmationState ||
+      !["none", "requested", "following", "friend"]
+        .includes(confirmationState)
+    ) {
+      return;
+    }
 
     button.disabled = true;
 

@@ -26,12 +26,14 @@ const css = fs.readFileSync(
 function createHarness({
   viewer = { state: "none", access: "full" },
   confirmed = true,
+  confirmSupported = true,
   responseStatus = 201,
   networkError = false,
   language = "es"
 } = {}) {
   const calls = [];
   const confirmations = [];
+  const confirmationOptions = [];
 
   function element(hidden = false) {
     return {
@@ -106,10 +108,19 @@ function createHarness({
     location: {
       pathname: "/u/blocks_bob"
     },
-    confirm(message) {
-      confirmations.push(message);
-      return confirmed;
-    }
+    confirm() {
+      throw new Error("native_confirm_must_not_be_used");
+    },
+    UIConfirm: confirmSupported ? {
+      async ask(options) {
+        confirmations.push(options.message);
+        confirmationOptions.push(options);
+
+        return typeof confirmed === "function"
+          ? await confirmed(options)
+          : confirmed;
+      }
+    } : undefined
   };
 
   async function fetchMock(url, options = {}) {
@@ -178,6 +189,8 @@ function createHarness({
     elements,
     calls,
     confirmations,
+    confirmationOptions,
+    window,
     async initialize() {
       documentHandlers.DOMContentLoaded();
       await new Promise(setImmediate);
@@ -411,3 +424,102 @@ test(
     }
   }
 );
+
+test("DS-07.5.2 publico: confirmacion destructiva explicita", async () => {
+  const h = createHarness();
+
+  await h.initialize();
+  await h.clickBlock();
+
+  assert.equal(h.confirmationOptions.length, 1);
+  assert.equal(h.confirmationOptions[0].tone, "danger");
+  assert.match(h.confirmationOptions[0].message, /@blocks_bob/);
+  assert.equal(h.blockRequests().length, 1);
+});
+
+test("DS-07.5.2 publico: fallo del dialogo no bloquea", async () => {
+  for (const options of [
+    { confirmSupported: false },
+    { confirmed: "true" },
+    {
+      confirmed: async () => {
+        throw new Error("dialog_failed");
+      }
+    }
+  ]) {
+    const h = createHarness(options);
+
+    await h.initialize();
+    await h.clickBlock();
+    await h.clickBlock();
+
+    assert.equal(h.blockRequests().length, 0);
+    assert.equal(
+      h.elements["#publicProfileBlockAction"].disabled,
+      false
+    );
+  }
+});
+
+test("DS-07.5.2 publico: contexto cambiado cancela bloqueo", async () => {
+  for (const change of [
+    h => { h.window.location.pathname = "/u/another"; },
+    h => {
+      h.elements["#publicProfileBlockAction"].hidden = true;
+    },
+    h => {
+      h.elements["#publicProfileBlockAction"].disabled = true;
+    },
+    h => {
+      h.elements["#publicProfileSocial"].hidden = true;
+    },
+    h => {
+      h.elements["#publicProfileSocialAction"]
+        .dataset.socialState = "self";
+    }
+  ]) {
+    let release;
+
+    const decision = new Promise(resolve => {
+      release = resolve;
+    });
+
+    const h = createHarness({
+      confirmed: () => decision
+    });
+
+    await h.initialize();
+
+    const operation = h.clickBlock();
+
+    await h.clickBlock();
+
+    assert.equal(h.confirmationOptions.length, 1);
+
+    change(h);
+
+    release(true);
+
+    await operation;
+
+    assert.equal(h.blockRequests().length, 0);
+  }
+});
+
+test("DS-07.5.2 publico: carga UIConfirm antes del perfil", () => {
+  const component = html.indexOf(
+    'src="/assets/js/app/ui-confirm.js"'
+  );
+
+  const profileScript = html.indexOf(
+    'src="/assets/js/app/public-profile.js"'
+  );
+
+  assert.ok(component >= 0);
+  assert.ok(profileScript > component);
+
+  assert.match(
+    html,
+    /href="\/assets\/css\/design-confirmations\.css"/
+  );
+});
