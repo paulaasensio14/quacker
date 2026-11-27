@@ -5,6 +5,7 @@
 (function () {
   const stack = [];
   const lastFocus = new WeakMap();
+  const dismissPolicies = new WeakMap();
 
   function isOpen(el) {
     return !!el && el.classList.contains("is-open");
@@ -96,9 +97,23 @@
     }
   }
 
+  function requestDismiss(modalEl) {
+    if (!isOpen(modalEl)) return;
+
+    const policy = dismissPolicies.get(modalEl);
+
+    if (policy?.canDismiss &&
+        !policy.canDismiss()) {
+      return;
+    }
+
+    close(modalEl);
+    policy?.onDismiss?.();
+  }
+
   function closeTop() {
     const top = stack[stack.length - 1];
-    if (top) close(top);
+    if (top) requestDismiss(top);
   }
 
   function trapTab(e) {
@@ -106,7 +121,20 @@
     if (!top || !isOpen(top)) return;
 
     const focusables = getFocusable(top);
-    if (!focusables.length) return;
+    if (!focusables.length) {
+      if (dismissPolicies.has(top)) {
+        e.preventDefault();
+
+        const card = top.querySelector(".modal-card");
+
+        if (card) {
+          card.setAttribute("tabindex", "-1");
+          card.focus();
+        }
+      }
+
+      return;
+    }
 
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
@@ -157,16 +185,26 @@
   function bind(modalId, {
     closeSelectors = [],
     initialFocusSelector = null,
-    closeOnBackdrop = true
+    closeOnBackdrop = true,
+    canDismiss = null,
+    onDismiss = null
   } = {}) {
     const modalEl = document.getElementById(modalId);
     if (!modalEl) return;
+
+    if (typeof canDismiss === "function" ||
+        typeof onDismiss === "function") {
+      dismissPolicies.set(modalEl, {
+        canDismiss,
+        onDismiss
+      });
+    }
 
     // Click fuera (solo overlay)
     if (closeOnBackdrop && !modalEl.dataset.backdropBound) {
       modalEl.dataset.backdropBound = "1";
       modalEl.addEventListener("click", (e) => {
-        if (e.target === modalEl) close(modalEl);
+        if (e.target === modalEl) requestDismiss(modalEl);
       });
     }
 
@@ -180,7 +218,7 @@
 
       btn.addEventListener("click", (e) => {
         e.preventDefault();
-        close(modalEl);
+        requestDismiss(modalEl);
       });
     });
 

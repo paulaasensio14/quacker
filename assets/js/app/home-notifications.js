@@ -139,7 +139,7 @@ const NotificationsUI = (() => {
       if (emptyStateEl) emptyStateEl.hidden = true;
       if (errorStateEl) errorStateEl.hidden = false;
 
-      if (markAllBtn) {
+      if (markAllBtn && markAllBtn.dataset?.markAllBusy !== "1") {
         markAllBtn.disabled = true;
         markAllBtn.textContent = window.I18n.t("notif_mark_all");
       }
@@ -304,7 +304,7 @@ const NotificationsUI = (() => {
     notifListEl.innerHTML = "";
 
     // UX: si no hay notificaciones, desactivar "Marcar todas"
-    if (markAllBtn) {
+    if (markAllBtn && markAllBtn.dataset?.markAllBusy !== "1") {
       const hasAny = notifications.length > 0;
       markAllBtn.disabled = !hasAny;
       markAllBtn.textContent = hasAny
@@ -796,61 +796,192 @@ const NotificationsUI = (() => {
   }
 
   // Modal confirmar "Marcar todas"
+  let markAllOpening = false;
+  let markAllBusy = false;
+
+  const isClearNotifsModalOpen = () =>
+    document.getElementById("confirmClearNotifsModal")
+      ?.classList.contains("is-open") === true;
+
+  const showMarkAllError = (err) => {
+    console.error(err);
+
+    window.toast?.({
+      title: window.I18n.t("home_notif_mark_all_error_title"),
+      message: window.I18n.t("home_notif_try_again"),
+      type: "error",
+      duration: 3000
+    });
+  };
+
   window.UIModal?.bind("confirmClearNotifsModal", {
     closeSelectors: ["#closeConfirmClearNotifs", "#cancelClearNotifs"],
-    initialFocusSelector: "#confirmClearNotifs",
-    closeOnBackdrop: true
+    initialFocusSelector: "#cancelClearNotifs",
+    closeOnBackdrop: true,
+    canDismiss: () => !markAllBusy
   });
 
   const openConfirmClearNotifsModal = () => {
     const modal = document.getElementById("confirmClearNotifsModal");
-    if (!modal) return;
-    window.UIModal?.open(modal, { initialFocusSelector: "#confirmClearNotifs" });
+
+    if (!modal || isClearNotifsModalOpen() || markAllBusy) {
+      return;
+    }
+
+    window.UIModal?.open(modal, {
+      initialFocusSelector: "#cancelClearNotifs",
+      lastFocusEl: markAllBtn
+    });
   };
 
   const closeConfirmClearNotifsModal = () => {
     const modal = document.getElementById("confirmClearNotifsModal");
+
     if (!modal) return;
-    window.UIModal?.close(modal);
+
+    window.UIModal?.close(modal, { restoreFocus: false });
+
+    if (panel?.classList.contains("is-open")) {
+      closeBtn?.focus?.();
+    } else {
+      trigger?.focus?.();
+    }
   };
 
-  // Botón "Marcar todas" (abre confirmación)
+  // Evitar consultas y aperturas simultaneas.
   if (markAllBtn) {
     markAllBtn.addEventListener("click", async () => {
-      const list = await ApiClient.getNotifications();
-      if (!list || list.length === 0) return;
-      openConfirmClearNotifsModal();
+      if (
+        markAllOpening ||
+        markAllBusy ||
+        markAllBtn.disabled ||
+        isClearNotifsModalOpen() ||
+        !panel?.classList.contains("is-open")
+      ) return;
+
+      const interactionVersion = __notifPanelInteractionVersion;
+
+      markAllOpening = true;
+
+      try {
+        const list = await ApiClient.getNotifications();
+
+        if (
+          !Array.isArray(list) ||
+          list.length === 0 ||
+          markAllBusy ||
+          interactionVersion !== __notifPanelInteractionVersion ||
+          !panel?.classList.contains("is-open")
+        ) return;
+
+        openConfirmClearNotifsModal();
+      } catch (err) {
+        showMarkAllError(err);
+      } finally {
+        markAllOpening = false;
+      }
     });
   }
 
-  // Confirmar desde modal
   const confirmClearBtn = document.getElementById("confirmClearNotifs");
+
   if (confirmClearBtn) {
     confirmClearBtn.addEventListener("click", async () => {
-      const snapshot = await ApiClient.getNotifications();
+      if (
+        markAllBusy ||
+        confirmClearBtn.disabled ||
+        !isClearNotifsModalOpen()
+      ) return;
 
-      closeConfirmClearNotifsModal();
+      const modal =
+        document.getElementById("confirmClearNotifsModal");
+
+      const modalCard = modal?.querySelector(".modal-card");
+
+      const cancel =
+        document.getElementById("cancelClearNotifs");
+
+      const close =
+        document.getElementById("closeConfirmClearNotifs");
+
+      const controls = [confirmClearBtn, cancel, close]
+        .filter(Boolean);
+
+      const previousText = confirmClearBtn.textContent;
+      const previousMarkText = markAllBtn?.textContent;
+      const previousMarkDisabled = markAllBtn?.disabled;
+
+      let saved = false;
+      let closed = false;
+      let cards = [];
+
+      // Bloquear antes de la primera operacion asincrona.
+      markAllBusy = true;
+
+      for (const control of controls) {
+        control.disabled = true;
+      }
+
+      confirmClearBtn.textContent =
+        window.I18n.t("home_notif_marking_all");
+
+      modalCard?.setAttribute("aria-busy", "true");
+      modalCard?.setAttribute("tabindex", "-1");
+      modalCard?.focus();
 
       if (markAllBtn) {
         markAllBtn.disabled = true;
-        const originalText = markAllBtn.textContent;
-        markAllBtn.dataset.originalText = originalText || window.I18n.t("notif_mark_all");
-        markAllBtn.textContent = window.I18n.t("home_notif_marking_all");
+        markAllBtn.dataset.markAllBusy = "1";
+        markAllBtn.textContent =
+          window.I18n.t("home_notif_marking_all");
         markAllBtn.classList.add("is-busy");
       }
 
-      const cards = Array.from(
-        notifListEl.querySelectorAll(
-          '.notif-card[data-persisted-notification="true"]'
-        )
-      );
-      cards.forEach((el, i) => {
-        setTimeout(() => el.classList.add("is-removing"), i * 35);
-      });
+      try {
+        // No eliminar sin una copia valida para Deshacer.
+        const snapshot = await ApiClient.getNotifications();
 
-      setTimeout(async () => {
-        try {
-          await ApiClient.clearNotifications();
+        if (!Array.isArray(snapshot)) {
+          throw new Error("invalid_notifications_snapshot");
+        }
+
+        if (!snapshot.length) {
+          closeConfirmClearNotifsModal();
+          closed = true;
+          saved = true;
+          return;
+        }
+
+        closeConfirmClearNotifsModal();
+        closed = true;
+
+        cards = Array.from(
+          notifListEl.querySelectorAll(
+            '.notif-card[data-persisted-notification="true"]'
+          )
+        );
+
+        cards.forEach((el, i) => {
+          setTimeout(
+            () => el.classList.add("is-removing"),
+            i * 35
+          );
+        });
+
+        await new Promise(resolve =>
+          setTimeout(
+            resolve,
+            Math.min(260, cards.length * 35 + 140)
+          )
+        );
+
+        const result = await ApiClient.clearNotifications();
+
+        if (result?.ok !== true) {
+          throw new Error("clear_notifications_failed");
+        }
+
+        saved = true;
 
           window.toast?.({
             title: window.I18n.t("home_notif_mark_all_success_title"),
@@ -879,24 +1010,46 @@ const NotificationsUI = (() => {
             }
           });
 
-          // Importante: no hacemos render manual. Vendrá por evento.
-        } catch (err) {
-          console.error(err);
+      } catch (err) {
+        showMarkAllError(err);
+      } finally {
+        markAllBusy = false;
 
-          window.toast?.({
-            title: window.I18n.t("home_notif_mark_all_error_title"),
-            message: window.I18n.t("home_notif_try_again"),
-            type: "error",
-            duration: 3000
-          });
-        } finally {
-          if (markAllBtn) {
-            markAllBtn.disabled = false;
-            markAllBtn.textContent = markAllBtn.dataset.originalText || window.I18n.t("notif_mark_all");
-            markAllBtn.classList.remove("is-busy");
+        for (const control of controls) {
+          control.disabled = false;
+        }
+
+        confirmClearBtn.textContent = previousText;
+        modalCard?.removeAttribute("aria-busy");
+
+        if (markAllBtn) {
+          delete markAllBtn.dataset.markAllBusy;
+
+          markAllBtn.disabled =
+            saved || previousMarkDisabled === true;
+
+          markAllBtn.textContent = saved
+            ? window.I18n.t("home_notif_none_new")
+            : previousMarkText;
+
+          markAllBtn.classList.remove("is-busy");
+        }
+
+        if (!saved) {
+          for (const card of cards) {
+            card.classList.remove("is-removing");
           }
         }
-      }, Math.min(260, cards.length * 35 + 140));
+
+        if (isClearNotifsModalOpen()) {
+          cancel?.focus();
+        }
+
+        // Actualizar tras liberar el estado ocupado.
+        if (closed) {
+          renderNotifications().catch(console.error);
+        }
+      }
     });
   }
 
@@ -1044,6 +1197,7 @@ const NotificationsUI = (() => {
   }
 
   function trapTabKey(e) {
+    if (e.defaultPrevented || isClearNotifsModalOpen()) return;
     if (!panel || !panel.classList.contains("is-open")) return;
     if (e.key !== "Tab") return;
 
@@ -1090,6 +1244,14 @@ const NotificationsUI = (() => {
 
   // Cerrar al clicar fuera
   document.addEventListener("click", (e) => {
+    const modal =
+      document.getElementById("confirmClearNotifsModal");
+
+    if (
+      isClearNotifsModalOpen() ||
+      modal?.contains(e.target)
+    ) return;
+
     if (!panel || !panel.classList.contains("is-open")) return;
     const isClickInside = panel.contains(e.target) || trigger?.contains(e.target);
     if (!isClickInside) closePanel({ restoreFocus: false });
@@ -1097,6 +1259,7 @@ const NotificationsUI = (() => {
 
   // Cerrar con Escape
   document.addEventListener("keydown", (e) => {
+    if (e.defaultPrevented || isClearNotifsModalOpen()) return;
     if (e.key !== "Escape") return;
     if (!panel || !panel.classList.contains("is-open")) return;
     closePanel();

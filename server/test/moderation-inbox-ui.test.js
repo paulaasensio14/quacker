@@ -33,6 +33,11 @@ class FakeElement {
     this.children = [...children];
   }
 
+  contains(target) {
+    return this === target ||
+      this.children.some(child => child.contains(target));
+  }
+
   addEventListener(type, handler) {
     this.handlers[type] = handler;
   }
@@ -47,6 +52,7 @@ function createHarness({
   response = { totalPending: 0, reports: [] },
   error = null,
   confirmed = true,
+  confirmSupported = true,
   decisionError = null
 } = {}) {
   const elements = {
@@ -57,19 +63,39 @@ function createHarness({
     moderationReportsRefresh: new FakeElement("button")
   };
 
+  const view = elements["view-moderation"];
+
+  view.active = true;
+
+  view.classList = {
+    contains(name) {
+      return name === "is-active" && view.active;
+    }
+  };
+
   const listeners = {};
   const calls = [];
   const decisions = [];
   const confirmations = [];
+  const confirmationOptions = [];
   let currentDecisionError = decisionError;
   let currentError = error;
   let currentResponse = response;
 
   const window = {
-    confirm(message) {
-      confirmations.push(message);
-      return confirmed;
+    confirm() {
+      throw new Error("native_confirm_must_not_be_used");
     },
+    UIConfirm: confirmSupported ? {
+      async ask(options) {
+        confirmations.push(options.message);
+        confirmationOptions.push(options);
+
+        return typeof confirmed === "function"
+          ? await confirmed(options)
+          : confirmed;
+      }
+    } : undefined,
     I18n: {
       t(key, params) {
         if (key === "moderation_pending_count") {
@@ -142,6 +168,7 @@ function createHarness({
     calls,
     decisions,
     confirmations,
+    confirmationOptions,
     setDecisionError(value) {
       currentDecisionError = value;
     },
@@ -641,4 +668,220 @@ test("las notas excesivamente largas se rechazan", async () => {
     controls.feedback.textContent,
     "moderation_notes_too_long"
   );
+});
+
+function pendingModerationDecision() {
+  let release;
+
+  const promise = new Promise(resolve => {
+    release = resolve;
+  });
+
+  return { promise, release };
+}
+
+async function confirmationHarness(options = {}) {
+  const h = createHarness({
+    response: {
+      totalPending: 1,
+      reports: [makeReport()]
+    },
+    ...options
+  });
+
+  await h.module.init();
+  await h.module.loadReports();
+
+  return h;
+}
+
+test("DS-07.5.2 moderacion: decisiones y tonos originales", async () => {
+  for (const action of ["resolve", "dismiss"]) {
+    const h = await confirmationHarness();
+    const controls = getControls(h);
+
+    controls.notes.value = "  Nota privada  ";
+
+    await controls[action].handlers.click();
+
+    assert.equal(h.confirmations.length, 1);
+
+    const options = h.confirmationOptions[0];
+
+    assert.equal(
+      options.tone,
+      action === "resolve" ? "normal" : "danger"
+    );
+
+    assert.equal(
+      options.title,
+      "moderation_" + action
+    );
+
+    assert.equal(
+      options.confirmLabel,
+      "moderation_" + action
+    );
+
+    assert.equal(
+      options.message,
+      "moderation_confirm_" + action
+    );
+
+    assert.equal(options.cancelLabel, "common_cancel");
+    assert.equal(options.closeLabel, "common_close");
+
+    assert.deepEqual(h.decisions, [{
+      id: "report_decision_1",
+      action,
+      notes: "Nota privada"
+    }]);
+
+    assert.equal(
+      h.elements.moderationReportsList.children.length,
+      0
+    );
+  }
+});
+
+test("DS-07.5.2 moderacion: fallo o respuesta invalida no guarda", async () => {
+  for (const options of [
+    { confirmSupported: false },
+    { confirmed: false },
+    { confirmed: "true" },
+    { confirmed: 1 },
+    { confirmed: async () => undefined },
+    {
+      confirmed: async () => {
+        throw new Error("dialog_failed");
+      }
+    }
+  ]) {
+    const h = await confirmationHarness(options);
+    const controls = getControls(h);
+
+    await controls.resolve.handlers.click();
+    await controls.dismiss.handlers.click();
+
+    assert.equal(h.decisions.length, 0);
+    assert.equal(controls.resolve.disabled, false);
+    assert.equal(controls.dismiss.disabled, false);
+    assert.equal(controls.notes.disabled, false);
+
+    assert.equal(
+      h.elements.moderationReportsRefresh.disabled,
+      false
+    );
+  }
+});
+
+test("DS-07.5.2 moderacion: cambios de contexto invalidan decision", async () => {
+  for (const change of [
+    async h => {
+      await h.module.loadReports();
+    },
+
+    async h => {
+      h.setError(
+        Object.assign(
+          new Error("forbidden"),
+          { status: 403 }
+        )
+      );
+
+      await h.module.loadReports();
+    },
+
+    h => {
+      h.elements["view-moderation"].active = false;
+    },
+
+    h => {
+      h.elements["view-moderation"].hidden = true;
+    },
+
+    h => {
+      h.elements.moderationReportsList.replaceChildren();
+    },
+
+    (h, controls) => {
+      controls.notes.value = "Notas modificadas";
+    },
+
+    (h, controls) => {
+      controls.resolve.disabled = true;
+    }
+  ]) {
+    const decision = pendingModerationDecision();
+
+    const h = await confirmationHarness({
+      confirmed: () => decision.promise
+    });
+
+    const controls = getControls(h);
+
+    controls.notes.value = "Notas originales";
+
+    const operation = controls.resolve.handlers.click();
+
+    assert.equal(h.confirmations.length, 1);
+    assert.equal(h.decisions.length, 0);
+
+    await change(h, controls);
+
+    decision.release(true);
+
+    await operation;
+
+    assert.equal(h.decisions.length, 0);
+  }
+});
+
+test("DS-07.5.2 moderacion: no duplica decisiones pendientes", async () => {
+  const decision = pendingModerationDecision();
+
+  const h = await confirmationHarness({
+    confirmed: () => decision.promise,
+
+    response: {
+      totalPending: 2,
+      reports: [
+        makeReport(),
+        {
+          ...makeReport(),
+          id: "report_decision_2"
+        }
+      ]
+    }
+  });
+
+  const first = getControls(h);
+
+  const secondCard =
+    h.elements.moderationReportsList.children[1];
+
+  const secondActions = secondCard.children.find(
+    entry =>
+      entry.className === "moderation-report-actions"
+  );
+
+  const secondResolve =
+    secondActions.children[1].children[0];
+
+  const operation = first.resolve.handlers.click();
+
+  await first.resolve.handlers.click();
+  await first.dismiss.handlers.click();
+  await secondResolve.handlers.click();
+
+  assert.equal(h.confirmations.length, 1);
+  assert.equal(h.decisions.length, 0);
+
+  decision.release(true);
+
+  await operation;
+
+  assert.equal(h.decisions.length, 1);
+  assert.equal(h.decisions[0].id, "report_decision_1");
+  assert.equal(h.decisions[0].action, "resolve");
 });

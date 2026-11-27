@@ -52,6 +52,9 @@ class FakeElement {
   }
 
   replaceChildren(...children) {
+    for (const child of this.children) {
+      child.parent = null;
+    }
     this.children = [];
     this.append(...children);
   }
@@ -119,6 +122,7 @@ class FakeElement {
 function createHarness({
   initialBlocks = [{ username: "bob" }],
   confirmed = true,
+  confirmSupported = true,
   unblockError = null,
   loadError = null,
   loadErrorAfter = Infinity,
@@ -133,11 +137,27 @@ function createHarness({
   const unblockCalls = [];
   const messages = [];
   const confirmations = [];
+  const confirmationOptions = [];
 
   const list = new FakeElement();
   const status = new FakeElement();
 
+  const profileView = {
+    active: true,
+    classList: {
+      contains(name) {
+        return name === "is-active" && profileView.active;
+      }
+    }
+  };
+
+  const profileLayout = {
+    dataset: { activeProfileTab: "privacidad" }
+  };
+
   const elements = {
+    "#view-profile": profileView,
+    "#view-profile .profile-layout": profileLayout,
     "#profileBlockedUsersList": list,
     "#profileBlockedUsersStatus": status
   };
@@ -152,10 +172,19 @@ function createHarness({
   };
 
   const window = {
-    confirm(message) {
-      confirmations.push(message);
-      return confirmed;
+    confirm() {
+      throw new Error("native_confirm_must_not_be_used");
     },
+    UIConfirm: confirmSupported ? {
+      async ask(options) {
+        confirmations.push(options.message);
+        confirmationOptions.push(options);
+
+        return typeof confirmed === "function"
+          ? await confirmed(options)
+          : confirmed;
+      }
+    } : undefined,
     toast(message) {
       messages.push(message);
     }
@@ -233,9 +262,13 @@ function createHarness({
 
   return {
     actions,
+    profileView,
+    profileLayout,
     list,
     status,
     confirmations,
+    confirmationOptions,
+    window,
     unblockCalls,
     messages,
     firstButton,
@@ -607,3 +640,79 @@ test(
     assert.equal(harness.status.textContent, "");
   }
 );
+
+test("DS-07.5.2 perfil: confirmacion ordinaria y explicita", async () => {
+  const h = createHarness();
+
+  await h.actions.loadBlockedUsers();
+  h.actions.bindBlockedUsers();
+
+  await h.click();
+
+  assert.equal(h.confirmationOptions.length, 1);
+  assert.equal(h.confirmationOptions[0].tone, "normal");
+  assert.deepEqual(h.unblockCalls, ["bob"]);
+});
+
+test("DS-07.5.2 perfil: confirmacion fallida no desbloquea", async () => {
+  for (const options of [
+    { confirmSupported: false },
+    { confirmed: "true" },
+    {
+      confirmed: async () => {
+        throw new Error("dialog_failed");
+      }
+    }
+  ]) {
+    const h = createHarness(options);
+
+    await h.actions.loadBlockedUsers();
+    h.actions.bindBlockedUsers();
+
+    await h.click();
+    await h.click();
+
+    assert.equal(h.unblockCalls.length, 0);
+    assert.equal(h.firstButton().disabled, false);
+  }
+});
+
+test("DS-07.5.2 perfil: contexto cambiado cancela desbloqueo", async () => {
+  for (const change of [
+    h => { h.firstButton().dataset.username = "alice"; },
+    h => { h.firstButton().disabled = true; },
+    h => { h.firstButton().remove(); },
+    h => { h.profileView.active = false; },
+    h => {
+      h.profileLayout.dataset.activeProfileTab = "perfil";
+    },
+    h => h.actions.loadBlockedUsers()
+  ]) {
+    let release;
+
+    const decision = new Promise(resolve => {
+      release = resolve;
+    });
+
+    const h = createHarness({
+      confirmed: () => decision
+    });
+
+    await h.actions.loadBlockedUsers();
+    h.actions.bindBlockedUsers();
+
+    const operation = h.click();
+
+    await h.click();
+
+    assert.equal(h.confirmationOptions.length, 1);
+
+    await change(h);
+
+    release(true);
+
+    await operation;
+
+    assert.equal(h.unblockCalls.length, 0);
+  }
+});

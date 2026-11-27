@@ -14,6 +14,7 @@ const CommunityProfileModule = (() => {
   let followBusy = false;
   let followOperationVersion = 0;
   let blockBusy = false;
+  let blockConfirmBusy = false;
   let blockOperationVersion = 0;
   let currentViewerState = "";
   let currentViewerAccess = "";
@@ -1122,6 +1123,7 @@ const CommunityProfileModule = (() => {
       button.hidden ||
       button.disabled ||
       blockBusy ||
+      blockConfirmBusy ||
       followBusy ||
       !activeUsername ||
       ![
@@ -1136,21 +1138,59 @@ const CommunityProfileModule = (() => {
 
     const username = activeUsername;
 
-    const confirmed = window.confirm(
-      t(
-        "community_block_confirm",
-        "¿Bloquear a este usuario? " +
-          "Se eliminarán los seguimientos y las " +
-          "solicitudes pendientes entre ambos. " +
-          "No se restaurarán al desbloquear."
-      ) + `\n@${username}`
-    );
+    const confirmationRequestVersion = requestVersion;
+    const confirmationBlockVersion = blockOperationVersion;
+    const confirmationFollowVersion = followOperationVersion;
+    const confirmationViewerState = currentViewerState;
+    const confirmationViewerAccess = currentViewerAccess;
 
-    if (!confirmed) return;
+    const message = t(
+      "community_block_confirm",
+      "¿Bloquear a este usuario? " +
+        "Se eliminarán los seguimientos y las " +
+        "solicitudes pendientes entre ambos. " +
+        "No se restaurarán al desbloquear."
+    ) + `\n@${username}`;
+
+    let confirmed = false;
+
+    blockConfirmBusy = true;
+
+    try {
+      const label = t(
+        "community_block_button",
+        "Bloquear usuario"
+      );
+
+      confirmed = await window.UIConfirm?.ask?.({
+        title: label,
+        message,
+        confirmLabel: label,
+        cancelLabel: t("common_cancel", "Cancelar"),
+        closeLabel: t("common_close", "Cerrar"),
+        tone: "danger"
+      });
+    } catch (_) {
+      return;
+    } finally {
+      blockConfirmBusy = false;
+    }
+
+    if (confirmed !== true) return;
 
     if (
       username !== activeUsername ||
-      button.hidden
+      confirmationRequestVersion !== requestVersion ||
+      confirmationBlockVersion !== blockOperationVersion ||
+      confirmationFollowVersion !== followOperationVersion ||
+      confirmationViewerState !== currentViewerState ||
+      confirmationViewerAccess !== currentViewerAccess ||
+      blockBusy ||
+      followBusy ||
+      $("#communityProfileBlockAction") !== button ||
+      button.hidden ||
+      button.disabled ||
+      !$("#view-community-profile")?.classList.contains("is-active")
     ) {
       return;
     }

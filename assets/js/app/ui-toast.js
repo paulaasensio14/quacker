@@ -1,5 +1,5 @@
 // Toast unificado para toda la app Quacker
-// API pública: window.toast({ title, message, type, duration, actionLabel, onAction })
+// API pública: window.toast({ title, message, type, duration, actionLabel, onAction, icon })
 // Sin emojis. Solo SVG. Soporta Undo.
 
 (function () {
@@ -75,24 +75,26 @@
     setTimeout(() => el.remove(), 180);
   }
 
-  function iconSvg(type) {
-    if (type === "success") {
-      return `
-        <svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"></path>
-        </svg>`;
-    }
-
-    if (type === "error") {
-      return `
-        <svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 2 1 21h22L12 2zm0 6c.6 0 1 .4 1 1v5c0 .6-.4 1-1 1s-1-.4-1-1V9c0-.6.4-1 1-1zm0 10a1.25 1.25 0 1 1 0 2.5A1.25 1.25 0 0 1 12 18z"></path>
-        </svg>`;
-    }
+  function iconSvg(type, icon) {
+    const paths = type === "success" && icon === "list"
+      ? '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"></path>'
+      : type === "success"
+        ? '<path d="M5 12l4 4L19 6"></path>'
+        : type === "error"
+          ? '<path d="M6 6l12 12M18 6L6 18"></path>'
+          : '<path d="M12 11v6M12 7h.01"></path>';
 
     return `
-      <svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4.8a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4zM11 10h2v8h-2v-8z"></path>
+      <svg class="toast-icon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round">
+        ${paths}
       </svg>`;
   }
 
@@ -102,7 +104,8 @@
     type = "info",
     duration = 2200,
     actionLabel = null,
-    onAction = null
+    onAction = null,
+    icon = null
   } = {}) {
     const host = getHost();
     if (!host) return;
@@ -111,6 +114,11 @@
 
     const toast = document.createElement("div");
     toast.className = `toast toast--${type}`;
+
+    if (type === "success" && icon === "list") {
+      toast.classList.add("toast--list");
+    }
+
     toast.setAttribute("role", "status");
 
     const safeTitle = escapeHtml(title);
@@ -125,7 +133,7 @@
     const safeCloseLabel = escapeHtml(closeLabel);
 
     toast.innerHTML = `
-      ${iconSvg(type)}
+      ${iconSvg(type, icon)}
       <div class="toast-content">
         ${safeTitle ? `<div class="toast-title">${safeTitle}</div>` : ""}
         ${safeMessage ? `<div class="toast-message">${safeMessage}</div>` : ""}

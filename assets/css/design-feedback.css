@@ -1,0 +1,2335 @@
+/*
+ * QUACKER DESIGN SYSTEM — DS-07
+ * Messages, loading and empty states.
+ *
+ * DS-07.1 — Toast feedback.
+ */
+
+/* Shared toast container */
+
+.toast-host {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  width: min(460px, calc(100% - 24px));
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: grid;
+  gap: 10px;
+  pointer-events: none;
+}
+
+/* Inverted surfaces */
+
+.toast {
+  --q-toast-bg: #17181c;
+  --q-toast-text: #f3f0e8;
+  --q-toast-muted: #d4d0c8;
+  --q-toast-action: var(--q-brand);
+  --q-toast-border: #34363d;
+  --q-toast-hover: rgb(255 255 255 / 9%);
+  --q-toast-success: #17804a;
+  --q-toast-danger: #c8362a;
+  --q-toast-info: #2449c7;
+  --q-toast-icon-ink: #ffffff;
+
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px;
+  border: 1px solid var(--q-toast-border);
+  border-radius: 14px;
+
+  background: var(--q-toast-bg);
+  color: var(--q-toast-text);
+
+  box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: visible;
+
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+body.dark-theme .toast {
+  --q-toast-bg: #f3f0e8;
+  --q-toast-text: #17181c;
+  --q-toast-muted: #565a63;
+  --q-toast-action: #795d00;
+  --q-toast-border: #e2ddd2;
+  --q-toast-hover: rgb(23 24 28 / 8%);
+  --q-toast-success: #43c982;
+  --q-toast-danger: #ff7a6b;
+  --q-toast-info: #8fb0ff;
+  --q-toast-icon-ink: #17181c;
+
+  background: var(--q-toast-bg);
+  color: var(--q-toast-text);
+  border-color: var(--q-toast-border);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 32%);
+}
+
+.toast.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.toast--success,
+.toast--error,
+.toast--info {
+  border-color: var(--q-toast-border);
+}
+
+/* Semantic icons */
+
+.toast-icon {
+  grid-column: 1;
+  grid-row: 1;
+
+  display: block;
+  width: 28px;
+  height: 28px;
+
+  box-sizing: border-box;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 6px;
+
+  border-radius: 50%;
+
+  background: var(--q-toast-info);
+  color: var(--q-toast-icon-ink);
+
+  fill: none;
+  stroke: currentColor;
+  opacity: 1;
+}
+
+.toast--success .toast-icon {
+  background: var(--q-toast-success);
+}
+
+.toast--error .toast-icon {
+  background: var(--q-toast-danger);
+}
+
+.toast--info .toast-icon {
+  background: var(--q-toast-info);
+}
+
+/* Text */
+
+.toast-content {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.toast-title {
+  min-width: 0;
+  margin: 0;
+
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.4;
+
+  color: var(--q-toast-text);
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.toast-message {
+  min-width: 0;
+  margin: 0;
+
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+
+  color: var(--q-toast-muted);
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Shared action and close controls */
+
+.toast-btn {
+  appearance: none;
+  -webkit-appearance: none;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0;
+
+  font: inherit;
+  line-height: 1.3;
+
+  border: 0;
+  background: transparent;
+  color: var(--q-toast-text);
+
+  box-shadow: none;
+  transform: none;
+
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.toast-btn.toast-action {
+  grid-column: 3;
+  grid-row: 1;
+
+  min-height: 36px;
+  height: auto;
+  max-width: 136px;
+
+  padding: 7px 6px;
+  border: 0;
+  border-radius: 8px;
+
+  background: transparent;
+  color: var(--q-toast-action);
+
+  font-size: 0.875rem;
+  font-weight: 700;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  box-shadow: none;
+}
+
+.toast-btn.toast-close {
+  grid-column: 4;
+  grid-row: 1;
+
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+
+  background: transparent;
+  color: var(--q-toast-muted);
+
+  box-shadow: none;
+}
+
+.toast-btn:hover:not(:disabled) {
+  background: var(--q-toast-hover);
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.toast-btn:active {
+  box-shadow: none;
+  transform: none;
+}
+
+.toast-btn:disabled,
+.toast-btn.is-busy {
+  cursor: default;
+  opacity: 0.75;
+  box-shadow: none;
+  transform: none;
+}
+
+.toast-btn:focus-visible {
+  outline: 2px solid var(--q-toast-action);
+  outline-offset: 2px;
+}
+
+/* Busy feedback, scoped to toast actions */
+
+.toast-btn .btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+
+  animation: qToastSpin 700ms linear infinite;
+}
+
+@keyframes qToastSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Legacy timer, if present */
+
+.toast-timer {
+  position: absolute;
+  inset: auto 8px 0;
+  height: 2px;
+  width: auto;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--q-toast-hover);
+}
+
+.toast-timer > span {
+  background: var(--q-toast-action);
+}
+
+/* Small screens */
+
+@media (max-width: 480px) {
+  .toast {
+    grid-template-columns: 28px minmax(0, 1fr) 44px;
+    gap: 8px;
+  }
+
+  .toast-btn.toast-close {
+    grid-column: 3;
+    grid-row: 1;
+
+    width: 44px;
+    height: 44px;
+  }
+
+  .toast-btn.toast-action {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    justify-self: end;
+    min-height: 44px;
+    max-width: 100%;
+  }
+}
+
+/* Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast-btn,
+  .toast-timer > span {
+    transition: none;
+  }
+
+  .toast,
+  .toast.is-open {
+    transform: none;
+  }
+
+  .toast-btn .btn-spinner {
+    animation: none;
+  }
+}
+
+
+/* DS-07.1: successful list additions */
+
+.toast--success.toast--list .toast-icon {
+  background: var(--q-brand);
+  color: #17181c;
+}
+
+
+/* ==================================================
+   DS-07.2 - Inline semantic alerts
+   ================================================== */
+
+:root {
+  --q-alert-info-bg: #e9eefc;
+  --q-alert-info-ink: #2449c7;
+
+  --q-alert-success-bg: #e4f3e9;
+  --q-alert-success-ink: #16663c;
+
+  --q-alert-warning-bg: #fbf0db;
+  --q-alert-warning-ink: #805000;
+
+  --q-alert-error-bg: #fbe8e5;
+  --q-alert-error-ink: #ad2c22;
+
+  --q-alert-info-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v6M12 7h.01'/%3E%3C/svg%3E");
+
+  --q-alert-success-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8 12 3 3 5-6'/%3E%3C/svg%3E");
+
+  --q-alert-warning-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 20h20L12 3ZM12 9v5M12 17h.01'/%3E%3C/svg%3E");
+
+  --q-alert-error-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 17h.01'/%3E%3C/svg%3E");
+}
+
+body.dark-theme {
+  --q-alert-info-bg: #19243d;
+  --q-alert-info-ink: #8fb0ff;
+
+  --q-alert-success-bg: #152d22;
+  --q-alert-success-ink: #43c982;
+
+  --q-alert-warning-bg: #342817;
+  --q-alert-warning-ink: #f2b84b;
+
+  --q-alert-error-bg: #351e1d;
+  --q-alert-error-ink: #ff7a6b;
+}
+
+/* Reusable semantic variants */
+
+.q-alert--info {
+  --q-alert-bg: var(--q-alert-info-bg);
+  --q-alert-ink: var(--q-alert-info-ink);
+  --q-alert-icon: var(--q-alert-info-icon);
+}
+
+.q-alert--success {
+  --q-alert-bg: var(--q-alert-success-bg);
+  --q-alert-ink: var(--q-alert-success-ink);
+  --q-alert-icon: var(--q-alert-success-icon);
+}
+
+.q-alert--warning {
+  --q-alert-bg: var(--q-alert-warning-bg);
+  --q-alert-ink: var(--q-alert-warning-ink);
+  --q-alert-icon: var(--q-alert-warning-icon);
+}
+
+.q-alert--error {
+  --q-alert-bg: var(--q-alert-error-bg);
+  --q-alert-ink: var(--q-alert-error-ink);
+  --q-alert-icon: var(--q-alert-error-icon);
+}
+
+/* Public reusable component */
+
+.q-alert {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+
+  padding: 12px 14px 12px 42px;
+  border: 1px solid var(--q-alert-ink, var(--q-alert-info-ink));
+  border-radius: 12px;
+
+  background: var(--q-alert-bg, var(--q-alert-info-bg));
+  color: var(--q-alert-ink, var(--q-alert-info-ink));
+
+  box-shadow: none;
+
+  text-align: start;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.q-alert::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+
+  background: var(--q-alert-ink, var(--q-alert-info-ink));
+
+  -webkit-mask-image: var(--q-alert-icon, var(--q-alert-info-icon));
+  mask-image: var(--q-alert-icon, var(--q-alert-info-icon));
+
+  -webkit-mask-position: center;
+  mask-position: center;
+
+  -webkit-mask-size: contain;
+  mask-size: contain;
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.q-alert-title {
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.q-alert-message {
+  color: var(--q-text);
+  line-height: 1.5;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+/* Existing error containers */
+
+.modal-errors,
+.profile-form-errors,
+.form-errors,
+.auth-error,
+.content-detail-feedback--error {
+  --q-alert-bg: var(--q-alert-error-bg);
+  --q-alert-ink: var(--q-alert-error-ink);
+  --q-alert-icon: var(--q-alert-error-icon);
+}
+
+/* Collaboration and invitation messages */
+
+.list-collaboration-feedback,
+#listLinkInviteFeedback,
+#listLinkInviteAcceptFeedback {
+  --q-alert-bg: var(--q-alert-info-bg);
+  --q-alert-ink: var(--q-alert-info-ink);
+  --q-alert-icon: var(--q-alert-info-icon);
+}
+
+.list-collaboration-feedback[role="alert"],
+#listLinkInviteFeedback[role="alert"],
+#listLinkInviteAcceptFeedback[role="alert"] {
+  --q-alert-bg: var(--q-alert-error-bg);
+  --q-alert-ink: var(--q-alert-error-ink);
+  --q-alert-icon: var(--q-alert-error-icon);
+}
+
+/*
+ * Apply visual styles without changing the original
+ * visibility or message lifecycle.
+ */
+
+.modal-errors,
+.profile-form-errors,
+.form-errors,
+.auth-error,
+.content-detail-feedback--error,
+.list-collaboration-feedback,
+#listLinkInviteFeedback,
+#listLinkInviteAcceptFeedback {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+
+  padding: 12px 14px 12px 42px;
+  border: 1px solid var(--q-alert-ink);
+  border-radius: 12px;
+
+  background: var(--q-alert-bg);
+  color: var(--q-alert-ink);
+  box-shadow: none;
+
+  text-align: start;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.modal-errors::before,
+.profile-form-errors::before,
+.form-errors::before,
+.auth-error::before,
+.content-detail-feedback--error::before,
+.list-collaboration-feedback::before,
+#listLinkInviteFeedback::before,
+#listLinkInviteAcceptFeedback::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+
+  width: 20px;
+  height: 20px;
+
+  pointer-events: none;
+
+  background: var(--q-alert-ink);
+
+  -webkit-mask-image: var(--q-alert-icon);
+  mask-image: var(--q-alert-icon);
+
+  -webkit-mask-position: center;
+  mask-position: center;
+
+  -webkit-mask-size: contain;
+  mask-size: contain;
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.modal-errors .error-line {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.profile-form-errors ul {
+  margin: 0;
+  padding-inline-start: 18px;
+  overflow-wrap: anywhere;
+}
+
+/* Hidden and empty containers must stay hidden */
+
+.q-alert[hidden],
+.q-alert:empty,
+.modal-errors[hidden],
+.modal-errors:empty,
+.profile-form-errors[hidden],
+.profile-form-errors:empty,
+.form-errors[hidden],
+.form-errors:empty,
+.auth-error[hidden],
+.auth-error:empty,
+.content-detail-feedback--error[hidden],
+.list-collaboration-feedback[hidden],
+.list-collaboration-feedback:empty,
+#listLinkInviteFeedback[hidden],
+#listLinkInviteFeedback:empty,
+#listLinkInviteAcceptFeedback[hidden],
+#listLinkInviteAcceptFeedback:empty {
+  display: none;
+}
+
+
+/* DS-07.2: confirmed collaboration feedback */
+
+.list-collaboration-feedback[role="status"][data-feedback-tone="success"] {
+  --q-alert-bg: var(--q-alert-success-bg);
+  --q-alert-ink: var(--q-alert-success-ink);
+  --q-alert-icon: var(--q-alert-success-icon);
+}
+
+.list-collaboration-feedback[role="alert"][data-feedback-tone="warning"] {
+  --q-alert-bg: var(--q-alert-warning-bg);
+  --q-alert-ink: var(--q-alert-warning-ink);
+  --q-alert-icon: var(--q-alert-warning-icon);
+}
+
+
+/* DS-07.3: loading */
+
+:root {
+  --q-skeleton-base: #e7e3da;
+  --q-skeleton-highlight: #f6f4ef;
+  --q-skeleton-border: #ded9cf;
+  --q-loading-ink: #795d00;
+}
+
+body.dark-theme {
+  --q-skeleton-base: #292e38;
+  --q-skeleton-highlight: #3a414e;
+  --q-skeleton-border: #343a45;
+  --q-loading-ink: #ffc928;
+}
+
+/*
+ * Skeleton shapes.
+ * Preserve the dimensions and layout of existing cards.
+ */
+
+.metric-value.is-skeleton,
+body #view-home .cw-card--skeleton .skel,
+body #view-home .backlog-card--skeleton .skel,
+body #view-library .lib-card.is-skeleton .lib-cover,
+#view-library .lib-card.is-skeleton .lib-meta,
+.list-card--skeleton .list-skel-title,
+.list-card--skeleton .list-skel-pill,
+.list-card--skeleton .list-skel-icon,
+.list-card--skeleton .list-skel-line,
+#view-explore .explore-skel-cover,
+#view-explore .explore-card-type--skeleton,
+#view-explore .explore-skel-section-title,
+#view-explore .explore-skel-section-subtitle,
+#view-explore .explore-skel-section-actions,
+.activity-loading-row {
+  box-sizing: border-box;
+  background: var(--q-skeleton-base);
+  border-color: var(--q-skeleton-border);
+}
+
+/* Library text placeholders retain their reserved space. */
+
+#view-library .lib-card.is-skeleton .lib-title {
+  min-width: 0;
+
+  background:
+    linear-gradient(
+      var(--q-skeleton-base),
+      var(--q-skeleton-base)
+    ) 0 5px / 90% 10px no-repeat,
+    linear-gradient(
+      var(--q-skeleton-base),
+      var(--q-skeleton-base)
+    ) 0 23px / 66% 10px no-repeat;
+
+  border: 0;
+  border-radius: 6px;
+  color: transparent;
+}
+
+#view-library .lib-card.is-skeleton .lib-meta {
+  width: 62%;
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+/* Prevent placeholders from overflowing small cards. */
+
+.cw-card--skeleton .cw-skel-btn,
+.cw-card--skeleton .cw-skel-chip,
+.backlog-card--skeleton .bg-skel-btn,
+.backlog-card--skeleton .bg-skel-chip,
+.list-card--skeleton .list-skel-pill,
+.explore-skel-section-title,
+.explore-skel-section-subtitle,
+.explore-skel-section-actions {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Shared, restrained shimmer animation. */
+
+.metric-value.is-skeleton::after,
+.cw-card--skeleton .skel::after,
+.backlog-card--skeleton .skel::after,
+.lib-card.is-skeleton .lib-cover::after,
+.list-card--skeleton .list-skel-title::after,
+.list-card--skeleton .list-skel-pill::after,
+.list-card--skeleton .list-skel-icon::after,
+.list-card--skeleton .list-skel-line::after,
+.explore-skel-cover::after,
+.explore-card-type--skeleton::after,
+.explore-skel-section-title::after,
+.explore-skel-section-subtitle::after,
+.explore-skel-section-actions::after,
+.activity-loading-row::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--q-skeleton-highlight) 50%,
+    transparent 100%
+  );
+
+  animation: qSkeletonShimmer 1600ms ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes qSkeletonShimmer {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Button indicators: follow the button text colour.
+ * Toast indicators remain managed by DS-07.1.
+ * The auth SVG spinner keeps its existing structure.
+ */
+
+body .btn-spinner:empty:not(:where(.toast-btn *)) {
+  display: inline-block;
+  box-sizing: border-box;
+
+  width: 14px;
+  height: 14px;
+
+  flex-shrink: 0;
+
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+
+  animation: qLoadingSpin 900ms linear infinite;
+}
+
+@keyframes qLoadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Library background refresh */
+
+.lib-refresh-veil-inner {
+  box-sizing: border-box;
+
+  border: 1px solid var(--q-border);
+  border-radius: 12px;
+
+  background: var(--q-surface);
+  color: var(--q-text-2);
+
+  box-shadow: none;
+
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#libRefreshVeil .btn-spinner {
+  color: var(--q-loading-ink);
+}
+
+/* Detail loading message.
+ * Do not override display or the error state.
+ */
+
+#contentDetailLoading {
+  box-sizing: border-box;
+
+  border: 1px solid var(--q-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  background: var(--q-surface);
+  color: var(--q-text-2);
+
+  box-shadow: none;
+  overflow-wrap: anywhere;
+}
+
+#contentDetailLoading::before {
+  content: "";
+  display: inline-block;
+  box-sizing: border-box;
+
+  width: 18px;
+  height: 18px;
+
+  margin-inline-end: 10px;
+  vertical-align: middle;
+
+  color: var(--q-loading-ink);
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+
+  animation: qLoadingSpin 900ms linear infinite;
+  pointer-events: none;
+}
+
+/* Explicit visibility guards */
+
+.activity-loading[hidden],
+.lib-refresh-veil[hidden],
+#contentDetailLoading[hidden] {
+  display: none !important;
+}
+
+/* Keep a static indication of loading for reduced motion. */
+
+@media (prefers-reduced-motion: reduce) {
+  .metric-value.is-skeleton::after,
+  .cw-card--skeleton .skel::after,
+  .backlog-card--skeleton .skel::after,
+  .lib-card.is-skeleton .lib-cover::after,
+  .list-card--skeleton .list-skel-title::after,
+  .list-card--skeleton .list-skel-pill::after,
+  .list-card--skeleton .list-skel-icon::after,
+  .list-card--skeleton .list-skel-line::after,
+  .explore-skel-cover::after,
+  .explore-card-type--skeleton::after,
+  .explore-skel-section-title::after,
+  .explore-skel-section-subtitle::after,
+  .explore-skel-section-actions::after,
+  .activity-loading-row::after {
+    animation: none;
+    transform: none;
+    opacity: 0;
+  }
+
+  body .btn-spinner:empty:not(:where(.toast-btn *)),
+  .q-btn-spinner,
+  #contentDetailLoading::before,
+  #authSubmitSpinner svg {
+    animation: none;
+    transform: none;
+  }
+
+  .activity-list.is-loading {
+    transition: none;
+  }
+}
+
+
+/* DS-07.4: empty states */
+
+:root {
+  --q-empty-accent-bg: #fff3c8;
+  --q-empty-accent-ink: #795d00;
+}
+
+body.dark-theme {
+  --q-empty-accent-bg: #352e19;
+  --q-empty-accent-ink: #ffc928;
+}
+
+/* Shared surfaces */
+
+body :is(
+  .empty-state-card,
+  .lib-empty-state-card,
+  .home-empty-card,
+  .empty-card,
+  .notif-empty-state,
+  .activity-empty,
+  .atl-empty-state
+),
+body:is(.dark-theme, :not(.dark-theme))
+:is(#view-home, #view-explore, #view-library, #view-lists)
+:is(.empty-state-card, .lib-empty-state-card),
+body:is(.dark-theme, :not(.dark-theme))
+#view-home .home-backlog-empty .empty-state-card {
+  box-sizing: border-box;
+
+  min-width: 0;
+  max-width: 100%;
+
+  background: var(--q-surface);
+  color: var(--q-text);
+
+  border: 1px solid var(--q-border);
+  border-radius: 16px;
+
+  padding: 24px;
+
+  box-shadow: none;
+
+  overflow-wrap: anywhere;
+
+  --q-empty-icon-bg: var(--q-empty-accent-bg);
+  --q-empty-icon-ink: var(--q-empty-accent-ink);
+}
+
+/* Main empty screens */
+
+body #view-explore .empty-state {
+  margin-top: 24px;
+  padding: 12px 0;
+}
+
+body:is(.dark-theme, :not(.dark-theme))
+#view-explore .empty-state-card,
+body:is(.dark-theme, :not(.dark-theme))
+:is(#view-library, #view-lists) .lib-empty-state-card,
+body .lib-empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 14px;
+
+  width: min(100%, 560px);
+  min-height: 0;
+  max-width: 100%;
+
+  padding: 28px 24px;
+
+  text-align: center;
+}
+
+body #view-explore .empty-state-main {
+  min-width: 0;
+  width: 100%;
+}
+
+/* Home: retain compact horizontal layout on desktop */
+
+body #view-home .home-continue-empty .empty-state-card,
+body:is(.dark-theme, :not(.dark-theme))
+#view-home .home-backlog-empty .empty-state-card {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+body #view-home .empty-state-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Compact panels */
+
+body .notif-empty-state,
+body .activity-empty,
+body .atl-empty-state,
+body .home-empty-card,
+body .empty-card {
+  min-height: 0;
+  padding: 16px;
+  border-radius: 14px;
+}
+
+body .atl-empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+
+/* Titles */
+
+body :is(
+  .empty-state-title,
+  .lib-empty-state-title,
+  .notif-empty-title,
+  .activity-empty-title,
+  .atl-empty-title,
+  .empty-card-title
+),
+body:is(.dark-theme, :not(.dark-theme))
+:is(#view-home, #view-explore, #view-library, #view-lists)
+:is(.empty-state-title, .lib-empty-state-title),
+body:is(.dark-theme, :not(.dark-theme))
+#view-home .home-backlog-empty .empty-state-title {
+  color: var(--q-text);
+
+  font-size: 1.125rem;
+  line-height: 1.35;
+  font-weight: 700;
+
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+body:is(.dark-theme, :not(.dark-theme))
+#view-explore .empty-state-title,
+body .lib-empty-state-title,
+body:is(.dark-theme, :not(.dark-theme))
+:is(#view-library, #view-lists) .lib-empty-state-title {
+  font-size: clamp(1.125rem, 3vw, 1.375rem);
+  font-weight: 700;
+}
+
+body .home-empty-card h3 {
+  margin: 0 0 6px;
+  color: var(--q-text);
+  font-size: 1rem;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+/* Supporting text */
+
+body :is(
+  .empty-state-text,
+  .lib-empty-state-text,
+  .notif-empty-desc,
+  .activity-empty-desc,
+  .atl-empty-sub,
+  .empty-card-text,
+  .home-empty-card p
+),
+body:is(.dark-theme, :not(.dark-theme))
+:is(#view-home, #view-explore, #view-library, #view-lists)
+:is(.empty-state-text, .lib-empty-state-text),
+body:is(.dark-theme, :not(.dark-theme))
+#view-home .home-backlog-empty .empty-state-text {
+  color: var(--q-text-2);
+  opacity: 1;
+
+  font-size: 0.9375rem;
+  line-height: 1.55;
+
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+
+body #view-explore .empty-state-text,
+body .lib-empty-state-text {
+  max-width: 44ch;
+  margin-inline: auto;
+}
+
+.lib-empty-state-kicker {
+  color: var(--q-text-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Neutral search state */
+
+#exploreEmpty .empty-state-card {
+  --q-empty-icon-bg: var(--q-surface-2);
+  --q-empty-icon-ink: var(--q-text-2);
+}
+
+/* Error states use the approved semantic palette */
+
+body #exploreError .empty-state-card,
+body .lib-empty-state-card--error,
+body #homeDashboardError,
+body #notifErrorState,
+body #activityError,
+body .atl-empty-state:has(#atlRetryLoadListsBtn) {
+  --q-empty-icon-bg: var(--q-alert-error-bg);
+  --q-empty-icon-ink: var(--q-alert-error-ink);
+}
+
+/*
+ * Repeat the variant for scoped cards.
+ * This avoids legacy dark-theme overrides.
+ */
+
+body:is(.dark-theme, :not(.dark-theme))
+#view-explore #exploreError .empty-state-card,
+body:is(.dark-theme, :not(.dark-theme))
+:is(#view-library, #view-lists)
+.lib-empty-state-card--error {
+  --q-empty-icon-bg: var(--q-alert-error-bg);
+  --q-empty-icon-ink: var(--q-alert-error-ink);
+}
+
+body:is(.dark-theme, :not(.dark-theme))
+#view-explore #exploreEmpty .empty-state-card {
+  --q-empty-icon-bg: var(--q-surface-2);
+  --q-empty-icon-ink: var(--q-text-2);
+}
+
+/* Existing decorative icons */
+
+body :is(
+  .empty-state-icon,
+  .lib-empty-state-icon,
+  .notif-empty-icon,
+  .atl-empty-icon
+),
+body #view-explore .empty-state-icon,
+body:is(.dark-theme, :not(.dark-theme))
+#view-home .home-backlog-empty .empty-state-icon,
+body .lib-empty-state-card--error .lib-empty-state-icon {
+  box-sizing: border-box;
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+
+  width: 48px;
+  height: 48px;
+
+  border: 0;
+  border-radius: 14px;
+
+  background: var(--q-empty-icon-bg);
+  color: var(--q-empty-icon-ink);
+
+  font-size: 1.5rem;
+  font-weight: 700;
+
+  margin: 0;
+  box-shadow: none;
+}
+
+body :is(
+  .empty-state-icon,
+  .lib-empty-state-icon,
+  .notif-empty-icon,
+  .atl-empty-icon
+) svg {
+  width: 23px;
+  height: 23px;
+
+  display: block;
+  flex-shrink: 0;
+
+  opacity: 1;
+}
+
+.lib-empty-state-icon-svg {
+  fill: currentColor;
+}
+
+/* A decorative icon for existing error states without one */
+
+.lib-empty-state-card--error:not(:has(> .lib-empty-state-icon))::before,
+#homeDashboardError::before,
+#notifErrorState::before,
+#activityError::before {
+  content: "";
+  display: block;
+
+  width: 24px;
+  height: 24px;
+
+  margin-bottom: 6px;
+
+  background: var(--q-alert-error-ink);
+
+  -webkit-mask: var(--q-alert-error-icon) center / contain no-repeat;
+  mask: var(--q-alert-error-icon) center / contain no-repeat;
+
+  pointer-events: none;
+}
+
+/* Existing list detail without items */
+
+#listDetailEmpty {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 12px 0;
+  padding: 20px;
+
+  background: var(--q-surface);
+  color: var(--q-text-2);
+
+  border: 1px solid var(--q-border);
+  border-radius: 14px;
+
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  text-align: center;
+
+  overflow-wrap: anywhere;
+}
+
+/* Preserve all real actions and button semantics */
+
+body .empty-state-actions,
+body .lib-empty-state-actions,
+body #view-explore .empty-state-actions,
+body #view-home .empty-state-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 10px;
+
+  min-width: 0;
+  max-width: 100%;
+
+  margin-top: 12px;
+}
+
+body #view-home .empty-state-actions {
+  justify-content: flex-start;
+}
+
+body .empty-state-actions > :is(button, a),
+body .lib-empty-state-actions > :is(button, a),
+body #view-explore .empty-state-actions > :is(button, a),
+body #view-home .empty-state-actions > :is(button, a),
+body #view-home .home-continue-empty
+.empty-state-actions > :is(.btn-primary, .btn-secondary) {
+  box-sizing: border-box;
+
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+
+  flex: 0 1 auto;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  text-align: center;
+}
+
+#homeDashboardRetry,
+#atlRetryLoadListsBtn,
+#atlCreateListBtn {
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+}
+
+/* Small screens */
+
+@media (max-width: 480px) {
+  body:is(.dark-theme, :not(.dark-theme))
+  :is(#view-home, #view-explore, #view-library, #view-lists)
+  :is(.empty-state-card, .lib-empty-state-card),
+  body:is(.dark-theme, :not(.dark-theme))
+  #view-home .home-backlog-empty .empty-state-card {
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+
+  body #view-home .home-continue-empty .empty-state-card,
+  body:is(.dark-theme, :not(.dark-theme))
+  #view-home .home-backlog-empty .empty-state-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  body #view-home .empty-state-main {
+    width: 100%;
+  }
+
+  body .empty-state-actions,
+  body .lib-empty-state-actions,
+  body #view-home .empty-state-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body .empty-state-actions > :is(button, a),
+  body .lib-empty-state-actions > :is(button, a),
+  body #view-explore .empty-state-actions > :is(button, a),
+  body #view-home .empty-state-actions > :is(button, a),
+  body #view-home .home-continue-empty
+  .empty-state-actions > :is(.btn-primary, .btn-secondary) {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Preserve existing visibility contracts */
+
+.empty-state[hidden],
+.lib-empty-state[hidden],
+.lib-empty-state.is-initially-hidden,
+.home-empty-card[hidden],
+.notif-empty-state[hidden],
+.activity-empty[hidden],
+#listDetailEmpty.is-initially-hidden,
+#listDetailEmpty[hidden] {
+  display: none !important;
+}
+
+
+/* DS-07.4: visual refinements */
+
+:root {
+  --q-empty-play-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m10 8 6 4-6 4V8Z'/%3E%3C/svg%3E");
+
+  --q-empty-list-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01'/%3E%3C/svg%3E");
+
+  --q-empty-error-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ad2c22' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 17h.01'/%3E%3C/svg%3E");
+
+  --q-empty-retry-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 11a8 8 0 1 0-2 6M20 4v7h-7'/%3E%3C/svg%3E");
+}
+
+body.dark-theme {
+  --q-empty-error-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff7a6b' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 17h.01'/%3E%3C/svg%3E");
+}
+
+/* Continue: replace only the decorative glyph. */
+
+body #view-home .home-continue-empty .empty-state-icon > svg {
+  display: none;
+}
+
+body #view-home .home-continue-empty .empty-state-icon::after {
+  content: "";
+  display: block;
+  width: 25px;
+  height: 25px;
+  background: currentColor;
+
+  -webkit-mask-image: var(--q-empty-play-icon);
+  mask-image: var(--q-empty-play-icon);
+
+  -webkit-mask-size: contain;
+  mask-size: contain;
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Lists: use the same recognizable list glyph as toasts. */
+
+body #view-lists .lib-empty-state-card:not(.lib-empty-state-card--error)
+.lib-empty-state-icon > svg {
+  display: none;
+}
+
+body #view-lists .lib-empty-state-card:not(.lib-empty-state-card--error)
+.lib-empty-state-icon::after {
+  content: "";
+  display: block;
+  width: 25px;
+  height: 25px;
+  background: currentColor;
+
+  -webkit-mask-image: var(--q-empty-list-icon);
+  mask-image: var(--q-empty-list-icon);
+
+  -webkit-mask-size: contain;
+  mask-size: contain;
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* Explore: explicitly center the complete text block. */
+
+body #view-explore .empty-state-main {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+body #view-explore .empty-state-title,
+body.dark-theme #view-explore .empty-state-title {
+  width: 100%;
+  margin-inline: auto;
+  text-align: center;
+  text-wrap: balance;
+}
+
+body #view-explore .empty-state-text,
+body.dark-theme #view-explore .empty-state-text {
+  width: 100%;
+  max-width: 44ch;
+  margin-inline: auto;
+  text-align: center;
+  text-wrap: balance;
+}
+
+body #view-explore .empty-state-actions {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Notification surfaces must also override legacy dark styles. */
+
+body.dark-theme .notif-empty-state {
+  background: var(--q-surface);
+  border: 1px solid var(--q-border);
+  color: var(--q-text);
+  box-shadow: none;
+}
+
+body.dark-theme .notif-empty-icon {
+  background: var(--q-empty-icon-bg);
+  color: var(--q-empty-icon-ink);
+  border: 0;
+}
+
+body.dark-theme .notif-empty-title {
+  color: var(--q-text);
+}
+
+body.dark-theme .notif-empty-desc {
+  color: var(--q-text-2);
+  opacity: 1;
+}
+
+/* Consistent, compact recovery cards. */
+
+body #homeDashboardError,
+body #notifErrorState,
+body #activityError,
+body #view-home .empty-card {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+
+  min-width: 0;
+  padding: 20px;
+
+  border: 1px solid var(--q-border);
+  border-radius: 14px;
+
+  background: var(--q-surface);
+  color: var(--q-text);
+
+  text-align: center;
+  box-shadow: none;
+}
+
+body #homeDashboardError::before,
+body #notifErrorState::before,
+body #activityError::before,
+body #view-home .empty-card::before {
+  content: "";
+  display: block;
+
+  width: 48px;
+  height: 48px;
+
+  margin: 0;
+  border-radius: 14px;
+
+  background-color: var(--q-alert-error-bg);
+  background-image: var(--q-empty-error-symbol);
+  background-size: 24px 24px;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  -webkit-mask: none;
+  mask: none;
+
+  pointer-events: none;
+}
+
+body #homeDashboardError h3,
+body #notifErrorState .notif-empty-title,
+body #activityError .activity-empty-title,
+body #view-home .empty-card-title {
+  margin: 0;
+  color: var(--q-text);
+
+  font-size: 1.125rem;
+  line-height: 1.35;
+  font-weight: 700;
+
+  text-align: center;
+  text-wrap: balance;
+}
+
+body #homeDashboardError p,
+body #notifErrorState .notif-empty-desc,
+body #activityError .activity-empty-desc,
+body #view-home .empty-card-text {
+  max-width: 44ch;
+  margin: 0;
+
+  color: var(--q-text-2);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+
+  text-align: center;
+  text-wrap: balance;
+}
+
+body #activityError .empty-state-actions {
+  margin-top: 0;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Recovery actions: no compact chip styling. */
+
+body #homeDashboardRetry,
+body #notifRetryLoadBtn,
+body #activityErrorRetry {
+  appearance: none;
+  -webkit-appearance: none;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  box-sizing: border-box;
+
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  height: auto;
+
+  padding: 10px 16px;
+  margin: 4px 0 0;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  background: var(--q-brand);
+  color: #17181c;
+
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.4;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  box-shadow: none;
+  transform: none;
+
+  cursor: pointer;
+}
+
+body #homeDashboardRetry::before,
+body #notifRetryLoadBtn::before,
+body #activityErrorRetry::before {
+  content: "";
+  display: inline-block;
+
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+
+  background: currentColor;
+
+  -webkit-mask: var(--q-empty-retry-icon) center / contain no-repeat;
+  mask: var(--q-empty-retry-icon) center / contain no-repeat;
+
+  pointer-events: none;
+}
+
+body #homeDashboardRetry:hover:not(:disabled),
+body #notifRetryLoadBtn:hover:not(:disabled),
+body #activityErrorRetry:hover:not(:disabled) {
+  background: #efb91c;
+  color: #17181c;
+  box-shadow: none;
+  transform: none;
+}
+
+body #homeDashboardRetry:disabled,
+body #notifRetryLoadBtn:disabled,
+body #activityErrorRetry:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+body #homeDashboardRetry:focus-visible,
+body #notifRetryLoadBtn:focus-visible,
+body #activityErrorRetry:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 3px;
+}
+
+/* Remove inherited offset shadows only in affected Home/Explore actions. */
+
+body #view-home .empty-state-actions > :is(button, a),
+body #view-explore .empty-state-actions > :is(button, a) {
+  min-height: 44px;
+  box-shadow: none;
+  border-radius: 10px;
+  transform: none;
+}
+
+body #view-home .empty-state-actions > :is(button, a):hover,
+body #view-explore .empty-state-actions > :is(button, a):hover {
+  box-shadow: none;
+  transform: none;
+}
+
+/* Responsive recovery cards. */
+
+@media (max-width: 480px) {
+  body #homeDashboardError,
+  body #notifErrorState,
+  body #activityError,
+  body #view-home .empty-card {
+    padding: 16px;
+  }
+
+  body #homeDashboardRetry,
+  body #notifRetryLoadBtn,
+  body #activityErrorRetry {
+    width: 100%;
+  }
+}
+
+/* Do not expose inactive recovery states. */
+
+#homeDashboardError[hidden],
+#notifErrorState[hidden],
+#activityError[hidden] {
+  display: none !important;
+}
+
+
+/* DS-07.4: explore alignment */
+
+body #view-explore :is(#exploreEmpty, #exploreError)
+.empty-state-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+body #view-explore :is(#exploreEmpty, #exploreError)
+.empty-state-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  text-align: center;
+}
+
+body #view-explore :is(#exploreEmpty, #exploreError)
+:is(.empty-state-title, .empty-state-text) {
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  text-align: center;
+  text-indent: 0;
+
+  white-space: normal;
+  text-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+
+body #view-explore :is(#exploreEmpty, #exploreError)
+.empty-state-text {
+  max-width: 48ch;
+}
+
+body #view-explore :is(#exploreEmpty, #exploreError)
+.empty-state-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+
+  width: 100%;
+  min-width: 0;
+
+  margin: 0;
+  padding-top: 4px;
+}
+
+body #view-explore :is(#exploreEmpty, #exploreError)
+.empty-state-actions > button {
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  body #view-explore :is(#exploreEmpty, #exploreError)
+  .empty-state-actions > button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+
+/* DS-07.5.1: confirmations */
+
+:root {
+  --q-confirm-danger-bg: #ad2c22;
+  --q-confirm-danger-text: #ffffff;
+
+  --q-confirm-trash-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18M8 6V4h8v2M5 6l1 14h12l1-14M10 10v6M14 10v6'/%3E%3C/svg%3E");
+
+  --q-confirm-bell-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4'/%3E%3C/svg%3E");
+}
+
+body.dark-theme {
+  --q-confirm-danger-bg: #ff7a6b;
+  --q-confirm-danger-text: #17181c;
+}
+
+/* Only existing confirmation overlays. */
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) {
+  box-sizing: border-box;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+
+  background: rgb(15 17 21 / 58%);
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal):not(.is-open) {
+  display: none;
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal).is-open {
+  display: flex;
+}
+
+/* Dialog surface */
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-card {
+  box-sizing: border-box;
+
+  width: min(100%, 440px);
+  min-width: 0;
+  max-width: 440px;
+
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  padding: 24px;
+
+  background: var(--q-surface);
+  color: var(--q-text);
+
+  border: 1px solid var(--q-border);
+  border-radius: 20px;
+
+  box-shadow: 0 18px 48px rgb(0 0 0 / 18%);
+
+  overflow-wrap: anywhere;
+}
+
+/* Header: semantic icon, close action and title. */
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+
+  align-items: start;
+  gap: 14px;
+
+  margin: 0 0 14px;
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-header::before {
+  content: "";
+
+  grid-column: 1;
+  grid-row: 1;
+
+  display: block;
+  box-sizing: border-box;
+
+  width: 48px;
+  height: 48px;
+
+  border-radius: 14px;
+  background-color: var(--q-confirm-icon-bg);
+
+  pointer-events: none;
+}
+
+body #confirmDeleteListModal {
+  --q-confirm-icon-bg: var(--q-alert-error-bg);
+  --q-confirm-icon-ink: var(--q-alert-error-ink);
+  --q-confirm-icon: var(--q-confirm-trash-icon);
+}
+
+body #confirmClearNotifsModal {
+  --q-confirm-icon-bg: var(--q-empty-accent-bg);
+  --q-confirm-icon-ink: var(--q-empty-accent-ink);
+  --q-confirm-icon: var(--q-confirm-bell-icon);
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-header::after {
+  content: "";
+
+  grid-column: 1;
+  grid-row: 1;
+
+  justify-self: start;
+  align-self: start;
+
+  width: 26px;
+  height: 26px;
+
+  margin: 11px;
+
+  background: var(--q-confirm-icon-ink);
+
+  -webkit-mask: var(--q-confirm-icon) center / contain no-repeat;
+  mask: var(--q-confirm-icon) center / contain no-repeat;
+
+  pointer-events: none;
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-header h3 {
+  grid-column: 1 / -1;
+  grid-row: 2;
+
+  min-width: 0;
+
+  margin: 0;
+
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+
+  color: var(--q-text);
+  text-align: start;
+
+  overflow-wrap: anywhere;
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-close {
+  grid-column: 2;
+  grid-row: 1;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+
+  margin: 0;
+  padding: 0;
+
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+
+  border: 1px solid var(--q-border);
+  border-radius: 50%;
+
+  box-shadow: none;
+  transform: none;
+
+  cursor: pointer;
+}
+
+/* Message and existing Undo note */
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-body {
+  min-width: 0;
+
+  color: var(--q-text-2);
+
+  font-size: 0.9375rem;
+  line-height: 1.55;
+
+  text-align: start;
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-body > p {
+  margin: 0 0 10px;
+
+  color: var(--q-text-2);
+
+  font-size: 0.9375rem;
+  line-height: 1.55;
+
+  overflow-wrap: anywhere;
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-body > p:last-of-type {
+  margin: 0;
+
+  padding: 10px 12px;
+
+  background: var(--q-surface-2);
+  color: var(--q-text-2);
+
+  border: 1px solid var(--q-border);
+  border-radius: 10px;
+
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/* Footer */
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-actions {
+  display: flex;
+  flex-direction: row;
+
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+
+  gap: 10px;
+
+  margin: 20px 0 0;
+  padding: 16px 0 0;
+
+  border-top: 1px solid var(--q-border);
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  box-sizing: border-box;
+
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  height: auto;
+
+  margin: 0;
+  padding: 10px 18px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.4;
+
+  text-align: center;
+  white-space: normal;
+
+  overflow-wrap: anywhere;
+
+  box-shadow: none;
+  transform: none;
+
+  transition: background-color 150ms ease, filter 150ms ease;
+}
+
+/* Cancel remains visually neutral. */
+
+body :is(#cancelDeleteList, #cancelClearNotifs) {
+  background: var(--q-surface);
+  color: var(--q-text);
+  border-color: var(--q-border);
+}
+
+/* Destructive confirmation */
+
+body #confirmDeleteList {
+  background: var(--q-confirm-danger-bg);
+  color: var(--q-confirm-danger-text);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* Ordinary, reversible confirmation */
+
+body #confirmClearNotifs {
+  background: var(--q-brand);
+  color: #17181c;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+body :is(#confirmDeleteList, #confirmClearNotifs):hover:not(:disabled) {
+  filter: brightness(0.96);
+  box-shadow: none;
+  transform: none;
+}
+
+body :is(#cancelDeleteList, #cancelClearNotifs):hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  box-shadow: none;
+  transform: none;
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) button:focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 3px;
+}
+
+body :is(#confirmDeleteListModal, #confirmClearNotifsModal) button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Small viewports */
+
+@media (max-width: 480px) {
+  body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  body :is(#confirmDeleteListModal, #confirmClearNotifsModal) .modal-actions > button {
+    flex: 1 1 120px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body :is(#confirmDeleteListModal, #confirmClearNotifsModal) button {
+    transition: none;
+  }
+}
+
+
+/* DS-07.6: counters and expansion */
+
+body .home-continue-meta,
+body .content-detail-cast-card .content-detail-card-head {
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Contadores: cifras reales, sin paginacion ficticia. */
+
+body :is(
+  #continueCountLabel,
+  #listDetailShowing,
+  .explore-results-head > .explore-section-sub
+) {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  color: var(--q-text-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  opacity: 1;
+}
+
+body #continueCountLabel {
+  display: inline-block;
+  margin: 0;
+}
+
+body #listDetailShowing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid var(--q-border);
+  border-radius: 999px;
+  background: var(--q-surface-2);
+  box-shadow: none;
+  text-align: center;
+}
+
+body .explore-results-head > .explore-section-sub {
+  margin: 6px 0 0;
+}
+
+/* Controles de navegacion y ampliacion. */
+
+body :is(
+  #btnGoLibraryFromContinue,
+  #contentDetailCastToggle,
+  #profileOpinionsViewAll
+) {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  padding: 10px 14px;
+  border: 1px solid var(--q-border);
+  border-radius: 10px;
+  background: var(--q-surface);
+  color: var(--q-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+  transition: none;
+}
+
+/* Inicio: acceso principal a la biblioteca. */
+
+body #btnGoLibraryFromContinue {
+  background: var(--q-brand);
+  color: #17181c;
+  border-color: transparent;
+}
+
+/* Flechas decorativas: no forman parte del nombre accesible. */
+
+body :is(
+  #btnGoLibraryFromContinue,
+  #profileOpinionsViewAll
+)::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  background-color: currentColor;
+  -webkit-mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12h15m-6-6 6 6-6 6'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12h15m-6-6 6 6-6 6'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+/* Reparto: indicador dependiente del estado real. */
+
+body #contentDetailCastToggle::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  margin: -4px 2px 0;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+body #contentDetailCastToggle[aria-expanded="true"]::after {
+  margin-top: 4px;
+  transform: rotate(225deg);
+}
+
+body :is(
+  #contentDetailCastToggle,
+  #profileOpinionsViewAll
+):hover:not(:disabled) {
+  background: var(--q-surface-2);
+  color: var(--q-text);
+  box-shadow: none;
+  transform: none;
+}
+
+body #btnGoLibraryFromContinue:hover:not(:disabled) {
+  background: var(--q-brand);
+  color: #17181c;
+  filter: brightness(0.96);
+  box-shadow: none;
+  transform: none;
+}
+
+body :is(
+  #btnGoLibraryFromContinue,
+  #contentDetailCastToggle,
+  #profileOpinionsViewAll
+):focus-visible {
+  outline: 2px solid var(--q-info);
+  outline-offset: 3px;
+}
+
+body :is(
+  #btnGoLibraryFromContinue,
+  #contentDetailCastToggle,
+  #profileOpinionsViewAll
+):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Respetar la visibilidad decidida por los controladores. */
+
+body :is(
+  #btnGoLibraryFromContinue,
+  #contentDetailCastToggle,
+  #profileOpinionsViewAll,
+  #continueCountLabel,
+  #listDetailShowing
+)[hidden],
+body #continueCountLabel:empty,
+body #listDetailShowing:empty {
+  display: none !important;
+}
+
+@media (max-width: 480px) {
+  body .home-continue-meta {
+    justify-content: flex-start;
+    max-width: 100%;
+  }
+
+  body #listDetailShowing {
+    justify-self: start;
+  }
+
+  body #profileOpinionsViewAll {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body :is(
+    #btnGoLibraryFromContinue,
+    #contentDetailCastToggle,
+    #profileOpinionsViewAll
+  ),
+  body #contentDetailCastToggle::after {
+    transition: none;
+  }
+}
+
+
+/* DS-07.7: library empty icon */
+
+body .lib-empty-state-card:not(.lib-empty-state-card--error)
+  > .lib-empty-state-icon {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+}
+
+body .lib-empty-state-card:not(.lib-empty-state-card--error)
+  > .lib-empty-state-icon::before,
+body .lib-empty-state-card:not(.lib-empty-state-card--error)
+  > .lib-empty-state-icon::after {
+  content: none;
+}
+
+body .lib-empty-state-card:not(.lib-empty-state-card--error)
+  > .lib-empty-state-icon
+  > svg.lib-empty-state-icon-svg {
+  display: block;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  max-width: 24px;
+  max-height: 24px;
+  margin: 0;
+  padding: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
