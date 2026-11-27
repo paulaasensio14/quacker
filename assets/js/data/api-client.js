@@ -244,6 +244,9 @@ if (externalSignal?.aborted) {
     items: null
   };
 
+  let listsCacheReadVersion = 0;
+  let listsCacheDirectVersion = 0;
+
   let _listsCache = {
     transport: "",
     timestamp: 0,
@@ -917,6 +920,9 @@ if (externalSignal?.aborted) {
   }
 
   function _invalidateListsCache() {
+    listsCacheReadVersion += 1;
+    listsCacheDirectVersion += 1;
+
     _listsCache = {
       transport: "",
       timestamp: 0,
@@ -1686,6 +1692,8 @@ if (externalSignal?.aborted) {
     }
 
     if (_isHttp()) {
+      const readVersion = ++listsCacheReadVersion;
+
       try {
         const res = await _httpJson("GET", "/lists");
         const items = Array.isArray(res)
@@ -1693,7 +1701,11 @@ if (externalSignal?.aborted) {
           : (res && Array.isArray(res.items) ? res.items : []);
         const normalizedItems = _normalizeListCollection(items);
 
-        _setListsCache(normalizedItems);
+        if (_isHttp() &&
+            readVersion === listsCacheReadVersion) {
+          _setListsCache(normalizedItems);
+        }
+
         return _cloneCollection(normalizedItems);
       } catch (error) {
         console.error("[ApiClient] getLists failed", error);
@@ -1711,6 +1723,35 @@ if (externalSignal?.aborted) {
     const items = _normalizeListCollection(state.lists || []);
     _setListsCache(items);
     return _cloneCollection(items);
+  }
+
+  async function getListsForNavigation() {
+    if (!_isHttp()) return getLists();
+
+    const directVersion = ++listsCacheDirectVersion;
+    listsCacheReadVersion += 1;
+
+    const result = await _httpJson("GET", "/lists");
+
+    const items = Array.isArray(result)
+      ? result
+      : result?.items;
+
+    if (!Array.isArray(items)) {
+      throw _makeApiError("invalid_lists_response", 502);
+    }
+
+    const normalizedItems = _normalizeListCollection(items);
+
+    if (_isHttp() &&
+        directVersion === listsCacheDirectVersion) {
+      // La respuesta directa validada tiene prioridad
+      // sobre las escrituras ordinarias pendientes.
+      listsCacheReadVersion += 1;
+      _setListsCache(normalizedItems);
+    }
+
+    return normalizedItems;
   }
 
   // Devuelve las listas donde está un item (para deshabilitar opciones y pintar estado)
@@ -9331,6 +9372,7 @@ if (externalSignal?.aborted) {
     markWhatsNewSeen,
     // listas
     getLists,
+    getListsForNavigation,
     getListsContainingItem,
     createList,
     createListPoll,

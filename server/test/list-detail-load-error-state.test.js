@@ -388,9 +388,22 @@ test(
       /currentUserId\s*=\s*_normalizeId\(session\?\.user\?\.id\)/
     );
 
+    const loadSource = listsSource.match(
+      /^  async function load\(\) \{[\s\S]*?^  \}[ \t]*$/m
+    )?.[0];
+
+    assert.ok(loadSource, "No se encontro ListsModule.load");
+
+    // La identidad debe resolverse antes de solicitar las listas.
     assert.match(
-      listsSource,
-      /async function load\s*\(\)[\s\S]*?await _ensureCurrentUserId\(\)[\s\S]*?allLists\s*=\s*await ApiClient\.getLists\(\)/
+      loadSource,
+      /await _ensureCurrentUserId\(\);[\s\S]*?const loadedLists = await ApiClient\.getLists\(\);/
+    );
+
+    // La respuesta solo se publica si la carga sigue vigente.
+    assert.match(
+      loadSource,
+      /const loadedLists = await ApiClient\.getLists\(\);\s*if \(!isCurrentLoad\(\)\) return;\s*allLists = Array\.isArray\(loadedLists\)\s*\?\s*loadedLists\s*:\s*\[\];/
     );
   }
 );
@@ -758,6 +771,200 @@ test(
     assert.match(
       listsSource,
       /canManageList\s*\?\s*`[\s\S]*?data-action="edit-list"[\s\S]*?data-action="delete-list"[\s\S]*?`\s*:\s*""/
+    );
+  }
+);
+
+
+test(
+  "DS-08.2 runtime: resuelve y conserva la identidad antes de cargar listas",
+  async () => {
+    const vm = await import("node:vm");
+
+    function extract(name) {
+      const lines = listsSource.split(/\r?\n/);
+
+      const start = lines.findIndex(
+        line => line.startsWith(
+          "  async function " + name + "("
+        )
+      );
+
+      assert.ok(start >= 0, "Funcion no localizada: " + name);
+
+      const end = lines.findIndex(
+        (line, index) =>
+          index > start && line.trimEnd() === "  }"
+      );
+
+      assert.ok(end > start, "Cierre no localizado: " + name);
+
+      return lines.slice(start, end + 1).join("\n");
+    }
+
+    const events = [];
+
+    let sessionCalls = 0;
+    let listsCalls = 0;
+    let resolveSession;
+
+    const session = new Promise(resolve => {
+      resolveSession = resolve;
+    });
+
+    const context = vm.createContext({
+      currentUserId: "",
+      listsLoadRequestVersion: 0,
+      allLists: [],
+      visibleLists: [],
+      activeListId: null,
+      activeDetailTab: "content",
+
+      ApiClient: {
+        getCurrentSession() {
+          sessionCalls++;
+          events.push("session-requested");
+          return session;
+        },
+
+        async getLists() {
+          listsCalls++;
+
+          assert.equal(
+            context.currentUserId,
+            "fictional-user"
+          );
+
+          events.push("lists-requested");
+
+          return [{
+            id: "fictional-list",
+            name: "Lista ficticia",
+            visibility: "collab",
+            items: []
+          }];
+        }
+      },
+
+      _normalizeId(value) {
+        return String(value ?? "").trim();
+      },
+
+      async _loadUIState() {},
+
+      async _loadListsOverviewLibrary() {},
+
+      renderListsSkeleton() {},
+
+      _syncListsToolbarUI() {},
+
+      applyFilters() {
+        assert.equal(
+          context.currentUserId,
+          "fictional-user"
+        );
+
+        events.push("lists-rendered");
+      },
+
+      _getEl() {
+        return { hidden: true };
+      },
+
+      document: {
+        getElementById() {
+          return null;
+        },
+
+        querySelector() {
+          return null;
+        }
+      },
+
+      requestAnimationFrame(callback) {
+        callback();
+      },
+
+      render() {},
+
+      console: {
+        error(...args) {
+          throw new Error(
+            args.map(String).join(" ")
+          );
+        }
+      }
+    });
+
+    vm.runInContext(
+      [
+        extract("_ensureCurrentUserId"),
+        extract("load")
+      ].join("\n\n"),
+      context
+    );
+
+    const firstLoad = context.load();
+
+    await new Promise(resolve => {
+      setImmediate(resolve);
+    });
+
+    // La identidad aun no se ha resuelto.
+    assert.equal(sessionCalls, 1);
+    assert.equal(listsCalls, 0);
+    assert.equal(context.currentUserId, "");
+
+    resolveSession({
+      user: {
+        id: "fictional-user"
+      }
+    });
+
+    await firstLoad;
+
+    assert.equal(
+      context.currentUserId,
+      "fictional-user"
+    );
+
+    assert.equal(sessionCalls, 1);
+    assert.equal(listsCalls, 1);
+
+    assert.deepEqual(
+      events,
+      [
+        "session-requested",
+        "lists-requested",
+        "lists-rendered"
+      ]
+    );
+
+    assert.deepEqual(
+      Array.from(context.allLists, list => list.id),
+      ["fictional-list"]
+    );
+
+    // Una segunda carga conserva la identidad ya resuelta.
+    await context.load();
+
+    assert.equal(sessionCalls, 1);
+    assert.equal(listsCalls, 2);
+
+    assert.equal(
+      context.currentUserId,
+      "fictional-user"
+    );
+
+    assert.deepEqual(
+      events,
+      [
+        "session-requested",
+        "lists-requested",
+        "lists-rendered",
+        "lists-requested",
+        "lists-rendered"
+      ]
     );
   }
 );

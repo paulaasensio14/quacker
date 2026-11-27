@@ -86,6 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 2) Iniciar módulos después
   try { window.LibraryUI?.init?.(); } catch (e) { console.error("LibraryUI.init error", e); }
   try { window.ListsModule?.init?.(); } catch (e) { console.error("ListsModule.init error", e); }
+  try { window.SidebarLists?.init?.(); } catch (e) { console.error("SidebarLists.init error", e); }
   // Mostrar una invitacion pendiente solo despues
   // de verificar la sesion autenticada.
   try {

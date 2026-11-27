@@ -17,6 +17,9 @@ const ListsModule = (() => {
   let listsViewMode = "cards"; // "cards" | "list"
 
   let activeListId = null;
+  let activeDetailItemsRequestVersion = 0;
+  let listDetailOpenRequestVersion = 0;
+  let listsLoadRequestVersion = 0;
   let activeDetailTab = "content";
   let __returnToAddToListItemId = null;
 
@@ -579,15 +582,28 @@ const ListsModule = (() => {
   }
 
   async function load() {
+    const loadVersion = ++listsLoadRequestVersion;
+    const isCurrentLoad = () =>
+      loadVersion === listsLoadRequestVersion;
+
     await _loadUIState();
+    if (!isCurrentLoad()) return;
+
     await _ensureCurrentUserId();
+    if (!isCurrentLoad()) return;
+
     renderListsSkeleton();
 
     try {
-      allLists = await ApiClient.getLists();
-      if (!Array.isArray(allLists)) allLists = [];
+      const loadedLists = await ApiClient.getLists();
+      if (!isCurrentLoad()) return;
+
+      allLists = Array.isArray(loadedLists)
+        ? loadedLists
+        : [];
 
       await _loadListsOverviewLibrary();
+      if (!isCurrentLoad()) return;
 
       visibleLists = [...allLists]; // lo que se muestra
       updateFilterCounts();
@@ -595,6 +611,8 @@ const ListsModule = (() => {
       applyFilters();
 
       requestAnimationFrame(() => {
+        if (!isCurrentLoad()) return;
+
         const isListsActive = document.querySelector("#view-lists")?.classList.contains("is-active");
         if (isListsActive) {
           render(false);
@@ -614,6 +632,10 @@ const ListsModule = (() => {
           renderListCollaboration(activeList);
           activateListDetailTab(activeDetailTab);
           await renderActiveListPolls();
+          if (!isCurrentLoad() ||
+              normalizedActiveListId !== _normalizeId(activeListId)) {
+            return;
+          }
           await renderActiveListItems();
         }
       }
@@ -636,6 +658,8 @@ const ListsModule = (() => {
       }
 
     } catch (e) {
+      if (!isCurrentLoad()) return;
+
       console.error("ListsModule.load error", e);
       allLists = [];
       visibleLists = [];
@@ -1875,13 +1899,17 @@ const ListsModule = (() => {
       !!_getEl("listDetail")?.hidden;
 
     if (openingNewDetail) {
+      activeDetailItemsRequestVersion += 1;
       resetListLinkInviteUI();
     }
 
-    activeListId = normalizedListId;
-
-    const list = allLists.find(l => _normalizeId(l.id) === activeListId);
+    const list = allLists.find(
+      l => _normalizeId(l.id) === normalizedListId
+    );
     if (!list) return;
+
+    activeListId = normalizedListId;
+    window.SidebarLists?.select?.(activeListId);
 
     const detail = _getEl("listDetail");
     const grid = _getEl("listsGrid");
@@ -1910,10 +1938,12 @@ const ListsModule = (() => {
   }
 
   function closeListDetail() {
+    activeDetailItemsRequestVersion += 1;
     closeListMemberSuggestions();
     collaborationIdentityRequestVersion += 1;
     resetListLinkInviteUI();
     activeListId = null;
+    window.SidebarLists?.select?.(null);
     activateListDetailTab("content");
 
     const detail = _getEl("listDetail");
@@ -2207,6 +2237,14 @@ const ListsModule = (() => {
 
 
   async function renderActiveListItems(){
+    const requestVersion = ++activeDetailItemsRequestVersion;
+    const requestedListId = _normalizeId(activeListId);
+
+    const isCurrentRequest = () =>
+      requestVersion === activeDetailItemsRequestVersion &&
+      requestedListId === _normalizeId(activeListId);
+
+
     const grid = _getEl("listDetailItemsGrid");
     const empty = _getEl("listDetailEmpty");
     const error = _getEl("listDetailError");
@@ -2252,6 +2290,8 @@ const ListsModule = (() => {
     try{
       library = await ApiClient.getLibrary();
     }catch(e){
+      if (!isCurrentRequest()) return;
+
       console.error(e);
       grid.innerHTML = "";
       empty.classList.add("is-initially-hidden");
@@ -2264,6 +2304,8 @@ const ListsModule = (() => {
 
       return;
     }
+
+    if (!isCurrentRequest()) return;
 
     const items =
       (Array.isArray(list.items) ? list.items : [])
@@ -3338,6 +3380,102 @@ const ListsModule = (() => {
     _showConfirmDeleteErrors("");
   }
 
+  async function openListFromNavigation(e) {
+    const listId = _normalizeId(e?.detail?.listId);
+    const highlightItemId = _normalizeId(e?.detail?.highlightItemId);
+
+    if (!listId) return;
+
+    window.Router?.showView("lists");
+
+    const version = ++listDetailOpenRequestVersion;
+
+    const isCurrent = () =>
+      version === listDetailOpenRequestVersion &&
+      document.querySelector("#view-lists")
+        ?.classList.contains("is-active");
+
+    try {
+      await load();
+
+      if (!isCurrent()) return;
+
+      if (e?.detail?.source === "sidebar") {
+        const fresh = await ApiClient.getListsForNavigation();
+
+        if (!isCurrent()) return;
+
+        if (!Array.isArray(fresh)) {
+          throw new Error("invalid_lists_response");
+        }
+
+        // Invalidar cargas ordinarias anteriores a esta
+        // respuesta directa y validada del servidor.
+        listsLoadRequestVersion += 1;
+        allLists = fresh;
+
+        if (!fresh.some(
+          list => _normalizeId(list.id) === listId
+        )) {
+          closeListDetail();
+          applyFilters();
+
+          window.toast?.({
+            message: t("sidebar_lists_unavailable"),
+            type: "info"
+          });
+
+          return;
+        }
+
+        applyFilters();
+      }
+
+      if (!isCurrent()) return;
+
+      await openListDetail(listId);
+
+      if (!isCurrent()) return;
+
+      if (highlightItemId) {
+        requestAnimationFrame(() => {
+          if (!isCurrent() ||
+              _normalizeId(activeListId) !== listId) {
+            return;
+          }
+
+          const safe = (window.CSS && CSS.escape)
+            ? CSS.escape(highlightItemId)
+            : highlightItemId;
+
+          const el = document.querySelector(
+            `.list-item-card[data-item-id="${safe}"]`
+          );
+
+          if (el) {
+            el.scrollIntoView({
+              behavior: "smooth",
+              block: "center"
+            });
+          }
+
+          if (typeof flashListItemCard === "function") {
+            flashListItemCard(highlightItemId);
+          }
+        });
+      }
+    } catch (error) {
+      if (!isCurrent()) return;
+
+      console.error(error);
+
+      window.toast?.({
+        message: t("sidebar_lists_error"),
+        type: "error"
+      });
+    }
+  }
+
   function init() {
 
     // Bind modales (una sola fuente de verdad: UIModal)
@@ -3379,7 +3517,14 @@ const ListsModule = (() => {
     }
 
     document.addEventListener("quacker:view-change", (e) => {
+      listDetailOpenRequestVersion += 1;
       const viewId = e.detail?.viewId;
+
+      window.SidebarLists?.select?.(
+        viewId === "lists" && !_getEl("listDetail")?.hidden
+          ? activeListId
+          : null
+      );
 
       // Cuando entramos en "lists", recargamos y pintamos
       if (viewId === "lists") {
@@ -3418,31 +3563,10 @@ const ListsModule = (() => {
     document.addEventListener("quacker:data-changed", _handleListsItemStateChanged);
 
     // Volver desde Explore a un detalle de lista concreto
-    document.addEventListener("quacker:lists-open-detail", async (e) => {
-      const listId = _normalizeId(e?.detail?.listId);
-      const highlightItemId = _normalizeId(e?.detail?.highlightItemId);
-      if (!listId) return;
-
-      // Aseguramos vista + datos antes de abrir detalle
-      window.Router?.showView("lists");
-      await load();
-      await openListDetail(listId);
-
-      if (highlightItemId) {
-        // Esperar un frame para asegurar DOM pintado
-        requestAnimationFrame(() => {
-          const safe = (window.CSS && CSS.escape) ? CSS.escape(highlightItemId) : highlightItemId;
-          const el = document.querySelector(`.list-item-card[data-item-id="${safe}"]`);
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
-          // Reutiliza tu helper (ya existe porque el highlight al deshacer funciona)
-          if (typeof flashListItemCard === "function") {
-            flashListItemCard(highlightItemId);
-          }
-        });
-      }
-    });
+    document.addEventListener(
+      "quacker:lists-open-detail",
+      openListFromNavigation
+    );
 
     document.querySelectorAll(".pill-filter").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -3520,6 +3644,7 @@ const ListsModule = (() => {
         if (card) {
           const id = _normalizeId(card.dataset.id);
           if (!id) return;
+          listDetailOpenRequestVersion += 1;
           await openListDetail(id);
         }
 
@@ -3785,6 +3910,7 @@ const ListsModule = (() => {
     });
 
     document.getElementById("btnBackToLists")?.addEventListener("click", () => {
+      listDetailOpenRequestVersion += 1;
       closeListDetail();
     });
 
