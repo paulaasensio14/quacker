@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="assets/css/design-forms.css">
   <link rel="stylesheet" href="assets/css/design-cards.css">
   <link rel="stylesheet" href="assets/css/design-confirmations.css">
+  <link rel="stylesheet" href="assets/css/design-navigation.css">
   <link rel="stylesheet" href="assets/css/design-feedback.css">
 
 </head>
@@ -173,6 +174,35 @@
           </button>
         </li>
       </ul>
+
+      <section id="sidebarLists" aria-labelledby="sidebarListsTitle">
+        <div class="sidebar-lists-heading">
+          <h2 id="sidebarListsTitle" data-i18n="sidebar_lists_title">Mis listas</h2>
+          <button type="button" id="sidebarListsCreate"
+            aria-label="Nueva lista" data-i18n-aria-label="lists_new">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </button>
+        </div>
+
+        <p id="sidebarListsStatus" role="status" aria-live="polite"></p>
+
+        <ul id="sidebarListsEntries" aria-busy="false"></ul>
+
+        <button type="button" id="sidebarListsRetry" hidden
+          data-i18n="library_retry">Reintentar</button>
+
+        <button type="button" id="sidebarListsAll">
+          <span data-i18n="sidebar_lists_all">Ver todas las listas</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <path d="m9 6 6 6-6 6"/>
+          </svg>
+        </button>
+      </section>
     </nav>
 
     <div class="sidebar-footer">
@@ -3095,6 +3125,7 @@
 
   <script src="assets/js/app/library.js"></script>
   <script src="assets/js/app/lists.js"></script>
+  <script src="assets/js/app/sidebar-lists.js"></script>
   <script src="assets/js/app/profile.js"></script>
   <script src="assets/js/app/profile-tabs.js"></script>
   <script src="assets/js/app/detail.js"></script>
